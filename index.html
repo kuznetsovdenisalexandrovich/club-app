@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Ты Боженька Продаж</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg:#100e18; --bg2:#17141f; --card:#1a1725; --card2:#211d2e;
+  --border:rgba(255,255,255,0.08); --line:rgba(255,255,255,0.06);
+  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+  --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
+  --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
+  --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg)}
+body{
+  font-family:var(--body);color:var(--text);min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+}
+.shell{max-width:520px;margin:0 auto;padding:0 16px}
+
+header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-items:center;gap:12px}
+.mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:14px;color:white;flex-shrink:0}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em}
+.brand-sub{font-size:12px;color:var(--text-faint);margin-top:2px}
+
+.section-label{font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
+.section-label:first-of-type{margin-top:0}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:12px}
+
+.sub-card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sub-left{display:flex;align-items:center;gap:12px}
+.sub-icon{width:44px;height:44px;border-radius:14px;background:var(--lav-dim);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sub-name{font-family:var(--disp);font-weight:700;font-size:15px}
+.sub-meta{font-size:12px;color:var(--text-faint);margin-top:3px}
+.pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap}
+.pill.active{background:rgba(62,207,142,0.15);color:var(--green)}
+.pill.inactive{background:rgba(255,69,58,0.15);color:var(--red)}
+.sub-note{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:14px}
+
+.profile-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.profile-row:last-child{border-bottom:none}
+.profile-label{font-size:13px;color:var(--text-faint)}
+.profile-value{font-size:13px;font-weight:600;text-align:right}
+
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;font-size:14px;font-family:var(--body);padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
+.search-wrap input::placeholder{color:var(--text-faint)}
+
+.lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;transition:transform .1s}
+.lec-card:active{transform:scale(0.98)}
+.lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
+.lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lec-tags{display:flex;flex-wrap:wrap;gap:6px}
+.lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
+.loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
+
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(23,20,31,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:50}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-faint);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s}
+.tab-item.active{color:var(--lav)}
+.tab-icon{font-size:20px}
+
+.view{display:none}
+.view.active{display:block}
+
+.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 24px;gap:14px}
+.center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
+.center-msg h2{font-family:var(--disp);font-weight:700;font-size:17px}
+.center-msg p{font-size:13px;color:var(--text-dim);line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="shell" id="app-shell" style="display:none">
+
+  <header>
+    <div class="mark">БП</div>
+    <div>
+      <div class="brand-name">Ты Боженька Продаж</div>
+      <div class="brand-sub" id="header-sub">—</div>
+    </div>
+  </header>
+
+  <!-- ── Профиль ── -->
+  <div class="view active" id="view-profile">
+    <div class="section-label">Подписка</div>
+    <div class="card sub-card">
+      <div class="sub-left">
+        <div class="sub-icon">◆</div>
+        <div>
+          <div class="sub-name" id="sub-name">—</div>
+          <div class="sub-meta" id="sub-meta">—</div>
+        </div>
+      </div>
+      <span class="pill" id="sub-pill">—</span>
+    </div>
+    <div class="sub-note" id="sub-note"></div>
+
+    <div class="section-label">Профиль</div>
+    <div class="card">
+      <div class="profile-row">
+        <span class="profile-label">Имя</span>
+        <span class="profile-value" id="p-name">—</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">Username</span>
+        <span class="profile-value" id="p-username">—</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">Месяцев в клубе</span>
+        <span class="profile-value" id="p-months">—</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">Следующий платёж</span>
+        <span class="profile-value" id="p-next">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Библиотека ── -->
+  <div class="view" id="view-library">
+    <div class="section-label">Библиотека</div>
+    <div class="search-wrap">
+      <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
+    </div>
+    <div id="lib-list"><div class="loading">Загрузка...</div></div>
+  </div>
+
+</div>
+
+<!-- Не в Telegram -->
+<div class="center-msg" id="not-telegram-msg" style="display:none">
+  <div class="mark">БП</div>
+  <h2>Открой в Telegram</h2>
+  <p>Сейчас приложение доступно только внутри Telegram-бота клуба. Отдельный вход по номеру телефона появится совсем скоро.</p>
+</div>
+
+<div class="tabbar" id="tabbar" style="display:none">
+  <div class="tab-item active" onclick="switchView('profile')" id="tab-profile">
+    <span class="tab-icon">◆</span>
+    <span>Профиль</span>
+  </div>
+  <div class="tab-item" onclick="switchView('library')" id="tab-library">
+    <span class="tab-icon">▤</span>
+    <span>Библиотека</span>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://club-backend-production-fc7f.up.railway.app';
+let telegramId = null;
+let allLectures = [];
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'library' && !allLectures.length) loadLibrary();
+}
+
+function monthsSince(dateStr) {
+  if (!dateStr) return '—';
+  const parts = dateStr.split('.');
+  if (parts.length !== 3) return '—';
+  const d = new Date(parts[2], parts[1]-1, parts[0]);
+  const now = new Date();
+  let months = (now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth());
+  return months < 1 ? '< 1' : months;
+}
+
+async function loadProfile() {
+  try {
+    const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
+    const u = await r.json();
+
+    if (!u.found) {
+      document.getElementById('sub-name').textContent = 'Профиль не найден';
+      document.getElementById('sub-meta').textContent = 'Похоже, ты ещё не оформлял(а) подписку';
+      document.getElementById('sub-pill').textContent = '—';
+      return;
+    }
+
+    document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
+    document.getElementById('p-name').textContent = u.full_name || u.name || '—';
+    document.getElementById('p-username').textContent = u.username || '—';
+    document.getElementById('p-months').textContent = monthsSince(u.first_payment_date);
+    document.getElementById('p-next').textContent = u.next_payment_date || '—';
+
+    document.getElementById('sub-name').textContent = u.sub_name || 'Без подписки';
+    document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
+
+    const pill = document.getElementById('sub-pill');
+    if (u.is_member) {
+      pill.textContent = 'Активна';
+      pill.className = 'pill active';
+      document.getElementById('sub-note').textContent = u.next_payment_date
+        ? `Следующее списание — ${u.next_payment_date}`
+        : '';
+    } else {
+      pill.textContent = 'Неактивна';
+      pill.className = 'pill inactive';
+      document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
+    }
+  } catch (e) {
+    document.getElementById('sub-name').textContent = 'Ошибка загрузки';
+  }
+}
+
+async function loadLibrary(query) {
+  const listEl = document.getElementById('lib-list');
+  listEl.innerHTML = '<div class="loading">Загрузка...</div>';
+  try {
+    const url = query
+      ? `${API_URL}/lectures/search?q=${encodeURIComponent(query)}`
+      : `${API_URL}/lectures?limit=100`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!query) allLectures = data;
+    renderLibrary(data);
+  } catch (e) {
+    listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
+  }
+}
+
+function renderLibrary(items) {
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(l => `
+    <div class="lec-card" onclick="openLecture('${l.link || ''}','${l.link_vk || ''}')">
+      <div class="lec-title">${l.title}</div>
+      <div class="lec-desc">${l.description || ''}</div>
+      <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+function openLecture(link, linkVk) {
+  const url = link || linkVk;
+  if (!url) return;
+  if (window.Telegram?.WebApp?.openLink) {
+    window.Telegram.WebApp.openLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+let searchTimer;
+function onSearchInput() {
+  clearTimeout(searchTimer);
+  const q = document.getElementById('lib-search').value.trim();
+  searchTimer = setTimeout(() => loadLibrary(q || undefined), 300);
+}
+
+// ── Init ──
+(function init(){
+  const tg = window.Telegram?.WebApp;
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    tg.ready();
+    tg.expand();
+    telegramId = tg.initDataUnsafe.user.id;
+    document.getElementById('app-shell').style.display = 'block';
+    document.getElementById('tabbar').style.display = 'flex';
+    loadProfile();
+  } else {
+    document.getElementById('not-telegram-msg').style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>
