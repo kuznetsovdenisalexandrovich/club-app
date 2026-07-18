@@ -61,7 +61,16 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .lec-tags{display:flex;flex-wrap:wrap;gap:6px}
 .lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
 
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px}
+.tile:active{transform:scale(0.96)}
+.tile-icon{width:36px;height:36px;border-radius:12px;background:var(--lav-dim);color:var(--lav);display:flex;align-items:center;justify-content:center;font-size:16px}
+.tile-label{font-size:12px;font-weight:600;line-height:1.3}
+.tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
+
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:100;white-space:nowrap}
+.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 .loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 
 .tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(23,20,31,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:50}
@@ -90,8 +99,8 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
     </div>
   </header>
 
-  <!-- ── Профиль ── -->
-  <div class="view active" id="view-profile">
+  <!-- ── Портал ── -->
+  <div class="view active" id="view-portal">
     <div class="section-label">Подписка</div>
     <div class="card sub-card">
       <div class="sub-left">
@@ -105,6 +114,56 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
     </div>
     <div class="sub-note" id="sub-note"></div>
 
+    <div class="section-label">Меню</div>
+    <div class="tile-grid">
+      <div class="tile" onclick="switchView('library')">
+        <div class="tile-icon">▤</div>
+        <div class="tile-label">Библиотека</div>
+      </div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon">◷</div>
+        <div class="tile-label">Расписание</div>
+        <span class="tile-soon">Скоро</span>
+      </div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon">♪</div>
+        <div class="tile-label">Уведомления</div>
+        <span class="tile-soon">Скоро</span>
+      </div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon">↗</div>
+        <div class="tile-label">Пригласить друга</div>
+        <span class="tile-soon">Скоро</span>
+      </div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon">●</div>
+        <div class="tile-label">Бонусы</div>
+        <span class="tile-soon">Скоро</span>
+      </div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon">◆</div>
+        <div class="tile-label">Настройки подписки</div>
+        <span class="tile-soon">Скоро</span>
+      </div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon">?</div>
+        <div class="tile-label">Поддержка</div>
+        <span class="tile-soon">Скоро</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Библиотека ── -->
+  <div class="view" id="view-library">
+    <div class="section-label">Библиотека</div>
+    <div class="search-wrap">
+      <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
+    </div>
+    <div id="lib-list"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- ── Профиль ── -->
+  <div class="view" id="view-profile">
     <div class="section-label">Профиль</div>
     <div class="card">
       <div class="profile-row">
@@ -132,15 +191,6 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
     </div>
   </div>
 
-  <!-- ── Библиотека ── -->
-  <div class="view" id="view-library">
-    <div class="section-label">Библиотека</div>
-    <div class="search-wrap">
-      <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
-    </div>
-    <div id="lib-list"><div class="loading">Загрузка...</div></div>
-  </div>
-
 </div>
 
 <!-- Не в Telegram -->
@@ -150,14 +200,20 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
   <p>Сейчас приложение доступно только внутри Telegram-бота клуба. Отдельный вход по номеру телефона появится совсем скоро.</p>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <div class="tabbar" id="tabbar" style="display:none">
-  <div class="tab-item active" onclick="switchView('profile')" id="tab-profile">
-    <span class="tab-icon">◆</span>
-    <span>Профиль</span>
+  <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
+    <span class="tab-icon">◈</span>
+    <span>Портал</span>
   </div>
   <div class="tab-item" onclick="switchView('library')" id="tab-library">
     <span class="tab-icon">▤</span>
     <span>Библиотека</span>
+  </div>
+  <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
+    <span class="tab-icon">◆</span>
+    <span>Профиль</span>
   </div>
 </div>
 
@@ -165,6 +221,14 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 const API_URL = 'https://club-backend-production-fc7f.up.railway.app';
 let telegramId = null;
 let allLectures = [];
+
+function comingSoon() {
+  const el = document.getElementById('toast');
+  el.textContent = 'Скоро появится здесь!';
+  el.classList.add('visible');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('visible'), 1800);
+}
 
 function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
