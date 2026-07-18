@@ -68,11 +68,13 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .search-wrap input{width:100%;font-size:14px;font-family:var(--body);padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
 .search-wrap input::placeholder{color:var(--text-faint)}
 
-.lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;transition:transform .1s}
-.lec-card:active{transform:scale(0.98)}
+.lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
 .lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
 .lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lec-tags{display:flex;flex-wrap:wrap;gap:6px}
+.lec-links{display:flex;gap:8px;margin-top:12px}
+.lec-link-btn{flex:1;font-size:12px;font-weight:700;padding:9px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--lav);cursor:pointer}
+.lec-link-btn:active{transform:scale(0.97)}
 .lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
 
 .continue-card{cursor:pointer;background:linear-gradient(135deg,var(--lav-dim),transparent)}
@@ -81,6 +83,18 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .continue-progress{width:100%;height:5px;border-radius:10px;background:var(--card2);margin-top:12px;overflow:hidden}
 .continue-progress-bar{height:100%;background:linear-gradient(90deg,var(--lav),var(--coral));border-radius:10px}
 .scroll-spacer{height:24px}
+.notif-btn{width:100%;padding:13px;border-radius:14px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer;margin-bottom:20px}
+.notif-btn:active{transform:scale(0.98)}
+.notif-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+.notif-row:last-child{border-bottom:none}
+.notif-label{font-size:13px;font-weight:600}
+.toggle{width:46px;height:26px;border-radius:16px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:2px;cursor:pointer;flex-shrink:0;transition:background .15s}
+.toggle.on{background:var(--lav-deep);justify-content:flex-end}
+.toggle.off{justify-content:flex-start}
+.toggle-thumb{width:20px;height:20px;border-radius:50%;background:white;transition:all .15s}
+.news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
+.news-block:last-child{margin-bottom:0}
+.news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 .tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px}
@@ -127,6 +141,12 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 
   <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
+    <div class="section-label">Новости</div>
+    <div class="card" id="news-card">
+      <div class="loading">Загрузка...</div>
+    </div>
+    <button class="notif-btn" onclick="switchView('notifications')">Настроить уведомления</button>
+
     <div class="section-label">Продолжить</div>
     <div class="card continue-card" id="continue-card" onclick="openContinue()">
       <div class="continue-label" id="continue-kicker">—</div>
@@ -145,11 +165,6 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
       <div class="tile" onclick="comingSoon()">
         <div class="tile-icon">◷</div>
         <div class="tile-label">Расписание</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon">♪</div>
-        <div class="tile-label">Уведомления</div>
         <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="comingSoon()">
@@ -172,6 +187,18 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
         <div class="tile-label">Поддержка</div>
         <span class="tile-soon">Скоро</span>
       </div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Уведомления ── -->
+  <div class="view" id="view-notifications">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span>Уведомления</span>
+    </div>
+    <div class="card" id="notif-list">
+      <div class="loading">Загрузка...</div>
     </div>
     <div class="scroll-spacer"></div>
   </div>
@@ -291,8 +318,10 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+  const tabEl = document.getElementById('tab-' + name);
+  if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) loadLibrary();
+  if (name === 'notifications') loadNotifications();
 }
 
 function monthsSince(dateStr) {
@@ -346,6 +375,107 @@ function openContinue() {
   } else {
     switchView('library');
   }
+}
+
+// ── Списки уведомлений — тексты-триггеры нужно сверить с реально работающими
+// кнопками в боте (Denis подтверждает точный список). Плейсхолдеры ниже —
+// частично из уже виденных рабочих текстов, частично — предположение.
+// off_trigger: null означает, что этот блок ещё не создан в Salebot —
+// тумблер для этого списка будет включать, но не сможет выключать, пока не пришлёшь триггер
+const NOTIF_LISTS = [
+  { list_id: 2100157, key: 'l2100157', name: 'Дайджест на месяц', on_trigger: 'digest_on',       off_trigger: 'digest_off' },
+  { list_id: 2100155, key: 'l2100155', name: 'Выпуски журнала',   on_trigger: 'magazine_on',     off_trigger: 'magazine_off' },
+  { list_id: 2100154, key: 'l2100154', name: 'Книжный клуб',      on_trigger: 'book_club_on',    off_trigger: 'book_club_off' },
+  { list_id: 2100153, key: 'l2100153', name: 'Живые занятия',     on_trigger: 'live_events_on',  off_trigger: 'live_events_off' },
+  { list_id: 2100152, key: 'l2100152', name: 'Выход лекций',      on_trigger: 'newlectures_on',  off_trigger: 'newlectures_off' },
+];
+
+let listMembership = null; // {l2100157: true, ...} после первого запроса
+
+async function fetchListMembership() {
+  await fetch(`${API_URL}/app/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, action: 'check_lists', params: {} })
+  }).catch(()=>{});
+
+  for (let i = 0; i < 8; i++) {
+    await new Promise(r => setTimeout(r, 1200));
+    try {
+      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_lists`);
+      const data = await r.json();
+      if (data.status === 'done') {
+        listMembership = data.result;
+        return listMembership;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+async function loadNews() {
+  const el = document.getElementById('news-card');
+  try {
+    const [news] = await Promise.all([
+      fetch(`${API_URL}/news/latest`).then(r => r.json()),
+      listMembership ? Promise.resolve() : fetchListMembership(),
+    ]);
+
+    let html = `<div class="news-block">${news.common_text || 'Пока новостей нет.'}</div>`;
+    (news.targeted || []).forEach(t => {
+      const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
+      const key = cfg ? cfg.key : null;
+      const isMember = key && listMembership && listMembership[key] === 'True';
+      if (isMember) {
+        html += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
+      }
+    });
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Не удалось загрузить новости</div>';
+  }
+}
+
+async function loadNotifications() {
+  const el = document.getElementById('notif-list');
+  if (!listMembership) await fetchListMembership();
+  if (!listMembership) {
+    el.innerHTML = '<div class="empty">Не удалось загрузить — попробуй ещё раз</div>';
+    return;
+  }
+  el.innerHTML = NOTIF_LISTS.map(cfg => {
+    const isOn = listMembership[cfg.key] === 'True';
+    return `
+      <div class="notif-row">
+        <span class="notif-label">${cfg.name}</span>
+        <div class="toggle ${isOn ? 'on' : 'off'}" onclick="toggleNotif('${cfg.key}')">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function toggleNotif(key) {
+  const cfg = NOTIF_LISTS.find(c => c.key === key);
+  if (!cfg) return;
+  const isOn = listMembership[key] === 'True';
+  const trigger = isOn ? cfg.off_trigger : cfg.on_trigger;
+
+  if (!trigger) {
+    alert('Для этого пока не настроено отключение — скоро появится');
+    return;
+  }
+
+  await fetch(`${API_URL}/app/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, action: trigger, params: {} })
+  }).catch(()=>{});
+
+  // Оптимистично переключаем сразу, потом сверяемся с реальностью через пару секунд
+  listMembership[key] = isOn ? 'False' : 'True';
+  loadNotifications();
+  setTimeout(async () => { await fetchListMembership(); loadNotifications(); }, 2500);
 }
 
 async function loadContinueWidget() {
@@ -441,30 +571,48 @@ function renderLibrary(items) {
     return;
   }
   listEl.innerHTML = items.map((l, i) => `
-    <div class="lec-card" onclick="openLecture(${i})">
+    <div class="lec-card">
       <div class="lec-title">${l.title}</div>
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
+      <div class="lec-links">
+        ${l.link ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
+        ${l.link_vk ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
+      </div>
     </div>
   `).join('');
 }
 
-function openLecture(index) {
-  const l = renderedItems[index];
-  if (!l) return;
-  const url = l.link || l.link_vk;
+function rememberLastLecture(l) {
   try {
     localStorage.setItem('club_app_last_lecture', JSON.stringify({
       slug: l.slug, title: l.title, description: l.description,
       link: l.link, link_vk: l.link_vk, ts: Date.now()
     }));
   } catch(e){}
+}
+
+function openUrl(url) {
   if (!url) return;
   if (window.Telegram?.WebApp?.openLink) {
     window.Telegram.WebApp.openLink(url);
   } else {
     window.open(url, '_blank');
   }
+}
+
+function openLectureLink(index, platform) {
+  const l = renderedItems[index];
+  if (!l) return;
+  rememberLastLecture(l);
+  openUrl(platform === 'vk' ? l.link_vk : l.link);
+}
+
+function openLecture(index) {
+  const l = renderedItems[index];
+  if (!l) return;
+  rememberLastLecture(l);
+  openUrl(l.link || l.link_vk);
 }
 
 let searchTimer;
@@ -485,6 +633,7 @@ function onSearchInput() {
     document.getElementById('tabbar').style.display = 'flex';
     loadProfile();
     loadContinueWidget();
+    loadNews();
   } else {
     document.getElementById('not-telegram-msg').style.display = 'flex';
   }
