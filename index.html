@@ -89,6 +89,8 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .icon-btn.spinning{animation:spin .6s linear}
 @keyframes spin{to{transform:rotate(360deg)}}
 .notif-btn-small{padding:7px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text-dim);font-family:var(--body);font-weight:600;font-size:11px;cursor:pointer}
+.ai-btn{width:100%;padding:12px;border-radius:14px;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:white;font-family:var(--body);font-weight:700;font-size:12.5px;border:none;cursor:pointer;margin-bottom:14px}
+.ai-btn:active{transform:scale(0.98)}
 .notif-btn-small:active{transform:scale(0.96)}
 .news-header{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
 .news-header .section-label{margin:0}
@@ -103,6 +105,24 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
 .news-block:last-child{margin-bottom:0}
 .news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.streams-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;-webkit-overflow-scrolling:touch}
+.streams-row::-webkit-scrollbar{display:none}
+.stream-tile{flex:0 0 auto;width:130px;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative}
+.stream-tile:active{transform:scale(0.97)}
+.stream-tile-img{width:100%;height:80px;object-fit:cover;display:block;background:var(--card2)}
+.stream-tile-title{font-size:11.5px;font-weight:700;padding:8px 10px;line-height:1.3}
+
+.tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
+.tag-pill{font-size:11px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer}
+.tag-pill.active{background:var(--warm-deep);border-color:transparent;color:white}
+
+.stream-hero{position:relative;height:220px;margin:0 -16px 0;overflow:hidden}
+.stream-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.stream-hero-fade{position:absolute;inset:0;background:linear-gradient(to bottom, transparent 40%, var(--bg) 100%)}
+.stream-back{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(10px)}
+.stream-body{padding-top:4px}
+.stream-title{font-family:var(--disp);font-weight:700;font-size:19px;margin-bottom:8px}
+.stream-desc{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:20px}
 .tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 .tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px}
@@ -220,11 +240,31 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 
   <!-- ── Библиотека ── -->
   <div class="view" id="view-library">
-    <div class="section-label">Библиотека</div>
+    <div class="section-label">Потоки</div>
+    <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
+
+    <div class="section-label">Искать в библиотеке</div>
+    <button class="ai-btn" onclick="openUrl('https://t.me/youselllikeagod_bot')">Спросить ИИ-помощника своими словами</button>
     <div class="search-wrap">
       <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
     </div>
+    <div id="tag-filter-row" class="tag-filter-row"></div>
     <div id="lib-list"><div class="loading">Загрузка...</div></div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Поток ── -->
+  <div class="view" id="view-stream">
+    <div class="stream-hero" id="stream-hero">
+      <img id="stream-hero-img" src="" alt="">
+      <div class="stream-hero-fade"></div>
+      <span class="stream-back" onclick="switchView('library')">←</span>
+    </div>
+    <div class="stream-body">
+      <div class="stream-title" id="stream-title">—</div>
+      <div class="stream-desc" id="stream-desc"></div>
+      <div id="stream-lectures"><div class="loading">Загрузка...</div></div>
+    </div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -347,9 +387,9 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  const tabEl = document.getElementById('tab-' + name);
+  const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
   if (tabEl) tabEl.classList.add('active');
-  if (name === 'library' && !allLectures.length) loadLibrary();
+  if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
   if (name === 'notifications') loadNotifications();
 }
 
@@ -584,6 +624,82 @@ async function loadProfile() {
   }
 }
 
+let activeTagFilter = null;
+let allTags = [];
+
+function collectTags(items) {
+  const set = new Set();
+  items.forEach(l => (l.tags || []).forEach(t => set.add(t)));
+  return [...set].sort();
+}
+
+function renderTagFilter() {
+  const el = document.getElementById('tag-filter-row');
+  if (!allTags.length) { el.innerHTML = ''; return; }
+  el.innerHTML = allTags.map(t => `
+    <span class="tag-pill ${activeTagFilter === t ? 'active' : ''}" onclick="toggleTagFilter('${t}')">#${t}</span>
+  `).join('');
+}
+
+function toggleTagFilter(tag) {
+  activeTagFilter = activeTagFilter === tag ? null : tag;
+  renderTagFilter();
+  applyTagFilter();
+}
+
+function applyTagFilter() {
+  const base = allLectures;
+  const filtered = activeTagFilter ? base.filter(l => (l.tags || []).includes(activeTagFilter)) : base;
+  renderLibrary(filtered);
+}
+
+async function loadStreams() {
+  const el = document.getElementById('streams-row');
+  try {
+    const streams = await fetch(`${API_URL}/streams`).then(r => r.json());
+    if (!streams.length) { el.innerHTML = ''; return; }
+    el.innerHTML = streams.map(s => `
+      <div class="stream-tile" onclick="openStream('${s.stream_key}')">
+        <img class="stream-tile-img" src="${s.image_url || ''}" alt="">
+        <div class="stream-tile-title">${s.title || s.stream_key}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = '';
+  }
+}
+
+async function openStream(key) {
+  switchView('stream');
+  document.getElementById('stream-title').textContent = 'Загрузка...';
+  document.getElementById('stream-desc').textContent = '';
+  document.getElementById('stream-hero-img').src = '';
+  document.getElementById('stream-lectures').innerHTML = '<div class="loading">Загрузка...</div>';
+  try {
+    const [stream, lectures] = await Promise.all([
+      fetch(`${API_URL}/streams/${key}`).then(r => r.json()),
+      fetch(`${API_URL}/streams/${key}/lectures`).then(r => r.json()),
+    ]);
+    document.getElementById('stream-title').textContent = stream.title || key;
+    document.getElementById('stream-desc').textContent = stream.description || '';
+    document.getElementById('stream-hero-img').src = stream.image_url || '';
+    renderedItems = lectures;
+    document.getElementById('stream-lectures').innerHTML = lectures.map((l, i) => `
+      <div class="lec-card">
+        <div class="lec-title">${l.title}</div>
+        <div class="lec-desc">${l.description || ''}</div>
+        <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
+        <div class="lec-links">
+          ${l.link ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
+          ${l.link_vk ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('stream-lectures').innerHTML = '<div class="empty">Не удалось загрузить поток</div>';
+  }
+}
+
 async function loadLibrary(query) {
   const listEl = document.getElementById('lib-list');
   listEl.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -593,8 +709,14 @@ async function loadLibrary(query) {
       : `${API_URL}/lectures?limit=100`;
     const r = await fetch(url);
     const data = await r.json();
-    if (!query) allLectures = data;
-    renderLibrary(data);
+    if (!query) {
+      allLectures = data;
+      allTags = collectTags(data);
+      renderTagFilter();
+      applyTagFilter();
+    } else {
+      renderLibrary(data);
+    }
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
