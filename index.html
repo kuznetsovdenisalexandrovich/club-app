@@ -8,16 +8,25 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
 
-:root {
+[data-theme="dark"] {
   --bg:#100e18; --bg2:#17141f; --card:#1a1725; --card2:#211d2e;
   --border:rgba(255,255,255,0.08); --line:rgba(255,255,255,0.06);
   --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+  --shadow:none;
+}
+[data-theme="light"] {
+  --bg:#f7f3ec; --bg2:#ffffff; --card:#ffffff; --card2:#f1ece2;
+  --border:rgba(40,30,20,0.08); --line:rgba(40,30,20,0.07);
+  --text:#2a2620; --text-dim:#6b6055; --text-faint:#9c9186;
+  --shadow:0 4px 18px -6px rgba(60,40,30,0.08);
+}
+:root {
   --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
   --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
   --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{background:var(--bg)}
+html,body{background:var(--bg);transition:background .25s}
 body{
   font-family:var(--body);color:var(--text);min-height:100vh;
   -webkit-font-smoothing:antialiased;
@@ -25,7 +34,12 @@ body{
 }
 .shell{max-width:520px;margin:0 auto;padding:0 16px}
 
-header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-items:center;gap:12px}
+header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.theme-switch{width:52px;height:30px;border-radius:20px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:3px;cursor:pointer;flex-shrink:0}
+[data-theme="dark"] .theme-switch{justify-content:flex-end}
+[data-theme="light"] .theme-switch{justify-content:flex-start}
+.theme-switch-thumb{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s}
 .mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:14px;color:white;flex-shrink:0}
 .brand-name{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em}
 .brand-sub{font-size:12px;color:var(--text-faint);margin-top:2px}
@@ -33,7 +47,7 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .section-label{font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
 .section-label:first-of-type{margin-top:0}
 
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:12px;box-shadow:var(--shadow);transition:background .25s,border-color .25s}
 
 .sub-card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .sub-left{display:flex;align-items:center;gap:12px}
@@ -61,6 +75,12 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .lec-tags{display:flex;flex-wrap:wrap;gap:6px}
 .lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
 
+.continue-card{cursor:pointer;background:linear-gradient(135deg,var(--lav-dim),transparent)}
+.continue-label{font-size:10.5px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.continue-title{font-family:var(--disp);font-weight:700;font-size:15px;line-height:1.4}
+.continue-progress{width:100%;height:5px;border-radius:10px;background:var(--card2);margin-top:12px;overflow:hidden}
+.continue-progress-bar{height:100%;background:linear-gradient(90deg,var(--lav),var(--coral));border-radius:10px}
+.scroll-spacer{height:24px}
 .tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 .tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px}
@@ -73,7 +93,8 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 .loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 
-.tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(23,20,31,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:50}
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:50}
+.scroll-fade{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom));left:0;right:0;height:36px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:49}
 .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-faint);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s}
 .tab-item.active{color:var(--lav)}
 .tab-icon{font-size:20px}
@@ -92,27 +113,28 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 <div class="shell" id="app-shell" style="display:none">
 
   <header>
-    <div class="mark">БП</div>
-    <div>
-      <div class="brand-name">Ты Боженька Продаж</div>
-      <div class="brand-sub" id="header-sub">—</div>
+    <div class="brand">
+      <div class="mark">БП</div>
+      <div>
+        <div class="brand-name">Ты Боженька Продаж</div>
+        <div class="brand-sub" id="header-sub">—</div>
+      </div>
+    </div>
+    <div class="theme-switch" id="theme-switch" onclick="toggleTheme()">
+      <div class="theme-switch-thumb" id="theme-thumb">☀</div>
     </div>
   </header>
 
   <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
-    <div class="section-label">Подписка</div>
-    <div class="card sub-card">
-      <div class="sub-left">
-        <div class="sub-icon">◆</div>
-        <div>
-          <div class="sub-name" id="sub-name">—</div>
-          <div class="sub-meta" id="sub-meta">—</div>
-        </div>
+    <div class="section-label">Продолжить</div>
+    <div class="card continue-card" id="continue-card" onclick="openContinue()">
+      <div class="continue-label" id="continue-kicker">—</div>
+      <div class="continue-title" id="continue-title">Загрузка...</div>
+      <div class="continue-progress" id="continue-progress-wrap" style="display:none">
+        <div class="continue-progress-bar" id="continue-progress-bar"></div>
       </div>
-      <span class="pill" id="sub-pill">—</span>
     </div>
-    <div class="sub-note" id="sub-note"></div>
 
     <div class="section-label">Меню</div>
     <div class="tile-grid">
@@ -151,6 +173,7 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
         <span class="tile-soon">Скоро</span>
       </div>
     </div>
+    <div class="scroll-spacer"></div>
   </div>
 
   <!-- ── Библиотека ── -->
@@ -160,10 +183,24 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
       <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
     </div>
     <div id="lib-list"><div class="loading">Загрузка...</div></div>
+    <div class="scroll-spacer"></div>
   </div>
 
   <!-- ── Профиль ── -->
   <div class="view" id="view-profile">
+    <div class="section-label">Подписка</div>
+    <div class="card sub-card">
+      <div class="sub-left">
+        <div class="sub-icon">◆</div>
+        <div>
+          <div class="sub-name" id="sub-name">—</div>
+          <div class="sub-meta" id="sub-meta">—</div>
+        </div>
+      </div>
+      <span class="pill" id="sub-pill">—</span>
+    </div>
+    <div class="sub-note" id="sub-note"></div>
+
     <div class="section-label">Профиль</div>
     <div class="card">
       <div class="profile-row">
@@ -189,6 +226,7 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
       <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="testCheckMembership()">Проверить членство (тест)</button>
       <div style="font-size:12.5px;color:var(--text-dim);margin-top:10px;text-align:center" id="test-result"></div>
     </div>
+    <div class="scroll-spacer"></div>
   </div>
 
 </div>
@@ -201,6 +239,8 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="scroll-fade"></div>
 
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
@@ -219,6 +259,23 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 
 <script>
 const API_URL = 'https://club-backend-production-fc7f.up.railway.app';
+
+function applyThemeIcon(theme){
+  document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
+}
+function toggleTheme(){
+  const html = document.documentElement;
+  const next = html.dataset.theme === 'light' ? 'dark' : 'light';
+  html.dataset.theme = next;
+  applyThemeIcon(next);
+  try{ localStorage.setItem('club_app_theme', next); }catch(e){}
+}
+(function initTheme(){
+  let saved = 'dark';
+  try{ saved = localStorage.getItem('club_app_theme') || 'dark'; }catch(e){}
+  document.documentElement.dataset.theme = saved;
+  document.addEventListener('DOMContentLoaded', () => applyThemeIcon(saved));
+})();
 let telegramId = null;
 let allLectures = [];
 
@@ -277,6 +334,49 @@ async function testCheckMembership() {
   resultEl.textContent = 'Не дождались ответа за 12 секунд — проверь блок в Salebot';
 }
 
+function openContinue() {
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
+  if (last) {
+    const url = last.link || last.link_vk;
+    if (url) {
+      if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(url);
+      else window.open(url, '_blank');
+    }
+  } else {
+    switchView('library');
+  }
+}
+
+async function loadContinueWidget() {
+  const kickerEl = document.getElementById('continue-kicker');
+  const titleEl = document.getElementById('continue-title');
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
+
+  if (last) {
+    kickerEl.textContent = 'Продолжить просмотр';
+    titleEl.textContent = last.title;
+    return;
+  }
+
+  // Своей истории просмотра ещё нет — показываем самую свежую лекцию из библиотеки
+  try {
+    const r = await fetch(`${API_URL}/lectures?limit=1`);
+    const data = await r.json();
+    if (data.length) {
+      kickerEl.textContent = 'Новое в библиотеке';
+      titleEl.textContent = data[0].title;
+    } else {
+      kickerEl.textContent = 'Библиотека';
+      titleEl.textContent = 'Загляни в раздел «Библиотека»';
+    }
+  } catch (e) {
+    kickerEl.textContent = 'Библиотека';
+    titleEl.textContent = 'Загляни в раздел «Библиотека»';
+  }
+}
+
 async function loadProfile() {
   try {
     const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
@@ -331,14 +431,17 @@ async function loadLibrary(query) {
   }
 }
 
+let renderedItems = [];
+
 function renderLibrary(items) {
+  renderedItems = items;
   const listEl = document.getElementById('lib-list');
   if (!items.length) {
     listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
     return;
   }
-  listEl.innerHTML = items.map(l => `
-    <div class="lec-card" onclick="openLecture('${l.link || ''}','${l.link_vk || ''}')">
+  listEl.innerHTML = items.map((l, i) => `
+    <div class="lec-card" onclick="openLecture(${i})">
       <div class="lec-title">${l.title}</div>
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
@@ -346,8 +449,16 @@ function renderLibrary(items) {
   `).join('');
 }
 
-function openLecture(link, linkVk) {
-  const url = link || linkVk;
+function openLecture(index) {
+  const l = renderedItems[index];
+  if (!l) return;
+  const url = l.link || l.link_vk;
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
   if (!url) return;
   if (window.Telegram?.WebApp?.openLink) {
     window.Telegram.WebApp.openLink(url);
@@ -373,6 +484,7 @@ function onSearchInput() {
     document.getElementById('app-shell').style.display = 'block';
     document.getElementById('tabbar').style.display = 'flex';
     loadProfile();
+    loadContinueWidget();
   } else {
     document.getElementById('not-telegram-msg').style.display = 'flex';
   }
