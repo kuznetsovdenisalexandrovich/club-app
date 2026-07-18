@@ -23,6 +23,7 @@
 :root {
   --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
   --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
+  --warm:#d97a52; --warm-deep:#c8663f;
   --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -83,13 +84,20 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
 .continue-progress{width:100%;height:5px;border-radius:10px;background:var(--card2);margin-top:12px;overflow:hidden}
 .continue-progress-bar{height:100%;background:linear-gradient(90deg,var(--lav),var(--coral));border-radius:10px}
 .scroll-spacer{height:24px}
-.notif-btn{width:100%;padding:13px;border-radius:14px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:var(--body);font-weight:600;font-size:13px;cursor:pointer;margin-bottom:20px}
-.notif-btn:active{transform:scale(0.98)}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text-dim);flex-shrink:0}
+.icon-btn:active{transform:scale(0.92)}
+.icon-btn.spinning{animation:spin .6s linear}
+@keyframes spin{to{transform:rotate(360deg)}}
+.notif-btn-small{padding:7px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text-dim);font-family:var(--body);font-weight:600;font-size:11px;cursor:pointer}
+.notif-btn-small:active{transform:scale(0.96)}
+.news-header{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
+.news-header .section-label{margin:0}
+.header-actions{display:flex;align-items:center;gap:10px}
 .notif-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
 .notif-row:last-child{border-bottom:none}
 .notif-label{font-size:13px;font-weight:600}
 .toggle{width:46px;height:26px;border-radius:16px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:2px;cursor:pointer;flex-shrink:0;transition:background .15s}
-.toggle.on{background:var(--lav-deep);justify-content:flex-end}
+.toggle.on{background:var(--warm-deep);justify-content:flex-end}
 .toggle.off{justify-content:flex-start}
 .toggle-thumb{width:20px;height:20px;border-radius:50%;background:white;transition:all .15s}
 .news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
@@ -134,18 +142,21 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
         <div class="brand-sub" id="header-sub">—</div>
       </div>
     </div>
-    <div class="theme-switch" id="theme-switch" onclick="toggleTheme()">
-      <div class="theme-switch-thumb" id="theme-thumb">☀</div>
+    <div class="header-actions">
+      <button class="icon-btn" id="refresh-btn" onclick="refreshApp()" title="Обновить">⟳</button>
+      <div class="theme-switch" id="theme-switch" onclick="toggleTheme()">
+        <div class="theme-switch-thumb" id="theme-thumb">☀</div>
+      </div>
     </div>
   </header>
 
   <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
-    <div class="section-label">Новости</div>
-    <div class="card" id="news-card">
-      <div class="loading">Загрузка...</div>
+    <div class="news-header" id="news-header" style="display:none">
+      <div class="section-label" style="margin:0">Обновления клуба</div>
+      <button class="notif-btn-small" onclick="switchView('notifications')">Уведомления</button>
     </div>
-    <button class="notif-btn" onclick="switchView('notifications')">Настроить уведомления</button>
+    <div class="card" id="news-card" style="display:none"></div>
 
     <div class="section-label">Продолжить</div>
     <div class="card continue-card" id="continue-card" onclick="openContinue()">
@@ -161,6 +172,10 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
       <div class="tile" onclick="switchView('library')">
         <div class="tile-icon">▤</div>
         <div class="tile-label">Библиотека</div>
+      </div>
+      <div class="tile" onclick="switchView('notifications')">
+        <div class="tile-icon">♪</div>
+        <div class="tile-label">Уведомления</div>
       </div>
       <div class="tile" onclick="comingSoon()">
         <div class="tile-icon">◷</div>
@@ -306,6 +321,20 @@ function toggleTheme(){
 let telegramId = null;
 let allLectures = [];
 
+async function refreshApp() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  listMembership = null;
+  try {
+    await Promise.all([loadProfile(), loadNews(), loadContinueWidget()]);
+    if (document.getElementById('view-notifications').classList.contains('active')) {
+      await loadNotifications();
+    }
+  } finally {
+    setTimeout(() => btn.classList.remove('spinning'), 400);
+  }
+}
+
 function comingSoon() {
   const el = document.getElementById('toast');
   el.textContent = 'Скоро появится здесь!';
@@ -415,13 +444,20 @@ async function fetchListMembership() {
 
 async function loadNews() {
   const el = document.getElementById('news-card');
+  const headerEl = document.getElementById('news-header');
   try {
     const [news] = await Promise.all([
       fetch(`${API_URL}/news/latest`).then(r => r.json()),
       listMembership ? Promise.resolve() : fetchListMembership(),
     ]);
 
-    let html = `<div class="news-block">${news.common_text || 'Пока новостей нет.'}</div>`;
+    if (!news.common_text || !news.common_text.trim()) {
+      el.style.display = 'none';
+      headerEl.style.display = 'none';
+      return;
+    }
+
+    let html = `<div class="news-block">${news.common_text}</div>`;
     (news.targeted || []).forEach(t => {
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
@@ -431,8 +467,11 @@ async function loadNews() {
       }
     });
     el.innerHTML = html;
+    el.style.display = 'block';
+    headerEl.style.display = 'flex';
   } catch (e) {
-    el.innerHTML = '<div class="empty">Не удалось загрузить новости</div>';
+    el.style.display = 'none';
+    headerEl.style.display = 'none';
   }
 }
 
