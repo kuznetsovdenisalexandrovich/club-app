@@ -124,6 +124,12 @@ header{padding:calc(env(safe-area-inset-top)+20px) 0 20px;display:flex;align-ite
         <span class="profile-value" id="p-next">—</span>
       </div>
     </div>
+
+    <div class="section-label">Тест</div>
+    <div class="card">
+      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="testCheckMembership()">Проверить членство (тест)</button>
+      <div style="font-size:12.5px;color:var(--text-dim);margin-top:10px;text-align:center" id="test-result"></div>
+    </div>
   </div>
 
   <!-- ── Библиотека ── -->
@@ -176,6 +182,35 @@ function monthsSince(dateStr) {
   const now = new Date();
   let months = (now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth());
   return months < 1 ? '< 1' : months;
+}
+
+async function testCheckMembership() {
+  const resultEl = document.getElementById('test-result');
+  resultEl.textContent = 'Отправляю запрос...';
+  try {
+    await fetch(`${API_URL}/app/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, action: 'check_membership', params: {} })
+    });
+  } catch (e) {
+    resultEl.textContent = 'Ошибка отправки';
+    return;
+  }
+
+  resultEl.textContent = 'Жду ответ от Salebot...';
+  for (let i = 0; i < 8; i++) {
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_membership`);
+      const data = await r.json();
+      if (data.status === 'done') {
+        resultEl.textContent = 'Готово: ' + JSON.stringify(data.result);
+        return;
+      }
+    } catch (e) {}
+  }
+  resultEl.textContent = 'Не дождались ответа за 12 секунд — проверь блок в Salebot';
 }
 
 async function loadProfile() {
