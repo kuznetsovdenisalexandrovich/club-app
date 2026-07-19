@@ -1,812 +1,1838 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Ты Боженька Продаж</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="БП Админка">
+<meta name="theme-color" content="#7c6cf0">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>БП · Админка</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
 
-[data-theme="dark"] {
-  --bg:#121014; --bg2:#1c1a1e; --card:#1c1a1e; --card2:#252226;
-  --border:rgba(255,255,255,0.09); --line:rgba(255,255,255,0.07);
-  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
-  --shadow:none;
-}
+/* ── Темы ── */
 [data-theme="light"] {
-  --bg:#faf5ee; --bg2:#ffffff; --card:#fffcf8; --card2:#f3ebe0;
-  --border:rgba(60,40,25,0.09); --line:rgba(60,40,25,0.07);
-  --text:#2b241d; --text-dim:#6e6156; --text-faint:#a89b8c;
-  --shadow:0 6px 20px -8px rgba(90,60,30,0.10);
+  --bg:        #f1ecfb;
+  --bg-b:      #e9effc;
+  --bg-c:      #fbeef6;
+  --surface:   rgba(255,255,255,0.65);
+  --surface2:  rgba(255,255,255,0.85);
+  --border:    rgba(255,255,255,0.6);
+  --line:      rgba(120,110,160,0.13);
+  --text:      #2c2a3d;
+  --text-dim:  #6b6680;
+  --text-faint:#a7a2bd;
+  --card-bg:   rgba(255,255,255,0.55);
+  --input-bg:  rgba(255,255,255,0.5);
+  --popup-bg:  #f4f0fc;
+  --stat-bg:   rgba(255,255,255,0.6);
+  --blob1-op:  0.22;
+  --blob2-op:  0.18;
+  --chart-grid:rgba(124,108,240,0.08);
+  --chart-tick:#a7a2bd;
 }
+[data-theme="dark"] {
+  --bg:        #1e1c28;
+  --bg-b:      #221f30;
+  --bg-c:      #261e2e;
+  --surface:   rgba(255,255,255,0.06);
+  --surface2:  rgba(255,255,255,0.09);
+  --border:    rgba(255,255,255,0.10);
+  --line:      rgba(255,255,255,0.08);
+  --text:      #ede9f8;
+  --text-dim:  #9d99b8;
+  --text-faint:#5e5a78;
+  --card-bg:   rgba(255,255,255,0.05);
+  --input-bg:  rgba(255,255,255,0.07);
+  --popup-bg:  #231f31;
+  --stat-bg:   rgba(255,255,255,0.07);
+  --blob1-op:  0.15;
+  --blob2-op:  0.10;
+  --chart-grid:rgba(255,255,255,0.06);
+  --chart-tick:#5e5a78;
+}
+
 :root {
   --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
-  --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
-  --warm:#e8614a; --warm-deep:#cf4f39;
+  --peach:#ffb199; --mint:#8fe3c0; --coral:#ff8fa3;
+  --green:#3ecf8e; --red:#ff453a;
   --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
+  --shadow:0 4px 20px -6px rgba(124,108,240,0.15);
 }
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{background:var(--bg);transition:background .25s}
+html{background:var(--bg);transition:background .3s}
 body{
   font-family:var(--body);color:var(--text);min-height:100vh;
+  background:
+    radial-gradient(800px 500px at -10% -10%,var(--bg-c),transparent 60%),
+    radial-gradient(700px 500px at 110% 5%,var(--bg-b),transparent 55%),
+    var(--bg);
   -webkit-font-smoothing:antialiased;
-  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));
+  transition:background .3s,color .3s;
 }
-.shell{max-width:520px;margin:0 auto;padding:0 16px}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;transition:opacity .3s}
+.blob-1{width:300px;height:300px;top:-100px;right:-80px;background:var(--lav);opacity:var(--blob1-op)}
+.blob-2{width:250px;height:250px;bottom:15%;left:-100px;background:var(--peach);opacity:var(--blob2-op)}
+.blob-3{width:200px;height:200px;top:40%;right:-60px;background:var(--mint);opacity:var(--blob2-op)}
+.shell{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:0 16px}
 
-header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{display:flex;align-items:center;gap:12px}
-.theme-switch{width:52px;height:30px;border-radius:20px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:3px;cursor:pointer;flex-shrink:0}
-[data-theme="dark"] .theme-switch{justify-content:flex-end}
-[data-theme="light"] .theme-switch{justify-content:flex-start}
-.theme-switch-thumb{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s}
-.mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--lav),var(--warm));display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:14px;color:white;flex-shrink:0;box-shadow:0 0 11px rgba(232,97,74,0.18),0 0 7px rgba(155,140,242,0.15),inset 0 1px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.25)}
-.brand-name{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em}
-.brand-sub{font-size:12px;color:var(--text-faint);margin-top:2px}
-
-.section-label{font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
-.section-label:first-of-type{margin-top:0}
-
-.card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:18px;margin-bottom:12px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);transition:background .25s,border-color .25s}
-
-.sub-card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(232,97,74,0.08),transparent);box-shadow:0 0 18px -10px rgba(232,97,74,0.15),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
-.sub-left{display:flex;align-items:center;gap:12px}
-.sub-icon{width:44px;height:44px;border-radius:14px;background:var(--lav-dim);color:var(--lav-deep);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
-.sub-name{font-family:var(--disp);font-weight:700;font-size:15px}
-.sub-meta{font-size:12px;color:var(--text-faint);margin-top:3px}
-.pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap}
-.pill.active{background:rgba(62,207,142,0.15);color:var(--green)}
-.pill.inactive{background:rgba(255,69,58,0.15);color:var(--red)}
-.sub-note{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:14px}
-
-.profile-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
-.profile-row:last-child{border-bottom:none}
-.profile-label{font-size:13px;color:var(--text-faint)}
-.profile-value{font-size:13px;font-weight:600;text-align:right}
-
-.search-wrap{position:relative;margin-bottom:14px}
-.search-wrap input{width:100%;font-size:14px;font-family:var(--body);padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
-.search-wrap input::placeholder{color:var(--text-faint)}
-
-.lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
-.lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
-.lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.lec-tags{display:flex;flex-wrap:wrap;gap:6px}
-.lec-links{display:flex;gap:8px;margin-top:12px}
-.lec-link-btn{flex:1;font-size:12px;font-weight:700;padding:9px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--lav);cursor:pointer}
-.lec-link-btn:active{transform:scale(0.97)}
-.lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
-
-.continue-card{cursor:pointer;background:linear-gradient(135deg,rgba(232,97,74,0.12),transparent);box-shadow:0 0 20px -10px rgba(232,97,74,0.18),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
-.continue-label{font-size:10.5px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.continue-play{font-size:9px}
-.continue-title{font-family:var(--disp);font-weight:700;font-size:15px;line-height:1.4}
-.continue-progress{width:100%;height:5px;border-radius:10px;background:var(--card2);margin-top:12px;overflow:hidden}
-.continue-progress-bar{height:100%;background:linear-gradient(90deg,var(--warm),var(--amber));border-radius:10px}
-.scroll-spacer{height:24px}
-.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text-dim);flex-shrink:0}
+/* Header */
+header{padding:calc(env(safe-area-inset-top)+16px) 0 16px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:13px;color:white;box-shadow:0 6px 16px -4px rgba(155,140,242,0.45)}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:-.01em}
+.brand-sub{font-size:11px;color:var(--text-faint);margin-top:1px}
+.header-right{display:flex;gap:8px;align-items:center}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;font-size:15px;transition:transform .15s;color:var(--text)}
 .icon-btn:active{transform:scale(0.92)}
-.icon-btn.spinning{animation:spin .6s linear}
-@keyframes spin{to{transform:rotate(360deg)}}
-.notif-btn-small{padding:7px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text-dim);font-family:var(--body);font-weight:600;font-size:11px;cursor:pointer}
-.ai-btn{width:100%;padding:12px;border-radius:14px;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:white;font-family:var(--body);font-weight:700;font-size:12.5px;border:none;cursor:pointer;margin-bottom:14px;box-shadow:0 3px 12px -3px rgba(232,97,74,0.28),0 0 9px rgba(232,97,74,0.15)}
-.ai-btn:active{transform:scale(0.98)}
-.notif-btn-small:active{transform:scale(0.96)}
-.news-header{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
-.news-header .section-label{margin:0}
-.header-actions{display:flex;align-items:center;gap:10px}
-.notif-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
-.notif-row:last-child{border-bottom:none}
-.notif-label{font-size:13px;font-weight:600}
-.toggle{width:46px;height:26px;border-radius:16px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:2px;cursor:pointer;flex-shrink:0;transition:background .15s}
-.toggle.on{background:var(--warm-deep);justify-content:flex-end;box-shadow:0 0 8px -2px rgba(232,97,74,0.3)}
-.toggle.off{justify-content:flex-start}
-.toggle-thumb{width:20px;height:20px;border-radius:50%;background:white;transition:all .15s}
-.news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
-.news-block:last-child{margin-bottom:0}
-.news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.streams-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;-webkit-overflow-scrolling:touch}
-.streams-row::-webkit-scrollbar{display:none}
-.stream-tile{flex:0 0 auto;width:130px;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative}
-.stream-tile:active{transform:scale(0.97)}
-.stream-tile-img{width:100%;height:80px;object-fit:cover;display:block;background:var(--card2)}
-.stream-tile-title{font-size:11.5px;font-weight:700;padding:8px 10px;line-height:1.3}
+.refresh-btn:active{transform:scale(0.92) rotate(180deg) !important}
+.last-update{font-size:11px;color:var(--text-faint);text-align:center;margin-bottom:16px}
 
-.tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
-.tag-pill{font-size:11px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer}
-.tag-pill.active{background:var(--warm-deep);border-color:transparent;color:white}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi-wide{grid-column:span 2}
+.kpi{background:var(--surface);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.kpi-val{font-family:var(--disp);font-weight:900;font-size:26px;letter-spacing:-.03em;color:var(--text);line-height:1}
+.kpi-val.big{font-size:30px}
+.kpi-sub{font-size:11px;color:var(--text-faint);margin-top:5px}
+.kpi-accent{color:var(--lav-deep)}
 
-.stream-hero{position:relative;height:220px;margin:0 -16px 0;overflow:hidden}
-.stream-hero img{width:100%;height:100%;object-fit:cover;display:block}
-.stream-hero-fade{position:absolute;inset:0;background:linear-gradient(to bottom, transparent 40%, var(--bg) 100%)}
-.stream-back{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(10px)}
-.stream-body{padding-top:4px}
-.stream-title{font-family:var(--disp);font-weight:700;font-size:19px;margin-bottom:8px}
-.stream-desc{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:20px}
-.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
-.tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
-.tile:active{transform:scale(0.96)}
-.tile-icon{width:36px;height:36px;border-radius:12px;background:var(--lav-dim);color:var(--lav);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
-.tile-label{font-size:12px;font-weight:600;line-height:1.3}
-.tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
+/* Section */
+.section{margin-bottom:14px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px;flex-wrap:wrap;gap:6px}
+.section-title{font-family:var(--disp);font-weight:700;font-size:14px;letter-spacing:-.01em}
+.card{background:var(--surface);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.scroll-row{-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
+.scroll-row::-webkit-scrollbar{display:none}
+.scroll-row.dragging{cursor:grabbing;user-select:none}
+.period-tabs{display:flex;gap:6px}
+.ptab{font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;cursor:pointer;border:none;background:rgba(124,108,240,0.08);color:var(--text-dim);transition:all .15s;font-family:var(--body)}
+.ptab.active{background:var(--lav-dim);color:var(--lav-deep)}
+.chart-wrap{padding:16px 16px 8px}
+.chart-canvas-wrap{position:relative;height:140px}
 
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:100;white-space:nowrap}
-.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
-.loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
+/* List */
+.list-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.list-item:last-child{border-bottom:none}
+.list-item:active{background:rgba(155,140,242,0.08)}
+.avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:var(--lav-dim);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--lav-deep)}
+.item-info{flex:1;min-width:0}
+.item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-sub{font-size:11px;color:var(--text-faint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-right{text-align:right;flex-shrink:0}
+.item-val{font-size:12px;font-weight:700;color:var(--lav-deep)}
+.item-date{font-size:11px;color:var(--text-faint);margin-top:2px}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.03em}
+.badge-ok{background:rgba(62,207,142,0.15);color:#1a9466}
+.badge-err{background:rgba(248,113,113,0.15);color:#c0392b}
+.badge-act{background:var(--lav-dim);color:var(--lav-deep)}
 
-.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:50}
-.scroll-fade{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom));left:0;right:0;height:36px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:49}
-.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-faint);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s}
-.tab-icon{font-size:20px;transition:filter .15s;display:flex;align-items:center;justify-content:center}
-.tab-item.active{color:var(--warm)}
-.tab-item.active .tab-icon{filter:drop-shadow(0 0 4px var(--warm))}
-.tab-underline{width:20px;height:2px;border-radius:2px;background:transparent;margin-top:4px}
-.tab-item.active .tab-underline{background:var(--warm)}
+/* Payments */
+.pay-item{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.pay-item:last-child{border-bottom:none}
+.pay-icon{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.pay-icon-ok{background:rgba(62,207,142,0.15)}
+.pay-icon-err{background:rgba(248,113,113,0.12)}
+.pay-info{flex:1;min-width:0}
+.pay-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-meta{font-size:11px;color:var(--text-faint);margin-top:1px}
+.pay-amount{font-size:13px;font-weight:700;flex-shrink:0}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.filter-row input,.filter-row select{font-size:12px;font-family:var(--body);padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);flex:1;min-width:90px}
+.pay-summary{padding:10px 16px;font-size:12px;color:var(--text-faint);text-align:center}
+.search-wrap{padding:12px 16px;border-bottom:1px solid var(--line)}
+.search-wrap input{width:100%;font-size:13px;font-family:var(--body);padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)}
+.search-wrap input::placeholder{color:var(--text-faint)}
+.empty{padding:24px;text-align:center;color:var(--text-faint);font-size:13px}
+.loading{text-align:center;padding:20px;color:var(--text-faint);font-size:13px}
 
-.view{display:none}
-.view.active{display:block}
+/* Popup */
+.popup-overlay{position:fixed;inset:0;background:rgba(20,18,30,0.5);backdrop-filter:blur(6px);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.popup-overlay.open{display:flex}
+.popup{background:var(--popup-bg);border-radius:24px 24px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:0 0 calc(24px + env(safe-area-inset-bottom));box-shadow:0 -8px 40px rgba(124,108,240,0.2)}
+.popup-handle{width:40px;height:4px;border-radius:2px;background:var(--lav-dim);margin:12px auto 16px}
+.html-toolbar{display:flex;gap:6px}
+.html-toolbar button{width:34px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);font-family:var(--body);font-size:13px;cursor:pointer}
+.html-toolbar button:active{opacity:.7}
+.rich-input{min-height:120px;max-height:400px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;resize:vertical}
+.rich-input:empty:before{content:attr(data-placeholder);color:var(--text-faint)}
+.rich-input b,.rich-input strong{font-weight:700}
+.rich-input i,.rich-input em{font-style:italic}
+.rich-input u{text-decoration:underline}
+.rich-input s,.rich-input strike{text-decoration:line-through}
+.rich-input a{color:var(--lav-deep);text-decoration:underline}
+.rich-input blockquote{border-left:3px solid var(--lav-deep);margin:4px 0;padding:2px 0 2px 10px;color:var(--text-faint)}
+.rich-input .tg-spoiler-mark{background:rgba(140,140,140,.35);border-radius:3px;padding:0 2px}
+.emoji-picker{display:none;position:absolute;top:38px;left:0;z-index:20;background:var(--popup-bg);border:1px solid var(--line);border-radius:12px;padding:8px;grid-template-columns:repeat(6,1fr);gap:2px;box-shadow:0 4px 20px rgba(0,0,0,.2);width:220px}
+.emoji-picker.open{display:grid}
+.emoji-picker button{font-size:18px;padding:4px;border:none;background:transparent;cursor:pointer;border-radius:6px;line-height:1}
+.emoji-picker button:hover{background:var(--input-bg)}
+.popup-header{padding:0 20px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px}
+.popup-avatar{width:52px;height:52px;border-radius:50%;background:var(--lav-dim);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--lav-deep);flex-shrink:0}
+.popup-name{font-family:var(--disp);font-weight:700;font-size:16px;letter-spacing:-.01em}
+.popup-handle-link{font-size:12px;color:var(--lav-deep);margin-top:3px}
+.popup-close{margin-left:auto;width:32px;height:32px;border-radius:50%;background:var(--lav-dim);border:none;cursor:pointer;font-size:16px;color:var(--lav-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.popup-body{padding:16px 20px}
+.popup-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.popup-stat{background:var(--stat-bg);border-radius:14px;padding:12px 14px;border:1px solid var(--border)}
+.popup-stat-label{font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.popup-stat-val{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:-.02em;color:var(--text)}
+.popup-stat-val.accent{color:var(--lav-deep)}
+.popup-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.popup-row:last-of-type{border-bottom:none}
+.popup-row-label{color:var(--text-faint);font-size:12px}
+.popup-row-val{font-weight:600;text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.popup-section-title{font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 10px}
+.popup-input{width:100%;font-size:13px;font-family:var(--body);padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);margin-bottom:8px}
+.popup-input::placeholder{color:var(--text-faint)}
+.popup-save{width:100%;padding:12px;border-radius:14px;background:var(--lav-deep);color:white;font-family:var(--disp);font-weight:700;font-size:13px;border:none;cursor:pointer;margin-top:4px;transition:opacity .15s}
+.popup-save:active{opacity:.8}
 
-.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 24px;gap:14px}
-.center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
-.center-msg h2{font-family:var(--disp);font-weight:700;font-size:17px}
-.center-msg p{font-size:13px;color:var(--text-dim);line-height:1.6}
+/* Action buttons */
+.actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.action-btn{padding:10px 8px;border-radius:14px;border:1px solid var(--border);background:var(--stat-bg);font-size:12px;font-weight:600;font-family:var(--body);color:var(--text);cursor:pointer;text-align:center;transition:all .15s;line-height:1.3}
+.action-btn:active{opacity:.75;transform:scale(0.97)}
+.action-btn.danger{color:var(--red);border-color:rgba(255,69,58,0.25);background:rgba(255,69,58,0.06)}
+.action-btn.success{color:var(--green);border-color:rgba(62,207,142,0.25);background:rgba(62,207,142,0.06)}
+.action-btn.primary{color:var(--lav-deep);border-color:var(--lav-dim);background:var(--lav-dim)}
+.scroll-btn{flex:0 0 auto;white-space:nowrap;width:auto;padding:12px 20px;margin-bottom:0}
+.action-result{font-size:12px;text-align:center;padding:8px;border-radius:10px;margin-bottom:8px;display:none}
+.action-result.ok{background:rgba(62,207,142,0.12);color:#1a9466}
+.action-result.err{background:rgba(255,69,58,0.10);color:var(--red)}
+.payload-row{display:none;gap:6px;margin-bottom:8px}
+.payload-row.visible{display:flex}
+.payload-input{flex:1;font-size:12px;font-family:var(--body);padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)}
+.payload-input::placeholder{color:var(--text-faint)}
+.send-payload-btn{padding:8px 14px;border-radius:10px;background:var(--lav-deep);color:white;border:none;font-size:12px;font-weight:600;font-family:var(--body);cursor:pointer;white-space:nowrap}
+
+/* PIN screen */
+.pin-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+.pin-screen.hidden{display:none}
+.pin-logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:20px;color:white;box-shadow:0 8px 24px -6px rgba(155,140,242,0.45)}
+.pin-title{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:-.01em;color:var(--text)}
+.pin-dots{display:flex;gap:12px}
+.pin-dot{width:12px;height:12px;border-radius:50%;background:var(--lav-dim);transition:background .15s}
+.pin-dot.filled{background:var(--lav-deep)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:240px}
+.pin-btn{height:64px;border-radius:16px;border:1px solid var(--border);background:var(--surface);font-family:var(--disp);font-weight:700;font-size:20px;color:var(--text);cursor:pointer;transition:all .12s;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.pin-btn:active{transform:scale(0.94);background:var(--lav-dim)}
+.pin-btn.del{font-size:16px;color:var(--text-faint)}
+.pin-error{font-size:13px;color:var(--red);height:18px;text-align:center}
 </style>
 </head>
 <body>
 
-<div class="shell" id="app-shell" style="display:none">
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
 
+<div class="shell">
   <header>
     <div class="brand">
       <div class="mark">БП</div>
       <div>
-        <div class="brand-name">Ты Боженька Продаж</div>
-        <div class="brand-sub" id="header-sub">—</div>
+        <div class="brand-name">Боженька Продаж</div>
+        <div class="brand-sub">Административная панель</div>
       </div>
     </div>
-    <div class="header-actions">
-      <button class="icon-btn" id="refresh-btn" onclick="refreshApp()" title="Обновить">⟳</button>
-      <div class="theme-switch" id="theme-switch" onclick="toggleTheme()">
-        <div class="theme-switch-thumb" id="theme-thumb">☀</div>
-      </div>
+    <div class="header-right">
+      <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Тёмная тема">🌙</button>
+      <button class="icon-btn refresh-btn" onclick="loadAll()" title="Обновить">↻</button>
     </div>
   </header>
 
-  <!-- ── Портал ── -->
-  <div class="view active" id="view-portal">
-    <div class="news-header" id="news-header" style="display:none">
-      <div class="section-label" style="margin:0">Обновления клуба</div>
-      <button class="notif-btn-small" onclick="switchView('notifications')">Уведомления</button>
-    </div>
-    <div class="card" id="news-card" style="display:none"></div>
+  <div class="last-update" id="last-update">Загрузка...</div>
 
-    <div class="section-label">Продолжить</div>
-    <div class="card continue-card" id="continue-card" onclick="openContinue()">
-      <div class="continue-label"><span class="continue-play">▶</span><span id="continue-kicker">—</span></div>
-      <div class="continue-title" id="continue-title">Загрузка...</div>
-      <div class="continue-progress" id="continue-progress-wrap" style="display:none">
-        <div class="continue-progress-bar" id="continue-progress-bar"></div>
-      </div>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Участников</div>
+      <div class="kpi-val" id="stat-members">—</div>
+      <div class="kpi-sub">активных сейчас</div>
     </div>
-
-    <div class="section-label">Меню</div>
-    <div class="tile-grid">
-      <div class="tile" onclick="switchView('library')">
-        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-        <div class="tile-label">Библиотека</div>
-      </div>
-      <div class="tile" onclick="switchView('notifications')">
-        <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <div class="tile-label">Уведомления</div>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <div class="tile-label">Расписание</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:rgba(110,168,254,0.16);color:#6ea8fe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 18 18 6M18 6H9M18 6v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="tile-label">Пригласить друга</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5v9M9 9.8c0-1.3 1.2-2.3 3-2.3s3 .9 3 2.1c0 2.8-6 1.4-6 4.2 0 1.3 1.3 2.2 3 2.2s3-.9 3-2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-        <div class="tile-label">Бонусы</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 3 9l9 13 9-13-9-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 9h18M8.5 9 12 2l3.5 7M8.5 9 12 22M15.5 9 12 22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
-        <div class="tile-label">Настройки подписки</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:var(--card2);color:var(--text-faint)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
-        <div class="tile-label">Поддержка</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
+    <div class="kpi">
+      <div class="kpi-label">Платежей</div>
+      <div class="kpi-val" id="stat-payments">—</div>
+      <div class="kpi-sub">за всё время</div>
     </div>
-    <div class="scroll-spacer"></div>
-  </div>
-
-  <!-- ── Уведомления ── -->
-  <div class="view" id="view-notifications">
-    <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
-      <span>Уведомления</span>
-    </div>
-    <div class="card" id="notif-list">
-      <div class="loading">Загрузка...</div>
-    </div>
-    <div class="scroll-spacer"></div>
-  </div>
-
-  <!-- ── Библиотека ── -->
-  <div class="view" id="view-library">
-    <div class="section-label">Потоки</div>
-    <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
-
-    <div class="section-label">Искать в библиотеке</div>
-    <button class="ai-btn" onclick="openUrl('https://t.me/youselllikeagod_bot')">Спросить ИИ-помощника своими словами</button>
-    <div class="search-wrap">
-      <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
-    </div>
-    <div id="tag-filter-row" class="tag-filter-row"></div>
-    <div id="lib-list"><div class="loading">Загрузка...</div></div>
-    <div class="scroll-spacer"></div>
-  </div>
-
-  <!-- ── Поток ── -->
-  <div class="view" id="view-stream">
-    <div class="stream-hero" id="stream-hero">
-      <img id="stream-hero-img" src="" alt="">
-      <div class="stream-hero-fade"></div>
-      <span class="stream-back" onclick="switchView('library')">←</span>
-    </div>
-    <div class="stream-body">
-      <div class="stream-title" id="stream-title">—</div>
-      <div class="stream-desc" id="stream-desc"></div>
-      <div id="stream-lectures"><div class="loading">Загрузка...</div></div>
-    </div>
-    <div class="scroll-spacer"></div>
-  </div>
-
-  <!-- ── Профиль ── -->
-  <div class="view" id="view-profile">
-    <div class="section-label">Подписка</div>
-    <div class="card sub-card">
-      <div class="sub-left">
-        <div class="sub-icon">◆</div>
+    <div class="kpi kpi-wide">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div class="sub-name" id="sub-name">—</div>
-          <div class="sub-meta" id="sub-meta">—</div>
+          <div class="kpi-label">Общая выручка</div>
+          <div class="kpi-val big" id="stat-revenue">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="kpi-label">Чистыми</div>
+          <div class="kpi-val kpi-accent" id="stat-actual">—</div>
+          <div class="kpi-sub" id="stat-commission"></div>
         </div>
       </div>
-      <span class="pill" id="sub-pill">—</span>
     </div>
-    <div class="sub-note" id="sub-note"></div>
-
-    <div class="section-label">Профиль</div>
-    <div class="card">
-      <div class="profile-row">
-        <span class="profile-label">Имя</span>
-        <span class="profile-value" id="p-name">—</span>
-      </div>
-      <div class="profile-row">
-        <span class="profile-label">Username</span>
-        <span class="profile-value" id="p-username">—</span>
-      </div>
-      <div class="profile-row">
-        <span class="profile-label">Месяцев в клубе</span>
-        <span class="profile-value" id="p-months">—</span>
-      </div>
-      <div class="profile-row">
-        <span class="profile-label">Следующий платёж</span>
-        <span class="profile-value" id="p-next">—</span>
-      </div>
-    </div>
-
-    <div class="section-label">Тест</div>
-    <div class="card">
-      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="testCheckMembership()">Проверить членство (тест)</button>
-      <div style="font-size:12.5px;color:var(--text-dim);margin-top:10px;text-align:center" id="test-result"></div>
-    </div>
-    <div class="scroll-spacer"></div>
   </div>
 
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Выручка</div>
+      <div class="period-tabs">
+        <button class="ptab active" onclick="setPeriod('month',this)">30д</button>
+        <button class="ptab" onclick="setPeriod('quarter',this)">3м</button>
+        <button class="ptab" onclick="setPeriod('year',this)">Год</button>
+        <button class="ptab" onclick="setPeriod('all',this)">Всё</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap">
+        <div class="chart-canvas-wrap">
+          <canvas id="revenueChart" role="img" aria-label="График выручки">Загрузка...</canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><div class="section-title">Рассылки</div></div>
+    <div class="card scroll-row" id="broadcast-row" style="padding:14px 16px;display:flex;gap:10px;overflow-x:auto">
+      <button class="popup-save scroll-btn" onclick="openCampaignsPopup()">Уведомления</button>
+      <button class="popup-save scroll-btn" onclick="openBroadcastPopup()">Разослать всем</button>
+      <button class="popup-save scroll-btn" onclick="openNewsPopup()">Новости</button>
+      <button class="popup-save scroll-btn" onclick="openStreamsPopup()">Потоки</button>
+      <button class="popup-save scroll-btn" onclick="openSchedulePopup()">Расписание</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Участники</div>
+      <select id="user-filter" onchange="filterUsers()" style="font-size:11px;font-family:var(--body);padding:4px 8px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
+        <option value="active" selected>Активные</option>
+        <option value="all">Все</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="search-wrap">
+        <input type="text" id="user-search" placeholder="Поиск по имени, телефону, email, username..." oninput="filterUsers()">
+      </div>
+      <div style="padding:14px 16px"><button class="action-btn" style="width:100%" onclick="openManualUserPopup()">+ Добавить клиента вручную</button></div>
+      <div id="users-list"><div class="loading">Загрузка...</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><div class="section-title">Платежи</div></div>
+    <div class="card">
+      <div class="filter-row">
+        <input type="date" id="date-from" onchange="filterPayments()">
+        <input type="date" id="date-to" onchange="filterPayments()">
+        <select id="pay-status" onchange="filterPayments()">
+          <option value="ok" selected>Успешные</option>
+          <option value="all">Все</option>
+          <option value="fail">Ошибки</option>
+        </select>
+      </div>
+      <div id="payments-list"><div class="loading">Загрузка...</div></div>
+      <div class="pay-summary" id="pay-summary"></div>
+    </div>
+  </div>
 </div>
 
-<!-- Не в Telegram -->
-<div class="center-msg" id="not-telegram-msg" style="display:none">
-  <div class="mark">БП</div>
-  <h2>Открой в Telegram</h2>
-  <p>Сейчас приложение доступно только внутри Telegram-бота клуба. Отдельный вход по номеру телефона появится совсем скоро.</p>
+<!-- Campaigns Popup -->
+<div class="popup-overlay" id="campaigns-popup-overlay">
+  <div class="popup" id="campaigns-popup">
+    <div class="popup-handle"></div>
+    <div class="popup-body" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="popup-section-title" style="margin-top:0;margin-bottom:0">Уведомления</div>
+      <button class="action-btn" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="closeCampaignsPopup()"><svg width="14" height="14" viewBox="0 0 14 14" style="display:block"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <select id="camp-list" class="popup-input" style="margin-bottom:0" onchange="onCampListChange()"></select>
+      <select id="camp-flow" class="popup-input" style="margin-bottom:0;display:none" onchange="updateCampFormForFlow()">
+        <option value="lecture">Теория + практика (эфир, потом телемост)</option>
+        <option value="meetup">Просто встреча (сразу телемост)</option>
+      </select>
+      <div class="html-toolbar" style="position:relative;flex-wrap:wrap">
+        <button type="button" onclick="applyFormat('camp-text','bold')"><b>B</b></button>
+        <button type="button" onclick="applyFormat('camp-text','italic')"><i>I</i></button>
+        <button type="button" onclick="applyFormat('camp-text','underline')"><u>U</u></button>
+        <button type="button" onclick="applyFormat('camp-text','strikeThrough')"><s>S</s></button>
+        <button type="button" onclick="applyLinkFormat('camp-text')">🔗</button>
+        <button type="button" onclick="applyBlockquote('camp-text')">❝</button>
+        <button type="button" onclick="applySpoiler('camp-text')">👁</button>
+        <button type="button" onclick="toggleEmojiPicker('camp-emoji-picker')">😊</button>
+        <div class="emoji-picker" id="camp-emoji-picker"></div>
+      </div>
+      <div id="camp-text" class="popup-input rich-input" contenteditable="true" data-placeholder="Текст анонса... (для 'Просто встреча' необязателен)"></div>
+      <input class="popup-input" type="text" id="camp-link" placeholder="Ссылка на телемост/материал" style="margin-bottom:0;display:none">
+      <button class="popup-save" id="camp-submit-btn" onclick="createCampaign()">Создать кампанию</button>
+    </div>
+    <div id="campaigns-list"><div class="loading">Загрузка...</div></div>
+    </div>
+  </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
-<div class="scroll-fade"></div>
-
-<div class="tabbar" id="tabbar" style="display:none">
-  <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v10h5v-6h2v6h5V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-    <span>Портал</span>
-    <div class="tab-underline"></div>
+<!-- News Popup -->
+<div class="popup-overlay" id="news-popup-overlay">
+  <div class="popup" id="news-popup">
+    <div class="popup-handle"></div>
+    <div class="popup-body" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="popup-section-title" style="margin-top:0;margin-bottom:0">Новости</div>
+      <button class="action-btn" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="closeNewsPopup()"><svg width="14" height="14" viewBox="0 0 14 14" style="display:block"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="html-toolbar">
+        <button type="button" onclick="applyFormat('news-common','bold')"><b>B</b></button>
+        <button type="button" onclick="applyFormat('news-common','italic')"><i>I</i></button>
+        <button type="button" onclick="applyFormat('news-common','underline')"><u>U</u></button>
+        <button type="button" onclick="applyLinkFormat('news-common')">🔗</button>
+      </div>
+      <div id="news-common" class="popup-input rich-input" contenteditable="true" data-placeholder="Общий текст для всех участников..."></div>
+      <div class="pay-meta">Дополнительные блоки — только для тех, кто состоит в конкретном списке уведомлений</div>
+      <div id="news-targeted-list"></div>
+      <button class="action-btn" onclick="addNewsTargeted()">+ Добавить блок для списка</button>
+      <button class="popup-save" onclick="publishNews()">Опубликовать</button>
+      <button class="action-btn danger" onclick="deleteAllNews()">Удалить все новости</button>
+    </div>
+    </div>
   </div>
-  <div class="tab-item" onclick="switchView('library')" id="tab-library">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-    <span>Библиотека</span>
-    <div class="tab-underline"></div>
+</div>
+
+<!-- Streams Popup -->
+<div class="popup-overlay" id="streams-popup-overlay">
+  <div class="popup" id="streams-popup">
+    <div class="popup-handle"></div>
+    <div class="popup-body" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="popup-section-title" style="margin-top:0;margin-bottom:0">Потоки</div>
+      <button class="action-btn" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="closeStreamsPopup()"><svg width="14" height="14" viewBox="0 0 14 14" style="display:block"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <input class="popup-input" type="text" id="stream-key" placeholder="Ключ потока (напр. sales_p03) — совпадает с началом slug лекций" style="margin-bottom:0">
+      <input class="popup-input" type="text" id="stream-title" placeholder="Название потока" style="margin-bottom:0">
+      <textarea class="popup-input" id="stream-description" rows="2" placeholder="Общее описание потока..." style="margin-bottom:0;resize:vertical"></textarea>
+      <input class="popup-input" type="text" id="stream-image" placeholder="Ссылка на обложку (картинка)" style="margin-bottom:0">
+      <button class="popup-save" onclick="saveStream()">Сохранить поток</button>
+    </div>
+    <div id="streams-list" style="margin-top:14px"></div>
+    </div>
   </div>
-  <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-    <span>Профиль</span>
-    <div class="tab-underline"></div>
+</div>
+
+<!-- Schedule Popup -->
+<div class="popup-overlay" id="schedule-popup-overlay">
+  <div class="popup" id="schedule-popup">
+    <div class="popup-handle"></div>
+    <div class="popup-body" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="popup-section-title" style="margin-top:0;margin-bottom:0">Расписание</div>
+      <button class="action-btn" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="closeSchedulePopup()"><svg width="14" height="14" viewBox="0 0 14 14" style="display:block"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="period-tabs" style="margin-bottom:12px">
+      <button class="ptab active" id="sched-tab-btn-oneoff" onclick="switchScheduleTab('oneoff')">Разовые</button>
+      <button class="ptab" id="sched-tab-btn-rules" onclick="switchScheduleTab('rules')">Повторяющиеся</button>
+      <button class="ptab" id="sched-tab-btn-teaser" onclick="switchScheduleTab('teaser')">Анонсы</button>
+    </div>
+
+    <!-- Разовые события -->
+    <div id="sched-tab-oneoff">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px">
+          <input class="popup-input" type="date" id="sched-event-date" style="margin-bottom:0;flex:1">
+          <input class="popup-input" type="time" id="sched-event-time" style="margin-bottom:0;flex:1">
+        </div>
+        <input class="popup-input" type="text" id="sched-event-title" placeholder="Название события" style="margin-bottom:0">
+        <textarea class="popup-input" id="sched-event-desc" rows="2" placeholder="Описание..." style="margin-bottom:0;resize:vertical"></textarea>
+        <input class="popup-input" type="text" id="sched-event-link" placeholder="Ссылка (необязательно)" style="margin-bottom:0">
+        <button class="popup-save" id="sched-event-submit-btn" onclick="saveOneOffEvent()">Добавить событие</button>
+      </div>
+      <div id="sched-oneoff-list" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Повторяющиеся правила -->
+    <div id="sched-tab-rules" style="display:none">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px">
+          <select class="popup-input" id="sched-rule-weekday" style="margin-bottom:0;flex:1">
+            <option value="0">Понедельник</option>
+            <option value="1">Вторник</option>
+            <option value="2">Среда</option>
+            <option value="3">Четверг</option>
+            <option value="4">Пятница</option>
+            <option value="5">Суббота</option>
+            <option value="6">Воскресенье</option>
+          </select>
+          <input class="popup-input" type="time" id="sched-rule-time" style="margin-bottom:0;flex:1">
+        </div>
+        <input class="popup-input" type="text" id="sched-rule-title" placeholder="Название события" style="margin-bottom:0">
+        <textarea class="popup-input" id="sched-rule-desc" rows="2" placeholder="Описание..." style="margin-bottom:0;resize:vertical"></textarea>
+        <input class="popup-input" type="text" id="sched-rule-link" placeholder="Ссылка (необязательно)" style="margin-bottom:0">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:2px 2px 4px">
+          <input type="checkbox" id="sched-rule-active" checked style="width:16px;height:16px"> Активно
+        </label>
+        <button class="popup-save" id="sched-rule-submit-btn" onclick="saveScheduleRule()">Добавить правило</button>
+      </div>
+      <div id="sched-rules-list" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Анонсы без даты -->
+    <div id="sched-tab-teaser" style="display:none">
+      <div class="pay-meta" style="margin-bottom:8px">Показываются в аппе отдельным блоком под календарём — для создания ощущения предвкушения ("скоро в клубе...")</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input class="popup-input" type="text" id="sched-teaser-title" placeholder="Название анонса" style="margin-bottom:0">
+        <textarea class="popup-input" id="sched-teaser-desc" rows="2" placeholder="Описание..." style="margin-bottom:0;resize:vertical"></textarea>
+        <input class="popup-input" type="text" id="sched-teaser-link" placeholder="Ссылка (необязательно)" style="margin-bottom:0">
+        <button class="popup-save" id="sched-teaser-submit-btn" onclick="saveTeaser()">Добавить анонс</button>
+      </div>
+      <div id="sched-teaser-list" style="margin-top:14px"></div>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Manual User Popup -->
+<div class="popup-overlay" id="manual-user-popup-overlay">
+  <div class="popup" id="manual-user-popup">
+    <div class="popup-handle"></div>
+    <div class="popup-body" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="popup-section-title" style="margin-top:0;margin-bottom:0">Добавить клиента вручную</div>
+      <button class="action-btn" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="closeManualUserPopup()"><svg width="14" height="14" viewBox="0 0 14 14" style="display:block"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <input class="popup-input" type="text" id="manual-user-name" placeholder="Имя" style="margin-bottom:0">
+      <input class="popup-input" type="text" id="manual-user-username" placeholder="Username в Telegram (@ник)" style="margin-bottom:0">
+      <input class="popup-input" type="tel" id="manual-user-phone" placeholder="Телефон" style="margin-bottom:0">
+      <input class="popup-input" type="email" id="manual-user-email" placeholder="Email" style="margin-bottom:0">
+      <input class="popup-input" type="text" id="manual-user-sub" placeholder="Тариф" value="База - помесячный доступ к онлайн-клубу" style="margin-bottom:0">
+      <input class="popup-input" type="text" id="manual-user-cost" placeholder="Стоимость" value="990" style="margin-bottom:0">
+      <button class="popup-save" onclick="createManualUser()">Создать клиента</button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Broadcast-All Popup -->
+<div class="popup-overlay" id="broadcast-popup-overlay">
+  <div class="popup" id="broadcast-popup">
+    <div class="popup-handle"></div>
+    <div class="popup-body" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="popup-section-title" style="margin-top:0;margin-bottom:0">Разослать всем участникам</div>
+      <button class="action-btn" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="closeBroadcastPopup()"><svg width="14" height="14" viewBox="0 0 14 14" style="display:block"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="html-toolbar" style="position:relative;flex-wrap:wrap">
+        <button type="button" onclick="applyFormat('bcast-text','bold')"><b>B</b></button>
+        <button type="button" onclick="applyFormat('bcast-text','italic')"><i>I</i></button>
+        <button type="button" onclick="applyFormat('bcast-text','underline')"><u>U</u></button>
+        <button type="button" onclick="applyFormat('bcast-text','strikeThrough')"><s>S</s></button>
+        <button type="button" onclick="applyLinkFormat('bcast-text')">🔗</button>
+        <button type="button" onclick="applyBlockquote('bcast-text')">❝</button>
+        <button type="button" onclick="applySpoiler('bcast-text')">👁</button>
+        <button type="button" onclick="toggleEmojiPicker('bcast-emoji-picker')">😊</button>
+        <div class="emoji-picker" id="bcast-emoji-picker"></div>
+      </div>
+      <div id="bcast-text" class="popup-input rich-input" contenteditable="true" data-placeholder="Текст сообщения всему клубу..."></div>
+
+      <div id="bcast-buttons"></div>
+      <button class="action-btn" onclick="addBcastButton()">+ Добавить кнопку</button>
+      <div class="pay-meta">Кнопка «Вернуться в главное меню» добавится последней автоматически.</div>
+
+      <input class="popup-input" type="tel" id="bcast-test-phone" placeholder="Телефон для теста (+7...), необязательно" value="+79885472439" style="margin-bottom:0">
+      <button class="action-btn" onclick="sendBroadcastAll(true)">Тест — отправить только себе</button>
+      <button class="popup-save" onclick="sendBroadcastAll(false)">Отправить всем в клубе</button>
+      <button class="action-btn" onclick="returnBroadcastAllToMenu()">Вернуть всех в меню</button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+  <div class="popup" id="popup">
+    <div class="popup-handle"></div>
+    <div class="popup-header">
+      <div class="popup-avatar" id="popup-avatar">?</div>
+      <div>
+        <div class="popup-name" id="popup-name">—</div>
+        <div class="popup-handle-link" id="popup-handle">—</div>
+      </div>
+      <button class="popup-close" onclick="document.getElementById('popup-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="popup-body">
+
+      <div class="popup-stats">
+        <div class="popup-stat">
+          <div class="popup-stat-label">Всего принёс</div>
+          <div class="popup-stat-val accent" id="popup-total">—</div>
+        </div>
+        <div class="popup-stat">
+          <div class="popup-stat-label">Месяцев в клубе</div>
+          <div class="popup-stat-val" id="popup-months">—</div>
+        </div>
+        <div class="popup-stat">
+          <div class="popup-stat-label">Из базы</div>
+          <div class="popup-stat-val" id="popup-payments-rev">—</div>
+        </div>
+        <div class="popup-stat">
+          <div class="popup-stat-label">Вручную</div>
+          <div class="popup-stat-val" id="popup-manual-rev">—</div>
+        </div>
+      </div>
+
+      <div id="popup-rows"></div>
+
+      <!-- Действия -->
+      <div class="popup-section-title">Действия</div>
+      <div id="action-result" class="action-result"></div>
+
+      <div class="actions-grid">
+        <button class="action-btn success" onclick="doAction('activate')">Активировать</button>
+        <button class="action-btn danger"  onclick="doAction('deactivate')">Деактивировать</button>
+        <button class="action-btn primary" onclick="doAction('discount')">Скидка</button>
+        <button class="action-btn primary" onclick="doAction('bonuses')">1000 бонусов</button>
+        <button class="action-btn"         onclick="doAction('registration')">Регистрация</button>
+        <button class="action-btn"         onclick="showPayload('shift_payment','Сдвинуть платёж','Дата ДД.ММ.ГГГГ')">Сдвинуть платёж</button>
+        <button class="action-btn"         onclick="showPayload('send_message','Отправить','Текст сообщения...')">Сообщение</button>
+        <button class="action-btn"         onclick="showPayload('callback','Колбек','Текст колбека...')">Колбек</button>
+        <button class="action-btn success" onclick="recordManualPayment()">Записать оплату</button>
+        <button class="action-btn"         onclick="doAction('cleanup_last_message')">Очистить сообщение</button>
+        <button class="action-btn"         onclick="doAction('send_menu')">В меню</button>
+      </div>
+
+      <div class="payload-row" id="payload-row">
+        <input class="payload-input" type="text" id="payload-input" placeholder="">
+        <button class="send-payload-btn" id="payload-send-btn" onclick="sendPayload()">→</button>
+      </div>
+
+      <!-- Ручная корректировка -->
+      <div class="popup-section-title">Ручная корректировка</div>
+      <input class="popup-input" type="number" id="popup-input-revenue" placeholder="Сумма исторических платежей ₽">
+      <input class="popup-input" type="text"   id="popup-input-notes"   placeholder="Заметки об участнике...">
+      <button class="popup-save" onclick="saveUserPatch()">Сохранить</button>
+
+      <!-- История платежей -->
+      <div class="popup-section-title">История платежей</div>
+      <div id="popup-payments" style="border-radius:14px;overflow:hidden;background:var(--stat-bg);border:1px solid var(--border)"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const API        = 'https://club-backend-production-fc7f.up.railway.app';
+const ADMIN_TOKEN = 'club2024secretkey';
+let allUsers=[], allPayments=[], revenueChart=null, currentPeriod='month', currentUser=null, pendingAction=null;
+
+/* ── Тема ── */
+function toggleTheme(){
+  const html=document.documentElement;
+  const isDark=html.dataset.theme==='dark';
+  html.dataset.theme=isDark?'light':'dark';
+  document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';
+  try{localStorage.setItem('theme',html.dataset.theme);sessionStorage.setItem('theme',html.dataset.theme);}catch(e){}
+  if(revenueChart) drawChart();
+}
+(function(){
+  let saved='light';try{saved=localStorage.getItem('theme')||sessionStorage.getItem('theme')||'light';}catch(e){}
+  document.documentElement.dataset.theme=saved;
+  document.getElementById('theme-btn').textContent=saved==='dark'?'☀️':'🌙';
+})();
+
+/* ── Utils ── */
+function initials(n){ if(!n||n==='—')return'?'; return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function isOk(s){ return ['success','auto_payment','1'].includes((s||'').toLowerCase()); }
+function fmt(n){ return Math.round(n).toLocaleString('ru')+' ₽'; }
+
+/* ── Load ── */
+async function deletePayment(id, e){
+  e.stopPropagation();
+  if(!confirm('Удалить этот платёж?')) return;
+  try{
+    const r=await fetch(API+'/payments/'+id+'?x_admin_token='+ADMIN_TOKEN,{method:'DELETE'});
+    if(r.ok||r.status===204){ allPayments=allPayments.filter(p=>p.id!==id); filterPayments(); loadStats(); }
+    else alert('Ошибка удаления');
+  }catch(e){alert('Ошибка');}
+}
+
+async function loadAll(){
+  document.getElementById('last-update').textContent='Обновлено в '+new Date().toLocaleTimeString('ru');
+  await Promise.all([loadStats(),loadUsers(),loadPayments(),loadNotificationLists(),loadCampaigns()]);
+}
+
+async function loadStats(){
+  try{
+    const d=await fetch(API+'/payments/stats').then(r=>r.json());
+    document.getElementById('stat-payments').textContent=d.total_payments??'—';
+    document.getElementById('stat-revenue').textContent=d.total_amount?fmt(d.total_amount):'—';
+    document.getElementById('stat-actual').textContent=d.total_actual?fmt(d.total_actual):'—';
+    if(d.total_commission) document.getElementById('stat-commission').textContent='комиссия '+fmt(d.total_commission);
+  }catch(e){}
+}
+
+async function loadUsers(){
+  try{
+    allUsers=await fetch(API+'/users/list?limit=500').then(r=>r.json());
+    document.getElementById('stat-members').textContent=allUsers.filter(u=>u.is_member).length;
+    filterUsers();
+  }catch(e){ document.getElementById('users-list').innerHTML='<div class="empty">Ошибка загрузки</div>'; }
+}
+
+function filterUsers(){
+  const q=(document.getElementById('user-search').value||'').toLowerCase();
+  const f=document.getElementById('user-filter').value;
+  let users=allUsers;
+  if(f==='active') users=users.filter(u=>u.is_member);
+  if(q) users=users.filter(u=>
+    (u.full_name||'').toLowerCase().includes(q)||
+    (u.name||'').toLowerCase().includes(q)||
+    (u.phone||'').includes(q)||
+    (u.email||'').toLowerCase().includes(q)||
+    (u.username||'').toLowerCase().includes(q)
+  );
+  const el=document.getElementById('users-list');
+  if(!users.length){el.innerHTML='<div class="empty">Ничего не найдено</div>';return;}
+  el.innerHTML=users.map(u=>{
+    const name=u.full_name||u.name||'—';
+    const sub=u.username||u.email||u.phone||'—';
+    const total=u.total_revenue||0;
+    return `<div class="list-item" onclick="openPopup(${u.id})">
+      <div class="avatar">${initials(name)}</div>
+      <div class="item-info">
+        <div class="item-name">${name}</div>
+        <div class="item-sub">${sub}</div>
+      </div>
+      <div class="item-right">
+        <div class="item-val">${total>0?fmt(total):''}</div>
+        <div class="item-date">${u.next_payment_date||''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadPayments(){
+  try{
+    allPayments=await fetch(API+'/payments?limit=500').then(r=>r.json());
+    const now=new Date(),from=new Date();
+    from.setDate(now.getDate()-30);
+    document.getElementById('date-to').value=now.toISOString().slice(0,10);
+    document.getElementById('date-from').value=from.toISOString().slice(0,10);
+    filterPayments();
+    drawChart();
+  }catch(e){ document.getElementById('payments-list').innerHTML='<div class="empty">Ошибка загрузки</div>'; }
+}
+
+function filterPayments(){
+  const from=document.getElementById('date-from').value;
+  const to=document.getElementById('date-to').value;
+  const sf=document.getElementById('pay-status').value;
+  let pays=allPayments;
+  if(from) pays=pays.filter(p=>new Date(p.payment_date)>=new Date(from));
+  if(to)   pays=pays.filter(p=>new Date(p.payment_date)<=new Date(to+'T23:59:59'));
+  if(sf==='ok')   pays=pays.filter(p=>isOk(p.status));
+  if(sf==='fail') pays=pays.filter(p=>!isOk(p.status));
+  const totalNet=pays.reduce((s,p)=>s+parseFloat(p.actual_amount||0),0);
+  const totalAmt=pays.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+  const el=document.getElementById('payments-list');
+  if(!pays.length){el.innerHTML='<div class="empty">Нет платежей за период</div>';}
+  else el.innerHTML=pays.map(p=>{
+    const ok=isOk(p.status);
+    const d=new Date(p.payment_date);
+    const date=d.toLocaleDateString('ru',{day:'2-digit',month:'short'});
+    return `<div class="pay-item">
+      <div class="pay-icon ${ok?'pay-icon-ok':'pay-icon-err'}">${ok?'✓':'✗'}</div>
+      <div class="pay-info">
+        <div class="pay-name">${p.sub_name||'Платёж'}</div>
+        <div class="pay-meta">${date} · ${p.client_name||('id '+p.telegram_id)}</div>
+      </div>
+      <div style='display:flex;align-items:center;gap:8px'><div class="pay-amount" style="color:${ok?'var(--lav-deep)':'var(--red)'}">${fmt(parseFloat(p.actual_amount||0))}</div><button onclick="deletePayment(${p.id},event)" style='background:none;border:none;cursor:pointer;color:var(--text-faint);font-size:14px;padding:2px 4px;border-radius:4px' title='Удалить'>✕</button></div>
+    </div>`;
+  }).join('');
+  document.getElementById('pay-summary').textContent=pays.length?`${pays.length} платежей · ${fmt(totalAmt)} · чистыми ${fmt(totalNet)}`:'';
+}
+
+/* ── Campaigns / Уведомления ── */
+let notificationLists=[];
+
+async function loadNotificationLists(){
+  try{
+    notificationLists=await fetch(API+'/notification-lists').then(r=>r.json());
+    document.getElementById('camp-list').innerHTML=notificationLists.map(l=>`<option value="${l.list_id}">${l.name}</option>`).join('');
+    onCampListChange();
+  }catch(e){}
+}
+
+function onCampListChange(){
+  const listId=parseInt(document.getElementById('camp-list').value);
+  const info=notificationLists.find(l=>l.list_id===listId);
+  const flowSel=document.getElementById('camp-flow');
+  flowSel.style.display=(info && info.flow_options.length>1)?'':'none';
+  updateCampFormForFlow();
+}
+
+function getSelectedFlow(){
+  const listId=parseInt(document.getElementById('camp-list').value);
+  const info=notificationLists.find(l=>l.list_id===listId);
+  if(!info) return null;
+  if(info.flow_options.length>1) return document.getElementById('camp-flow').value;
+  return info.flow_options[0];
+}
+
+function updateCampFormForFlow(){
+  const flow=getSelectedFlow();
+  const isSingleStep = flow==='material' || flow==='meetup';
+  document.getElementById('camp-link').style.display = isSingleStep ? '' : 'none';
+  document.getElementById('camp-submit-btn').textContent = isSingleStep ? 'Отправить' : 'Создать и отправить анонс';
+}
+
+async function loadCampaigns(){
+  try{
+    const campaigns=await fetch(API+'/campaigns').then(r=>r.json());
+    renderCampaigns(campaigns);
+  }catch(e){ document.getElementById('campaigns-list').innerHTML='<div class="empty">Ошибка загрузки</div>'; }
+}
+
+function renderCampaigns(campaigns){
+  const el=document.getElementById('campaigns-list');
+  if(!campaigns.length){ el.innerHTML='<div class="empty">Кампаний пока нет</div>'; return; }
+  const statusBadge={
+    draft:'<span class="badge badge-act">черновик</span>',
+    announced:'<span class="badge badge-ok">анонс отправлен</span>',
+    live_started:'<span class="badge badge-ok">эфир начался</span>',
+    sent:'<span class="badge badge-ok">завершена</span>',
+  };
+  el.innerHTML=campaigns.map(c=>{
+    const d=new Date(c.created_at);
+    const date=d.toLocaleDateString('ru',{day:'2-digit',month:'short'});
+    let actions='';
+
+    if(c.flow==='lecture'){
+      if(c.status==='draft'){
+        actions=`<button class="action-btn success" onclick="announceCampaign(${c.id})">Отправить анонс</button>`;
+      } else if(c.status==='announced'){
+        actions=`
+          <input class="popup-input" type="text" id="vk-input-${c.id}" placeholder="Ссылка на эфир в ВК..." value="${c.vk_stream_link||''}" style="margin-bottom:0">
+          <textarea class="popup-input" id="live-text-${c.id}" rows="2" placeholder="Текст 'эфир начался'..." style="margin-bottom:0;resize:vertical">${c.live_text||''}</textarea>
+          <button class="action-btn primary" onclick="startLiveCampaign(${c.id})">Начать эфир</button>`;
+      } else if(c.status==='live_started'){
+        actions=`
+          <input class="popup-input" type="text" id="link-input-${c.id}" placeholder="Ссылка на телемост (практика)..." value="${c.meeting_link||''}" style="margin-bottom:0">
+          <button class="action-btn primary" onclick="sendCampaignLink(${c.id})">Отправить ссылку на практику</button>`;
+      } else {
+        actions=`
+          <div class="pay-meta">Ссылка на практику отправлена: ${c.meeting_link}</div>
+          ${c.returned_to_menu?'':'<button class="action-btn" onclick="returnCampaignToMenu('+c.id+')">Вернуть всех в меню</button>'}`;
+      }
+    } else if(c.flow==='meetup'){
+      if(c.status!=='sent'){
+        actions=`
+          <input class="popup-input" type="text" id="link-input-${c.id}" placeholder="Ссылка на телемост..." value="${c.meeting_link||''}" style="margin-bottom:0">
+          <button class="action-btn primary" onclick="sendMeetupCampaign(${c.id})">Отправить</button>`;
+      } else {
+        actions=`
+          <div class="pay-meta">Отправлено, ссылка: ${c.meeting_link}</div>
+          ${c.returned_to_menu?'':'<button class="action-btn" onclick="returnCampaignToMenu('+c.id+')">Вернуть всех в меню</button>'}`;
+      }
+    } else {
+      if(c.status!=='sent'){
+        actions=`
+          <input class="popup-input" type="text" id="link-input-${c.id}" placeholder="Ссылка на материал..." value="${c.meeting_link||''}" style="margin-bottom:0">
+          <button class="action-btn primary" onclick="sendMaterialCampaign(${c.id})">Отправить</button>`;
+      } else {
+        actions=`
+          <div class="pay-meta">Отправлено, ссылка: ${c.meeting_link}</div>
+          ${c.returned_to_menu?'':'<button class="action-btn" onclick="returnCampaignToMenu('+c.id+')">Вернуть всех в меню</button>'}`;
+      }
+    }
+
+    return `<div class="pay-item" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="pay-name">${c.title||'Без названия'}</div>
+        ${statusBadge[c.status]||''}
+      </div>
+      <div class="pay-meta">${c.list_name} · ${date}</div>
+      ${actions}
+      <button class="action-btn danger" onclick="deleteCampaign(${c.id},event)">Удалить</button>
+    </div>`;
+  }).join('');
+}
+
+async function createCampaign(){
+  const list_id=parseInt(document.getElementById('camp-list').value);
+  const listInfo=notificationLists.find(l=>l.list_id===list_id);
+  const now=new Date();
+  const stamp=now.toLocaleDateString('ru',{day:'2-digit',month:'2-digit'})+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  const title=(listInfo?listInfo.name:'Кампания')+' — '+stamp;
+  const announce_text=getRichText('camp-text');
+  const flowSel=document.getElementById('camp-flow');
+  const flow=flowSel.style.display!=='none'?flowSel.value:undefined;
+  const resolvedFlow=getSelectedFlow();
+  const isSingleStep = resolvedFlow==='material' || resolvedFlow==='meetup';
+  const meeting_link=isSingleStep?document.getElementById('camp-link').value.trim():undefined;
+
+  if(resolvedFlow!=='meetup' && !announce_text){ alert('Заполни текст анонса'); return; }
+  if(isSingleStep && !meeting_link){ alert('Вставь ссылку'); return; }
+  if(!confirm('Отправить сразу всем в списке?')) return;
+
+  try{
+    const createRes=await fetch(API+'/campaigns?x_admin_token='+ADMIN_TOKEN,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({list_id,title,announce_text,flow,meeting_link})
+    });
+    if(!createRes.ok){ alert('Ошибка создания кампании'); return; }
+    const created=await createRes.json();
+
+    if(isSingleStep){
+      const sendEndpoint = resolvedFlow==='material' ? 'send-material' : 'send-meetup';
+      const r=await fetch(API+'/campaigns/'+created.id+'/'+sendEndpoint+'?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+      if(!r.ok){ alert('Кампания создана, но отправка не удалась — попробуй из списка ниже'); await loadCampaigns(); return; }
+    } else if(resolvedFlow==='lecture'){
+      const r=await fetch(API+'/campaigns/'+created.id+'/announce?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+      if(!r.ok){ alert('Кампания создана, но анонс не отправился — попробуй из списка ниже'); await loadCampaigns(); return; }
+    }
+
+    document.getElementById('camp-text').innerHTML='';
+    document.getElementById('camp-link').value='';
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка создания кампании'); }
+}
+
+async function announceCampaign(id){
+  if(!confirm('Отправить анонс всем в списке?')) return;
+  try{
+    const r=await fetch(API+'/campaigns/'+id+'/announce?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function startLiveCampaign(id){
+  const vk_stream_link=document.getElementById('vk-input-'+id).value.trim();
+  const live_text=document.getElementById('live-text-'+id).value.trim();
+  if(!vk_stream_link){ alert('Вставь ссылку на эфир в ВК'); return; }
+  try{
+    await fetch(API+'/campaigns/'+id+'?x_admin_token='+ADMIN_TOKEN,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({vk_stream_link,live_text})
+    });
+    if(!confirm('Начать эфир — разослать ссылки всем в списке?')) return;
+    const r=await fetch(API+'/campaigns/'+id+'/start-live?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function sendMeetupCampaign(id){
+  const link=document.getElementById('link-input-'+id).value.trim();
+  if(!link){ alert('Вставь ссылку на встречу'); return; }
+  try{
+    await fetch(API+'/campaigns/'+id+'?x_admin_token='+ADMIN_TOKEN,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({meeting_link:link})
+    });
+    if(!confirm('Отправить всем в списке?')) return;
+    const r=await fetch(API+'/campaigns/'+id+'/send-meetup?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function sendCampaignLink(id){
+  const link=document.getElementById('link-input-'+id).value.trim();
+  if(!link){ alert('Вставь ссылку на встречу'); return; }
+  try{
+    await fetch(API+'/campaigns/'+id+'?x_admin_token='+ADMIN_TOKEN,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({meeting_link:link})
+    });
+    if(!confirm('Разослать ссылку всем в списке?')) return;
+    const r=await fetch(API+'/campaigns/'+id+'/send-link?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function returnCampaignToMenu(id){
+  if(!confirm('Тихо вернуть всех в главное меню?')) return;
+  try{
+    const r=await fetch(API+'/campaigns/'+id+'/return-to-menu?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function returnBroadcastAllToMenu(){
+  if(!confirm('Тихо вернуть ВСЕХ участников клуба в главное меню?')) return;
+  try{
+    const r=await fetch(API+'/broadcast-all/return-to-menu?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function sendMaterialCampaign(id){
+  const link=document.getElementById('link-input-'+id).value.trim();
+  if(!link){ alert('Вставь ссылку на материал'); return; }
+  try{
+    await fetch(API+'/campaigns/'+id+'?x_admin_token='+ADMIN_TOKEN,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({meeting_link:link})
+    });
+    if(!confirm('Отправить всем в списке?')) return;
+    const r=await fetch(API+'/campaigns/'+id+'/send-material?x_admin_token='+ADMIN_TOKEN,{method:'POST'});
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+/* ── Разослать всем (конструктор кнопок) ── */
+let bcastButtons=[]; // {type, text, url, callback}
+
+function renderBcastButtons(){
+  const el=document.getElementById('bcast-buttons');
+  el.innerHTML=bcastButtons.map((b,i)=>{
+    let extra='';
+    if(b.type==='url'){
+      extra=`<input class="popup-input" type="text" placeholder="Ссылка (url)..." value="${b.url||''}" style="margin-bottom:0" oninput="bcastButtons[${i}].url=this.value">`;
+    } else if(b.type==='callback'){
+      extra=`<input class="popup-input" type="text" placeholder="Callback (что уйдёт боту)..." value="${b.callback||''}" style="margin-bottom:0" oninput="bcastButtons[${i}].callback=this.value">`;
+    }
+    return `<div style="display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px">
+      <div style="display:flex;gap:6px">
+        <select style="flex:0 0 110px;font-size:12px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)" onchange="bcastButtons[${i}].type=this.value;renderBcastButtons()">
+          <option value="normal" ${b.type==='normal'?'selected':''}>Обычная</option>
+          <option value="url" ${b.type==='url'?'selected':''}>Ссылка</option>
+          <option value="callback" ${b.type==='callback'?'selected':''}>Callback</option>
+        </select>
+        <input class="popup-input" type="text" placeholder="Текст кнопки..." value="${b.text||''}" style="margin-bottom:0;flex:1" oninput="bcastButtons[${i}].text=this.value">
+        <button class="action-btn danger" style="flex:0 0 auto" onclick="removeBcastButton(${i})">✕</button>
+      </div>
+      ${extra}
+    </div>`;
+  }).join('');
+}
+
+function addBcastButton(){
+  if(bcastButtons.length>=4){ alert('Максимум 4 кнопки'); return; }
+  bcastButtons.push({type:'normal', text:'', url:'', callback:''});
+  renderBcastButtons();
+}
+
+function removeBcastButton(i){
+  bcastButtons.splice(i,1);
+  renderBcastButtons();
+}
+
+async function sendBroadcastAll(isTest){
+  const message=getRichText('bcast-text');
+  if(!message){ alert('Напиши текст сообщения'); return; }
+  const test_phone=document.getElementById('bcast-test-phone').value.trim();
+
+  if(isTest && !test_phone){ alert('Впиши телефон для теста'); return; }
+  if(!isTest && !confirm('Разослать это сообщение ВСЕМ участникам клуба? Действие необратимо.')) return;
+
+  try{
+    const r=await fetch(API+'/broadcast-all?x_admin_token='+ADMIN_TOKEN,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message, buttons:bcastButtons, test_phone: isTest?test_phone:null})
+    });
+    if(!r.ok){ alert('Ошибка отправки'); return; }
+    if(isTest){ alert('Тест отправлен тебе — проверь Telegram.'); return; }
+    alert('Отправлено!');
+    document.getElementById('bcast-text').innerHTML='';
+    bcastButtons=[];
+    renderBcastButtons();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function deleteCampaign(id,e){
+  e.stopPropagation();
+  if(!confirm('Удалить кампанию?')) return;
+  try{
+    await fetch(API+'/campaigns/'+id+'?x_admin_token='+ADMIN_TOKEN,{method:'DELETE'});
+    await loadCampaigns();
+  }catch(e){ alert('Ошибка удаления'); }
+}
+
+/* ── Chart ── */
+function setPeriod(p,btn){
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); currentPeriod=p; drawChart();
+}
+
+function drawChart(){
+  const isDark=document.documentElement.dataset.theme==='dark';
+  const now=new Date(),from=new Date();
+  if(currentPeriod==='month')   from.setDate(now.getDate()-30);
+  if(currentPeriod==='quarter') from.setMonth(now.getMonth()-3);
+  if(currentPeriod==='year')    from.setFullYear(now.getFullYear()-1);
+  if(currentPeriod==='all')     from.setFullYear(2020);
+  const pays=allPayments.filter(p=>new Date(p.payment_date)>=from&&isOk(p.status));
+  const byKey={};
+  for(const p of pays){
+    const d=new Date(p.payment_date);
+    const key=currentPeriod==='month'?d.toISOString().slice(0,10):d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    const label=currentPeriod==='month'?d.toLocaleDateString('ru',{day:'2-digit',month:'short'}):d.toLocaleDateString('ru',{month:'short',year:'2-digit'});
+    if(!byKey[key])byKey[key]={label,val:0};
+    byKey[key].val+=parseFloat(p.actual_amount||0);
+  }
+  const sorted=Object.entries(byKey).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(revenueChart)revenueChart.destroy();
+  const tickColor=isDark?'#5e5a78':'#a7a2bd';
+  const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(124,108,240,0.08)';
+  revenueChart=new Chart(document.getElementById('revenueChart'),{
+    type:'bar',
+    data:{labels:sorted.map(([,v])=>v.label),datasets:[{data:sorted.map(([,v])=>Math.round(v.val)),backgroundColor:'#9b8cf2',borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.raw).toLocaleString('ru')+' ₽'}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:tickColor,autoSkip:true,maxTicksLimit:10,maxRotation:0}},y:{grid:{color:gridColor},ticks:{font:{size:10},color:tickColor,callback:v=>Math.round(v/1000)+'к ₽'}}}}
+  });
+}
+
+/* ── Popup ── */
+function openPopup(uid){
+  const u=allUsers.find(u=>u.id===uid);
+  if(!u)return;
+  currentUser=u;
+  const name=u.full_name||u.name||'—';
+  document.getElementById('popup-avatar').textContent=initials(name);
+  document.getElementById('popup-name').textContent=name;
+  document.getElementById('popup-handle').textContent=u.username||u.email||'—';
+  let months='—';
+  if(u.autopayments_num) months=u.autopayments_num+'м';
+  else if(u.first_payment_date){
+    const parts=u.first_payment_date.split('.');
+    if(parts.length===3){
+      const diff=Math.floor((new Date()-new Date(parts[2],parts[1]-1,parts[0]))/(1000*60*60*24*30));
+      months=diff>0?diff+'м':'<1м';
+    }
+  }
+  document.getElementById('popup-total').textContent=u.total_revenue>0?fmt(u.total_revenue):'0 ₽';
+  document.getElementById('popup-months').textContent=months;
+  document.getElementById('popup-payments-rev').textContent=fmt(u.payments_revenue||0);
+  document.getElementById('popup-manual-rev').textContent=fmt(u.manual_revenue||0);
+  document.getElementById('popup-rows').innerHTML=[
+    ['Телефон',u.phone||'—'],
+    ['Email',u.email||'—'],
+    ['Username',u.username||'—'],
+    ['Тариф',u.sub_name||'—'],
+    ['Следующий платёж',u.next_payment_date||'—'],
+    ['В клубе с',u.first_payment_date||'—'],
+    ['Profile ID',u.profile_id||'—'],
+    ['Статус',u.is_member?'<span class="badge badge-act">активен</span>':'<span class="badge badge-err">неактивен</span>'],
+    ['Заметки',u.notes||'—'],
+  ].map(([l,v])=>`<div class="popup-row"><span class="popup-row-label">${l}</span><span class="popup-row-val">${v}</span></div>`).join('');
+  document.getElementById('popup-input-revenue').value=u.manual_revenue||'';
+  document.getElementById('popup-input-notes').value=u.notes||'';
+  renderPopupPayments(u);
+  document.getElementById('action-result').style.display='none';
+  document.getElementById('payload-row').classList.remove('visible');
+  document.getElementById('popup-overlay').classList.add('open');
+}
+
+function renderPopupPayments(u){
+  const el=document.getElementById('popup-payments');
+  const pays=allPayments.filter(p=>
+    (u.id && p.user_id===u.id) ||
+    (!p.user_id && u.profile_id && p.profile_id===u.profile_id) ||
+    (!p.user_id && !p.profile_id && u.telegram_id && p.telegram_id===u.telegram_id)
+  ).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+  if(!pays.length){ el.innerHTML='<div class="empty">Платежей нет</div>'; return; }
+  el.innerHTML=pays.map(p=>{
+    const ok=isOk(p.status);
+    const d=new Date(p.payment_date);
+    const date=d.toLocaleDateString('ru',{day:'2-digit',month:'short',year:'2-digit'});
+    return `<div class="pay-item">
+      <div class="pay-icon ${ok?'pay-icon-ok':'pay-icon-err'}">${ok?'✓':'✗'}</div>
+      <div class="pay-info">
+        <div class="pay-name">${p.sub_name||'Платёж'}</div>
+        <div class="pay-meta">${date}</div>
+      </div>
+      <div class="pay-amount" style="color:${ok?'var(--lav-deep)':'var(--red)'}">${fmt(parseFloat(p.actual_amount||0))}</div>
+    </div>`;
+  }).join('');
+}
+
+function closePopup(e){
+  if(e.target===document.getElementById('popup-overlay'))
+    document.getElementById('popup-overlay').classList.remove('open');
+}
+
+function openCampaignsPopup(){ document.getElementById('campaigns-popup-overlay').classList.add('open'); }
+function closeCampaignsPopup(){ document.getElementById('campaigns-popup-overlay').classList.remove('open'); }
+
+let newsTargeted=[];
+
+function openNewsPopup(){
+  document.getElementById('news-popup-overlay').classList.add('open');
+  if(!newsTargeted.length) renderNewsTargeted();
+}
+function closeNewsPopup(){ document.getElementById('news-popup-overlay').classList.remove('open'); }
+
+function addNewsTargeted(){
+  newsTargeted.push({list_id: notificationLists[0]?.list_id || 0, text: ''});
+  renderNewsTargeted();
+}
+function removeNewsTargeted(i){
+  newsTargeted.splice(i,1);
+  renderNewsTargeted();
+}
+function renderNewsTargeted(){
+  const el=document.getElementById('news-targeted-list');
+  el.innerHTML=newsTargeted.map((t,i)=>`
+    <div style="display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px">
+      <div style="display:flex;gap:6px">
+        <select style="flex:1;font-size:12px;border-radius:10px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)" onchange="newsTargeted[${i}].list_id=parseInt(this.value)">
+          ${notificationLists.map(l=>`<option value="${l.list_id}" ${l.list_id===t.list_id?'selected':''}>${l.name}</option>`).join('')}
+        </select>
+        <button class="action-btn danger" style="flex:0 0 auto" onclick="removeNewsTargeted(${i})">✕</button>
+      </div>
+      <div class="html-toolbar">
+        <button type="button" onclick="applyFormat('news-target-${i}','bold')"><b>B</b></button>
+        <button type="button" onclick="applyFormat('news-target-${i}','italic')"><i>I</i></button>
+        <button type="button" onclick="applyLinkFormat('news-target-${i}')">🔗</button>
+      </div>
+      <div id="news-target-${i}" class="popup-input rich-input" style="min-height:50px" contenteditable="true" data-placeholder="Текст для этого списка..." oninput="newsTargeted[${i}].text=this.innerHTML">${t.text}</div>
+    </div>`).join('');
+}
+
+async function publishNews(){
+  const common_text=document.getElementById('news-common').innerHTML.trim();
+  if(!common_text){ alert('Напиши общий текст новости'); return; }
+  if(!confirm('Опубликовать новость для всех участников?')) return;
+  try{
+    const r=await fetch(API+'/news?x_admin_token='+ADMIN_TOKEN,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({common_text, targeted:newsTargeted.filter(t=>t.text.trim())})
+    });
+    if(!r.ok){ alert('Ошибка публикации'); return; }
+    alert('Опубликовано!');
+    document.getElementById('news-common').innerHTML='';
+    newsTargeted=[];
+    renderNewsTargeted();
+    closeNewsPopup();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function deleteAllNews(){
+  if(!confirm('Удалить ВСЕ новости без возможности восстановить?')) return;
+  try{
+    const r=await fetch(API+'/news/all?x_admin_token='+ADMIN_TOKEN,{method:'DELETE'});
+    if(!r.ok){ alert('Ошибка удаления'); return; }
+    alert('Все новости удалены');
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+function openStreamsPopup(){
+  document.getElementById('streams-popup-overlay').classList.add('open');
+  loadStreamsList();
+}
+function closeStreamsPopup(){ document.getElementById('streams-popup-overlay').classList.remove('open'); }
+
+async function loadStreamsList(){
+  const el=document.getElementById('streams-list');
+  el.innerHTML='<div class="loading">Загрузка...</div>';
+  try{
+    const streams=await fetch(API+'/streams').then(r=>r.json());
+    if(!streams.length){ el.innerHTML='<div class="pay-meta">Потоков пока нет</div>'; return; }
+    el.innerHTML=streams.map(s=>`
+      <div class="pay-item">
+        <div style="flex:1">
+          <div class="pay-name">${s.title}</div>
+          <div class="pay-meta">${s.stream_key}</div>
+        </div>
+        <button class="action-btn" onclick='editStream(${JSON.stringify(s)})'>Изм.</button>
+        <button class="action-btn danger" onclick="deleteStream('${s.stream_key}')">Удл.</button>
+      </div>`).join('');
+  }catch(e){ el.innerHTML='<div class="pay-meta">Ошибка загрузки</div>'; }
+}
+
+function editStream(s){
+  document.getElementById('stream-key').value=s.stream_key;
+  document.getElementById('stream-key').disabled=true;
+  document.getElementById('stream-title').value=s.title;
+  document.getElementById('stream-description').value=s.description||'';
+  document.getElementById('stream-image').value=s.image_url||'';
+}
+
+async function saveStream(){
+  const stream_key=document.getElementById('stream-key').value.trim();
+  const title=document.getElementById('stream-title').value.trim();
+  const description=document.getElementById('stream-description').value.trim();
+  const image_url=document.getElementById('stream-image').value.trim();
+  if(!stream_key || !title){ alert('Заполни ключ и название'); return; }
+  const isEdit=document.getElementById('stream-key').disabled;
+  try{
+    const r=await fetch(API+'/streams'+(isEdit?'/'+stream_key:'')+'?x_admin_token='+ADMIN_TOKEN,{
+      method:isEdit?'PUT':'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(isEdit?{title,description,image_url}:{stream_key,title,description,image_url})
+    });
+    if(!r.ok){ alert('Ошибка сохранения'); return; }
+    document.getElementById('stream-key').value='';
+    document.getElementById('stream-key').disabled=false;
+    document.getElementById('stream-title').value='';
+    document.getElementById('stream-description').value='';
+    document.getElementById('stream-image').value='';
+    loadStreamsList();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function deleteStream(key){
+  if(!confirm('Удалить поток "'+key+'"? Сами лекции не удалятся.')) return;
+  try{
+    await fetch(API+'/streams/'+key+'?x_admin_token='+ADMIN_TOKEN,{method:'DELETE'});
+    loadStreamsList();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+/* ── Расписание ── */
+
+let scheduleEvents=[];       // разовые события + анонсы без даты (одна таблица, event_date=null у анонсов)
+let scheduleRules=[];        // повторяющиеся правила
+let editingScheduleEventId=null;
+let editingTeaserId=null;
+let editingScheduleRuleId=null;
+const WEEKDAY_NAMES=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+function openSchedulePopup(){
+  document.getElementById('schedule-popup-overlay').classList.add('open');
+  loadScheduleEvents();
+  loadScheduleRules();
+}
+function closeSchedulePopup(){ document.getElementById('schedule-popup-overlay').classList.remove('open'); }
+
+function switchScheduleTab(tab){
+  ['oneoff','rules','teaser'].forEach(t=>{
+    document.getElementById('sched-tab-'+t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('sched-tab-btn-'+t).classList.toggle('active', t===tab);
+  });
+}
+
+async function loadScheduleEvents(){
+  const oneoffEl=document.getElementById('sched-oneoff-list');
+  const teaserEl=document.getElementById('sched-teaser-list');
+  oneoffEl.innerHTML='<div class="loading">Загрузка...</div>';
+  teaserEl.innerHTML='<div class="loading">Загрузка...</div>';
+  try{
+    scheduleEvents=await fetch(API+'/schedule/events').then(r=>r.json());
+    renderOneOffList();
+    renderTeaserList();
+  }catch(e){
+    oneoffEl.innerHTML='<div class="pay-meta">Ошибка загрузки</div>';
+    teaserEl.innerHTML='<div class="pay-meta">Ошибка загрузки</div>';
+  }
+}
+
+function renderOneOffList(){
+  const el=document.getElementById('sched-oneoff-list');
+  const rows=scheduleEvents.filter(e=>e.event_date);
+  if(!rows.length){ el.innerHTML='<div class="pay-meta">Разовых событий пока нет</div>'; return; }
+  el.innerHTML=rows.map(e=>`
+    <div class="pay-item">
+      <div style="flex:1">
+        <div class="pay-name">${e.title}</div>
+        <div class="pay-meta">${e.event_date}${e.event_time?' · '+e.event_time:''}</div>
+      </div>
+      <button class="action-btn" onclick='editOneOffEvent(${JSON.stringify(e)})'>Изм.</button>
+      <button class="action-btn danger" onclick="deleteScheduleEvent(${e.id})">Удл.</button>
+    </div>`).join('');
+}
+
+function renderTeaserList(){
+  const el=document.getElementById('sched-teaser-list');
+  const rows=scheduleEvents.filter(e=>!e.event_date);
+  if(!rows.length){ el.innerHTML='<div class="pay-meta">Анонсов пока нет</div>'; return; }
+  el.innerHTML=rows.map(e=>`
+    <div class="pay-item">
+      <div style="flex:1">
+        <div class="pay-name">${e.title}</div>
+        <div class="pay-meta">${e.description||''}</div>
+      </div>
+      <button class="action-btn" onclick='editTeaser(${JSON.stringify(e)})'>Изм.</button>
+      <button class="action-btn danger" onclick="deleteScheduleEvent(${e.id})">Удл.</button>
+    </div>`).join('');
+}
+
+function editOneOffEvent(e){
+  editingScheduleEventId=e.id;
+  document.getElementById('sched-event-date').value=e.event_date;
+  document.getElementById('sched-event-time').value=e.event_time||'';
+  document.getElementById('sched-event-title').value=e.title;
+  document.getElementById('sched-event-desc').value=e.description||'';
+  document.getElementById('sched-event-link').value=e.link||'';
+  document.getElementById('sched-event-submit-btn').textContent='Сохранить изменения';
+}
+
+function editTeaser(e){
+  editingTeaserId=e.id;
+  document.getElementById('sched-teaser-title').value=e.title;
+  document.getElementById('sched-teaser-desc').value=e.description||'';
+  document.getElementById('sched-teaser-link').value=e.link||'';
+  document.getElementById('sched-teaser-submit-btn').textContent='Сохранить изменения';
+}
+
+function resetOneOffForm(){
+  editingScheduleEventId=null;
+  document.getElementById('sched-event-date').value='';
+  document.getElementById('sched-event-time').value='';
+  document.getElementById('sched-event-title').value='';
+  document.getElementById('sched-event-desc').value='';
+  document.getElementById('sched-event-link').value='';
+  document.getElementById('sched-event-submit-btn').textContent='Добавить событие';
+}
+
+function resetTeaserForm(){
+  editingTeaserId=null;
+  document.getElementById('sched-teaser-title').value='';
+  document.getElementById('sched-teaser-desc').value='';
+  document.getElementById('sched-teaser-link').value='';
+  document.getElementById('sched-teaser-submit-btn').textContent='Добавить анонс';
+}
+
+async function saveOneOffEvent(){
+  const event_date=document.getElementById('sched-event-date').value;
+  const event_time=document.getElementById('sched-event-time').value;
+  const title=document.getElementById('sched-event-title').value.trim();
+  const description=document.getElementById('sched-event-desc').value.trim();
+  const link=document.getElementById('sched-event-link').value.trim();
+  if(!event_date || !title){ alert('Заполни дату и название'); return; }
+  const isEdit=!!editingScheduleEventId;
+  try{
+    const r=await fetch(API+'/schedule/events'+(isEdit?'/'+editingScheduleEventId:'')+'?x_admin_token='+ADMIN_TOKEN,{
+      method:isEdit?'PUT':'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({event_date,event_time,title,description,link})
+    });
+    if(!r.ok){ alert('Ошибка сохранения'); return; }
+    resetOneOffForm();
+    loadScheduleEvents();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function saveTeaser(){
+  const title=document.getElementById('sched-teaser-title').value.trim();
+  const description=document.getElementById('sched-teaser-desc').value.trim();
+  const link=document.getElementById('sched-teaser-link').value.trim();
+  if(!title){ alert('Заполни название анонса'); return; }
+  const isEdit=!!editingTeaserId;
+  try{
+    const r=await fetch(API+'/schedule/events'+(isEdit?'/'+editingTeaserId:'')+'?x_admin_token='+ADMIN_TOKEN,{
+      method:isEdit?'PUT':'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({event_date:null,title,description,link})
+    });
+    if(!r.ok){ alert('Ошибка сохранения'); return; }
+    resetTeaserForm();
+    loadScheduleEvents();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function deleteScheduleEvent(id){
+  if(!confirm('Удалить эту запись?')) return;
+  try{
+    await fetch(API+'/schedule/events/'+id+'?x_admin_token='+ADMIN_TOKEN,{method:'DELETE'});
+    loadScheduleEvents();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function loadScheduleRules(){
+  const el=document.getElementById('sched-rules-list');
+  el.innerHTML='<div class="loading">Загрузка...</div>';
+  try{
+    scheduleRules=await fetch(API+'/schedule/rules').then(r=>r.json());
+    renderScheduleRulesList();
+  }catch(e){ el.innerHTML='<div class="pay-meta">Ошибка загрузки</div>'; }
+}
+
+function renderScheduleRulesList(){
+  const el=document.getElementById('sched-rules-list');
+  if(!scheduleRules.length){ el.innerHTML='<div class="pay-meta">Повторяющихся правил пока нет</div>'; return; }
+  el.innerHTML=scheduleRules.map(r=>`
+    <div class="pay-item">
+      <div style="flex:1">
+        <div class="pay-name">${r.title} <span class="badge ${r.active?'badge-ok':'badge-err'}">${r.active?'активно':'выкл'}</span></div>
+        <div class="pay-meta">Каждый ${WEEKDAY_NAMES[r.weekday]}${r.event_time?' · '+r.event_time:''}</div>
+      </div>
+      <button class="action-btn" onclick='editScheduleRule(${JSON.stringify(r)})'>Изм.</button>
+      <button class="action-btn danger" onclick="deleteScheduleRule(${r.id})">Удл.</button>
+    </div>`).join('');
+}
+
+function editScheduleRule(r){
+  editingScheduleRuleId=r.id;
+  document.getElementById('sched-rule-weekday').value=r.weekday;
+  document.getElementById('sched-rule-time').value=r.event_time||'';
+  document.getElementById('sched-rule-title').value=r.title;
+  document.getElementById('sched-rule-desc').value=r.description||'';
+  document.getElementById('sched-rule-link').value=r.link||'';
+  document.getElementById('sched-rule-active').checked=r.active;
+  document.getElementById('sched-rule-submit-btn').textContent='Сохранить изменения';
+}
+
+function resetScheduleRuleForm(){
+  editingScheduleRuleId=null;
+  document.getElementById('sched-rule-weekday').value='0';
+  document.getElementById('sched-rule-time').value='';
+  document.getElementById('sched-rule-title').value='';
+  document.getElementById('sched-rule-desc').value='';
+  document.getElementById('sched-rule-link').value='';
+  document.getElementById('sched-rule-active').checked=true;
+  document.getElementById('sched-rule-submit-btn').textContent='Добавить правило';
+}
+
+async function saveScheduleRule(){
+  const weekday=parseInt(document.getElementById('sched-rule-weekday').value);
+  const event_time=document.getElementById('sched-rule-time').value;
+  const title=document.getElementById('sched-rule-title').value.trim();
+  const description=document.getElementById('sched-rule-desc').value.trim();
+  const link=document.getElementById('sched-rule-link').value.trim();
+  const active=document.getElementById('sched-rule-active').checked;
+  if(!title){ alert('Заполни название'); return; }
+  const isEdit=!!editingScheduleRuleId;
+  try{
+    const r=await fetch(API+'/schedule/rules'+(isEdit?'/'+editingScheduleRuleId:'')+'?x_admin_token='+ADMIN_TOKEN,{
+      method:isEdit?'PUT':'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({weekday,event_time,title,description,link,active})
+    });
+    if(!r.ok){ alert('Ошибка сохранения'); return; }
+    resetScheduleRuleForm();
+    loadScheduleRules();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function deleteScheduleRule(id){
+  if(!confirm('Удалить это правило?')) return;
+  try{
+    await fetch(API+'/schedule/rules/'+id+'?x_admin_token='+ADMIN_TOKEN,{method:'DELETE'});
+    loadScheduleRules();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+function openManualUserPopup(){ document.getElementById('manual-user-popup-overlay').classList.add('open'); }
+function closeManualUserPopup(){ document.getElementById('manual-user-popup-overlay').classList.remove('open'); }
+
+async function createManualUser(){
+  const full_name=document.getElementById('manual-user-name').value.trim();
+  const username=document.getElementById('manual-user-username').value.trim();
+  const phone=document.getElementById('manual-user-phone').value.trim();
+  const email=document.getElementById('manual-user-email').value.trim();
+  const sub_name=document.getElementById('manual-user-sub').value.trim();
+  const cost=document.getElementById('manual-user-cost').value.trim();
+  if(!phone && !email){ alert('Укажи хотя бы телефон или email'); return; }
+  try{
+    const r=await fetch(API+'/users/manual?x_admin_token='+ADMIN_TOKEN,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({full_name,username,phone,email,sub_name,cost})
+    });
+    if(!r.ok){ alert('Ошибка создания клиента'); return; }
+    document.getElementById('manual-user-name').value='';
+    document.getElementById('manual-user-username').value='';
+    document.getElementById('manual-user-phone').value='';
+    document.getElementById('manual-user-email').value='';
+    closeManualUserPopup();
+    await loadUsers();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+function openBroadcastPopup(){ document.getElementById('broadcast-popup-overlay').classList.add('open'); }
+function closeBroadcastPopup(){ document.getElementById('broadcast-popup-overlay').classList.remove('open'); }
+
+/* ── HTML-форматирование текстовых полей ── */
+function applyFormat(fieldId, command){
+  const el=document.getElementById(fieldId);
+  el.focus();
+  document.execCommand(command, false, null);
+}
+
+function applyLinkFormat(fieldId){
+  const url=prompt('Вставь ссылку:');
+  if(!url) return;
+  const el=document.getElementById(fieldId);
+  el.focus();
+  document.execCommand('createLink', false, url);
+}
+
+function applyBlockquote(fieldId){
+  const el=document.getElementById(fieldId);
+  el.focus();
+  document.execCommand('formatBlock', false, 'blockquote');
+}
+
+function applySpoiler(fieldId){
+  const el=document.getElementById(fieldId);
+  el.focus();
+  const sel=window.getSelection();
+  if(!sel.rangeCount || sel.isCollapsed){ alert('Выдели текст, который нужно скрыть спойлером'); return; }
+  const range=sel.getRangeAt(0);
+  const span=document.createElement('span');
+  span.className='tg-spoiler-mark';
+  try{
+    range.surroundContents(span);
+  }catch(e){
+    const contents=range.extractContents();
+    span.appendChild(contents);
+    range.insertNode(span);
+  }
+  sel.removeAllRanges();
+}
+
+const EMOJI_LIST=['😀','😂','😍','🥰','😅','😉','🙌','👍','🔥','❤️','🎉','✨','💪','🙏','😢','😱','🤔','👏','🚀','💯','⭐','🎯','📚','💬','⏰','📅','✅','❌','🎁','🌟'];
+
+function initEmojiPicker(pickerId, fieldId){
+  const picker=document.getElementById(pickerId);
+  if(!picker || picker.dataset.initialized) return;
+  picker.dataset.initialized='1';
+  picker.innerHTML=EMOJI_LIST.map(e=>`<button type="button" onclick="insertEmoji('${fieldId}','${pickerId}','${e}')">${e}</button>`).join('');
+}
+
+function toggleEmojiPicker(pickerId){
+  const fieldId = pickerId==='camp-emoji-picker' ? 'camp-text' : 'bcast-text';
+  initEmojiPicker(pickerId, fieldId);
+  document.getElementById(pickerId).classList.toggle('open');
+}
+
+function insertEmoji(fieldId, pickerId, emoji){
+  const el=document.getElementById(fieldId);
+  el.focus();
+  document.execCommand('insertText', false, emoji);
+  document.getElementById(pickerId).classList.remove('open');
+}
+
+function escapeHtmlText(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function richNodeToTelegramHtml(node){
+  let out='';
+  for(const child of node.childNodes){
+    if(child.nodeType===Node.TEXT_NODE){
+      out+=escapeHtmlText(child.textContent);
+    } else if(child.nodeType===Node.ELEMENT_NODE){
+      const tag=child.tagName;
+      if(tag==='B'||tag==='STRONG'){ out+='<b>'+richNodeToTelegramHtml(child)+'</b>'; }
+      else if(tag==='I'||tag==='EM'){ out+='<i>'+richNodeToTelegramHtml(child)+'</i>'; }
+      else if(tag==='U'){ out+='<u>'+richNodeToTelegramHtml(child)+'</u>'; }
+      else if(tag==='S'||tag==='STRIKE'||tag==='DEL'){ out+='<s>'+richNodeToTelegramHtml(child)+'</s>'; }
+      else if(tag==='A'){ out+='<a href="'+escapeHtmlText(child.getAttribute('href')||'')+'">'+richNodeToTelegramHtml(child)+'</a>'; }
+      else if(tag==='BLOCKQUOTE'){
+        if(out.length && !out.endsWith('\n')) out+='\n';
+        out+='<blockquote>'+richNodeToTelegramHtml(child)+'</blockquote>\n';
+      }
+      else if(tag==='SPAN' && child.classList.contains('tg-spoiler-mark')){ out+='<tg-spoiler>'+richNodeToTelegramHtml(child)+'</tg-spoiler>'; }
+      else if(tag==='BR'){ out+='\n'; }
+      else if(tag==='DIV'||tag==='P'){
+        if(out.length && !out.endsWith('\n')) out+='\n';
+        out+=richNodeToTelegramHtml(child)+'\n';
+      } else {
+        out+=richNodeToTelegramHtml(child);
+      }
+    }
+  }
+  return out;
+}
+
+/** Читает контентредактируемое поле и возвращает чистый Telegram-совместимый HTML
+    (только <b>/<i>/<u>/<a>, переносы строк из div/br — что реально видно в поле). */
+function getRichText(fieldId){
+  const el=document.getElementById(fieldId);
+  return richNodeToTelegramHtml(el).replace(/\n{3,}/g,'\n\n').trim();
+}
+
+/* ── Actions ── */
+async function recordManualPayment(){
+  if(!currentUser || !currentUser.id){ alert('Нет данных клиента'); return; }
+  const suggested=currentUser.cost || '';
+  const amount=prompt('Сумма платежа:', suggested);
+  if(amount===null) return;
+  try{
+    const r=await fetch(API+'/users/'+currentUser.id+'/manual-payment?x_admin_token='+ADMIN_TOKEN,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({amount: amount.trim() || null})
+    });
+    if(!r.ok){ alert('Ошибка записи платежа'); return; }
+    alert('Платёж записан!');
+    await loadAll();
+  }catch(e){ alert('Ошибка соединения'); }
+}
+
+async function doAction(action, payload=null){
+  if(!currentUser)return;
+  showActionResult('⏳ Выполняю...','');
+  try{
+    const r=await fetch(API+'/admin/action?x_admin_token='+ADMIN_TOKEN,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({telegram_id:currentUser.telegram_id,action,payload})
+    });
+    const d=await r.json();
+    if(r.ok) showActionResult('✓ Готово','ok');
+    else showActionResult('✗ '+( d.detail||'Ошибка'),'err');
+  }catch(e){ showActionResult('✗ Ошибка соединения','err'); }
+}
+
+function showActionResult(text,type){
+  const el=document.getElementById('action-result');
+  el.textContent=text;
+  el.className='action-result'+(type?' '+type:'');
+  el.style.display='block';
+  if(type) setTimeout(()=>{el.style.display='none'},3000);
+}
+
+function showPayload(action,btnText,placeholder){
+  pendingAction=action;
+  const row=document.getElementById('payload-row');
+  const input=document.getElementById('payload-input');
+  document.getElementById('payload-send-btn').textContent=btnText+' →';
+  input.placeholder=placeholder;
+  input.value='';
+  row.classList.toggle('visible');
+  if(row.classList.contains('visible')) input.focus();
+}
+
+function sendPayload(){
+  const val=document.getElementById('payload-input').value.trim();
+  if(!val||!pendingAction)return;
+  document.getElementById('payload-row').classList.remove('visible');
+  doAction(pendingAction,val);
+}
+
+/* ── Save patch ── */
+async function saveUserPatch(){
+  if(!currentUser)return;
+  const revenue=parseFloat(document.getElementById('popup-input-revenue').value)||0;
+  const notes=document.getElementById('popup-input-notes').value;
+  try{
+    await fetch(API+'/users/'+currentUser.telegram_id+'?x_admin_token='+ADMIN_TOKEN,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({manual_revenue:revenue,notes})
+    });
+    document.getElementById('popup-overlay').classList.remove('open');
+    await loadUsers();
+  }catch(e){alert('Ошибка сохранения');}
+}
+
+// loadAll called by pin screen
+</script>
+
+<div class="pin-screen" id="pin-screen">
+  <div class="pin-logo">БП</div>
+  <div class="pin-title">Введите пин-код</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+    <div class="pin-dot" id="d4"></div>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinKey('1')">1</button>
+    <button class="pin-btn" onclick="pinKey('2')">2</button>
+    <button class="pin-btn" onclick="pinKey('3')">3</button>
+    <button class="pin-btn" onclick="pinKey('4')">4</button>
+    <button class="pin-btn" onclick="pinKey('5')">5</button>
+    <button class="pin-btn" onclick="pinKey('6')">6</button>
+    <button class="pin-btn" onclick="pinKey('7')">7</button>
+    <button class="pin-btn" onclick="pinKey('8')">8</button>
+    <button class="pin-btn" onclick="pinKey('9')">9</button>
+    <button class="pin-btn del" onclick="pinKey('del')">⌫</button>
+    <button class="pin-btn" onclick="pinKey('0')">0</button>
+    <button class="pin-btn del" onclick="pinKey('clear')">C</button>
   </div>
 </div>
 
 <script>
-const API_URL = 'https://club-backend-production-fc7f.up.railway.app';
+const PIN = '33647';
+let pinEntered = '';
 
-function applyThemeIcon(theme){
-  document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
-}
-function toggleTheme(){
-  const html = document.documentElement;
-  const next = html.dataset.theme === 'light' ? 'dark' : 'light';
-  html.dataset.theme = next;
-  applyThemeIcon(next);
-  try{ localStorage.setItem('club_app_theme', next); }catch(e){}
-}
-(function initTheme(){
-  let saved = 'dark';
-  try{ saved = localStorage.getItem('club_app_theme') || 'dark'; }catch(e){}
-  document.documentElement.dataset.theme = saved;
-  document.addEventListener('DOMContentLoaded', () => applyThemeIcon(saved));
-})();
-let telegramId = null;
-let allLectures = [];
-
-async function refreshApp() {
-  const btn = document.getElementById('refresh-btn');
-  btn.classList.add('spinning');
-  listMembership = null;
-  try {
-    await Promise.all([loadProfile(), loadNews(), loadContinueWidget()]);
-    if (document.getElementById('view-notifications').classList.contains('active')) {
-      await loadNotifications();
-    }
-  } finally {
-    setTimeout(() => btn.classList.remove('spinning'), 400);
+function pinKey(k) {
+  const err = document.getElementById('pin-error');
+  err.textContent = '';
+  if (k === 'del') { pinEntered = pinEntered.slice(0,-1); }
+  else if (k === 'clear') { pinEntered = ''; }
+  else if (pinEntered.length < PIN.length) { pinEntered += k; }
+  
+  for (let i = 0; i < PIN.length; i++) {
+    document.getElementById('d'+i).classList.toggle('filled', i < pinEntered.length);
   }
-}
-
-function comingSoon() {
-  const el = document.getElementById('toast');
-  el.textContent = 'Скоро появится здесь!';
-  el.classList.add('visible');
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => el.classList.remove('visible'), 1800);
-}
-
-function switchView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
-  if (tabEl) tabEl.classList.add('active');
-  if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
-  if (name === 'notifications') loadNotifications();
-}
-
-function monthsSince(dateStr) {
-  if (!dateStr) return '—';
-  const parts = dateStr.split('.');
-  if (parts.length !== 3) return '—';
-  const d = new Date(parts[2], parts[1]-1, parts[0]);
-  const now = new Date();
-  let months = (now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth());
-  return months < 1 ? '< 1' : months;
-}
-
-async function testCheckMembership() {
-  const resultEl = document.getElementById('test-result');
-  resultEl.textContent = 'Отправляю запрос...';
-  try {
-    await fetch(`${API_URL}/app/action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, action: 'check_membership', params: {} })
-    });
-  } catch (e) {
-    resultEl.textContent = 'Ошибка отправки';
-    return;
-  }
-
-  resultEl.textContent = 'Жду ответ от Salebot...';
-  for (let i = 0; i < 8; i++) {
-    await new Promise(r => setTimeout(r, 1500));
-    try {
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_membership`);
-      const data = await r.json();
-      if (data.status === 'done') {
-        resultEl.textContent = 'Готово: ' + JSON.stringify(data.result);
-        return;
-      }
-    } catch (e) {}
-  }
-  resultEl.textContent = 'Не дождались ответа за 12 секунд — проверь блок в Salebot';
-}
-
-function openContinue() {
-  let last = null;
-  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
-  if (last) {
-    const url = last.link || last.link_vk;
-    openUrl(url);
-  } else {
-    switchView('library');
-  }
-}
-
-// ── Списки уведомлений — тексты-триггеры нужно сверить с реально работающими
-// кнопками в боте (Denis подтверждает точный список). Плейсхолдеры ниже —
-// частично из уже виденных рабочих текстов, частично — предположение.
-// off_trigger: null означает, что этот блок ещё не создан в Salebot —
-// тумблер для этого списка будет включать, но не сможет выключать, пока не пришлёшь триггер
-const NOTIF_LISTS = [
-  { list_id: 2100157, key: 'l2100157', name: 'Дайджест на месяц', on_trigger: 'digest_on',       off_trigger: 'digest_off' },
-  { list_id: 2100155, key: 'l2100155', name: 'Выпуски журнала',   on_trigger: 'magazine_on',     off_trigger: 'magazine_off' },
-  { list_id: 2100154, key: 'l2100154', name: 'Книжный клуб',      on_trigger: 'book_club_on',    off_trigger: 'book_club_off' },
-  { list_id: 2100153, key: 'l2100153', name: 'Живые занятия',     on_trigger: 'live_events_on',  off_trigger: 'live_events_off' },
-  { list_id: 2100152, key: 'l2100152', name: 'Выход лекций',      on_trigger: 'newlectures_on',  off_trigger: 'newlectures_off' },
-];
-
-let listMembership = null; // {l2100157: true, ...} после первого запроса
-
-async function fetchListMembership() {
-  await fetch(`${API_URL}/app/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id: telegramId, action: 'check_lists', params: {} })
-  }).catch(()=>{});
-
-  for (let i = 0; i < 8; i++) {
-    await new Promise(r => setTimeout(r, 1200));
-    try {
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_lists`);
-      const data = await r.json();
-      if (data.status === 'done') {
-        listMembership = data.result;
-        return listMembership;
-      }
-    } catch (e) {}
-  }
-  return null;
-}
-
-async function loadNews() {
-  const el = document.getElementById('news-card');
-  const headerEl = document.getElementById('news-header');
-  try {
-    const [news] = await Promise.all([
-      fetch(`${API_URL}/news/latest`).then(r => r.json()),
-      listMembership ? Promise.resolve() : fetchListMembership(),
-    ]);
-
-    if (!news.common_text || !news.common_text.trim()) {
-      el.style.display = 'none';
-      headerEl.style.display = 'none';
-      return;
-    }
-
-    let html = `<div class="news-block">${news.common_text}</div>`;
-    (news.targeted || []).forEach(t => {
-      const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
-      const key = cfg ? cfg.key : null;
-      const isMember = key && listMembership && listMembership[key] === 'True';
-      if (isMember) {
-        html += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
-      }
-    });
-    el.innerHTML = html;
-    el.style.display = 'block';
-    headerEl.style.display = 'flex';
-  } catch (e) {
-    el.style.display = 'none';
-    headerEl.style.display = 'none';
-  }
-}
-
-async function loadNotifications() {
-  const el = document.getElementById('notif-list');
-  if (!listMembership) await fetchListMembership();
-  if (!listMembership) {
-    el.innerHTML = '<div class="empty">Не удалось загрузить — попробуй ещё раз</div>';
-    return;
-  }
-  el.innerHTML = NOTIF_LISTS.map(cfg => {
-    const isOn = listMembership[cfg.key] === 'True';
-    return `
-      <div class="notif-row">
-        <span class="notif-label">${cfg.name}</span>
-        <div class="toggle ${isOn ? 'on' : 'off'}" onclick="toggleNotif('${cfg.key}')">
-          <div class="toggle-thumb"></div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-async function toggleNotif(key) {
-  const cfg = NOTIF_LISTS.find(c => c.key === key);
-  if (!cfg) return;
-  const isOn = listMembership[key] === 'True';
-  const trigger = isOn ? cfg.off_trigger : cfg.on_trigger;
-
-  if (!trigger) {
-    alert('Для этого пока не настроено отключение — скоро появится');
-    return;
-  }
-
-  await fetch(`${API_URL}/app/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id: telegramId, action: trigger, params: {} })
-  }).catch(()=>{});
-
-  // Оптимистично переключаем сразу, потом сверяемся с реальностью через пару секунд
-  listMembership[key] = isOn ? 'False' : 'True';
-  loadNotifications();
-  setTimeout(async () => { await fetchListMembership(); loadNotifications(); }, 2500);
-}
-
-async function loadContinueWidget() {
-  const kickerEl = document.getElementById('continue-kicker');
-  const titleEl = document.getElementById('continue-title');
-  let last = null;
-  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
-
-  if (last) {
-    kickerEl.textContent = 'Продолжить просмотр';
-    titleEl.textContent = last.title;
-    return;
-  }
-
-  // Своей истории просмотра ещё нет — показываем самую свежую лекцию из библиотеки
-  try {
-    const r = await fetch(`${API_URL}/lectures?limit=1`);
-    const data = await r.json();
-    if (data.length) {
-      kickerEl.textContent = 'Новое в библиотеке';
-      titleEl.textContent = data[0].title;
+  
+  if (pinEntered.length === PIN.length) {
+    if (pinEntered === PIN) {
+      try { sessionStorage.setItem('pin_ok','1'); } catch(e) {}
+      document.getElementById('pin-screen').classList.add('hidden');
+      loadAll();
     } else {
-      kickerEl.textContent = 'Библиотека';
-      titleEl.textContent = 'Загляни в раздел «Библиотека»';
+      err.textContent = 'Неверный пин-код';
+      pinEntered = '';
+      for (let i = 0; i < PIN.length; i++) {
+        document.getElementById('d'+i).classList.remove('filled');
+      }
     }
-  } catch (e) {
-    kickerEl.textContent = 'Библиотека';
-    titleEl.textContent = 'Загляни в раздел «Библиотека»';
   }
 }
 
-async function loadProfile() {
-  try {
-    const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
-    const u = await r.json();
+// Поддержка ввода пина с физической клавиатуры (для десктопа)
+document.addEventListener('keydown', function(e){
+  if (document.getElementById('pin-screen').classList.contains('hidden')) return;
+  if (e.key >= '0' && e.key <= '9') { pinKey(e.key); }
+  else if (e.key === 'Backspace') { pinKey('del'); }
+  else if (e.key === 'Escape') { pinKey('clear'); }
+});
 
-    if (!u.found) {
-      document.getElementById('sub-name').textContent = 'Профиль не найден';
-      document.getElementById('sub-meta').textContent = 'Похоже, ты ещё не оформлял(а) подписку';
-      document.getElementById('sub-pill').textContent = '—';
-      return;
-    }
-
-    document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
-    document.getElementById('p-name').textContent = u.full_name || u.name || '—';
-    document.getElementById('p-username').textContent = u.username || '—';
-    document.getElementById('p-months').textContent = monthsSince(u.first_payment_date);
-    document.getElementById('p-next').textContent = u.next_payment_date || '—';
-
-    document.getElementById('sub-name').textContent = u.sub_name || 'Без подписки';
-    document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
-
-    const pill = document.getElementById('sub-pill');
-    if (u.is_member) {
-      pill.textContent = 'Активна';
-      pill.className = 'pill active';
-      document.getElementById('sub-note').textContent = u.next_payment_date
-        ? `Следующее списание — ${u.next_payment_date}`
-        : '';
-    } else {
-      pill.textContent = 'Неактивна';
-      pill.className = 'pill inactive';
-      document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
-    }
-  } catch (e) {
-    document.getElementById('sub-name').textContent = 'Ошибка загрузки';
-  }
-}
-
-let activeTagFilter = null;
-let allTags = [];
-
-function collectTags(items) {
-  const set = new Set();
-  items.forEach(l => (l.tags || []).forEach(t => set.add(t)));
-  return [...set].sort();
-}
-
-function renderTagFilter() {
-  const el = document.getElementById('tag-filter-row');
-  if (!allTags.length) { el.innerHTML = ''; return; }
-  el.innerHTML = allTags.map(t => `
-    <span class="tag-pill ${activeTagFilter === t ? 'active' : ''}" onclick="toggleTagFilter('${t}')">#${t}</span>
-  `).join('');
-}
-
-function toggleTagFilter(tag) {
-  activeTagFilter = activeTagFilter === tag ? null : tag;
-  renderTagFilter();
-  applyTagFilter();
-}
-
-function applyTagFilter() {
-  const base = allLectures;
-  const filtered = activeTagFilter ? base.filter(l => (l.tags || []).includes(activeTagFilter)) : base;
-  renderLibrary(filtered);
-}
-
-async function loadStreams() {
-  const el = document.getElementById('streams-row');
-  try {
-    const streams = await fetch(`${API_URL}/streams`).then(r => r.json());
-    if (!streams.length) { el.innerHTML = ''; return; }
-    el.innerHTML = streams.map(s => `
-      <div class="stream-tile" onclick="openStream('${s.stream_key}')">
-        <img class="stream-tile-img" src="${s.image_url || ''}" alt="">
-        <div class="stream-tile-title">${s.title || s.stream_key}</div>
-      </div>
-    `).join('');
-  } catch (e) {
-    el.innerHTML = '';
-  }
-}
-
-async function openStream(key) {
-  switchView('stream');
-  document.getElementById('stream-title').textContent = 'Загрузка...';
-  document.getElementById('stream-desc').textContent = '';
-  document.getElementById('stream-hero-img').src = '';
-  document.getElementById('stream-lectures').innerHTML = '<div class="loading">Загрузка...</div>';
-  try {
-    const [stream, lectures] = await Promise.all([
-      fetch(`${API_URL}/streams/${key}`).then(r => r.json()),
-      fetch(`${API_URL}/streams/${key}/lectures`).then(r => r.json()),
-    ]);
-    document.getElementById('stream-title').textContent = stream.title || key;
-    document.getElementById('stream-desc').textContent = stream.description || '';
-    document.getElementById('stream-hero-img').src = stream.image_url || '';
-    renderedItems = lectures;
-    document.getElementById('stream-lectures').innerHTML = lectures.map((l, i) => `
-      <div class="lec-card">
-        <div class="lec-title">${l.title}</div>
-        <div class="lec-desc">${l.description || ''}</div>
-        <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
-        <div class="lec-links">
-          ${l.link ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
-          ${l.link_vk ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
-        </div>
-      </div>
-    `).join('');
-  } catch (e) {
-    document.getElementById('stream-lectures').innerHTML = '<div class="empty">Не удалось загрузить поток</div>';
-  }
-}
-
-async function loadLibrary(query) {
-  const listEl = document.getElementById('lib-list');
-  listEl.innerHTML = '<div class="loading">Загрузка...</div>';
-  try {
-    const url = query
-      ? `${API_URL}/lectures/search?q=${encodeURIComponent(query)}`
-      : `${API_URL}/lectures?limit=100`;
-    const r = await fetch(url);
-    const data = await r.json();
-    if (!query) {
-      allLectures = data;
-      allTags = collectTags(data);
-      renderTagFilter();
-      applyTagFilter();
-    } else {
-      renderLibrary(data);
-    }
-  } catch (e) {
-    listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
-  }
-}
-
-let renderedItems = [];
-
-function renderLibrary(items) {
-  renderedItems = items;
-  const listEl = document.getElementById('lib-list');
-  if (!items.length) {
-    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
-    return;
-  }
-  listEl.innerHTML = items.map((l, i) => `
-    <div class="lec-card">
-      <div class="lec-title">${l.title}</div>
-      <div class="lec-desc">${l.description || ''}</div>
-      <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
-      <div class="lec-links">
-        ${l.link ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
-        ${l.link_vk ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-function rememberLastLecture(l) {
-  try {
-    localStorage.setItem('club_app_last_lecture', JSON.stringify({
-      slug: l.slug, title: l.title, description: l.description,
-      link: l.link, link_vk: l.link_vk, ts: Date.now()
-    }));
-  } catch(e){}
-}
-
-function openUrl(url) {
-  if (!url) return;
-  const tg = window.Telegram?.WebApp;
-  const isTelegramLink = /^https:\/\/t\.me\//i.test(url);
-  if (tg && isTelegramLink && tg.openTelegramLink) {
-    tg.openTelegramLink(url);
-  } else if (tg && tg.openLink) {
-    tg.openLink(url);
-  } else {
-    window.open(url, '_blank');
-  }
-}
-
-function openLectureLink(index, platform) {
-  const l = renderedItems[index];
-  if (!l) return;
-  rememberLastLecture(l);
-  openUrl(platform === 'vk' ? l.link_vk : l.link);
-}
-
-function openLecture(index) {
-  const l = renderedItems[index];
-  if (!l) return;
-  rememberLastLecture(l);
-  openUrl(l.link || l.link_vk);
-}
-
-let searchTimer;
-function onSearchInput() {
-  clearTimeout(searchTimer);
-  const q = document.getElementById('lib-search').value.trim();
-  searchTimer = setTimeout(() => loadLibrary(q || undefined), 300);
-}
-
-// ── Init ──
-(function init(){
-  const tg = window.Telegram?.WebApp;
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    tg.ready();
-    tg.expand();
-    telegramId = tg.initDataUnsafe.user.id;
-    document.getElementById('app-shell').style.display = 'block';
-    document.getElementById('tabbar').style.display = 'flex';
-    loadProfile();
-    loadContinueWidget();
-    loadNews();
-  } else {
-    document.getElementById('not-telegram-msg').style.display = 'flex';
+// Check if already unlocked
+(function(){
+  let ok = false;
+  try { ok = sessionStorage.getItem('pin_ok') === '1'; } catch(e) {}
+  if (ok) {
+    document.getElementById('pin-screen').classList.add('hidden');
+    loadAll();
   }
 })();
+
+// Перетаскивание мышкой для горизонтально прокручиваемых блоков (.scroll-row)
+document.querySelectorAll('.scroll-row').forEach(row => {
+  // Трекпад: некоторые браузеры шлют горизонтальный свайп как deltaY, а не deltaX —
+  // подхватываем оба варианта, чтобы прокрутка двумя пальцами работала стабильно
+  row.addEventListener('wheel', e => {
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (delta !== 0) {
+      row.scrollLeft += delta;
+      e.preventDefault();
+    }
+  }, { passive: false });
+  let isDown = false, startX, scrollLeft;
+  row.addEventListener('mousedown', e => {
+    isDown = true;
+    row.classList.add('dragging');
+    startX = e.pageX - row.offsetLeft;
+    scrollLeft = row.scrollLeft;
+  });
+  window.addEventListener('mouseup', () => { isDown = false; row.classList.remove('dragging'); });
+  row.addEventListener('mouseleave', () => { isDown = false; row.classList.remove('dragging'); });
+  row.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - row.offsetLeft;
+    row.scrollLeft = scrollLeft - (x - startX);
+  });
+});
 </script>
 </body>
 </html>
