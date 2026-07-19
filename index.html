@@ -1116,7 +1116,7 @@ async function askAi(){
     await fetch(`${API_URL}/app/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, action: 'ai_library_question', params: { question } })
+      body: JSON.stringify({ telegram_id: telegramId, action: 'ai_library_question', params: { lib_question: question } })
     });
   } catch (e) {
     answerEl.innerHTML = '<div class="ai-loading">Не получилось отправить вопрос — проверь соединение</div>';
