@@ -444,10 +444,7 @@ function openContinue() {
   try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
   if (last) {
     const url = last.link || last.link_vk;
-    if (url) {
-      if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(url);
-      else window.open(url, '_blank');
-    }
+    openUrl(url);
   } else {
     switchView('library');
   }
@@ -762,8 +759,12 @@ function rememberLastLecture(l) {
 
 function openUrl(url) {
   if (!url) return;
-  if (window.Telegram?.WebApp?.openLink) {
-    window.Telegram.WebApp.openLink(url);
+  const tg = window.Telegram?.WebApp;
+  const isTelegramLink = /^https:\/\/t\.me\//i.test(url);
+  if (tg && isTelegramLink && tg.openTelegramLink) {
+    tg.openTelegramLink(url);
+  } else if (tg && tg.openLink) {
+    tg.openLink(url);
   } else {
     window.open(url, '_blank');
   }
