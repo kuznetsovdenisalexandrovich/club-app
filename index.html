@@ -168,6 +168,9 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .cal-widget-card{padding:14px}
 .cal-widget-card .cal-day{aspect-ratio:1/0.7}
 .cal-widget-card .cal-grid{gap:3px}
+.cal-widget-today{font-size:12.5px;font-weight:600;margin-bottom:12px;padding:11px 13px;border-radius:12px;background:var(--card2);cursor:pointer;line-height:1.4}
+.cal-widget-today b{color:var(--warm)}
+.cal-widget-today .link{color:var(--warm);text-decoration:underline}
 .cat-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
 .teaser-card{background:linear-gradient(135deg,rgba(155,140,242,0.10),transparent);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
 .teaser-card:last-child{margin-bottom:0}
@@ -229,6 +232,7 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
       <span style="font-size:12px;font-weight:600;color:var(--warm);cursor:pointer" onclick="switchView('schedule')">Все →</span>
     </div>
     <div class="card cal-widget-card">
+      <div class="cal-widget-today" id="cal-widget-today">—</div>
       <div class="cal-header">
         <div class="cal-month-label" id="cal-widget-month-label">—</div>
       </div>
@@ -361,9 +365,9 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 
   <!-- ── Расписание ── -->
   <div class="view" id="view-schedule">
-    <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
-      <span>Расписание</span>
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px"><span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span><span>Расписание</span></span>
+      <button class="notif-btn-small" onclick="switchView('notifications')">Настроить уведомления</button>
     </div>
 
     <div id="cat-filter-row" class="tag-filter-row" style="display:none"></div>
@@ -452,7 +456,10 @@ async function refreshApp() {
   btn.classList.add('spinning');
   listMembership = null;
   try {
-    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadCalendarMonth()]);
+    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadWidgetMonth()]);
+    if (document.getElementById('view-schedule').classList.contains('active')) {
+      await loadCalendarMonth();
+    }
     if (document.getElementById('view-notifications').classList.contains('active')) {
       await loadNotifications();
     }
@@ -601,6 +608,13 @@ async function loadNews() {
 
 async function loadNotifications() {
   const el = document.getElementById('notif-list');
+  // Дублируем открытие меню в бота колбеком — чтобы у клиента на фоне (без пуша) была та же менюшка,
+  // и бот с аппом не расходились в состоянии
+  fetch(`${API_URL}/app/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, action: 'notifications', params: {} })
+  }).catch(()=>{});
   if (!listMembership) await fetchListMembership();
   if (!listMembership) {
     el.innerHTML = '<div class="empty">Не удалось загрузить — попробуй ещё раз</div>';
@@ -888,8 +902,11 @@ function categoryColor(name){
 
 const today = new Date();
 let calYear = today.getFullYear();
-let calMonth = today.getMonth() + 1; // 1-12
-let calDaysData = {};        // "YYYY-MM-DD" -> [events]
+let calMonth = today.getMonth() + 1; // 1-12 — месяц, который сейчас пролистан в ПОЛНОМ виде расписания
+const TODAY_YEAR = today.getFullYear();
+const TODAY_MONTH = today.getMonth() + 1; // виджет на портале всегда закреплён за реальным текущим месяцем
+let calDaysData = {};         // "YYYY-MM-DD" -> [events], для полного навигируемого вида
+let widgetDaysData = {};      // "YYYY-MM-DD" -> [events], всегда текущий месяц, для виджета на портале
 let popupDayEvents = [];
 let activeCategories = null; // Set — какие категории сейчас показываются в полном виде расписания (null = ещё не инициализировано)
 let knownCategories = new Set(); // все когда-либо увиденные категории, чтобы новые сразу были включены в фильтр
@@ -905,20 +922,43 @@ function calShiftMonth(delta){
 }
 
 async function loadCalendarMonth(){
-  const labelText = `${MONTHS_NOM[calMonth-1]} ${calYear}`;
-  document.getElementById('cal-month-label').textContent = labelText;
-  document.getElementById('cal-widget-month-label').textContent = labelText;
+  document.getElementById('cal-month-label').textContent = `${MONTHS_NOM[calMonth-1]} ${calYear}`;
   try {
     const monthParam = `${calYear}-${pad2(calMonth)}`;
     const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
     calDaysData = data.days || {};
     renderCategoryFilterRow();
-    renderCalendarGrid('cal-grid', activeCategories);
-    renderCalendarGrid('cal-widget-grid', null);
+    renderCalendarGrid('cal-grid', calYear, calMonth, calDaysData, activeCategories);
     renderTeasers(data.teasers || []);
   } catch (e) {
     document.getElementById('cal-grid').innerHTML = '<div class="empty">Не удалось загрузить расписание</div>';
+  }
+}
+
+async function loadWidgetMonth(){
+  document.getElementById('cal-widget-month-label').textContent = `${MONTHS_NOM[TODAY_MONTH-1]} ${TODAY_YEAR}`;
+  try {
+    const monthParam = `${TODAY_YEAR}-${pad2(TODAY_MONTH)}`;
+    const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
+    widgetDaysData = data.days || {};
+    renderCalendarGrid('cal-widget-grid', TODAY_YEAR, TODAY_MONTH, widgetDaysData, null);
+    renderTodayLine();
+  } catch (e) {
     document.getElementById('cal-widget-grid').innerHTML = '<div class="empty">Не удалось загрузить</div>';
+  }
+}
+
+function renderTodayLine(){
+  const el = document.getElementById('cal-widget-today');
+  const events = widgetDaysData[todayStr()] || [];
+  if (!events.length) {
+    el.innerHTML = `Сегодня занятий нет — можешь посмотреть <span class="link">библиотеку →</span>`;
+    el.onclick = () => switchView('library');
+  } else {
+    const first = events[0];
+    const extra = events.length > 1 ? ` +ещё ${events.length - 1}` : '';
+    el.innerHTML = `Сегодня: <b>${first.title}</b>${first.time ? ' в ' + first.time : ''}${extra}`;
+    el.onclick = () => openDayPopup(todayStr());
   }
 }
 
@@ -946,21 +986,21 @@ function renderCategoryFilterRow(){
 function toggleCategoryFilter(cat){
   if (activeCategories.has(cat)) activeCategories.delete(cat); else activeCategories.add(cat);
   renderCategoryFilterRow();
-  renderCalendarGrid('cal-grid', activeCategories);
+  renderCalendarGrid('cal-grid', calYear, calMonth, calDaysData, activeCategories);
 }
 
-function renderCalendarGrid(targetId, filterSet){
+function renderCalendarGrid(targetId, year, month, daysData, filterSet){
   const gridEl = document.getElementById(targetId);
-  const firstOfMonth = new Date(calYear, calMonth - 1, 1);
+  const firstOfMonth = new Date(year, month - 1, 1);
   const leading = WEEKDAY_LEAD(firstOfMonth);
-  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const daysInMonth = new Date(year, month, 0).getDate();
   const tStr = todayStr();
 
   let html = '';
   for (let i = 0; i < leading; i++) html += '<div class="cal-day"></div>';
   for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(d)}`;
-    const dayEvents = calDaysData[dateStr] || [];
+    const dateStr = `${year}-${pad2(month)}-${pad2(d)}`;
+    const dayEvents = daysData[dateStr] || [];
     const visible = filterSet ? dayEvents.filter(e => !e.category || filterSet.has(e.category)) : dayEvents;
     const hasEvents = visible.length > 0;
     const isToday = dateStr === tStr;
@@ -987,7 +1027,7 @@ function renderTeasers(teasers){
 }
 
 function openDayPopup(dateStr){
-  popupDayEvents = calDaysData[dateStr] || [];
+  popupDayEvents = calDaysData[dateStr] || widgetDaysData[dateStr] || [];
   const [y, m, d] = dateStr.split('-').map(Number);
   document.getElementById('sched-popup-date').textContent = `${d} ${MONTHS_GEN[m-1]}`;
   document.getElementById('sched-popup-events').innerHTML = popupDayEvents.map((e, i) => `
@@ -1041,7 +1081,7 @@ function closeSchedPopup(){
     loadProfile();
     loadContinueWidget();
     loadNews();
-    loadCalendarMonth();
+    loadWidgetMonth();
   } else {
     document.getElementById('not-telegram-msg').style.display = 'flex';
   }
