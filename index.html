@@ -152,6 +152,34 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
 .center-msg h2{font-family:var(--disp);font-weight:700;font-size:17px}
 .center-msg p{font-size:13px;color:var(--text-dim);line-height:1.6}
+
+/* ── Расписание ── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-month-label{font-family:var(--disp);font-weight:700;font-size:14.5px}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10.5px;font-weight:700;color:var(--text-faint);margin-bottom:8px;letter-spacing:.02em}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;font-size:12.5px;font-weight:600;color:var(--text-faint);position:relative}
+.cal-day.in-month{color:var(--text-dim);cursor:default}
+.cal-day.has-events{background:var(--card2);color:var(--text);cursor:pointer}
+.cal-day.has-events:active{transform:scale(0.92)}
+.cal-day.today{box-shadow:inset 0 0 0 1.5px var(--warm)}
+.cal-day-dot{width:4px;height:4px;border-radius:50%;background:var(--warm);position:absolute;bottom:6px}
+.teaser-card{background:linear-gradient(135deg,rgba(155,140,242,0.10),transparent);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
+.teaser-card:last-child{margin-bottom:0}
+.teaser-title{font-weight:700;font-size:13.5px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.teaser-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5}
+
+.sched-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.sched-popup-overlay.open{display:flex}
+.sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:none}
+.sched-popup-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 16px}
+.sched-popup-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sched-popup-title{font-family:var(--disp);font-weight:700;font-size:15px}
+.sched-event-item{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.sched-event-item:last-child{margin-bottom:0}
+.sched-event-time{font-size:11px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.sched-event-title{font-weight:700;font-size:14px;margin-bottom:6px}
+.sched-event-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -201,10 +229,9 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Уведомления</div>
       </div>
-      <div class="tile" onclick="comingSoon()">
+      <div class="tile" onclick="switchView('schedule')">
         <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Расписание</div>
-        <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="comingSoon()">
         <div class="tile-icon" style="background:rgba(110,168,254,0.16);color:#6ea8fe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 18 18 6M18 6H9M18 6v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -315,6 +342,28 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
     <div class="scroll-spacer"></div>
   </div>
 
+  <!-- ── Расписание ── -->
+  <div class="view" id="view-schedule">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span>Расписание</span>
+    </div>
+
+    <div class="card" style="padding:16px">
+      <div class="cal-header">
+        <button class="icon-btn" onclick="calShiftMonth(-1)">‹</button>
+        <div class="cal-month-label" id="cal-month-label">—</div>
+        <button class="icon-btn" onclick="calShiftMonth(1)">›</button>
+      </div>
+      <div class="cal-weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+      <div class="cal-grid" id="cal-grid"><div class="loading">Загрузка...</div></div>
+    </div>
+
+    <div class="section-label" id="teaser-label" style="display:none">Скоро в клубе</div>
+    <div id="teaser-list"></div>
+    <div class="scroll-spacer"></div>
+  </div>
+
 </div>
 
 <!-- Не в Telegram -->
@@ -343,6 +392,17 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
     <span>Профиль</span>
     <div class="tab-underline"></div>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="sched-popup-overlay" onclick="if(event.target===this) closeSchedPopup()">
+  <div class="sched-popup" id="sched-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title" id="sched-popup-date">—</div>
+      <button class="icon-btn" onclick="closeSchedPopup()">✕</button>
+    </div>
+    <div id="sched-popup-events"></div>
   </div>
 </div>
 
@@ -398,6 +458,7 @@ function switchView(name) {
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
   if (name === 'notifications') loadNotifications();
+  if (name === 'schedule') loadCalendarMonth();
 }
 
 function monthsSince(dateStr) {
@@ -790,6 +851,119 @@ function onSearchInput() {
   const q = document.getElementById('lib-search').value.trim();
   searchTimer = setTimeout(() => loadLibrary(q || undefined), 300);
 }
+
+/* ── Расписание / календарь ── */
+
+const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const WEEKDAY_LEAD = d => (d.getDay() + 6) % 7; // 0=Пн ... 6=Вс
+
+const today = new Date();
+let calYear = today.getFullYear();
+let calMonth = today.getMonth() + 1; // 1-12
+let calDaysData = {};   // "YYYY-MM-DD" -> [events]
+let popupDayEvents = [];
+
+function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+function todayStr(){ return `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`; }
+
+function calShiftMonth(delta){
+  calMonth += delta;
+  if (calMonth < 1) { calMonth = 12; calYear--; }
+  if (calMonth > 12) { calMonth = 1; calYear++; }
+  loadCalendarMonth();
+}
+
+async function loadCalendarMonth(){
+  const gridEl = document.getElementById('cal-grid');
+  document.getElementById('cal-month-label').textContent = `${MONTHS_NOM[calMonth-1]} ${calYear}`;
+  gridEl.innerHTML = '<div class="loading">Загрузка...</div>';
+  try {
+    const monthParam = `${calYear}-${pad2(calMonth)}`;
+    const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
+    calDaysData = data.days || {};
+    renderCalendarGrid();
+    renderTeasers(data.teasers || []);
+  } catch (e) {
+    gridEl.innerHTML = '<div class="empty">Не удалось загрузить расписание</div>';
+  }
+}
+
+function renderCalendarGrid(){
+  const gridEl = document.getElementById('cal-grid');
+  const firstOfMonth = new Date(calYear, calMonth - 1, 1);
+  const leading = WEEKDAY_LEAD(firstOfMonth);
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const tStr = todayStr();
+
+  let html = '';
+  for (let i = 0; i < leading; i++) html += '<div class="cal-day"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(d)}`;
+    const hasEvents = !!(calDaysData[dateStr] && calDaysData[dateStr].length);
+    const isToday = dateStr === tStr;
+    const cls = ['cal-day', 'in-month', hasEvents ? 'has-events' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
+    html += `<div class="${cls}" ${hasEvents ? `onclick="openDayPopup('${dateStr}')"` : ''}>${d}${hasEvents ? '<span class="cal-day-dot"></span>' : ''}</div>`;
+  }
+  gridEl.innerHTML = html;
+}
+
+function renderTeasers(teasers){
+  const labelEl = document.getElementById('teaser-label');
+  const listEl = document.getElementById('teaser-list');
+  window._teasers = teasers;
+  if (!teasers.length) { labelEl.style.display = 'none'; listEl.innerHTML = ''; return; }
+  labelEl.style.display = '';
+  listEl.innerHTML = teasers.map((t, i) => `
+    <div class="teaser-card">
+      <div class="teaser-title">✨ ${t.title}</div>
+      <div class="teaser-desc">${t.description || ''}</div>
+      ${t.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(window._teasers[${i}].link)">Подробнее</button></div>` : ''}
+    </div>`).join('');
+}
+
+function openDayPopup(dateStr){
+  popupDayEvents = calDaysData[dateStr] || [];
+  const [y, m, d] = dateStr.split('-').map(Number);
+  document.getElementById('sched-popup-date').textContent = `${d} ${MONTHS_GEN[m-1]}`;
+  document.getElementById('sched-popup-events').innerHTML = popupDayEvents.map((e, i) => `
+    <div class="sched-event-item">
+      ${e.time ? `<div class="sched-event-time">${e.time}</div>` : ''}
+      <div class="sched-event-title">${e.title}</div>
+      ${e.description ? `<div class="sched-event-desc">${e.description}</div>` : ''}
+      ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(popupDayEvents[${i}].link)">Перейти</button></div>` : ''}
+    </div>`).join('');
+  document.getElementById('sched-popup-overlay').classList.add('open');
+}
+
+function closeSchedPopup(){
+  document.getElementById('sched-popup-overlay').classList.remove('open');
+}
+
+// Свайп вниз для закрытия попапа расписания
+(function initSchedPopupSwipe(){
+  const popup = document.getElementById('sched-popup');
+  let startY = 0, dy = 0, dragging = false;
+  popup.addEventListener('touchstart', e => {
+    if (popup.scrollTop > 0) return;
+    startY = e.touches[0].clientY;
+    dragging = true;
+    popup.style.transition = 'none';
+  }, { passive: true });
+  popup.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy > 0) popup.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  popup.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    popup.style.transition = '';
+    popup.style.transform = '';
+    if (dy > 80) closeSchedPopup();
+    dy = 0;
+  });
+})();
 
 // ── Init ──
 (function init(){
