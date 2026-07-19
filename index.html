@@ -68,7 +68,7 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 
 .lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
 .lec-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.save-btn{background:none;border:none;font-size:19px;line-height:1;color:var(--text-faint);cursor:pointer;padding:0;flex-shrink:0}
+.save-btn{background:none;border:none;line-height:1;color:var(--text-faint);cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center}
 .save-btn.saved{color:var(--warm)}
 .saved-banner{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:12.5px;font-weight:600}
 .clear-saved{color:var(--warm);cursor:pointer;font-weight:600}
@@ -794,13 +794,15 @@ async function loadStreams() {
 let renderedItems = [];
 let savedSlugs = new Set();
 
+const SAVE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function lecCardHtml(l, i){
   const isSaved = savedSlugs.has(l.slug);
   return `
     <div class="lec-card">
       <div class="lec-card-top">
         <div class="lec-title">${l.title}</div>
-        <button class="save-btn${isSaved ? ' saved' : ''}" onclick="event.stopPropagation();toggleSaved('${l.slug}')">${isSaved ? '★' : '☆'}</button>
+        <button class="save-btn${isSaved ? ' saved' : ''}" data-slug="${l.slug}" onclick="event.stopPropagation();toggleSaved('${l.slug}')" aria-label="Смотреть позже">${SAVE_ICON}</button>
       </div>
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
@@ -819,25 +821,31 @@ async function loadSavedSlugs(){
 }
 
 function toggleSaved(slug){
-  const isSaved = savedSlugs.has(slug);
-  if (isSaved) {
-    savedSlugs.delete(slug);
-    fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}&slug=${encodeURIComponent(slug)}`, { method: 'DELETE' }).catch(()=>{});
-  } else {
+  const willBeSaved = !savedSlugs.has(slug);
+  if (willBeSaved) {
     savedSlugs.add(slug);
     fetch(`${API_URL}/saved-lectures`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, slug })
     }).catch(()=>{});
-  }
-  // Перерисовываем то, что сейчас видно, чтобы звёздочка и список "Смотреть позже" сразу отразили изменение
-  if (document.getElementById('saved-banner').style.display !== 'none') {
-    openSavedList();
-  } else if (document.getElementById('view-stream').classList.contains('active')) {
-    document.getElementById('stream-lectures').innerHTML = renderedItems.map((l, i) => lecCardHtml(l, i)).join('');
   } else {
-    renderLibrary(renderedItems);
+    savedSlugs.delete(slug);
+    fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}&slug=${encodeURIComponent(slug)}`, { method: 'DELETE' }).catch(()=>{});
+  }
+
+  // Обновляем КАЖДУЮ видимую кнопку этой лекции напрямую (одна и та же лекция может быть
+  // на экране в нескольких местах сразу — библиотека под попапом ИИ, поток и т.п.) —
+  // никаких перерисовок всего списка, поэтому апдейт всегда мгновенный и в нужном месте.
+  document.querySelectorAll('.save-btn').forEach(el => {
+    if (el.dataset.slug === slug) el.classList.toggle('saved', willBeSaved);
+  });
+
+  // Если сейчас открыт отфильтрованный список "Смотреть позже" и лекцию убрали — карточка
+  // должна пропасть из списка сразу, а не просто сменить цвет иконки.
+  const bannerVisible = document.getElementById('saved-banner').style.display !== 'none';
+  if (bannerVisible && !willBeSaved) {
+    openSavedList();
   }
 }
 
