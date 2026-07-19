@@ -182,6 +182,7 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .ai-question-input{width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;font-family:inherit;font-size:13.5px;color:var(--text);resize:vertical}
 .ai-question-input:focus{outline:none;border-color:var(--warm)}
 .ai-answer-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text-dim);white-space:pre-wrap}
+.ai-answer-intro{font-size:12.5px;color:var(--text-dim);margin-bottom:10px}
 .ai-loading{font-size:13px;color:var(--text-faint);text-align:center;padding:20px 0}
 .sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:none}
 .sched-popup-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 16px}
@@ -1130,7 +1131,7 @@ async function askAi(){
       const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=ai_library_question`);
       const data = await r.json();
       if (data.status === 'done' && data.result && data.result.answer) {
-        answerEl.innerHTML = `<div class="ai-answer-card">${escapeHtml(data.result.answer).replace(/\n/g, '<br>')}</div>`;
+        await renderAiAnswerCards(data.result.answer);
         btn.disabled = false;
         return;
       }
@@ -1138,6 +1139,34 @@ async function askAi(){
   }
   answerEl.innerHTML = '<div class="ai-loading">Не дождались ответа — попробуй ещё раз чуть позже</div>';
   btn.disabled = false;
+}
+
+async function renderAiAnswerCards(rawAnswer){
+  const answerEl = document.getElementById('ai-answer-area');
+  const slugs = rawAnswer.split(',').map(s => s.trim()).filter(Boolean);
+
+  if (!allLectures.length) {
+    try { await loadLibrary(); } catch (e) {}
+  }
+
+  const matched = slugs.map(slug => allLectures.find(l => l.slug === slug)).filter(Boolean);
+
+  if (!matched.length) {
+    answerEl.innerHTML = '<div class="ai-answer-card">Не нашёл подходящей лекции по этому вопросу — попробуй переформулировать.</div>';
+    return;
+  }
+
+  renderedItems = matched;
+  answerEl.innerHTML = `<div class="ai-answer-intro">Вот что подходит по твоему вопросу:</div>` + matched.map((l, i) => `
+    <div class="lec-card">
+      <div class="lec-title">${l.title}</div>
+      <div class="lec-desc">${l.description || ''}</div>
+      <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
+      <div class="lec-links">
+        ${l.link ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
+        ${l.link_vk ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
+      </div>
+    </div>`).join('');
 }
 
 // ── Init ──
