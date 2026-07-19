@@ -1075,6 +1075,9 @@ function closeSchedPopup(){
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.ready();
     tg.expand();
+    if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) {
+      tg.disableVerticalSwipes();
+    }
     telegramId = tg.initDataUnsafe.user.id;
     document.getElementById('app-shell').style.display = 'block';
     document.getElementById('tabbar').style.display = 'flex';
