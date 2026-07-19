@@ -8,655 +8,153 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
 
-/* ── Theme Tokens ────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg: #0c0a15;
-  --bg2: #110f1e;
-  --line: rgba(255,255,255,0.05);
-  --card-bg: rgba(255,255,255,0.05);
-  --card2-bg: rgba(255,255,255,0.08);
-  --border: rgba(255,255,255,0.08);
-  --border-soft: rgba(255,255,255,0.05);
-  --text: #f0eefc;
-  --text-dim: #a29dc2;
-  --text-faint: #655f80;
-  --shadow: none;
-  --inner: inset 0 1px 0 rgba(255,255,255,0.06);
-  --blob-opacity: 1;
-  --tabbar-bg: rgba(12,10,21,0.88);
-  --tabbar-border: rgba(255,255,255,0.07);
+  --bg:#121014; --bg2:#1c1a1e; --card:#1c1a1e; --card2:#252226;
+  --border:rgba(255,255,255,0.09); --line:rgba(255,255,255,0.07);
+  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+  --shadow:none;
 }
 [data-theme="light"] {
-  --bg: #f5f0e8;
-  --bg2: #ede8df;
-  --line: rgba(40,30,20,0.07);
-  --card-bg: rgba(255,255,255,0.62);
-  --card2-bg: rgba(255,255,255,0.5);
-  --border: rgba(40,30,20,0.09);
-  --border-soft: rgba(40,30,20,0.06);
-  --text: #2a2218;
-  --text-dim: #6b5f50;
-  --text-faint: #9c9080;
-  --shadow: 0 4px 20px rgba(60,40,30,0.07);
-  --inner: inset 0 1px 0 rgba(255,255,255,0.5);
-  --blob-opacity: 0.5;
-  --tabbar-bg: rgba(245,240,232,0.9);
-  --tabbar-border: rgba(40,30,20,0.08);
+  --bg:#faf5ee; --bg2:#ffffff; --card:#fffcf8; --card2:#f3ebe0;
+  --border:rgba(60,40,25,0.09); --line:rgba(60,40,25,0.07);
+  --text:#2b241d; --text-dim:#6e6156; --text-faint:#a89b8c;
+  --shadow:0 6px 20px -8px rgba(90,60,30,0.10);
 }
 :root {
-  --coral: #e8614a;
-  --peach: #f0956e;
-  --lav: #9b8cf2;
-  --teal: #6ec4f0;
-  --green: #3ecf8e;
-  --amber: #ffb84d;
-  --red: #ff453a;
-  --disp: 'Unbounded', sans-serif;
-  --body: 'Manrope', sans-serif;
+  --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
+  --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
+  --warm:#e8614a; --warm-deep:#cf4f39;
+  --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
 }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);transition:background .25s}
+body{
+  font-family:var(--body);color:var(--text);min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+}
+.shell{max-width:520px;margin:0 auto;padding:0 16px}
 
-/* ── Reset ───────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-html, body {
-  background: var(--bg);
-  transition: background 0.25s;
-}
-body {
-  font-family: var(--body);
-  color: var(--text);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  padding-bottom: calc(88px + env(safe-area-inset-bottom));
-}
+header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.theme-switch{width:52px;height:30px;border-radius:20px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:3px;cursor:pointer;flex-shrink:0}
+[data-theme="dark"] .theme-switch{justify-content:flex-end}
+[data-theme="light"] .theme-switch{justify-content:flex-start}
+.theme-switch-thumb{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--lav),var(--coral));display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s}
+.mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--lav),var(--warm));display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:14px;color:white;flex-shrink:0;box-shadow:0 0 11px rgba(232,97,74,0.18),0 0 7px rgba(155,140,242,0.15),inset 0 1px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.25)}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em}
+.brand-sub{font-size:12px;color:var(--text-faint);margin-top:2px}
 
-/* ── Shell ───────────────────────────────────────────────────────── */
-.shell {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 0 16px;
-  position: relative;
-  z-index: 10;
-}
+.section-label{font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
+.section-label:first-of-type{margin-top:0}
 
-/* ── Blob Background ─────────────────────────────────────────────── */
-.blob-bg {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 0;
-}
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  transition: opacity 0.3s;
-  opacity: var(--blob-opacity);
-}
-.blob-coral {
-  top: -100px; right: -80px;
-  width: 360px; height: 360px;
-  background: radial-gradient(circle at 40% 40%, rgba(232,97,74,0.3) 0%, rgba(240,149,110,0.1) 55%, transparent 75%);
-  filter: blur(52px);
-  transform: rotate(-15deg);
-}
-.blob-lav {
-  bottom: 16%; left: -90px;
-  width: 310px; height: 310px;
-  background: radial-gradient(circle at 55% 55%, rgba(155,140,242,0.26) 0%, rgba(110,196,240,0.07) 58%, transparent 76%);
-  filter: blur(58px);
-}
-.blob-peach {
-  top: 48%; right: -40px;
-  width: 200px; height: 240px;
-  background: radial-gradient(circle, rgba(240,149,110,0.13) 0%, transparent 72%);
-  filter: blur(44px);
-}
-.grain-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.05;
-  pointer-events: none;
-}
+.card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:18px;margin-bottom:12px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);transition:background .25s,border-color .25s}
 
-/* ── Header ──────────────────────────────────────────────────────── */
-header {
-  padding: calc(env(safe-area-inset-top) + 20px) 0 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.brand { display: flex; align-items: center; gap: 12px; }
-.mark {
-  width: 42px; height: 42px;
-  border-radius: 13px;
-  background: linear-gradient(135deg, var(--coral), var(--lav));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px rgba(232,97,74,0.32);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--disp);
-  font-weight: 900;
-  font-size: 13px;
-  color: white;
-  flex-shrink: 0;
-}
-.brand-name {
-  font-family: var(--disp);
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--text);
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-}
-.brand-sub { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
-.header-actions { display: flex; align-items: center; gap: 10px; }
+.sub-card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(232,97,74,0.08),transparent);box-shadow:0 0 18px -10px rgba(232,97,74,0.15),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
+.sub-left{display:flex;align-items:center;gap:12px}
+.sub-icon{width:44px;height:44px;border-radius:14px;background:var(--lav-dim);color:var(--lav-deep);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
+.sub-name{font-family:var(--disp);font-weight:700;font-size:15px}
+.sub-meta{font-size:12px;color:var(--text-faint);margin-top:3px}
+.pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap}
+.pill.active{background:rgba(62,207,142,0.15);color:var(--green)}
+.pill.inactive{background:rgba(255,69,58,0.15);color:var(--red)}
+.sub-note{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:14px}
 
-/* ── Icon Button ─────────────────────────────────────────────────── */
-.icon-btn {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  background: var(--card2-bg);
-  border: 1px solid var(--border);
-  box-shadow: var(--inner);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--text-dim);
-  flex-shrink: 0;
-  transition: transform 0.15s;
-}
-.icon-btn:active { transform: scale(0.9); }
-.icon-btn.spinning { animation: spin 0.6s linear; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.profile-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.profile-row:last-child{border-bottom:none}
+.profile-label{font-size:13px;color:var(--text-faint)}
+.profile-value{font-size:13px;font-weight:600;text-align:right}
 
-/* ── Theme Switch ────────────────────────────────────────────────── */
-.theme-switch {
-  width: 52px; height: 28px;
-  border-radius: 100px;
-  background: var(--card2-bg);
-  border: 1px solid var(--border);
-  box-shadow: var(--inner);
-  display: flex; align-items: center; padding: 3px;
-  cursor: pointer; flex-shrink: 0; transition: all 0.2s;
-}
-[data-theme="dark"] .theme-switch { justify-content: flex-end; }
-[data-theme="light"] .theme-switch { justify-content: flex-start; }
-.theme-switch-thumb {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--coral), var(--lav));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px rgba(232,97,74,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px;
-  transition: all 0.2s;
-}
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;font-size:14px;font-family:var(--body);padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
+.search-wrap input::placeholder{color:var(--text-faint)}
 
-/* ── Section Label ───────────────────────────────────────────────── */
-.section-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 22px 0 10px;
-}
-.section-label:first-of-type { margin-top: 0; }
+.lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
+.lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
+.lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lec-tags{display:flex;flex-wrap:wrap;gap:6px}
+.lec-links{display:flex;gap:8px;margin-top:12px}
+.lec-link-btn{flex:1;font-size:12px;font-weight:700;padding:9px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--lav);cursor:pointer}
+.lec-link-btn:active{transform:scale(0.97)}
+.lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
 
-/* ── Glass Card ──────────────────────────────────────────────────── */
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 18px;
-  margin-bottom: 12px;
-  box-shadow: var(--inner), var(--shadow);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  transition: background 0.25s, border-color 0.25s;
-}
+.continue-card{cursor:pointer;background:linear-gradient(135deg,rgba(232,97,74,0.12),transparent);box-shadow:0 0 20px -10px rgba(232,97,74,0.18),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
+.continue-label{font-size:10.5px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.continue-play{font-size:9px}
+.continue-title{font-family:var(--disp);font-weight:700;font-size:15px;line-height:1.4}
+.continue-progress{width:100%;height:5px;border-radius:10px;background:var(--card2);margin-top:12px;overflow:hidden}
+.continue-progress-bar{height:100%;background:linear-gradient(90deg,var(--warm),var(--amber));border-radius:10px}
+.scroll-spacer{height:24px}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text-dim);flex-shrink:0}
+.icon-btn:active{transform:scale(0.92)}
+.icon-btn.spinning{animation:spin .6s linear}
+@keyframes spin{to{transform:rotate(360deg)}}
+.notif-btn-small{padding:7px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text-dim);font-family:var(--body);font-weight:600;font-size:11px;cursor:pointer}
+.ai-btn{width:100%;padding:12px;border-radius:14px;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:white;font-family:var(--body);font-weight:700;font-size:12.5px;border:none;cursor:pointer;margin-bottom:14px;box-shadow:0 3px 12px -3px rgba(232,97,74,0.28),0 0 9px rgba(232,97,74,0.15)}
+.ai-btn:active{transform:scale(0.98)}
+.notif-btn-small:active{transform:scale(0.96)}
+.news-header{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
+.news-header .section-label{margin:0}
+.header-actions{display:flex;align-items:center;gap:10px}
+.notif-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+.notif-row:last-child{border-bottom:none}
+.notif-label{font-size:13px;font-weight:600}
+.toggle{width:46px;height:26px;border-radius:16px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:2px;cursor:pointer;flex-shrink:0;transition:background .15s}
+.toggle.on{background:var(--warm-deep);justify-content:flex-end;box-shadow:0 0 8px -2px rgba(232,97,74,0.3)}
+.toggle.off{justify-content:flex-start}
+.toggle-thumb{width:20px;height:20px;border-radius:50%;background:white;transition:all .15s}
+.news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
+.news-block:last-child{margin-bottom:0}
+.news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.streams-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;-webkit-overflow-scrolling:touch}
+.streams-row::-webkit-scrollbar{display:none}
+.stream-tile{flex:0 0 auto;width:130px;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative}
+.stream-tile:active{transform:scale(0.97)}
+.stream-tile-img{width:100%;height:80px;object-fit:cover;display:block;background:var(--card2)}
+.stream-tile-title{font-size:11.5px;font-weight:700;padding:8px 10px;line-height:1.3}
 
-/* ── News ────────────────────────────────────────────────────────── */
-.news-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin: 22px 0 10px;
-}
-.news-header .section-label { margin: 0; }
-.news-tag {
-  font-size: 10px; font-weight: 700;
-  color: var(--coral);
-  text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 6px;
-}
-.news-block {
-  font-size: 13px; line-height: 1.65;
-  margin-bottom: 10px; white-space: pre-wrap;
-  color: var(--text-dim);
-}
-.news-block:last-child { margin-bottom: 0; }
-.notif-btn-small {
-  padding: 5px 12px; border-radius: 10px;
-  background: rgba(155,140,242,0.12);
-  border: 1px solid rgba(155,140,242,0.2);
-  color: var(--lav);
-  font-family: var(--body); font-weight: 600; font-size: 11px;
-  cursor: pointer; transition: transform 0.15s;
-}
-.notif-btn-small:active { transform: scale(0.96); }
+.tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
+.tag-pill{font-size:11px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer}
+.tag-pill.active{background:var(--warm-deep);border-color:transparent;color:white}
 
-/* ── Continue Card ───────────────────────────────────────────────── */
-.continue-card {
-  cursor: pointer;
-  position: relative; overflow: hidden;
-  background: linear-gradient(135deg, rgba(232,97,74,0.18) 0%, rgba(155,140,242,0.14) 60%, rgba(240,149,110,0.08) 100%) !important;
-  border: 1px solid rgba(232,97,74,0.18) !important;
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-radius: 22px; padding: 20px; margin-bottom: 12px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08) !important;
-  transition: transform 0.15s;
-}
-.continue-card:active { transform: scale(0.98); }
-.continue-card::before {
-  content: '';
-  position: absolute; top: -40px; right: -30px;
-  width: 130px; height: 130px;
-  background: radial-gradient(circle, rgba(232,97,74,0.38) 0%, transparent 72%);
-  filter: blur(26px); border-radius: 50%; pointer-events: none;
-}
-.continue-card::after {
-  content: '';
-  position: absolute; bottom: -20px; left: 10px;
-  width: 90px; height: 90px;
-  background: radial-gradient(circle, rgba(155,140,242,0.32) 0%, transparent 72%);
-  filter: blur(22px); border-radius: 50%; pointer-events: none;
-}
-.continue-card > * { position: relative; z-index: 1; }
-.continue-label {
-  font-size: 10px; font-weight: 700;
-  color: var(--coral);
-  text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 8px;
-}
-.continue-title {
-  font-family: var(--disp);
-  font-weight: 700; font-size: 15px;
-  color: var(--text); line-height: 1.4;
-  margin-bottom: 14px;
-}
-.continue-progress {
-  width: 100%; height: 4px;
-  border-radius: 100px;
-  background: rgba(255,255,255,0.1);
-  overflow: hidden;
-}
-.continue-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--coral), var(--peach));
-  border-radius: 100px;
-  box-shadow: 0 0 10px rgba(232,97,74,0.5);
-}
+.stream-hero{position:relative;height:220px;margin:0 -16px 0;overflow:hidden}
+.stream-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.stream-hero-fade{position:absolute;inset:0;background:linear-gradient(to bottom, transparent 40%, var(--bg) 100%)}
+.stream-back{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(10px)}
+.stream-body{padding-top:4px}
+.stream-title{font-family:var(--disp);font-weight:700;font-size:19px;margin-bottom:8px}
+.stream-desc{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:20px}
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.empty{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
+.tile:active{transform:scale(0.96)}
+.tile-icon{width:36px;height:36px;border-radius:12px;background:var(--lav-dim);color:var(--lav);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
+.tile-label{font-size:12px;font-weight:600;line-height:1.3}
+.tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
 
-/* ── Tile Grid ───────────────────────────────────────────────────── */
-.tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tile {
-  background: var(--card-bg);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border); border-radius: 20px;
-  padding: 20px 12px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 10px; text-align: center; cursor: pointer;
-  position: relative; min-height: 88px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), var(--shadow);
-  transition: transform 0.15s;
-}
-.tile:active { transform: scale(0.96); }
-.tile-icon {
-  width: 36px; height: 36px; border-radius: 12px;
-  background: rgba(155,140,242,0.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.tile-label { font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--text); }
-.tile-soon {
-  position: absolute; top: 8px; right: 8px;
-  font-size: 9px; font-weight: 700;
-  padding: 2px 7px; border-radius: 10px;
-  background: rgba(255,255,255,0.07); color: var(--text-faint);
-}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:100;white-space:nowrap}
+.toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 
-/* ── Streams Row ─────────────────────────────────────────────────── */
-.streams-row {
-  display: flex; gap: 10px;
-  overflow-x: auto; padding-bottom: 4px;
-  margin-bottom: 16px; margin-left: -16px; margin-right: -16px;
-  padding-left: 16px; padding-right: 16px;
-  -webkit-overflow-scrolling: touch; scrollbar-width: none;
-}
-.streams-row::-webkit-scrollbar { display: none; }
-.stream-tile {
-  flex: 0 0 auto; min-width: 118px;
-  border-radius: 18px; overflow: hidden; cursor: pointer;
-  background: var(--card-bg);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), var(--shadow);
-  padding: 14px 16px;
-  display: flex; flex-direction: column; gap: 8px;
-  transition: transform 0.15s;
-}
-.stream-tile:active { transform: scale(0.97); }
-.stream-tile-img {
-  width: 100%; height: 70px;
-  object-fit: cover; display: block;
-  background: var(--card2-bg);
-  border-radius: 10px; margin-bottom: 2px;
-}
-.stream-tile-img[src=""] { display: none; }
-.stream-tile-title {
-  font-size: 12px; font-weight: 700;
-  color: var(--text); line-height: 1.3;
-}
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:50}
+.scroll-fade{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom));left:0;right:0;height:36px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:49}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-faint);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s}
+.tab-icon{font-size:20px;transition:filter .15s;display:flex;align-items:center;justify-content:center}
+.tab-item.active{color:var(--warm)}
+.tab-item.active .tab-icon{filter:drop-shadow(0 0 4px var(--warm))}
+.tab-underline{width:20px;height:2px;border-radius:2px;background:transparent;margin-top:4px}
+.tab-item.active .tab-underline{background:var(--warm)}
 
-/* ── AI Button ───────────────────────────────────────────────────── */
-.ai-btn {
-  width: 100%; padding: 13px 16px; border-radius: 16px;
-  background: linear-gradient(148deg, var(--coral) 0%, var(--peach) 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 20px rgba(232,97,74,0.28), 0 1px 3px rgba(0,0,0,0.32);
-  color: white; font-family: var(--body); font-weight: 700;
-  font-size: 13px; letter-spacing: -0.01em;
-  border: 1px solid rgba(232,97,74,0.3);
-  cursor: pointer; margin-bottom: 12px;
-  transition: transform 0.15s, filter 0.15s;
-}
-.ai-btn:active { transform: scale(0.97); filter: brightness(0.95); }
+.view{display:none}
+.view.active{display:block}
 
-/* ── Search ──────────────────────────────────────────────────────── */
-.search-wrap { position: relative; margin-bottom: 12px; }
-.search-wrap input {
-  width: 100%; font-size: 14px; font-family: var(--body);
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid var(--border-soft);
-  background: var(--card-bg);
-  color: var(--text); outline: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  transition: border-color 0.2s;
-}
-.search-wrap input::placeholder { color: var(--text-faint); }
-.search-wrap input:focus { border-color: rgba(155,140,242,0.35); }
-
-/* ── Tag Pills ───────────────────────────────────────────────────── */
-.tag-filter-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 16px; }
-.tag-pill {
-  font-size: 11px; font-weight: 600;
-  padding: 6px 13px; border-radius: 100px;
-  background: var(--card-bg); border: 1px solid var(--border);
-  color: var(--text-dim); cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  transition: all 0.15s;
-}
-.tag-pill.active {
-  background: linear-gradient(135deg, var(--coral), var(--peach));
-  border-color: rgba(232,97,74,0.35); color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 3px 12px rgba(232,97,74,0.22);
-}
-.tag-pill:active { transform: scale(0.95); }
-
-/* ── Lecture Card ────────────────────────────────────────────────── */
-.lec-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border); border-radius: 20px;
-  padding: 16px; margin-bottom: 10px;
-  box-shadow: var(--inner), var(--shadow);
-  transition: background 0.25s;
-}
-.lec-title {
-  font-weight: 700; font-size: 13.5px; line-height: 1.4;
-  margin-bottom: 6px; color: var(--text);
-}
-.lec-desc {
-  font-size: 12.5px; color: var(--text-dim); line-height: 1.6;
-  margin-bottom: 10px;
-  display: -webkit-box; -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical; overflow: hidden;
-}
-.lec-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.lec-tag {
-  font-size: 10.5px; font-weight: 600;
-  padding: 3px 10px; border-radius: 100px;
-  background: rgba(255,255,255,0.07); color: var(--text-faint);
-}
-.lec-links { display: flex; gap: 8px; }
-.lec-link-btn {
-  flex: 1; font-size: 12px; font-weight: 700;
-  padding: 9px 10px; border-radius: 12px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.07);
-  color: var(--lav); cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 3px rgba(0,0,0,0.25);
-  font-family: var(--body);
-  transition: transform 0.15s;
-  text-align: center;
-}
-.lec-link-btn:active { transform: scale(0.96); }
-
-/* ── Stream Hero ─────────────────────────────────────────────────── */
-.stream-hero {
-  position: relative; overflow: hidden;
-  border-radius: 22px;
-  padding: 48px 20px 22px;
-  margin-bottom: 16px; min-height: 160px;
-  background: linear-gradient(135deg, rgba(232,97,74,0.22) 0%, rgba(155,140,242,0.15) 100%);
-  border: 1px solid rgba(232,97,74,0.18);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-}
-.stream-hero::before {
-  content: '';
-  position: absolute; top: -50px; right: -50px;
-  width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(232,97,74,0.44) 0%, transparent 72%);
-  filter: blur(42px); border-radius: 50%; pointer-events: none;
-}
-.stream-hero img#stream-hero-img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-  border-radius: 22px;
-  opacity: 0; transition: opacity 0.3s;
-}
-.stream-hero img#stream-hero-img[src]:not([src=""]) { opacity: 1; }
-.stream-hero-fade {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(12,10,21,0.1) 30%, rgba(12,10,21,0.85) 100%);
-  pointer-events: none; z-index: 1;
-}
-.stream-back {
-  position: absolute; top: 14px; left: 14px;
-  width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(0,0,0,0.32);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  color: white; display: flex; align-items: center; justify-content: center;
-  font-size: 16px; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.1);
-  transition: transform 0.15s; z-index: 2;
-}
-.stream-back:active { transform: scale(0.9); }
-.stream-body { padding-top: 0; position: relative; z-index: 2; }
-.stream-title {
-  font-family: var(--disp); font-weight: 700; font-size: 17px;
-  color: var(--text); line-height: 1.3; margin-bottom: 8px;
-}
-.stream-desc {
-  font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 20px;
-}
-
-/* ── Subscription Card ───────────────────────────────────────────── */
-.sub-card {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap;
-  position: relative; overflow: hidden;
-  background: linear-gradient(135deg, rgba(155,140,242,0.2) 0%, rgba(232,97,74,0.1) 100%) !important;
-  border: 1px solid rgba(155,140,242,0.22) !important;
-}
-.sub-card::before {
-  content: '';
-  position: absolute; top: -45px; right: -35px;
-  width: 150px; height: 150px;
-  background: radial-gradient(circle, rgba(155,140,242,0.38) 0%, transparent 72%);
-  filter: blur(30px); border-radius: 50%; pointer-events: none;
-}
-.sub-card > * { position: relative; z-index: 1; }
-.sub-left { display: flex; align-items: center; gap: 12px; }
-.sub-icon {
-  width: 44px; height: 44px; border-radius: 14px;
-  background: rgba(155,140,242,0.22);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
-}
-.sub-name { font-family: var(--disp); font-weight: 700; font-size: 13px; }
-.sub-meta { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
-.pill {
-  font-size: 11px; font-weight: 700;
-  padding: 5px 13px; border-radius: 100px; white-space: nowrap; flex-shrink: 0;
-}
-.pill.active { background: rgba(62,207,142,0.18); color: var(--green); }
-.pill.inactive { background: rgba(255,69,58,0.15); color: var(--red); }
-.sub-note {
-  font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-top: 14px;
-}
-
-/* ── Profile Rows ────────────────────────────────────────────────── */
-.profile-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 0; border-bottom: 1px solid var(--line);
-}
-.profile-row:last-child { border-bottom: none; }
-.profile-label { font-size: 12.5px; color: var(--text-faint); }
-.profile-value { font-size: 13px; font-weight: 600; text-align: right; }
-
-/* ── Notifications ───────────────────────────────────────────────── */
-.notif-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 15px 0; border-bottom: 1px solid var(--line); gap: 12px;
-}
-.notif-row:last-child { border-bottom: none; }
-.notif-label { font-size: 13px; font-weight: 600; }
-
-/* ── Toggle ──────────────────────────────────────────────────────── */
-.toggle {
-  width: 50px; height: 28px; border-radius: 100px;
-  display: flex; align-items: center; padding: 3px;
-  cursor: pointer; flex-shrink: 0; transition: all 0.2s ease;
-  border: 1px solid var(--border);
-}
-.toggle.on {
-  background: linear-gradient(135deg, var(--coral), var(--peach));
-  justify-content: flex-end;
-  border-color: rgba(232,97,74,0.35);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 2px 10px rgba(232,97,74,0.3);
-}
-.toggle.off {
-  background: rgba(255,255,255,0.1); justify-content: flex-start;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -1px 0 rgba(0,0,0,0.15);
-}
-[data-theme="light"] .toggle.off { background: rgba(0,0,0,0.1); }
-.toggle-thumb {
-  width: 20px; height: 20px; border-radius: 50%;
-  background: white; box-shadow: 0 1px 6px rgba(0,0,0,0.35); transition: all 0.15s;
-}
-
-/* ── Tab Bar ─────────────────────────────────────────────────────── */
-.tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: var(--tabbar-bg);
-  backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-  border-top: 1px solid var(--tabbar-border);
-  display: flex;
-  padding: 12px 8px calc(14px + env(safe-area-inset-bottom));
-  z-index: 50; transition: background 0.25s;
-}
-.tab-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  gap: 4px; color: var(--text-faint);
-  font-size: 10px; font-weight: 700; cursor: pointer;
-  transition: color 0.15s, transform 0.15s;
-  letter-spacing: 0.02em;
-}
-.tab-item:active { transform: scale(0.9); }
-.tab-item.active { color: var(--coral); }
-.tab-icon { font-size: 20px; }
-
-/* ── Scroll Fade ─────────────────────────────────────────────────── */
-.scroll-fade {
-  position: fixed;
-  bottom: calc(64px + env(safe-area-inset-bottom));
-  left: 0; right: 0; height: 36px;
-  background: linear-gradient(to bottom, transparent, var(--bg));
-  pointer-events: none; z-index: 49;
-}
-
-/* ── Toast ───────────────────────────────────────────────────────── */
-.toast {
-  position: fixed; bottom: 100px;
-  left: 50%; transform: translateX(-50%) translateY(20px);
-  background: var(--card-bg);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border); color: var(--text);
-  font-size: 13px; font-weight: 600;
-  padding: 12px 20px; border-radius: 14px;
-  opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 100;
-  white-space: nowrap; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-}
-.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* ── Loading / Empty ─────────────────────────────────────────────── */
-.loading, .empty {
-  text-align: center; padding: 40px 20px;
-  color: var(--text-faint); font-size: 13px;
-}
-
-/* ── Views ───────────────────────────────────────────────────────── */
-.view { display: none; }
-.view.active { display: block; }
-.scroll-spacer { height: 24px; }
-
-/* ── Not in Telegram ─────────────────────────────────────────────── */
-.center-msg {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 100vh; text-align: center;
-  padding: 0 24px; gap: 16px;
-  position: relative; z-index: 10;
-}
-.center-msg .mark { width: 56px; height: 56px; font-size: 18px; border-radius: 16px; }
-.center-msg h2 { font-family: var(--disp); font-weight: 700; font-size: 17px; }
-.center-msg p { font-size: 13px; color: var(--text-dim); line-height: 1.6; max-width: 280px; }
+.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 24px;gap:14px}
+.center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
+.center-msg h2{font-family:var(--disp);font-weight:700;font-size:17px}
+.center-msg p{font-size:13px;color:var(--text-dim);line-height:1.6}
 </style>
 </head>
 <body>
-
-<!-- Blob Background -->
-<div class="blob-bg" aria-hidden="true">
-  <div class="blob blob-coral"></div>
-  <div class="blob blob-lav"></div>
-  <div class="blob blob-peach"></div>
-  <svg class="grain-overlay">
-    <filter id="grain">
-      <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch"/>
-      <feColorMatrix type="saturate" values="0"/>
-    </filter>
-    <rect width="100%" height="100%" filter="url(#grain)"/>
-  </svg>
-</div>
 
 <div class="shell" id="app-shell" style="display:none">
 
@@ -676,7 +174,7 @@ header {
     </div>
   </header>
 
-  <!-- Портал -->
+  <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
     <div class="news-header" id="news-header" style="display:none">
       <div class="section-label" style="margin:0">Обновления клуба</div>
@@ -686,7 +184,7 @@ header {
 
     <div class="section-label">Продолжить</div>
     <div class="card continue-card" id="continue-card" onclick="openContinue()">
-      <div class="continue-label" id="continue-kicker">—</div>
+      <div class="continue-label"><span class="continue-play">▶</span><span id="continue-kicker">—</span></div>
       <div class="continue-title" id="continue-title">Загрузка...</div>
       <div class="continue-progress" id="continue-progress-wrap" style="display:none">
         <div class="continue-progress-bar" id="continue-progress-bar"></div>
@@ -696,34 +194,35 @@ header {
     <div class="section-label">Меню</div>
     <div class="tile-grid">
       <div class="tile" onclick="switchView('library')">
-        <div class="tile-icon">▤</div>
+        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Библиотека</div>
       </div>
       <div class="tile" onclick="switchView('notifications')">
-        <div class="tile-icon" style="background:rgba(232,97,74,0.15)">♪</div>
+        <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Уведомления</div>
       </div>
       <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:rgba(240,149,110,0.15)">◷</div>
+        <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Расписание</div>
         <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:rgba(110,196,240,0.15)">↗</div>
+        <div class="tile-icon" style="background:rgba(110,168,254,0.16);color:#6ea8fe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 18 18 6M18 6H9M18 6v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Пригласить друга</div>
         <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:rgba(255,184,77,0.15)">●</div>
+        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5v9M9 9.8c0-1.3 1.2-2.3 3-2.3s3 .9 3 2.1c0 2.8-6 1.4-6 4.2 0 1.3 1.3 2.2 3 2.2s3-.9 3-2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Бонусы</div>
         <span class="tile-soon">Скоро</span>
       </div>
-      <div class="tile" onclick="switchView('profile')">
-        <div class="tile-icon">◆</div>
+      <div class="tile" onclick="comingSoon()">
+        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 3 9l9 13 9-13-9-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 9h18M8.5 9 12 2l3.5 7M8.5 9 12 22M15.5 9 12 22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Настройки подписки</div>
+        <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:rgba(62,207,142,0.15)">?</div>
+        <div class="tile-icon" style="background:var(--card2);color:var(--text-faint)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
         <div class="tile-label">Поддержка</div>
         <span class="tile-soon">Скоро</span>
       </div>
@@ -731,10 +230,10 @@ header {
     <div class="scroll-spacer"></div>
   </div>
 
-  <!-- Уведомления -->
+  <!-- ── Уведомления ── -->
   <div class="view" id="view-notifications">
     <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span onclick="switchView('portal')" style="cursor:pointer;font-size:18px;color:var(--text-dim)">←</span>
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
       <span>Уведомления</span>
     </div>
     <div class="card" id="notif-list">
@@ -743,15 +242,13 @@ header {
     <div class="scroll-spacer"></div>
   </div>
 
-  <!-- Библиотека -->
+  <!-- ── Библиотека ── -->
   <div class="view" id="view-library">
-    <div class="section-label" style="margin-top:0">Потоки</div>
+    <div class="section-label">Потоки</div>
     <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
 
     <div class="section-label">Искать в библиотеке</div>
-    <button class="ai-btn" onclick="openUrl('https://t.me/youselllikeagod_bot')">
-      🤖&nbsp; Спросить ИИ-помощника своими словами
-    </button>
+    <button class="ai-btn" onclick="openUrl('https://t.me/youselllikeagod_bot')">Спросить ИИ-помощника своими словами</button>
     <div class="search-wrap">
       <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
     </div>
@@ -760,7 +257,7 @@ header {
     <div class="scroll-spacer"></div>
   </div>
 
-  <!-- Поток -->
+  <!-- ── Поток ── -->
   <div class="view" id="view-stream">
     <div class="stream-hero" id="stream-hero">
       <img id="stream-hero-img" src="" alt="">
@@ -775,9 +272,9 @@ header {
     <div class="scroll-spacer"></div>
   </div>
 
-  <!-- Профиль -->
+  <!-- ── Профиль ── -->
   <div class="view" id="view-profile">
-    <div class="section-label" style="margin-top:0">Подписка</div>
+    <div class="section-label">Подписка</div>
     <div class="card sub-card">
       <div class="sub-left">
         <div class="sub-icon">◆</div>
@@ -812,9 +309,7 @@ header {
 
     <div class="section-label">Тест</div>
     <div class="card">
-      <button class="lec-link-btn" style="width:100%;border-radius:14px;padding:12px" onclick="testCheckMembership()">
-        Проверить членство (тест)
-      </button>
+      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="testCheckMembership()">Проверить членство (тест)</button>
       <div style="font-size:12.5px;color:var(--text-dim);margin-top:10px;text-align:center" id="test-result"></div>
     </div>
     <div class="scroll-spacer"></div>
@@ -830,43 +325,46 @@ header {
 </div>
 
 <div class="toast" id="toast"></div>
+
 <div class="scroll-fade"></div>
 
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
-    <span class="tab-icon">◈</span>
+    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v10h5v-6h2v6h5V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
     <span>Портал</span>
+    <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('library')" id="tab-library">
-    <span class="tab-icon">▤</span>
+    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
     <span>Библиотека</span>
+    <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
-    <span class="tab-icon">◆</span>
+    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
     <span>Профиль</span>
+    <div class="tab-underline"></div>
   </div>
 </div>
 
 <script>
 const API_URL = 'https://club-backend-production-fc7f.up.railway.app';
 
-function applyThemeIcon(theme) {
+function applyThemeIcon(theme){
   document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
 }
-function toggleTheme() {
+function toggleTheme(){
   const html = document.documentElement;
   const next = html.dataset.theme === 'light' ? 'dark' : 'light';
   html.dataset.theme = next;
   applyThemeIcon(next);
-  try { localStorage.setItem('club_app_theme', next); } catch(e) {}
+  try{ localStorage.setItem('club_app_theme', next); }catch(e){}
 }
-(function initTheme() {
+(function initTheme(){
   let saved = 'dark';
-  try { saved = localStorage.getItem('club_app_theme') || 'dark'; } catch(e) {}
+  try{ saved = localStorage.getItem('club_app_theme') || 'dark'; }catch(e){}
   document.documentElement.dataset.theme = saved;
   document.addEventListener('DOMContentLoaded', () => applyThemeIcon(saved));
 })();
-
 let telegramId = null;
 let allLectures = [];
 
@@ -921,53 +419,69 @@ async function testCheckMembership() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, action: 'check_membership', params: {} })
     });
-  } catch(e) { resultEl.textContent = 'Ошибка отправки'; return; }
+  } catch (e) {
+    resultEl.textContent = 'Ошибка отправки';
+    return;
+  }
+
   resultEl.textContent = 'Жду ответ от Salebot...';
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 1500));
     try {
       const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_membership`);
       const data = await r.json();
-      if (data.status === 'done') { resultEl.textContent = 'Готово: ' + JSON.stringify(data.result); return; }
-    } catch(e) {}
+      if (data.status === 'done') {
+        resultEl.textContent = 'Готово: ' + JSON.stringify(data.result);
+        return;
+      }
+    } catch (e) {}
   }
   resultEl.textContent = 'Не дождались ответа за 12 секунд — проверь блок в Salebot';
 }
 
 function openContinue() {
   let last = null;
-  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e) {}
+  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
   if (last) {
     const url = last.link || last.link_vk;
-    if (url) {
-      if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(url);
-      else window.open(url, '_blank');
-    }
-  } else { switchView('library'); }
+    openUrl(url);
+  } else {
+    switchView('library');
+  }
 }
 
+// ── Списки уведомлений — тексты-триггеры нужно сверить с реально работающими
+// кнопками в боте (Denis подтверждает точный список). Плейсхолдеры ниже —
+// частично из уже виденных рабочих текстов, частично — предположение.
+// off_trigger: null означает, что этот блок ещё не создан в Salebot —
+// тумблер для этого списка будет включать, но не сможет выключать, пока не пришлёшь триггер
 const NOTIF_LISTS = [
-  { list_id: 2100157, key: 'l2100157', name: 'Дайджест на месяц',  on_trigger: 'digest_on',       off_trigger: 'digest_off' },
-  { list_id: 2100155, key: 'l2100155', name: 'Выпуски журнала',    on_trigger: 'magazine_on',     off_trigger: 'magazine_off' },
-  { list_id: 2100154, key: 'l2100154', name: 'Книжный клуб',       on_trigger: 'book_club_on',    off_trigger: 'book_club_off' },
-  { list_id: 2100153, key: 'l2100153', name: 'Живые занятия',      on_trigger: 'live_events_on',  off_trigger: 'live_events_off' },
-  { list_id: 2100152, key: 'l2100152', name: 'Выход лекций',       on_trigger: 'newlectures_on',  off_trigger: 'newlectures_off' },
+  { list_id: 2100157, key: 'l2100157', name: 'Дайджест на месяц', on_trigger: 'digest_on',       off_trigger: 'digest_off' },
+  { list_id: 2100155, key: 'l2100155', name: 'Выпуски журнала',   on_trigger: 'magazine_on',     off_trigger: 'magazine_off' },
+  { list_id: 2100154, key: 'l2100154', name: 'Книжный клуб',      on_trigger: 'book_club_on',    off_trigger: 'book_club_off' },
+  { list_id: 2100153, key: 'l2100153', name: 'Живые занятия',     on_trigger: 'live_events_on',  off_trigger: 'live_events_off' },
+  { list_id: 2100152, key: 'l2100152', name: 'Выход лекций',      on_trigger: 'newlectures_on',  off_trigger: 'newlectures_off' },
 ];
-let listMembership = null;
+
+let listMembership = null; // {l2100157: true, ...} после первого запроса
 
 async function fetchListMembership() {
   await fetch(`${API_URL}/app/action`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id: telegramId, action: 'check_lists', params: {} })
-  }).catch(() => {});
+  }).catch(()=>{});
+
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 1200));
     try {
       const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_lists`);
       const data = await r.json();
-      if (data.status === 'done') { listMembership = data.result; return listMembership; }
-    } catch(e) {}
+      if (data.status === 'done') {
+        listMembership = data.result;
+        return listMembership;
+      }
+    } catch (e) {}
   }
   return null;
 }
@@ -980,32 +494,47 @@ async function loadNews() {
       fetch(`${API_URL}/news/latest`).then(r => r.json()),
       listMembership ? Promise.resolve() : fetchListMembership(),
     ]);
+
     if (!news.common_text || !news.common_text.trim()) {
-      el.style.display = 'none'; headerEl.style.display = 'none'; return;
+      el.style.display = 'none';
+      headerEl.style.display = 'none';
+      return;
     }
+
     let html = `<div class="news-block">${news.common_text}</div>`;
     (news.targeted || []).forEach(t => {
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
       const isMember = key && listMembership && listMembership[key] === 'True';
-      if (isMember) html += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
+      if (isMember) {
+        html += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
+      }
     });
-    el.innerHTML = html; el.style.display = 'block'; headerEl.style.display = 'flex';
-  } catch(e) { el.style.display = 'none'; headerEl.style.display = 'none'; }
+    el.innerHTML = html;
+    el.style.display = 'block';
+    headerEl.style.display = 'flex';
+  } catch (e) {
+    el.style.display = 'none';
+    headerEl.style.display = 'none';
+  }
 }
 
 async function loadNotifications() {
   const el = document.getElementById('notif-list');
   if (!listMembership) await fetchListMembership();
-  if (!listMembership) { el.innerHTML = '<div class="empty">Не удалось загрузить — попробуй ещё раз</div>'; return; }
+  if (!listMembership) {
+    el.innerHTML = '<div class="empty">Не удалось загрузить — попробуй ещё раз</div>';
+    return;
+  }
   el.innerHTML = NOTIF_LISTS.map(cfg => {
     const isOn = listMembership[cfg.key] === 'True';
-    return `<div class="notif-row">
-      <span class="notif-label">${cfg.name}</span>
-      <div class="toggle ${isOn ? 'on' : 'off'}" onclick="toggleNotif('${cfg.key}')">
-        <div class="toggle-thumb"></div>
-      </div>
-    </div>`;
+    return `
+      <div class="notif-row">
+        <span class="notif-label">${cfg.name}</span>
+        <div class="toggle ${isOn ? 'on' : 'off'}" onclick="toggleNotif('${cfg.key}')">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>`;
   }).join('');
 }
 
@@ -1014,12 +543,19 @@ async function toggleNotif(key) {
   if (!cfg) return;
   const isOn = listMembership[key] === 'True';
   const trigger = isOn ? cfg.off_trigger : cfg.on_trigger;
-  if (!trigger) { alert('Для этого пока не настроено отключение — скоро появится'); return; }
+
+  if (!trigger) {
+    alert('Для этого пока не настроено отключение — скоро появится');
+    return;
+  }
+
   await fetch(`${API_URL}/app/action`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id: telegramId, action: trigger, params: {} })
-  }).catch(() => {});
+  }).catch(()=>{});
+
+  // Оптимистично переключаем сразу, потом сверяемся с реальностью через пару секунд
   listMembership[key] = isOn ? 'False' : 'True';
   loadNotifications();
   setTimeout(async () => { await fetchListMembership(); loadNotifications(); }, 2500);
@@ -1029,42 +565,67 @@ async function loadContinueWidget() {
   const kickerEl = document.getElementById('continue-kicker');
   const titleEl = document.getElementById('continue-title');
   let last = null;
-  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e) {}
-  if (last) { kickerEl.textContent = 'Продолжить просмотр'; titleEl.textContent = last.title; return; }
+  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
+
+  if (last) {
+    kickerEl.textContent = 'Продолжить просмотр';
+    titleEl.textContent = last.title;
+    return;
+  }
+
+  // Своей истории просмотра ещё нет — показываем самую свежую лекцию из библиотеки
   try {
     const r = await fetch(`${API_URL}/lectures?limit=1`);
     const data = await r.json();
-    if (data.length) { kickerEl.textContent = 'Новое в библиотеке'; titleEl.textContent = data[0].title; }
-    else { kickerEl.textContent = 'Библиотека'; titleEl.textContent = 'Загляни в раздел «Библиотека»'; }
-  } catch(e) { kickerEl.textContent = 'Библиотека'; titleEl.textContent = 'Загляни в раздел «Библиотека»'; }
+    if (data.length) {
+      kickerEl.textContent = 'Новое в библиотеке';
+      titleEl.textContent = data[0].title;
+    } else {
+      kickerEl.textContent = 'Библиотека';
+      titleEl.textContent = 'Загляни в раздел «Библиотека»';
+    }
+  } catch (e) {
+    kickerEl.textContent = 'Библиотека';
+    titleEl.textContent = 'Загляни в раздел «Библиотека»';
+  }
 }
 
 async function loadProfile() {
   try {
     const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
     const u = await r.json();
+
     if (!u.found) {
       document.getElementById('sub-name').textContent = 'Профиль не найден';
       document.getElementById('sub-meta').textContent = 'Похоже, ты ещё не оформлял(а) подписку';
       document.getElementById('sub-pill').textContent = '—';
       return;
     }
+
     document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
     document.getElementById('p-name').textContent = u.full_name || u.name || '—';
     document.getElementById('p-username').textContent = u.username || '—';
     document.getElementById('p-months').textContent = monthsSince(u.first_payment_date);
     document.getElementById('p-next').textContent = u.next_payment_date || '—';
+
     document.getElementById('sub-name').textContent = u.sub_name || 'Без подписки';
     document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
+
     const pill = document.getElementById('sub-pill');
     if (u.is_member) {
-      pill.textContent = 'Активна'; pill.className = 'pill active';
-      document.getElementById('sub-note').textContent = u.next_payment_date ? `Следующее списание — ${u.next_payment_date}` : '';
+      pill.textContent = 'Активна';
+      pill.className = 'pill active';
+      document.getElementById('sub-note').textContent = u.next_payment_date
+        ? `Следующее списание — ${u.next_payment_date}`
+        : '';
     } else {
-      pill.textContent = 'Неактивна'; pill.className = 'pill inactive';
+      pill.textContent = 'Неактивна';
+      pill.className = 'pill inactive';
       document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
     }
-  } catch(e) { document.getElementById('sub-name').textContent = 'Ошибка загрузки'; }
+  } catch (e) {
+    document.getElementById('sub-name').textContent = 'Ошибка загрузки';
+  }
 }
 
 let activeTagFilter = null;
@@ -1075,17 +636,24 @@ function collectTags(items) {
   items.forEach(l => (l.tags || []).forEach(t => set.add(t)));
   return [...set].sort();
 }
+
 function renderTagFilter() {
   const el = document.getElementById('tag-filter-row');
   if (!allTags.length) { el.innerHTML = ''; return; }
-  el.innerHTML = allTags.map(t => `<span class="tag-pill ${activeTagFilter === t ? 'active' : ''}" onclick="toggleTagFilter('${t}')">#${t}</span>`).join('');
+  el.innerHTML = allTags.map(t => `
+    <span class="tag-pill ${activeTagFilter === t ? 'active' : ''}" onclick="toggleTagFilter('${t}')">#${t}</span>
+  `).join('');
 }
+
 function toggleTagFilter(tag) {
   activeTagFilter = activeTagFilter === tag ? null : tag;
-  renderTagFilter(); applyTagFilter();
+  renderTagFilter();
+  applyTagFilter();
 }
+
 function applyTagFilter() {
-  const filtered = activeTagFilter ? allLectures.filter(l => (l.tags || []).includes(activeTagFilter)) : allLectures;
+  const base = allLectures;
+  const filtered = activeTagFilter ? base.filter(l => (l.tags || []).includes(activeTagFilter)) : base;
   renderLibrary(filtered);
 }
 
@@ -1096,10 +664,13 @@ async function loadStreams() {
     if (!streams.length) { el.innerHTML = ''; return; }
     el.innerHTML = streams.map(s => `
       <div class="stream-tile" onclick="openStream('${s.stream_key}')">
-        ${s.image_url ? `<img class="stream-tile-img" src="${s.image_url}" alt="${s.title || s.stream_key}">` : ''}
+        <img class="stream-tile-img" src="${s.image_url || ''}" alt="">
         <div class="stream-tile-title">${s.title || s.stream_key}</div>
-      </div>`).join('');
-  } catch(e) { el.innerHTML = ''; }
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = '';
+  }
 }
 
 async function openStream(key) {
@@ -1115,7 +686,7 @@ async function openStream(key) {
     ]);
     document.getElementById('stream-title').textContent = stream.title || key;
     document.getElementById('stream-desc').textContent = stream.description || '';
-    if (stream.image_url) document.getElementById('stream-hero-img').src = stream.image_url;
+    document.getElementById('stream-hero-img').src = stream.image_url || '';
     renderedItems = lectures;
     document.getElementById('stream-lectures').innerHTML = lectures.map((l, i) => `
       <div class="lec-card">
@@ -1126,26 +697,44 @@ async function openStream(key) {
           ${l.link ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
           ${l.link_vk ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
         </div>
-      </div>`).join('');
-  } catch(e) { document.getElementById('stream-lectures').innerHTML = '<div class="empty">Не удалось загрузить поток</div>'; }
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('stream-lectures').innerHTML = '<div class="empty">Не удалось загрузить поток</div>';
+  }
 }
 
 async function loadLibrary(query) {
   const listEl = document.getElementById('lib-list');
   listEl.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
-    const url = query ? `${API_URL}/lectures/search?q=${encodeURIComponent(query)}` : `${API_URL}/lectures?limit=100`;
-    const data = await fetch(url).then(r => r.json());
-    if (!query) { allLectures = data; allTags = collectTags(data); renderTagFilter(); applyTagFilter(); }
-    else renderLibrary(data);
-  } catch(e) { listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>'; }
+    const url = query
+      ? `${API_URL}/lectures/search?q=${encodeURIComponent(query)}`
+      : `${API_URL}/lectures?limit=100`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!query) {
+      allLectures = data;
+      allTags = collectTags(data);
+      renderTagFilter();
+      applyTagFilter();
+    } else {
+      renderLibrary(data);
+    }
+  } catch (e) {
+    listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
+  }
 }
 
 let renderedItems = [];
+
 function renderLibrary(items) {
   renderedItems = items;
   const listEl = document.getElementById('lib-list');
-  if (!items.length) { listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>'; return; }
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
   listEl.innerHTML = items.map((l, i) => `
     <div class="lec-card">
       <div class="lec-title">${l.title}</div>
@@ -1155,7 +744,8 @@ function renderLibrary(items) {
         ${l.link ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
       </div>
-    </div>`).join('');
+    </div>
+  `).join('');
 }
 
 function rememberLastLecture(l) {
@@ -1164,18 +754,34 @@ function rememberLastLecture(l) {
       slug: l.slug, title: l.title, description: l.description,
       link: l.link, link_vk: l.link_vk, ts: Date.now()
     }));
-  } catch(e) {}
+  } catch(e){}
 }
+
 function openUrl(url) {
   if (!url) return;
-  if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(url);
-  else window.open(url, '_blank');
+  const tg = window.Telegram?.WebApp;
+  const isTelegramLink = /^https:\/\/t\.me\//i.test(url);
+  if (tg && isTelegramLink && tg.openTelegramLink) {
+    tg.openTelegramLink(url);
+  } else if (tg && tg.openLink) {
+    tg.openLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
 }
+
 function openLectureLink(index, platform) {
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
   openUrl(platform === 'vk' ? l.link_vk : l.link);
+}
+
+function openLecture(index) {
+  const l = renderedItems[index];
+  if (!l) return;
+  rememberLastLecture(l);
+  openUrl(l.link || l.link_vk);
 }
 
 let searchTimer;
@@ -1185,14 +791,18 @@ function onSearchInput() {
   searchTimer = setTimeout(() => loadLibrary(q || undefined), 300);
 }
 
-(function init() {
+// ── Init ──
+(function init(){
   const tg = window.Telegram?.WebApp;
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    tg.ready(); tg.expand();
+    tg.ready();
+    tg.expand();
     telegramId = tg.initDataUnsafe.user.id;
     document.getElementById('app-shell').style.display = 'block';
     document.getElementById('tabbar').style.display = 'flex';
-    loadProfile(); loadContinueWidget(); loadNews();
+    loadProfile();
+    loadContinueWidget();
+    loadNews();
   } else {
     document.getElementById('not-telegram-msg').style.display = 'flex';
   }
