@@ -163,7 +163,12 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .cal-day.has-events{background:var(--card2);color:var(--text);cursor:pointer}
 .cal-day.has-events:active{transform:scale(0.92)}
 .cal-day.today{box-shadow:inset 0 0 0 1.5px var(--warm)}
-.cal-day-dot{width:4px;height:4px;border-radius:50%;background:var(--warm);position:absolute;bottom:6px}
+.cal-day-dots{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);display:flex;gap:2px}
+.cal-day-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.cal-widget-card{padding:14px}
+.cal-widget-card .cal-day{aspect-ratio:1/0.7}
+.cal-widget-card .cal-grid{gap:3px}
+.cat-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
 .teaser-card{background:linear-gradient(135deg,rgba(155,140,242,0.10),transparent);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
 .teaser-card:last-child{margin-bottom:0}
 .teaser-title{font-weight:700;font-size:13.5px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
@@ -217,6 +222,18 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
       <div class="continue-progress" id="continue-progress-wrap" style="display:none">
         <div class="continue-progress-bar" id="continue-progress-bar"></div>
       </div>
+    </div>
+
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Расписание</span>
+      <span style="font-size:12px;font-weight:600;color:var(--warm);cursor:pointer" onclick="switchView('schedule')">Все →</span>
+    </div>
+    <div class="card cal-widget-card">
+      <div class="cal-header">
+        <div class="cal-month-label" id="cal-widget-month-label">—</div>
+      </div>
+      <div class="cal-weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+      <div class="cal-grid" id="cal-widget-grid"><div class="loading">Загрузка...</div></div>
     </div>
 
     <div class="section-label">Меню</div>
@@ -349,6 +366,8 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
       <span>Расписание</span>
     </div>
 
+    <div id="cat-filter-row" class="tag-filter-row" style="display:none"></div>
+
     <div class="card" style="padding:16px">
       <div class="cal-header">
         <button class="icon-btn" onclick="calShiftMonth(-1)">‹</button>
@@ -433,7 +452,7 @@ async function refreshApp() {
   btn.classList.add('spinning');
   listMembership = null;
   try {
-    await Promise.all([loadProfile(), loadNews(), loadContinueWidget()]);
+    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadCalendarMonth()]);
     if (document.getElementById('view-notifications').classList.contains('active')) {
       await loadNotifications();
     }
@@ -858,11 +877,22 @@ const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','�
 const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const WEEKDAY_LEAD = d => (d.getDay() + 6) % 7; // 0=Пн ... 6=Вс
 
+// Та же палитра + хэш-функция, что и в дашборде — цвета категорий совпадают визуально в обоих местах
+const CATEGORY_PALETTE = ['#9b8cf2','#ff8fa3','#3ecf8e','#ffb84d','#6ea8fe','#e8614a','#8fe3c0'];
+function categoryColor(name){
+  if (!name) return 'var(--text-faint)';
+  let hash = 0;
+  for (let i=0;i<name.length;i++) hash = (hash*31 + name.charCodeAt(i)) >>> 0;
+  return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
+}
+
 const today = new Date();
 let calYear = today.getFullYear();
 let calMonth = today.getMonth() + 1; // 1-12
-let calDaysData = {};   // "YYYY-MM-DD" -> [events]
+let calDaysData = {};        // "YYYY-MM-DD" -> [events]
 let popupDayEvents = [];
+let activeCategories = null; // Set — какие категории сейчас показываются в полном виде расписания (null = ещё не инициализировано)
+let knownCategories = new Set(); // все когда-либо увиденные категории, чтобы новые сразу были включены в фильтр
 
 function pad2(n){ return n < 10 ? '0'+n : ''+n; }
 function todayStr(){ return `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`; }
@@ -875,22 +905,52 @@ function calShiftMonth(delta){
 }
 
 async function loadCalendarMonth(){
-  const gridEl = document.getElementById('cal-grid');
-  document.getElementById('cal-month-label').textContent = `${MONTHS_NOM[calMonth-1]} ${calYear}`;
-  gridEl.innerHTML = '<div class="loading">Загрузка...</div>';
+  const labelText = `${MONTHS_NOM[calMonth-1]} ${calYear}`;
+  document.getElementById('cal-month-label').textContent = labelText;
+  document.getElementById('cal-widget-month-label').textContent = labelText;
   try {
     const monthParam = `${calYear}-${pad2(calMonth)}`;
     const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
     calDaysData = data.days || {};
-    renderCalendarGrid();
+    renderCategoryFilterRow();
+    renderCalendarGrid('cal-grid', activeCategories);
+    renderCalendarGrid('cal-widget-grid', null);
     renderTeasers(data.teasers || []);
   } catch (e) {
-    gridEl.innerHTML = '<div class="empty">Не удалось загрузить расписание</div>';
+    document.getElementById('cal-grid').innerHTML = '<div class="empty">Не удалось загрузить расписание</div>';
+    document.getElementById('cal-widget-grid').innerHTML = '<div class="empty">Не удалось загрузить</div>';
   }
 }
 
-function renderCalendarGrid(){
-  const gridEl = document.getElementById('cal-grid');
+function collectCategories(){
+  const set = new Set();
+  Object.values(calDaysData).forEach(list => list.forEach(e => { if (e.category) set.add(e.category); }));
+  return set;
+}
+
+function renderCategoryFilterRow(){
+  const rowEl = document.getElementById('cat-filter-row');
+  const cats = [...collectCategories()].sort();
+  if (!cats.length) { rowEl.style.display = 'none'; rowEl.innerHTML = ''; return; }
+  if (!activeCategories) activeCategories = new Set();
+  cats.forEach(c => { if (!knownCategories.has(c)) { activeCategories.add(c); knownCategories.add(c); } });
+  rowEl.style.display = 'flex';
+  rowEl.innerHTML = cats.map(c => {
+    const color = categoryColor(c);
+    const isActive = activeCategories.has(c);
+    const safe = c.replace(/'/g, "\\'");
+    return `<span class="tag-pill${isActive ? ' active' : ''}" style="cursor:pointer;${isActive ? `background:${color};border-color:transparent;color:#fff` : ''}" onclick="toggleCategoryFilter('${safe}')"><span class="cat-dot" style="background:${isActive ? '#fff' : color}"></span>${c}</span>`;
+  }).join('');
+}
+
+function toggleCategoryFilter(cat){
+  if (activeCategories.has(cat)) activeCategories.delete(cat); else activeCategories.add(cat);
+  renderCategoryFilterRow();
+  renderCalendarGrid('cal-grid', activeCategories);
+}
+
+function renderCalendarGrid(targetId, filterSet){
+  const gridEl = document.getElementById(targetId);
   const firstOfMonth = new Date(calYear, calMonth - 1, 1);
   const leading = WEEKDAY_LEAD(firstOfMonth);
   const daysInMonth = new Date(calYear, calMonth, 0).getDate();
@@ -900,10 +960,14 @@ function renderCalendarGrid(){
   for (let i = 0; i < leading; i++) html += '<div class="cal-day"></div>';
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(d)}`;
-    const hasEvents = !!(calDaysData[dateStr] && calDaysData[dateStr].length);
+    const dayEvents = calDaysData[dateStr] || [];
+    const visible = filterSet ? dayEvents.filter(e => !e.category || filterSet.has(e.category)) : dayEvents;
+    const hasEvents = visible.length > 0;
     const isToday = dateStr === tStr;
     const cls = ['cal-day', 'in-month', hasEvents ? 'has-events' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
-    html += `<div class="${cls}" ${hasEvents ? `onclick="openDayPopup('${dateStr}')"` : ''}>${d}${hasEvents ? '<span class="cal-day-dot"></span>' : ''}</div>`;
+    const cats = [...new Set(visible.map(e => e.category || ''))].slice(0, 3);
+    const dots = cats.map(c => `<span class="cal-day-dot" style="background:${categoryColor(c)}"></span>`).join('');
+    html += `<div class="${cls}" ${hasEvents ? `onclick="openDayPopup('${dateStr}')"` : ''}>${d}<span class="cal-day-dots">${dots}</span></div>`;
   }
   gridEl.innerHTML = html;
 }
@@ -927,8 +991,8 @@ function openDayPopup(dateStr){
   const [y, m, d] = dateStr.split('-').map(Number);
   document.getElementById('sched-popup-date').textContent = `${d} ${MONTHS_GEN[m-1]}`;
   document.getElementById('sched-popup-events').innerHTML = popupDayEvents.map((e, i) => `
-    <div class="sched-event-item">
-      ${e.time ? `<div class="sched-event-time">${e.time}</div>` : ''}
+    <div class="sched-event-item" style="border-left:3px solid ${categoryColor(e.category)}">
+      ${e.category ? `<div class="sched-event-time" style="color:${categoryColor(e.category)}">${e.category}${e.time ? ' · '+e.time : ''}</div>` : (e.time ? `<div class="sched-event-time">${e.time}</div>` : '')}
       <div class="sched-event-title">${e.title}</div>
       ${e.description ? `<div class="sched-event-desc">${e.description}</div>` : ''}
       ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(popupDayEvents[${i}].link)">Перейти</button></div>` : ''}
@@ -977,6 +1041,7 @@ function closeSchedPopup(){
     loadProfile();
     loadContinueWidget();
     loadNews();
+    loadCalendarMonth();
   } else {
     document.getElementById('not-telegram-msg').style.display = 'flex';
   }
