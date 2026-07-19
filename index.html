@@ -65,11 +65,15 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .profile-label{font-size:13px;color:var(--text-faint)}
 .profile-value{font-size:13px;font-weight:600;text-align:right}
 
-.search-wrap{position:relative;margin-bottom:14px}
-.search-wrap input{width:100%;font-size:14px;font-family:var(--body);padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
-.search-wrap input::placeholder{color:var(--text-faint)}
 
 .lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
+.lec-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.save-btn{background:none;border:none;font-size:19px;line-height:1;color:var(--text-faint);cursor:pointer;padding:0;flex-shrink:0}
+.save-btn.saved{color:var(--warm)}
+.saved-banner{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:12.5px;font-weight:600}
+.clear-saved{color:var(--warm);cursor:pointer;font-weight:600}
+.watch-later-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--card2);border:1px solid var(--border);height:118px;text-align:center;padding:0 8px}
+.watch-later-icon{font-size:20px}
 .lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
 .lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lec-tags{display:flex;flex-wrap:wrap;gap:6px}
@@ -300,11 +304,9 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
     <div class="section-label">Потоки</div>
     <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
 
-    <div class="section-label">Искать в библиотеке</div>
+    <div class="section-label">Библиотека</div>
     <button class="ai-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
-    <div class="search-wrap">
-      <input type="text" id="lib-search" placeholder="Поиск по лекциям..." oninput="onSearchInput()">
-    </div>
+    <div id="saved-banner" class="saved-banner" style="display:none"></div>
     <div id="tag-filter-row" class="tag-filter-row"></div>
     <div id="lib-list"><div class="loading">Загрузка...</div></div>
     <div class="scroll-spacer"></div>
@@ -474,7 +476,7 @@ async function refreshApp() {
   btn.classList.add('spinning');
   listMembership = null;
   try {
-    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadWidgetMonth()]);
+    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadWidgetMonth(), loadSavedSlugs()]);
     if (document.getElementById('view-schedule').classList.contains('active')) {
       await loadCalendarMonth();
     }
@@ -771,18 +773,90 @@ function applyTagFilter() {
 
 async function loadStreams() {
   const el = document.getElementById('streams-row');
+  const watchLaterTile = `
+    <div class="stream-tile watch-later-tile" onclick="switchView('library');openSavedList()">
+      <div class="watch-later-icon">🔖</div>
+      <div class="stream-tile-title">Смотреть позже</div>
+    </div>`;
   try {
     const streams = await fetch(`${API_URL}/streams`).then(r => r.json());
-    if (!streams.length) { el.innerHTML = ''; return; }
-    el.innerHTML = streams.map(s => `
+    el.innerHTML = watchLaterTile + streams.map(s => `
       <div class="stream-tile" onclick="openStream('${s.stream_key}')">
         <img class="stream-tile-img" src="${s.image_url || ''}" alt="">
         <div class="stream-tile-title">${s.title || s.stream_key}</div>
       </div>
     `).join('');
   } catch (e) {
-    el.innerHTML = '';
+    el.innerHTML = watchLaterTile;
   }
+}
+
+let renderedItems = [];
+let savedSlugs = new Set();
+
+function lecCardHtml(l, i){
+  const isSaved = savedSlugs.has(l.slug);
+  return `
+    <div class="lec-card">
+      <div class="lec-card-top">
+        <div class="lec-title">${l.title}</div>
+        <button class="save-btn${isSaved ? ' saved' : ''}" onclick="event.stopPropagation();toggleSaved('${l.slug}')">${isSaved ? '★' : '☆'}</button>
+      </div>
+      <div class="lec-desc">${l.description || ''}</div>
+      <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
+      <div class="lec-links">
+        ${l.link ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
+        ${l.link_vk ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
+      </div>
+    </div>`;
+}
+
+async function loadSavedSlugs(){
+  try {
+    const slugs = await fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}`).then(r => r.json());
+    savedSlugs = new Set(slugs);
+  } catch (e) {}
+}
+
+function toggleSaved(slug){
+  const isSaved = savedSlugs.has(slug);
+  if (isSaved) {
+    savedSlugs.delete(slug);
+    fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}&slug=${encodeURIComponent(slug)}`, { method: 'DELETE' }).catch(()=>{});
+  } else {
+    savedSlugs.add(slug);
+    fetch(`${API_URL}/saved-lectures`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, slug })
+    }).catch(()=>{});
+  }
+  // Перерисовываем то, что сейчас видно, чтобы звёздочка и список "Смотреть позже" сразу отразили изменение
+  if (document.getElementById('saved-banner').style.display !== 'none') {
+    openSavedList();
+  } else if (document.getElementById('view-stream').classList.contains('active')) {
+    document.getElementById('stream-lectures').innerHTML = renderedItems.map((l, i) => lecCardHtml(l, i)).join('');
+  } else {
+    renderLibrary(renderedItems);
+  }
+}
+
+async function openSavedList(){
+  if (!allLectures.length) {
+    try { await loadLibrary(); } catch (e) {}
+  }
+  const filtered = allLectures.filter(l => savedSlugs.has(l.slug));
+  const bannerEl = document.getElementById('saved-banner');
+  bannerEl.style.display = 'flex';
+  bannerEl.innerHTML = `<span>🔖 Смотреть позже (${filtered.length})</span><span class="clear-saved" onclick="closeSavedList()">Все лекции ✕</span>`;
+  document.getElementById('tag-filter-row').style.display = 'none';
+  renderLibrary(filtered);
+}
+
+function closeSavedList(){
+  document.getElementById('saved-banner').style.display = 'none';
+  document.getElementById('tag-filter-row').style.display = '';
+  applyTagFilter();
 }
 
 async function openStream(key) {
@@ -800,45 +874,25 @@ async function openStream(key) {
     document.getElementById('stream-desc').textContent = stream.description || '';
     document.getElementById('stream-hero-img').src = stream.image_url || '';
     renderedItems = lectures;
-    document.getElementById('stream-lectures').innerHTML = lectures.map((l, i) => `
-      <div class="lec-card">
-        <div class="lec-title">${l.title}</div>
-        <div class="lec-desc">${l.description || ''}</div>
-        <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
-        <div class="lec-links">
-          ${l.link ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
-          ${l.link_vk ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
-        </div>
-      </div>
-    `).join('');
+    document.getElementById('stream-lectures').innerHTML = lectures.map((l, i) => lecCardHtml(l, i)).join('');
   } catch (e) {
     document.getElementById('stream-lectures').innerHTML = '<div class="empty">Не удалось загрузить поток</div>';
   }
 }
 
-async function loadLibrary(query) {
+async function loadLibrary() {
   const listEl = document.getElementById('lib-list');
   listEl.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
-    const url = query
-      ? `${API_URL}/lectures/search?q=${encodeURIComponent(query)}`
-      : `${API_URL}/lectures?limit=100`;
-    const r = await fetch(url);
-    const data = await r.json();
-    if (!query) {
-      allLectures = data;
-      allTags = collectTags(data);
-      renderTagFilter();
-      applyTagFilter();
-    } else {
-      renderLibrary(data);
-    }
+    const data = await fetch(`${API_URL}/lectures?limit=100`).then(r => r.json());
+    allLectures = data;
+    allTags = collectTags(data);
+    renderTagFilter();
+    applyTagFilter();
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
 }
-
-let renderedItems = [];
 
 function renderLibrary(items) {
   renderedItems = items;
@@ -847,17 +901,7 @@ function renderLibrary(items) {
     listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
     return;
   }
-  listEl.innerHTML = items.map((l, i) => `
-    <div class="lec-card">
-      <div class="lec-title">${l.title}</div>
-      <div class="lec-desc">${l.description || ''}</div>
-      <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
-      <div class="lec-links">
-        ${l.link ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
-        ${l.link_vk ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
-      </div>
-    </div>
-  `).join('');
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
 }
 
 function rememberLastLecture(l) {
@@ -896,12 +940,6 @@ function openLecture(index) {
   openUrl(l.link || l.link_vk);
 }
 
-let searchTimer;
-function onSearchInput() {
-  clearTimeout(searchTimer);
-  const q = document.getElementById('lib-search').value.trim();
-  searchTimer = setTimeout(() => loadLibrary(q || undefined), 300);
-}
 
 /* ── Расписание / календарь ── */
 
@@ -1093,6 +1131,8 @@ initSwipeToClose('ai-popup', closeAiPopup);
 
 function openAiPopup(){
   document.getElementById('ai-question-input').value = '';
+  document.getElementById('ai-question-input').style.display = '';
+  document.getElementById('ai-ask-btn').style.display = '';
   document.getElementById('ai-answer-area').innerHTML = '';
   document.getElementById('ai-popup-overlay').classList.add('open');
 }
@@ -1100,8 +1140,11 @@ function closeAiPopup(){
   document.getElementById('ai-popup-overlay').classList.remove('open');
 }
 
-function escapeHtml(s){
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function askAiAgain(){
+  document.getElementById('ai-question-input').value = '';
+  document.getElementById('ai-question-input').style.display = '';
+  document.getElementById('ai-ask-btn').style.display = '';
+  document.getElementById('ai-answer-area').innerHTML = '';
 }
 
 async function askAi(){
@@ -1151,22 +1194,21 @@ async function renderAiAnswerCards(rawAnswer){
 
   const matched = slugs.map(slug => allLectures.find(l => l.slug === slug)).filter(Boolean);
 
+  // Прячем поле вопроса и кнопку — остаются только карточки (+ возможность спросить ещё)
+  document.getElementById('ai-question-input').style.display = 'none';
+  document.getElementById('ai-ask-btn').style.display = 'none';
+
   if (!matched.length) {
-    answerEl.innerHTML = '<div class="ai-answer-card">Не нашёл подходящей лекции по этому вопросу — попробуй переформулировать.</div>';
+    answerEl.innerHTML = `
+      <div class="ai-answer-card">Не нашёл подходящей лекции по этому вопросу — попробуй переформулировать.</div>
+      <button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="askAiAgain()">Спросить ещё раз</button>`;
     return;
   }
 
   renderedItems = matched;
-  answerEl.innerHTML = `<div class="ai-answer-intro">Вот что подходит по твоему вопросу:</div>` + matched.map((l, i) => `
-    <div class="lec-card">
-      <div class="lec-title">${l.title}</div>
-      <div class="lec-desc">${l.description || ''}</div>
-      <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
-      <div class="lec-links">
-        ${l.link ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
-        ${l.link_vk ? `<button class="lec-link-btn" onclick="openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
-      </div>
-    </div>`).join('');
+  answerEl.innerHTML = `<div class="ai-answer-intro">Вот что подходит по твоему вопросу:</div>`
+    + matched.map((l, i) => lecCardHtml(l, i)).join('')
+    + `<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="askAiAgain()">Спросить ещё раз</button>`;
 }
 
 // ── Init ──
@@ -1185,6 +1227,7 @@ async function renderAiAnswerCards(rawAnswer){
     loadContinueWidget();
     loadNews();
     loadWidgetMonth();
+    loadSavedSlugs();
   } else {
     document.getElementById('not-telegram-msg').style.display = 'flex';
   }
