@@ -263,11 +263,12 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .video-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.68),rgba(0,0,0,0.05) 60%)}
 .video-banner-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,0.45);color:white;font-size:19px;display:flex;align-items:center;justify-content:center;padding-left:3px;z-index:1}
 .video-banner-title{position:absolute;left:14px;right:14px;bottom:12px;color:white;font-weight:700;font-size:14px;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,0.4)}
-.video-embed-player{position:relative;width:100%;aspect-ratio:9/16;max-height:440px;border-radius:12px;overflow:hidden;background:#000}
+.video-banner-dismiss{position:absolute;top:8px;right:8px;z-index:2;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:20px;font-size:10.5px;font-weight:700;padding:5px 10px;cursor:pointer}
+.video-embed-player{position:relative;height:min(62vh,520px);width:auto;max-width:100%;aspect-ratio:9/16;margin:0 auto;border-radius:12px;overflow:hidden;background:#000}
 .fullscreen-popup-overlay{position:fixed;inset:0;background:var(--bg);z-index:250;display:none;flex-direction:column}
 .fullscreen-popup-overlay.open{display:flex;animation:overlayFadeIn .22s ease forwards}
 .fullscreen-popup-header{display:flex;justify-content:flex-end;padding:calc(env(safe-area-inset-top)+16px) 16px 12px}
-.fullscreen-popup-body{flex:1;overflow-y:auto;padding:0 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+.fullscreen-popup-body{flex:1;overflow-y:auto;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
 .lec-link-btn.locked{opacity:0.55}
 .ai-btn.locked{opacity:0.55}
 .club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
@@ -279,7 +280,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .club-info-fade-wrap.expanded .club-info-gradient{display:none}
 .club-info-readmore{font-size:12px;font-weight:700;color:var(--warm)}
 .access-intro{font-size:13px;line-height:1.6;color:var(--text-dim);margin-bottom:18px}
-.access-btn{width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
+.access-btn{flex:none;width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
 .payment-help-link{text-align:center;font-size:12.5px;color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-top:8px}
 .ai-loading{font-size:13px;color:var(--text-faint);text-align:center;padding:20px 0}
 .sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:none}
@@ -336,6 +337,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
     </div>
 
     <div class="video-banner" id="onboarding-video-banner" style="display:none;background-image:url('images/onboarding-video.jpg')" onclick="openVideoPopup('onboarding')">
+      <button class="video-banner-dismiss" onclick="event.stopPropagation();dismissOnboardingBanner()">Скрыть ✕</button>
       <div class="video-banner-play">▶</div>
       <div class="video-banner-title">Как пользоваться клубом</div>
     </div>
@@ -977,12 +979,20 @@ function renderDemoBanner(){
   const salesVideo = document.getElementById('sales-video-banner');
   if (salesVideo) salesVideo.style.display = isMember ? 'none' : 'block';
   const onboardingVideo = document.getElementById('onboarding-video-banner');
-  if (onboardingVideo) onboardingVideo.style.display = isMember ? 'block' : 'none';
+  let onboardingDismissed = false;
+  try { onboardingDismissed = localStorage.getItem('onboarding_banner_dismissed') === '1'; } catch (e) {}
+  if (onboardingVideo) onboardingVideo.style.display = (isMember && !onboardingDismissed) ? 'block' : 'none';
   const aiBtn = document.getElementById('ai-helper-btn');
   if (aiBtn) {
     aiBtn.classList.toggle('locked', !isMember);
     aiBtn.textContent = (isMember ? '' : '🔒 ') + 'Спросить ИИ-помощника своими словами';
   }
+}
+
+function dismissOnboardingBanner(){
+  try { localStorage.setItem('onboarding_banner_dismissed', '1'); } catch (e) {}
+  const el = document.getElementById('onboarding-video-banner');
+  if (el) el.style.display = 'none';
 }
 
 let activeTagFilter = null;
