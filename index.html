@@ -100,8 +100,8 @@ body{
 }
 .shell{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:0 16px}
 
-header{padding:calc(env(safe-area-inset-top)+48px) 0 26px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{display:flex;align-items:center;gap:12px}
+header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:14px;padding:2px 0}
 .theme-switch{width:52px;height:30px;border-radius:20px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:3px;cursor:pointer;flex-shrink:0}
 [data-theme="dark"] .theme-switch{justify-content:flex-end}
 [data-theme="light"] .theme-switch{justify-content:flex-start}
@@ -254,7 +254,7 @@ header{padding:calc(env(safe-area-inset-top)+48px) 0 26px;display:flex;align-ite
 .ai-question-input:focus{outline:none;border-color:var(--warm)}
 .ai-answer-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text-dim);white-space:pre-wrap}
 .ai-answer-intro{font-size:12.5px;color:var(--text-dim);margin-bottom:10px}
-.demo-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(232,97,74,0.16),rgba(232,97,74,0.05));border:1px solid var(--warm);border-radius:16px;padding:14px 16px;margin-bottom:22px;cursor:pointer}
+.demo-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(232,97,74,0.16),rgba(232,97,74,0.05));border:1px solid var(--warm);border-radius:16px;padding:18px 18px;margin:6px 0 24px;cursor:pointer}
 .demo-banner-icon{font-size:22px}
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
@@ -264,6 +264,7 @@ header{padding:calc(env(safe-area-inset-top)+48px) 0 26px;display:flex;align-ite
 .club-info-text b{color:var(--text)}
 .access-intro{font-size:13px;line-height:1.6;color:var(--text-dim);margin-bottom:18px}
 .access-btn{width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
+.payment-help-link{text-align:center;font-size:12.5px;color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-top:8px}
 .ai-loading{font-size:13px;color:var(--text-faint);text-align:center;padding:20px 0}
 .sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:none}
 .sched-popup-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 16px}
@@ -523,6 +524,20 @@ header{padding:calc(env(safe-area-inset-top)+48px) 0 26px;display:flex;align-ite
       <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:10px">ВОТ ЭТО НАСТРОЙ!</div>
       <div class="access-intro">Выбирай комфортный для тебя вариант, спокойно оплачивай, все бонусы твои.<br><br>А, и на всякий случай: оплата обрабатывается 1-2 минуты, бот проведёт тебя за ручку через регистрацию и выдаст и доступы, и бонусы.<br><br>Добро пожаловать!</div>
       <div id="access-buttons"><div class="loading">Готовим ссылки...</div></div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Оплата не из РФ / проблема с оплатой ── -->
+  <div class="view" id="view-payment-help">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('access')" style="cursor:pointer;font-size:16px">←</span>
+      <span>Оплата не из РФ / проблема с оплатой</span>
+    </div>
+    <div class="card">
+      <div class="access-intro">Данные об оплате идут минуту-две, бывает три. Знаю, это мучительные минуты, но не переживай, скоро доступы автоматически придут тебе в бота <a href="https://t.me/youselllikeagod_bot" style="color:var(--warm)">@youselllikeagod_bot</a>.<br><br>Если же ты не можешь оплатить вообще, или у тебя карта не РФ, дай знать:</div>
+      <button class="lec-link-btn access-btn" onclick="openUrl('https://t.me/kuznetsov_denis?text=Приветики_хочу_оплатить_доступ_зарубежной_картой')">Оплата не из РФ</button>
+      <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_получается_оплатить_доступ')">Проблемы с оплатой</button>
     </div>
     <div class="scroll-spacer"></div>
   </div>
@@ -1367,9 +1382,9 @@ async function openAccessPage(){
 function renderAccessButtons(result){
   const el = document.getElementById('access-buttons');
   const buttons = [
-    { link: result.monthly_link, label: 'Помесячный (990₽/мес.)' },
-    { link: result.lifetime_link, label: 'Вечный (19990₽ разовый платёж)' },
-    { link: result.nonru_link, label: 'Оплата не из РФ' },
+    { link: result.trial_link, label: 'Тест-драйв (1р./3 дня)' },
+    { link: result.monthly_link, label: 'База (990р./мес.)' },
+    { link: result.lifetime_link, label: "Вечный (19'990 разовый платёж)" },
   ].filter(b => b.link);
 
   if (!buttons.length) {
@@ -1380,7 +1395,7 @@ function renderAccessButtons(result){
   window._paymentLinks = buttons;
   el.innerHTML = buttons.map((b, i) =>
     `<button class="lec-link-btn access-btn" onclick="goToPayment(${i})">${b.label}</button>`
-  ).join('');
+  ).join('') + `<div class="payment-help-link" onclick="switchView('payment-help')">Оплата не из РФ/Проблема с оплатой</div>`;
 }
 
 function goToPayment(i){
