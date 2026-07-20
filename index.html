@@ -259,10 +259,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
 .video-banner{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:16px;cursor:pointer}
-.video-embed-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:16px}
 .video-embed-player{position:relative;width:100%;aspect-ratio:9/16;max-height:440px;border-radius:12px;overflow:hidden;background:#000}
-.video-embed-title{font-weight:700;font-size:13.5px;margin-top:10px}
-.video-embed-sub{font-size:11.5px;color:var(--text-faint);margin-top:2px}
 .video-banner-thumb{width:64px;height:64px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,var(--lav),var(--warm));background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative}
 .video-banner-thumb .play-icon{width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.5);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;padding-left:2px}
 .video-banner-title{font-weight:700;font-size:13.5px}
@@ -271,9 +268,12 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .ai-btn.locked{opacity:0.55}
 .club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
 .club-info-text b{color:var(--text)}
-.club-info-teaser{font-family:var(--disp);font-weight:700;font-size:15px;line-height:1.5;margin-bottom:14px}
 .club-info-film-link{font-size:13px;color:var(--warm);cursor:pointer;margin-bottom:14px;line-height:1.5}
-.club-info-toggle{font-size:12.5px;color:var(--text-faint);cursor:pointer;text-decoration:underline}
+.club-info-fade-wrap{position:relative;max-height:150px;overflow:hidden;cursor:pointer;transition:max-height .3s ease}
+.club-info-fade-wrap.expanded{max-height:2000px;cursor:default}
+.club-info-gradient{position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(to bottom, transparent, var(--card) 78%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.club-info-fade-wrap.expanded .club-info-gradient{display:none}
+.club-info-readmore{font-size:12px;font-weight:700;color:var(--warm)}
 .access-intro{font-size:13px;line-height:1.6;color:var(--text-dim);margin-bottom:18px}
 .access-btn{width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
 .payment-help-link{text-align:center;font-size:12.5px;color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-top:8px}
@@ -326,20 +326,18 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       </div>
     </div>
 
-    <div class="video-embed-card" id="sales-video-banner" style="display:none">
-      <div class="video-embed-player">
-        <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
+    <div class="video-banner" id="sales-video-banner" style="display:none" onclick="openVideoPopup('sales')">
+      <div class="video-banner-thumb" style="background-image:url('images/film-ya-podumayu.jpg')"><span class="play-icon">▶</span></div>
+      <div class="video-banner-info">
+        <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
       </div>
-      <div class="video-embed-title">Как отработать «Я ПОДУМАЮ»?</div>
-      <div class="video-embed-sub">Короткий фильм — 30 минут, с юмором и по делу</div>
     </div>
 
-    <div class="video-embed-card" id="onboarding-video-banner" style="display:none">
-      <div class="video-embed-player">
-        <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
+    <div class="video-banner" id="onboarding-video-banner" style="display:none" onclick="openVideoPopup('onboarding')">
+      <div class="video-banner-thumb" style="background-image:url('images/onboarding-video.jpg')"><span class="play-icon">▶</span></div>
+      <div class="video-banner-info">
+        <div class="video-banner-title">Как пользоваться клубом</div>
       </div>
-      <div class="video-embed-title">Как пользоваться клубом</div>
-      <div class="video-embed-sub">Смотри перед тем как начать</div>
     </div>
 
     <div class="news-header" id="news-header" style="display:none">
@@ -522,10 +520,9 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       <span>О клубе</span>
     </div>
     <div class="card">
-      <div class="club-info-teaser">Всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ 🔥</div>
       <div class="club-info-film-link" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)</div>
-      <div class="club-info-toggle" id="club-info-toggle" onclick="toggleClubInfo()">Что внутри, подробно ↓</div>
-      <div class="club-info-text" id="club-info-full" style="display:none">Клубешник это:
+      <div class="club-info-fade-wrap" id="club-info-fade-wrap" onclick="expandClubInfo()">
+        <div class="club-info-text">Клубешник это:
 
 <b>- Занятия по продажам</b>, маркетингу, автоворонкам, сценариям и офферам, продажам в переписке (и ещё куче всего);
 <b>- Живые занятия</b> с практикой;
@@ -542,7 +539,13 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 - Бонус: <b>мастер-класс по продажам</b>, трафику, отработке возражений и презентации продукта;
 - "За кадром" - полный <b>разбор фильма "Я Подумаю"</b>, (сценарий, смыслы, съёмки).
 
-<b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".</div>
+<b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".
+
+Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!</div>
+        <div class="club-info-gradient" id="club-info-gradient">
+          <div class="club-info-readmore">Читать далее ↓</div>
+        </div>
+      </div>
     </div>
     <button class="lec-link-btn access-btn" onclick="openAccessPage()">Получить доступ</button>
     <div class="scroll-spacer"></div>
@@ -652,6 +655,32 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
     <textarea class="ai-question-input" id="ai-question-input" rows="3" placeholder="Например: как понять боли клиента на кастдевах?"></textarea>
     <button class="lec-link-btn" id="ai-ask-btn" style="width:100%;margin-top:10px;justify-content:center" onclick="askAi()">Спросить</button>
     <div id="ai-answer-area" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="video-popup-sales-overlay" onclick="if(event.target===this) closeVideoPopup('sales')">
+  <div class="sched-popup" id="video-popup-sales">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Как отработать «Я ПОДУМАЮ»?</div>
+      <button class="icon-btn" onclick="closeVideoPopup('sales')">✕</button>
+    </div>
+    <div class="video-embed-player">
+      <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
+    </div>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="video-popup-onboarding-overlay" onclick="if(event.target===this) closeVideoPopup('onboarding')">
+  <div class="sched-popup" id="video-popup-onboarding">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Как пользоваться клубом</div>
+      <button class="icon-btn" onclick="closeVideoPopup('onboarding')">✕</button>
+    </div>
+    <div class="video-embed-player">
+      <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
+    </div>
   </div>
 </div>
 
@@ -1364,6 +1393,15 @@ function initSwipeToClose(popupId, closeFn){
 }
 initSwipeToClose('sched-popup', closeSchedPopup);
 initSwipeToClose('ai-popup', closeAiPopup);
+
+function openVideoPopup(which){
+  document.getElementById(`video-popup-${which}-overlay`).classList.add('open');
+}
+function closeVideoPopup(which){
+  document.getElementById(`video-popup-${which}-overlay`).classList.remove('open');
+}
+initSwipeToClose('video-popup-sales', () => closeVideoPopup('sales'));
+initSwipeToClose('video-popup-onboarding', () => closeVideoPopup('onboarding'));
 initSwipeToClose('paywall-popup', closePaywall);
 initSwipeToClose('postpay-popup', closePostPay);
 
@@ -1380,12 +1418,8 @@ function openClubInfoPage(){
   switchView('club-info');
 }
 
-function toggleClubInfo(){
-  const full = document.getElementById('club-info-full');
-  const toggle = document.getElementById('club-info-toggle');
-  const isOpen = full.style.display !== 'none';
-  full.style.display = isOpen ? 'none' : 'block';
-  toggle.textContent = isOpen ? 'Что внутри, подробно ↓' : 'Свернуть ↑';
+function expandClubInfo(){
+  document.getElementById('club-info-fade-wrap').classList.add('expanded');
 }
 
 function openPostPay(){
