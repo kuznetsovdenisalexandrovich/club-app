@@ -187,6 +187,16 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .ai-question-input:focus{outline:none;border-color:var(--warm)}
 .ai-answer-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text-dim);white-space:pre-wrap}
 .ai-answer-intro{font-size:12.5px;color:var(--text-dim);margin-bottom:10px}
+.demo-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(232,97,74,0.16),rgba(232,97,74,0.05));border:1px solid var(--warm);border-radius:16px;padding:14px 16px;margin-bottom:16px;cursor:pointer}
+.demo-banner-icon{font-size:22px}
+.demo-banner-title{font-weight:700;font-size:13.5px}
+.demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
+.lec-link-btn.locked{opacity:0.55}
+.ai-btn.locked{opacity:0.55}
+.club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
+.club-info-text b{color:var(--text)}
+.access-intro{font-size:13px;line-height:1.6;color:var(--text-dim);margin-bottom:18px}
+.access-btn{width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
 .ai-loading{font-size:13px;color:var(--text-faint);text-align:center;padding:20px 0}
 .sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:none}
 .sched-popup-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 16px}
@@ -221,6 +231,14 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 
   <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
+    <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
+      <div class="demo-banner-icon">👀</div>
+      <div>
+        <div class="demo-banner-title">Ты в демо-режиме</div>
+        <div class="demo-banner-sub">Загляни, что внутри клуба →</div>
+      </div>
+    </div>
+
     <div class="news-header" id="news-header" style="display:none">
       <div class="section-label" style="margin:0">Обновления клуба</div>
       <button class="notif-btn-small" onclick="switchView('notifications')">Уведомления</button>
@@ -305,7 +323,7 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
     <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
 
     <div class="section-label">Библиотека</div>
-    <button class="ai-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
+    <button class="ai-btn" id="ai-helper-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
     <div id="saved-banner" class="saved-banner" style="display:none"></div>
     <div id="tag-filter-row" class="tag-filter-row"></div>
     <div id="lib-list"><div class="loading">Загрузка...</div></div>
@@ -394,6 +412,74 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
     <div class="scroll-spacer"></div>
   </div>
 
+  <!-- ── О клубе (демо/пейволл) ── -->
+  <div class="view" id="view-club-info">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span>О клубе</span>
+    </div>
+    <div class="card club-info-text">Клубешник это:
+
+<b>- Занятия по продажам</b>, маркетингу, автоворонкам, сценариям и офферам, продажам в переписке (и ещё куче всего);
+<b>- Живые занятия</b> с практикой;
+<b>- Записи лекций</b>, аудиоверсии, выжимки и файлы презентаций;
+<b>- Разборы ТВОИХ задач</b>;
+<b>- Книжный клуб</b>;
+<b>- Онлайн-журнал</b> по продажам (для любящих estetique, хохохо, бонжуууур);
+<b>- Персонализированные пиночки</b> действовать, вдохновляться и расти (целые потоки по мотивации);
+<b>- Обучение трафику</b>;
+- Самый нежный чат на свете;
+
+<b>- Удобные плейлисты занятий, аудиоверсии</b>, мы всё смонтировали, ужали до самой сути, собрали в плейлисты. Минимум твоего времени, максимум пользы, и всё организованно предельно понятно;
+
+- Бонус: <b>мастер-класс по продажам</b>, трафику, отработке возражений и презентации продукта;
+- "За кадром" - полный <b>разбор фильма "Я Подумаю"</b>, (сценарий, смыслы, съёмки).
+
+<b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".
+
+Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!</div>
+    <button class="lec-link-btn access-btn" onclick="openAccessPage()">Получить доступ</button>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Получить доступ (персональные ссылки на оплату) ── -->
+  <div class="view" id="view-access">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span>Получить доступ</span>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:10px">ВОТ ЭТО НАСТРОЙ!</div>
+      <div class="access-intro">Выбирай комфортный для тебя вариант, спокойно оплачивай, все бонусы твои.<br><br>А, и на всякий случай: оплата обрабатывается 1-2 минуты, бот проведёт тебя за ручку через регистрацию и выдаст и доступы, и бонусы.<br><br>Добро пожаловать!</div>
+      <div id="access-buttons"><div class="loading">Готовим ссылки...</div></div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+</div>
+
+<!-- Пейволл-алерт -->
+<div class="sched-popup-overlay" id="paywall-overlay" onclick="if(event.target===this) closePaywall()">
+  <div class="sched-popup" id="paywall-popup" style="text-align:center">
+    <div class="sched-popup-handle"></div>
+    <div style="font-size:34px;margin:6px 0 10px">🔒</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Вот ёшки, не вижу твоей подписки(</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Этот контент доступен только участникам клуба</div>
+    <button class="lec-link-btn access-btn" onclick="closePaywall();openAccessPage()">Открыть доступ</button>
+    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePaywall();openClubInfoPage()">Узнать подробнее</button>
+  </div>
+</div>
+
+<!-- Напоминание про регистрацию после клика по оплате -->
+<div class="sched-popup-overlay" id="postpay-overlay" onclick="if(event.target===this) closePostPay()">
+  <div class="sched-popup" id="postpay-popup" style="text-align:center">
+    <div class="sched-popup-handle"></div>
+    <div style="font-size:34px;margin:6px 0 10px">📝</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Почти готово!</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">После оплаты бот сам проведёт тебя через регистрацию — просто открой с ним диалог и следуй подсказкам.</div>
+    <button class="lec-link-btn access-btn" onclick="openUrl('https://t.me/youselllikeagod_bot')">Перейти в бота</button>
+    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_получить_доступ')">Написать в поддержку</button>
+  </div>
 </div>
 
 <!-- Не в Telegram -->
@@ -704,15 +790,19 @@ async function loadContinueWidget() {
   }
 }
 
+let isMember = false;
+
 async function loadProfile() {
   try {
     const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
     const u = await r.json();
 
     if (!u.found) {
+      isMember = false;
       document.getElementById('sub-name').textContent = 'Профиль не найден';
       document.getElementById('sub-meta').textContent = 'Похоже, ты ещё не оформлял(а) подписку';
       document.getElementById('sub-pill').textContent = '—';
+      renderDemoBanner();
       return;
     }
 
@@ -725,6 +815,7 @@ async function loadProfile() {
     document.getElementById('sub-name').textContent = u.sub_name || 'Без подписки';
     document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
 
+    isMember = !!u.is_member;
     const pill = document.getElementById('sub-pill');
     if (u.is_member) {
       pill.textContent = 'Активна';
@@ -737,8 +828,19 @@ async function loadProfile() {
       pill.className = 'pill inactive';
       document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
     }
+    renderDemoBanner();
   } catch (e) {
     document.getElementById('sub-name').textContent = 'Ошибка загрузки';
+  }
+}
+
+function renderDemoBanner(){
+  const el = document.getElementById('demo-banner');
+  if (el) el.style.display = isMember ? 'none' : 'flex';
+  const aiBtn = document.getElementById('ai-helper-btn');
+  if (aiBtn) {
+    aiBtn.classList.toggle('locked', !isMember);
+    aiBtn.textContent = (isMember ? '' : '🔒 ') + 'Спросить ИИ-помощника своими словами';
   }
 }
 
@@ -798,6 +900,8 @@ const SAVE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><
 
 function lecCardHtml(l, i){
   const isSaved = savedSlugs.has(l.slug);
+  const lockCls = isMember ? '' : ' locked';
+  const lockIcon = isMember ? '' : '🔒 ';
   return `
     <div class="lec-card">
       <div class="lec-card-top">
@@ -807,8 +911,8 @@ function lecCardHtml(l, i){
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
       <div class="lec-links">
-        ${l.link ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'tg')">Смотреть в ТГ</button>` : ''}
-        ${l.link_vk ? `<button class="lec-link-btn" onclick="event.stopPropagation();openLectureLink(${i},'vk')">Смотреть в VK</button>` : ''}
+        ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();openLectureLink(${i},'tg')">${lockIcon}Смотреть в ТГ</button>` : ''}
+        ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();openLectureLink(${i},'vk')">${lockIcon}Смотреть в VK</button>` : ''}
       </div>
     </div>`;
 }
@@ -935,6 +1039,7 @@ function openUrl(url) {
 }
 
 function openLectureLink(index, platform) {
+  if (!isMember) { openPaywall(); return; }
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
@@ -942,6 +1047,7 @@ function openLectureLink(index, platform) {
 }
 
 function openLecture(index) {
+  if (!isMember) { openPaywall(); return; }
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
@@ -1099,7 +1205,7 @@ function openDayPopup(dateStr){
       ${e.category ? `<div class="sched-event-time" style="color:${categoryColor(e.category)}">${e.category}${e.time ? ' · '+e.time : ''}</div>` : (e.time ? `<div class="sched-event-time">${e.time}</div>` : '')}
       <div class="sched-event-title">${e.title}</div>
       ${e.description ? `<div class="sched-event-desc">${e.description}</div>` : ''}
-      ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(popupDayEvents[${i}].link)">Перейти</button></div>` : ''}
+      ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn${isMember?'':' locked'}" onclick="isMember ? openUrl(popupDayEvents[${i}].link) : openPaywall()">${isMember?'':'🔒 '}Перейти</button></div>` : ''}
     </div>`).join('');
   document.getElementById('sched-popup-overlay').classList.add('open');
 }
@@ -1134,10 +1240,90 @@ function initSwipeToClose(popupId, closeFn){
 }
 initSwipeToClose('sched-popup', closeSchedPopup);
 initSwipeToClose('ai-popup', closeAiPopup);
+initSwipeToClose('paywall-popup', closePaywall);
+initSwipeToClose('postpay-popup', closePostPay);
+
+/* ── Демо-режим / пейволл / доступ ── */
+
+function openPaywall(){
+  document.getElementById('paywall-overlay').classList.add('open');
+}
+function closePaywall(){
+  document.getElementById('paywall-overlay').classList.remove('open');
+}
+
+function openClubInfoPage(){
+  switchView('club-info');
+}
+
+function openPostPay(){
+  document.getElementById('postpay-overlay').classList.add('open');
+}
+function closePostPay(){
+  document.getElementById('postpay-overlay').classList.remove('open');
+}
+
+async function openAccessPage(){
+  switchView('access');
+  const el = document.getElementById('access-buttons');
+  el.innerHTML = '<div class="loading">Готовим ссылки...</div>';
+
+  try {
+    await fetch(`${API_URL}/app/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, action: 'get_payment_links', params: {} })
+    });
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Не получилось отправить запрос — проверь соединение</div>';
+    return;
+  }
+
+  for (let i = 0; i < 12; i++) {
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=get_payment_links`);
+      const data = await r.json();
+      if (data.status === 'done' && data.result) {
+        renderAccessButtons(data.result);
+        return;
+      }
+    } catch (e) {}
+  }
+  el.innerHTML = '<div class="empty">Не дождались ответа — попробуй ещё раз чуть позже</div>';
+}
+
+function renderAccessButtons(result){
+  const el = document.getElementById('access-buttons');
+  const buttons = [
+    { link: result.monthly_link, label: 'Помесячный (990₽/мес.)' },
+    { link: result.lifetime_link, label: 'Вечный (19990₽ разовый платёж)' },
+    { link: result.nonru_link, label: 'Оплата не из РФ' },
+  ].filter(b => b.link);
+
+  if (!buttons.length) {
+    el.innerHTML = '<div class="empty">Не удалось получить ссылки — попробуй ещё раз</div>';
+    return;
+  }
+
+  window._paymentLinks = buttons;
+  el.innerHTML = buttons.map((b, i) =>
+    `<button class="lec-link-btn access-btn" onclick="goToPayment(${i})">${b.label}</button>`
+  ).join('');
+}
+
+function goToPayment(i){
+  const b = window._paymentLinks[i];
+  if (!b) return;
+  openUrl(b.link);
+  openPostPay();
+}
+
 
 /* ── ИИ-помощник по библиотеке (через Salebot ai_context_answer) ── */
 
 function openAiPopup(){
+  if (!isMember) { openPaywall(); return; }
   document.getElementById('ai-question-input').value = '';
   document.getElementById('ai-question-input').style.display = '';
   document.getElementById('ai-ask-btn').style.display = '';
