@@ -259,6 +259,10 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
 .video-banner{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:16px;cursor:pointer}
+.video-embed-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:16px}
+.video-embed-player{position:relative;width:100%;aspect-ratio:9/16;max-height:440px;border-radius:12px;overflow:hidden;background:#000}
+.video-embed-title{font-weight:700;font-size:13.5px;margin-top:10px}
+.video-embed-sub{font-size:11.5px;color:var(--text-faint);margin-top:2px}
 .video-banner-thumb{width:64px;height:64px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,var(--lav),var(--warm));background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative}
 .video-banner-thumb .play-icon{width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.5);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;padding-left:2px}
 .video-banner-title{font-weight:700;font-size:13.5px}
@@ -322,22 +326,20 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       </div>
     </div>
 
-    <div class="video-banner" id="sales-video-banner" style="display:none;position:relative">
-      <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="popover" data-boomstream-use-fullscreen-mode="0" style="position:absolute;inset:0;cursor:pointer;z-index:1"></span>
-      <div class="video-banner-thumb" style="background-image:url('images/film-ya-podumayu.jpg')"><span class="play-icon">▶</span></div>
-      <div class="video-banner-info">
-        <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
-        <div class="video-banner-sub">Короткий фильм — 30 минут, с юмором и по делу</div>
+    <div class="video-embed-card" id="sales-video-banner" style="display:none">
+      <div class="video-embed-player">
+        <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
       </div>
+      <div class="video-embed-title">Как отработать «Я ПОДУМАЮ»?</div>
+      <div class="video-embed-sub">Короткий фильм — 30 минут, с юмором и по делу</div>
     </div>
 
-    <div class="video-banner" id="onboarding-video-banner" style="display:none;position:relative">
-      <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="popover" data-boomstream-use-fullscreen-mode="0" style="position:absolute;inset:0;cursor:pointer;z-index:1"></span>
-      <div class="video-banner-thumb" style="background-image:url('images/onboarding-video.jpg')"><span class="play-icon">▶</span></div>
-      <div class="video-banner-info">
-        <div class="video-banner-title">Как пользоваться клубом</div>
-        <div class="video-banner-sub">Смотри перед тем как начать</div>
+    <div class="video-embed-card" id="onboarding-video-banner" style="display:none">
+      <div class="video-embed-player">
+        <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
       </div>
+      <div class="video-embed-title">Как пользоваться клубом</div>
+      <div class="video-embed-sub">Смотри перед тем как начать</div>
     </div>
 
     <div class="news-header" id="news-header" style="display:none">
@@ -521,7 +523,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
     </div>
     <div class="card">
       <div class="club-info-teaser">Всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ 🔥</div>
-      <div class="club-info-film-link" style="position:relative">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)<span data-boomstream-code="d9uzmOdM" data-boomstream-mode="popover" data-boomstream-use-fullscreen-mode="0" style="position:absolute;inset:0;cursor:pointer"></span></div>
+      <div class="club-info-film-link" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)</div>
       <div class="club-info-toggle" id="club-info-toggle" onclick="toggleClubInfo()">Что внутри, подробно ↓</div>
       <div class="club-info-text" id="club-info-full" style="display:none">Клубешник это:
 
