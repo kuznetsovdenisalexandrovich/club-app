@@ -15,6 +15,7 @@
   --bg2:#ede6de; --card:#e2dbd2; --card2:#ddd6cc;
   --border:rgba(194,186,176,0); --line:rgba(100,80,60,0.09);
   --text:#3a3028; --text-dim:#7a6a60; --text-faint:#a89888;
+  --lav:#e8614a; --lav-deep:#cf4f39; --lav-dim:rgba(232,97,74,0.16);
   --blob1-op:0; --blob2-op:0;
   --sh-r: 6px 6px 16px #c2bab0, -6px -6px 16px #faf4ec;
   --sh-sm:3px 3px 9px #c2bab0, -3px -3px 9px #faf4ec;
@@ -258,17 +259,20 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .demo-banner-icon{font-size:22px}
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
-.video-banner{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:16px;cursor:pointer}
+.video-banner{position:relative;width:100%;aspect-ratio:16/8;border-radius:16px;overflow:hidden;cursor:pointer;margin-bottom:16px;background-size:cover;background-position:center}
+.video-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.68),rgba(0,0,0,0.05) 60%)}
+.video-banner-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,0.45);color:white;font-size:19px;display:flex;align-items:center;justify-content:center;padding-left:3px;z-index:1}
+.video-banner-title{position:absolute;left:14px;right:14px;bottom:12px;color:white;font-weight:700;font-size:14px;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,0.4)}
 .video-embed-player{position:relative;width:100%;aspect-ratio:9/16;max-height:440px;border-radius:12px;overflow:hidden;background:#000}
-.video-banner-thumb{width:64px;height:64px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,var(--lav),var(--warm));background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative}
-.video-banner-thumb .play-icon{width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.5);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;padding-left:2px}
-.video-banner-title{font-weight:700;font-size:13.5px}
-.video-banner-sub{font-size:11.5px;color:var(--text-faint);margin-top:2px}
+.fullscreen-popup-overlay{position:fixed;inset:0;background:var(--bg);z-index:250;display:none;flex-direction:column}
+.fullscreen-popup-overlay.open{display:flex;animation:overlayFadeIn .22s ease forwards}
+.fullscreen-popup-header{display:flex;justify-content:flex-end;padding:calc(env(safe-area-inset-top)+16px) 16px 12px}
+.fullscreen-popup-body{flex:1;overflow-y:auto;padding:0 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
 .lec-link-btn.locked{opacity:0.55}
 .ai-btn.locked{opacity:0.55}
 .club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
 .club-info-text b{color:var(--text)}
-.club-info-film-link{font-size:13px;color:var(--warm);cursor:pointer;margin-bottom:14px;line-height:1.5}
+.club-info-video-link{color:var(--warm);text-decoration:underline;cursor:pointer}
 .club-info-fade-wrap{position:relative;max-height:150px;overflow:hidden;cursor:pointer;transition:max-height .3s ease}
 .club-info-fade-wrap.expanded{max-height:2000px;cursor:default}
 .club-info-gradient{position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(to bottom, transparent, var(--card) 78%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
@@ -326,18 +330,14 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       </div>
     </div>
 
-    <div class="video-banner" id="sales-video-banner" style="display:none" onclick="openVideoPopup('sales')">
-      <div class="video-banner-thumb" style="background-image:url('images/film-ya-podumayu.jpg')"><span class="play-icon">▶</span></div>
-      <div class="video-banner-info">
-        <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
-      </div>
+    <div class="video-banner" id="sales-video-banner" style="display:none;background-image:url('images/film-ya-podumayu.jpg')" onclick="openVideoPopup('sales')">
+      <div class="video-banner-play">▶</div>
+      <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
     </div>
 
-    <div class="video-banner" id="onboarding-video-banner" style="display:none" onclick="openVideoPopup('onboarding')">
-      <div class="video-banner-thumb" style="background-image:url('images/onboarding-video.jpg')"><span class="play-icon">▶</span></div>
-      <div class="video-banner-info">
-        <div class="video-banner-title">Как пользоваться клубом</div>
-      </div>
+    <div class="video-banner" id="onboarding-video-banner" style="display:none;background-image:url('images/onboarding-video.jpg')" onclick="openVideoPopup('onboarding')">
+      <div class="video-banner-play">▶</div>
+      <div class="video-banner-title">Как пользоваться клубом</div>
     </div>
 
     <div class="news-header" id="news-header" style="display:none">
@@ -464,14 +464,6 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
     <div class="section-label">Профиль</div>
     <div class="card">
       <div class="profile-row">
-        <span class="profile-label">Имя</span>
-        <span class="profile-value" id="p-name">—</span>
-      </div>
-      <div class="profile-row">
-        <span class="profile-label">Username</span>
-        <span class="profile-value" id="p-username">—</span>
-      </div>
-      <div class="profile-row">
         <span class="profile-label">Месяцев в клубе</span>
         <span class="profile-value" id="p-months">—</span>
       </div>
@@ -520,7 +512,6 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       <span>О клубе</span>
     </div>
     <div class="card">
-      <div class="club-info-film-link" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)</div>
       <div class="club-info-fade-wrap" id="club-info-fade-wrap" onclick="expandClubInfo()">
         <div class="club-info-text">Клубешник это:
 
@@ -541,7 +532,9 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 
 <b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".
 
-Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!</div>
+Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!
+
+Узнать про клуб подробнее ты можешь <span class="club-info-video-link" onclick="event.stopPropagation();openVideoPopup('sales')">в этом видео</span>.</div>
         <div class="club-info-gradient" id="club-info-gradient">
           <div class="club-info-readmore">Читать далее ↓</div>
         </div>
@@ -658,26 +651,23 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
   </div>
 </div>
 
-<div class="sched-popup-overlay" id="video-popup-sales-overlay" onclick="if(event.target===this) closeVideoPopup('sales')">
-  <div class="sched-popup" id="video-popup-sales">
-    <div class="sched-popup-handle"></div>
-    <div class="sched-popup-header">
-      <div class="sched-popup-title">Как отработать «Я ПОДУМАЮ»?</div>
-      <button class="icon-btn" onclick="closeVideoPopup('sales')">✕</button>
-    </div>
+<div class="fullscreen-popup-overlay" id="video-popup-sales-overlay">
+  <div class="fullscreen-popup-header">
+    <button class="icon-btn" onclick="closeVideoPopup('sales')">✕</button>
+  </div>
+  <div class="fullscreen-popup-body">
     <div class="video-embed-player">
       <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
     </div>
+    <button class="lec-link-btn access-btn" style="margin-top:20px" onclick="closeVideoPopup('sales');openAccessPage()">Получить доступ</button>
   </div>
 </div>
 
-<div class="sched-popup-overlay" id="video-popup-onboarding-overlay" onclick="if(event.target===this) closeVideoPopup('onboarding')">
-  <div class="sched-popup" id="video-popup-onboarding">
-    <div class="sched-popup-handle"></div>
-    <div class="sched-popup-header">
-      <div class="sched-popup-title">Как пользоваться клубом</div>
-      <button class="icon-btn" onclick="closeVideoPopup('onboarding')">✕</button>
-    </div>
+<div class="fullscreen-popup-overlay" id="video-popup-onboarding-overlay">
+  <div class="fullscreen-popup-header">
+    <button class="icon-btn" onclick="closeVideoPopup('onboarding')">✕</button>
+  </div>
+  <div class="fullscreen-popup-body">
     <div class="video-embed-player">
       <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
     </div>
@@ -956,8 +946,6 @@ async function loadProfile() {
     }
 
     document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
-    document.getElementById('p-name').textContent = u.full_name || u.name || '—';
-    document.getElementById('p-username').textContent = u.username || '—';
     document.getElementById('p-months').textContent = monthsSince(u.first_payment_date);
     document.getElementById('p-next').textContent = u.next_payment_date || '—';
 
@@ -987,9 +975,9 @@ function renderDemoBanner(){
   const el = document.getElementById('demo-banner');
   if (el) el.style.display = isMember ? 'none' : 'flex';
   const salesVideo = document.getElementById('sales-video-banner');
-  if (salesVideo) salesVideo.style.display = isMember ? 'none' : 'flex';
+  if (salesVideo) salesVideo.style.display = isMember ? 'none' : 'block';
   const onboardingVideo = document.getElementById('onboarding-video-banner');
-  if (onboardingVideo) onboardingVideo.style.display = isMember ? 'flex' : 'none';
+  if (onboardingVideo) onboardingVideo.style.display = isMember ? 'block' : 'none';
   const aiBtn = document.getElementById('ai-helper-btn');
   if (aiBtn) {
     aiBtn.classList.toggle('locked', !isMember);
@@ -1400,8 +1388,6 @@ function openVideoPopup(which){
 function closeVideoPopup(which){
   document.getElementById(`video-popup-${which}-overlay`).classList.remove('open');
 }
-initSwipeToClose('video-popup-sales', () => closeVideoPopup('sales'));
-initSwipeToClose('video-popup-onboarding', () => closeVideoPopup('onboarding'));
 initSwipeToClose('paywall-popup', closePaywall);
 initSwipeToClose('postpay-popup', closePostPay);
 
