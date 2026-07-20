@@ -8,17 +8,33 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
 
-[data-theme="dark"] {
-  --bg:#121014; --bg2:#1c1a1e; --card:#1c1a1e; --card2:#252226;
-  --border:rgba(255,255,255,0.09); --line:rgba(255,255,255,0.07);
-  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
-  --shadow:none;
-}
+/* ── Светлая тема: Carton warm neumorphism (украдено 1:1 из редизайна дашборда) ── */
 [data-theme="light"] {
-  --bg:#faf5ee; --bg2:#ffffff; --card:#fffcf8; --card2:#f3ebe0;
-  --border:rgba(60,40,25,0.09); --line:rgba(60,40,25,0.07);
-  --text:#2b241d; --text-dim:#6e6156; --text-faint:#a89b8c;
-  --shadow:0 6px 20px -8px rgba(90,60,30,0.10);
+  --bg:#e2dbd2; --bg-b:#ddd6cc; --bg-c:#ede6de;
+  --card-bg:#e2dbd2; --input-bg:#e2dbd2; --stat-bg:#ddd6cc;
+  --bg2:#ede6de; --card:#e2dbd2; --card2:#ddd6cc;
+  --border:rgba(194,186,176,0); --line:rgba(100,80,60,0.09);
+  --text:#3a3028; --text-dim:#7a6a60; --text-faint:#a89888;
+  --blob1-op:0; --blob2-op:0;
+  --sh-r: 6px 6px 16px #c2bab0, -6px -6px 16px #faf4ec;
+  --sh-sm:3px 3px 9px #c2bab0, -3px -3px 9px #faf4ec;
+  --sh-i: inset 5px 5px 12px #c2bab0, inset -5px -5px 12px #faf4ec;
+  --sh-is:inset 3px 3px 7px #c2bab0, inset -3px -3px 7px #faf4ec;
+  --shadow:var(--sh-r);
+}
+/* ── Тёмная тема: glassmorphism (тот же язык, что и раньше — просто точные значения из Фигмы) ── */
+[data-theme="dark"] {
+  --bg:#0c0a15; --bg-b:#110f1e; --bg-c:#0c0a15;
+  --card-bg:rgba(255,255,255,0.05); --input-bg:rgba(255,255,255,0.07); --stat-bg:rgba(255,255,255,0.07);
+  --bg2:#110f1e; --card:rgba(255,255,255,0.05); --card2:rgba(255,255,255,0.09);
+  --border:rgba(255,255,255,0.08); --line:rgba(255,255,255,0.06);
+  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+  --blob1-op:1; --blob2-op:1;
+  --sh-r: 0 4px 20px -6px rgba(124,108,240,0.18);
+  --sh-sm:0 2px 12px -4px rgba(124,108,240,0.14);
+  --sh-i: inset 0 1px 0 rgba(255,255,255,0.06);
+  --sh-is:inset 0 1px 0 rgba(255,255,255,0.04);
+  --shadow:var(--sh-r);
 }
 :root {
   --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
@@ -26,6 +42,55 @@
   --warm:#e8614a; --warm-deep:#cf4f39;
   --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
 }
+
+/* ── Блобы на фоне (только тёмная тема — в светлой прозрачные через --blob*-op) ── */
+.blob{position:fixed;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;transition:opacity .35s}
+.blob-1{width:300px;height:300px;top:-100px;right:-80px;background:var(--lav);opacity:var(--blob1-op);animation:blobFloat1 12s ease-in-out infinite}
+.blob-2{width:250px;height:250px;bottom:15%;left:-100px;background:var(--coral);opacity:var(--blob2-op);animation:blobFloat2 9s ease-in-out infinite}
+.blob-3{width:200px;height:200px;top:40%;right:-60px;background:var(--lav-dim);opacity:var(--blob2-op);animation:blobFloat2 15s ease-in-out infinite reverse}
+
+@keyframes overlayFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popupSlideUp{
+  from{transform:translateY(70px) scale(0.99);opacity:0}
+  to{transform:translateY(0) scale(1);opacity:1}
+}
+@keyframes cardEntrance{
+  from{opacity:0;transform:translateY(14px) scale(0.97)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes blobFloat1{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(16px,-22px) scale(1.05)}
+}
+@keyframes blobFloat2{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(-12px,16px) scale(1.03)}
+}
+@keyframes markGlow{
+  0%,100%{box-shadow:0 0 11px rgba(232,97,74,0.18),0 0 7px rgba(155,140,242,0.15),inset 0 1px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.25)}
+  50%{box-shadow:0 0 20px rgba(232,97,74,0.32),0 0 14px rgba(155,140,242,0.28),inset 0 1px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.25)}
+}
+
+/* ── Тёмная тема: точный glass-рецепт на все карточковидные поверхности ── */
+[data-theme="dark"] .card,[data-theme="dark"] .lec-card,[data-theme="dark"] .teaser-card,
+[data-theme="dark"] .sub-card,[data-theme="dark"] .cal-widget-card,[data-theme="dark"] .sched-event-item,
+[data-theme="dark"] .stream-tile,[data-theme="dark"] .watch-later-tile{
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+}
+[data-theme="dark"] .mark{animation:markGlow 4s ease-in-out infinite}
+
+/* ── Светлая тема: неоморфизм на все карточковидные поверхности (вместо плоских теней) ── */
+[data-theme="light"] .card,[data-theme="light"] .lec-card,[data-theme="light"] .teaser-card,
+[data-theme="light"] .cal-widget-card,[data-theme="light"] .sched-event-item{
+  background:var(--bg);box-shadow:var(--sh-r);border:none;backdrop-filter:none;
+}
+[data-theme="light"] .sub-card{background:var(--bg);box-shadow:var(--sh-r),0 0 18px -10px rgba(232,97,74,0.15);border:none}
+[data-theme="light"] .stream-tile,[data-theme="light"] .watch-later-tile{background:var(--bg);box-shadow:var(--sh-sm);border:none}
+[data-theme="light"] .icon-btn{background:var(--bg);box-shadow:var(--sh-sm);border:none}
+[data-theme="light"] .icon-btn:active{box-shadow:var(--sh-is)}
+[data-theme="light"] .lec-link-btn,[data-theme="light"] .action-btn{box-shadow:var(--sh-sm)}
+[data-theme="light"] .lec-link-btn:active,[data-theme="light"] .action-btn:active{box-shadow:var(--sh-is)!important}
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{background:var(--bg);transition:background .25s}
 body{
@@ -33,7 +98,7 @@ body{
   -webkit-font-smoothing:antialiased;
   padding-bottom:calc(84px + env(safe-area-inset-bottom));
 }
-.shell{max-width:520px;margin:0 auto;padding:0 16px}
+.shell{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:0 16px}
 
 header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:12px}
@@ -50,7 +115,7 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 
 .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:18px;margin-bottom:12px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);transition:background .25s,border-color .25s}
 
-.sub-card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(232,97,74,0.08),transparent);box-shadow:0 0 18px -10px rgba(232,97,74,0.15),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
+.sub-card{animation:cardEntrance .5s cubic-bezier(0.34,1.56,0.64,1) both;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(232,97,74,0.08),transparent);box-shadow:0 0 18px -10px rgba(232,97,74,0.15),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
 .sub-left{display:flex;align-items:center;gap:12px}
 .sub-icon{width:44px;height:44px;border-radius:14px;background:var(--lav-dim);color:var(--lav-deep);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
 .sub-name{font-family:var(--disp);font-weight:700;font-size:15px}
@@ -82,14 +147,15 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .lec-link-btn:active{transform:scale(0.97)}
 .lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
 
-.continue-card{cursor:pointer;background:linear-gradient(135deg,rgba(232,97,74,0.12),transparent);box-shadow:0 0 20px -10px rgba(232,97,74,0.18),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
+.continue-card{animation:cardEntrance .5s cubic-bezier(0.34,1.56,0.64,1) .08s both;cursor:pointer;background:linear-gradient(135deg,rgba(232,97,74,0.12),transparent);box-shadow:0 0 20px -10px rgba(232,97,74,0.18),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
 .continue-label{font-size:10.5px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .continue-play{font-size:9px}
 .continue-title{font-family:var(--disp);font-weight:700;font-size:15px;line-height:1.4}
 .continue-progress{width:100%;height:5px;border-radius:10px;background:var(--card2);margin-top:12px;overflow:hidden}
 .continue-progress-bar{height:100%;background:linear-gradient(90deg,var(--warm),var(--amber));border-radius:10px}
 .scroll-spacer{height:24px}
-.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text-dim);flex-shrink:0}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text-dim);flex-shrink:0;transition:transform .15s,box-shadow .2s,background .35s}
+.icon-btn:active{transform:scale(0.88)!important}
 .icon-btn:active{transform:scale(0.92)}
 .icon-btn.spinning{animation:spin .6s linear}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -182,7 +248,8 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 .teaser-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5}
 
 .sched-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:200;display:none;align-items:flex-end;justify-content:center}
-.sched-popup-overlay.open{display:flex}
+.sched-popup-overlay.open{display:flex;animation:overlayFadeIn .22s ease forwards}
+.sched-popup-overlay.open .sched-popup{animation:popupSlideUp .4s cubic-bezier(0.34,1.56,0.64,1) forwards}
 .ai-question-input{width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;font-family:inherit;font-size:13.5px;color:var(--text);resize:vertical}
 .ai-question-input:focus{outline:none;border-color:var(--warm)}
 .ai-answer-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text-dim);white-space:pre-wrap}
@@ -210,6 +277,10 @@ header{padding:calc(env(safe-area-inset-top)+32px) 0 20px;display:flex;align-ite
 </style>
 </head>
 <body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
 
 <div class="shell" id="app-shell" style="display:none">
 
