@@ -284,6 +284,9 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .sched-event-title{font-weight:700;font-size:14px;margin-bottom:6px}
 .sched-event-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;white-space:pre-wrap}
 </style>
+<script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
+<script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
+<script src="https://play.boomstream.com/assets/javascripts/biframesdk.js?v=1.1.1" async></script>
 </head>
 <body>
 
@@ -319,7 +322,8 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       </div>
     </div>
 
-    <div class="video-banner" id="sales-video-banner" style="display:none" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">
+    <div class="video-banner" id="sales-video-banner" style="display:none;position:relative">
+      <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="popover" data-boomstream-use-fullscreen-mode="0" style="position:absolute;inset:0;cursor:pointer;z-index:1"></span>
       <div class="video-banner-thumb" style="background-image:url('images/film-ya-podumayu.jpg')"><span class="play-icon">▶</span></div>
       <div class="video-banner-info">
         <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
@@ -327,7 +331,8 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       </div>
     </div>
 
-    <div class="video-banner" id="onboarding-video-banner" style="display:none" onclick="openUrl('https://play.boomstream.com/i6QVY0Lg')">
+    <div class="video-banner" id="onboarding-video-banner" style="display:none;position:relative">
+      <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="popover" data-boomstream-use-fullscreen-mode="0" style="position:absolute;inset:0;cursor:pointer;z-index:1"></span>
       <div class="video-banner-thumb" style="background-image:url('images/onboarding-video.jpg')"><span class="play-icon">▶</span></div>
       <div class="video-banner-info">
         <div class="video-banner-title">Как пользоваться клубом</div>
@@ -516,7 +521,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
     </div>
     <div class="card">
       <div class="club-info-teaser">Всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ 🔥</div>
-      <div class="club-info-film-link" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)</div>
+      <div class="club-info-film-link" style="position:relative">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)<span data-boomstream-code="d9uzmOdM" data-boomstream-mode="popover" data-boomstream-use-fullscreen-mode="0" style="position:absolute;inset:0;cursor:pointer"></span></div>
       <div class="club-info-toggle" id="club-info-toggle" onclick="toggleClubInfo()">Что внутри, подробно ↓</div>
       <div class="club-info-text" id="club-info-full" style="display:none">Клубешник это:
 
