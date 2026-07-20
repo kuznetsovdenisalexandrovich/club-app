@@ -258,10 +258,18 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .demo-banner-icon{font-size:22px}
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
+.video-banner{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:16px;cursor:pointer}
+.video-banner-thumb{width:64px;height:64px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,var(--lav),var(--warm));background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;position:relative}
+.video-banner-thumb .play-icon{width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.5);color:white;font-size:11px;display:flex;align-items:center;justify-content:center;padding-left:2px}
+.video-banner-title{font-weight:700;font-size:13.5px}
+.video-banner-sub{font-size:11.5px;color:var(--text-faint);margin-top:2px}
 .lec-link-btn.locked{opacity:0.55}
 .ai-btn.locked{opacity:0.55}
 .club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
 .club-info-text b{color:var(--text)}
+.club-info-teaser{font-family:var(--disp);font-weight:700;font-size:15px;line-height:1.5;margin-bottom:14px}
+.club-info-film-link{font-size:13px;color:var(--warm);cursor:pointer;margin-bottom:14px;line-height:1.5}
+.club-info-toggle{font-size:12.5px;color:var(--text-faint);cursor:pointer;text-decoration:underline}
 .access-intro{font-size:13px;line-height:1.6;color:var(--text-dim);margin-bottom:18px}
 .access-btn{width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
 .payment-help-link{text-align:center;font-size:12.5px;color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-top:8px}
@@ -308,6 +316,22 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       <div>
         <div class="demo-banner-title">Ты в демо-режиме</div>
         <div class="demo-banner-sub">Загляни, что внутри клуба →</div>
+      </div>
+    </div>
+
+    <div class="video-banner" id="sales-video-banner" style="display:none" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">
+      <div class="video-banner-thumb" style="background-image:url('images/film-ya-podumayu.jpg')"><span class="play-icon">▶</span></div>
+      <div class="video-banner-info">
+        <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
+        <div class="video-banner-sub">Короткий фильм — 30 минут, с юмором и по делу</div>
+      </div>
+    </div>
+
+    <div class="video-banner" id="onboarding-video-banner" style="display:none" onclick="openUrl('https://play.boomstream.com/i6QVY0Lg')">
+      <div class="video-banner-thumb" style="background-image:url('images/onboarding-video.jpg')"><span class="play-icon">▶</span></div>
+      <div class="video-banner-info">
+        <div class="video-banner-title">Как пользоваться клубом</div>
+        <div class="video-banner-sub">Смотри перед тем как начать</div>
       </div>
     </div>
 
@@ -490,7 +514,11 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
       <span>О клубе</span>
     </div>
-    <div class="card club-info-text">Клубешник это:
+    <div class="card">
+      <div class="club-info-teaser">Всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ 🔥</div>
+      <div class="club-info-film-link" onclick="openUrl('https://play.boomstream.com/d9uzmOdM')">🎬 Узнать о клубе ещё подробнее (короткий фильм «Я ПОДУМАЮ»)</div>
+      <div class="club-info-toggle" id="club-info-toggle" onclick="toggleClubInfo()">Что внутри, подробно ↓</div>
+      <div class="club-info-text" id="club-info-full" style="display:none">Клубешник это:
 
 <b>- Занятия по продажам</b>, маркетингу, автоворонкам, сценариям и офферам, продажам в переписке (и ещё куче всего);
 <b>- Живые занятия</b> с практикой;
@@ -507,9 +535,8 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 - Бонус: <b>мастер-класс по продажам</b>, трафику, отработке возражений и презентации продукта;
 - "За кадром" - полный <b>разбор фильма "Я Подумаю"</b>, (сценарий, смыслы, съёмки).
 
-<b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".
-
-Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!</div>
+<b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".</div>
+    </div>
     <button class="lec-link-btn access-btn" onclick="openAccessPage()">Получить доступ</button>
     <div class="scroll-spacer"></div>
   </div>
@@ -923,6 +950,10 @@ async function loadProfile() {
 function renderDemoBanner(){
   const el = document.getElementById('demo-banner');
   if (el) el.style.display = isMember ? 'none' : 'flex';
+  const salesVideo = document.getElementById('sales-video-banner');
+  if (salesVideo) salesVideo.style.display = isMember ? 'none' : 'flex';
+  const onboardingVideo = document.getElementById('onboarding-video-banner');
+  if (onboardingVideo) onboardingVideo.style.display = isMember ? 'flex' : 'none';
   const aiBtn = document.getElementById('ai-helper-btn');
   if (aiBtn) {
     aiBtn.classList.toggle('locked', !isMember);
@@ -1340,6 +1371,14 @@ function closePaywall(){
 
 function openClubInfoPage(){
   switchView('club-info');
+}
+
+function toggleClubInfo(){
+  const full = document.getElementById('club-info-full');
+  const toggle = document.getElementById('club-info-toggle');
+  const isOpen = full.style.display !== 'none';
+  full.style.display = isOpen ? 'none' : 'block';
+  toggle.textContent = isOpen ? 'Что внутри, подробно ↓' : 'Свернуть ↑';
 }
 
 function openPostPay(){
