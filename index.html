@@ -261,7 +261,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
 
-.level-card{cursor:pointer;position:fixed;top:calc(var(--safe-top) + 96px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3)}
+.level-card{cursor:pointer;position:fixed;top:calc(var(--safe-top) + 88px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3)}
 .level-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .level-card-title{font-weight:700;font-size:13px}
 .level-card-frac{font-size:12px;color:var(--text-faint)}
@@ -285,12 +285,12 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 
 .tour-overlay{display:none;z-index:400}
 .tour-overlay.open{display:block}
-.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 140px 9999px rgba(0,0,0,0.72);transition:all .35s ease;pointer-events:none;z-index:399}
+.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 50px 30px rgba(0,0,0,0.35), 0 0 220px 9999px rgba(0,0,0,0.74);transition:all .35s ease;pointer-events:none;z-index:399}
 .tour-tooltip{position:absolute;left:16px;right:16px;max-width:488px;margin:0 auto;pointer-events:none;transition:all .35s ease;z-index:401}
 .tour-tooltip-text{font-size:14.5px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.65);text-align:center}
 .tour-skip{position:fixed;top:calc(var(--safe-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
 
-body.onboarding-bar-visible header{margin-bottom:76px}
+body.onboarding-bar-visible header{margin-bottom:106px}
 
 .step-row{display:flex;align-items:center;gap:12px;padding:13px 4px;font-size:13.5px;color:var(--text-faint)}
 .step-row-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;margin-bottom:9px;border-radius:14px;background:var(--card2);border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit}
@@ -533,7 +533,7 @@ body.onboarding-bar-visible header{margin-bottom:76px}
 
     <div id="cat-filter-row" class="tag-filter-row" style="display:none"></div>
 
-    <div class="card" style="padding:16px">
+    <div class="card" id="schedule-calendar-card" style="padding:16px">
       <div class="cal-header">
         <button class="icon-btn" onclick="calShiftMonth(-1)">‹</button>
         <div class="cal-month-label" id="cal-month-label">—</div>
@@ -977,6 +977,7 @@ async function toggleNotif(key) {
   listMembership[key] = isOn ? 'False' : 'True';
   loadNotifications();
   setTimeout(async () => { await fetchListMembership(); loadNotifications(); }, 2500);
+  tourAdvanceOn('notif_toggled');
 }
 
 async function loadContinueWidget() {
@@ -1205,11 +1206,12 @@ function closeHowToUsePopup(){
 /* ── Тур по библиотеке (spotlight) — приклеен к содержимому, не к экрану ── */
 const LIBRARY_TOUR_STEPS = [
   { targetId: 'ai-helper-btn', text: 'Напиши сюда любой вопрос своими словами — например, как продавать в переписке. Мы подберём подходящую лекцию.', completeEvent: 'ai_asked' },
-  { targetSelector: '#ai-answer-area', text: 'Тут можно сохранить любую лекцию «на потом» — тапни на значок часов у карточки, можно сохранить сразу несколько.', completeEvent: 'lecture_saved' },
+  { targetGroupSelector: '#ai-answer-area .save-btn', text: 'Тут можно сохранить любую лекцию «на потом» — тапни на значок часов у карточки, можно сохранить сразу несколько.', completeEvent: 'lecture_saved', holdAfterComplete: true },
+  { targetId: 'schedule-calendar-card', text: 'Это страница с расписанием. Выбери ниже, о каких событиях ты хочешь получать уведомления в боте.', completeEvent: 'notif_toggled' },
 ];
 let tourActive = false;
 let tourStep = 0;
-let justFinishedTour = false;
+let readyForScheduleStep = false;
 
 function startLibraryTour(){
   switchView('library');
@@ -1223,22 +1225,36 @@ function showTourStep(){
   try {
     if (tourStep >= LIBRARY_TOUR_STEPS.length) { endLibraryTour(true); return; }
     const step = LIBRARY_TOUR_STEPS[tourStep];
-    const target = step.targetId ? document.getElementById(step.targetId) : document.querySelector(step.targetSelector);
-    if (!target) { tourStep++; showTourStep(); return; }
-    const rect = target.getBoundingClientRect();
+    let rect;
+    if (step.targetGroupSelector) {
+      // Один общий "овал" вокруг ВСЕХ подходящих элементов сразу (напр. все значки-часы в результатах)
+      const els = document.querySelectorAll(step.targetGroupSelector);
+      if (!els.length) { tourStep++; showTourStep(); return; }
+      let top = Infinity, left = Infinity, right = -Infinity, bottom = -Infinity;
+      els.forEach(el => {
+        const r = el.getBoundingClientRect();
+        top = Math.min(top, r.top); left = Math.min(left, r.left);
+        right = Math.max(right, r.right); bottom = Math.max(bottom, r.bottom);
+      });
+      rect = { top, left, width: right - left, height: bottom - top, bottom };
+    } else {
+      const target = step.targetId ? document.getElementById(step.targetId) : document.querySelector(step.targetSelector);
+      if (!target) { tourStep++; showTourStep(); return; }
+      rect = target.getBoundingClientRect();
+    }
     // Документо-относительные координаты (не viewport) — подсветка scrollится вместе со страницей
     const docTop = rect.top + window.scrollY;
     const docLeft = rect.left + window.scrollX;
     const hole = document.getElementById('tour-hole');
-    hole.style.left = (docLeft - 6) + 'px';
-    hole.style.top = (docTop - 6) + 'px';
-    hole.style.width = (rect.width + 12) + 'px';
-    hole.style.height = (rect.height + 12) + 'px';
+    hole.style.left = (docLeft - 10) + 'px';
+    hole.style.top = (docTop - 10) + 'px';
+    hole.style.width = (rect.width + 20) + 'px';
+    hole.style.height = (rect.height + 20) + 'px';
     document.getElementById('tour-tooltip-text').textContent = step.text;
     const tooltip = document.getElementById('tour-tooltip');
     const spaceBelow = window.innerHeight - rect.bottom;
     if (spaceBelow > 100) {
-      tooltip.style.top = (docTop + rect.height + 18) + 'px';
+      tooltip.style.top = (docTop + rect.height + 22) + 'px';
     } else {
       tooltip.style.top = (docTop - 46) + 'px';
     }
@@ -1252,16 +1268,22 @@ function showTourStep(){
 function tourAdvanceOn(eventName){
   if (!tourActive) return;
   const step = LIBRARY_TOUR_STEPS[tourStep];
-  if (step && step.completeEvent === eventName) {
-    tourStep++;
-    setTimeout(showTourStep, 400);
+  if (!step || step.completeEvent !== eventName) return;
+  document.getElementById('tour-overlay').classList.remove('open');
+  tourStep++;
+  if (step.holdAfterComplete) {
+    // Ждём — следующий шаг покажем только после того, как человек перейдёт
+    // на нужный экран (напр. закроет попап ИИ и попадёт в расписание)
+    readyForScheduleStep = true;
+    return;
   }
+  setTimeout(showTourStep, 400);
 }
 
 function endLibraryTour(completed){
   tourActive = false;
   document.getElementById('tour-overlay').classList.remove('open');
-  if (completed) { markOnboardStep('tour'); justFinishedTour = true; }
+  if (completed) markOnboardStep('tour');
 }
 
 let activeTagFilter = null;
@@ -1775,9 +1797,12 @@ function openAiPopup(){
 }
 function closeAiPopup(){
   document.getElementById('ai-popup-overlay').classList.remove('open');
-  if (justFinishedTour) {
-    justFinishedTour = false;
-    setTimeout(() => switchView('schedule'), 300);
+  if (readyForScheduleStep) {
+    readyForScheduleStep = false;
+    setTimeout(() => {
+      switchView('schedule');
+      setTimeout(showTourStep, 400);
+    }, 300);
   }
 }
 
