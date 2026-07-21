@@ -42,6 +42,7 @@
   --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
   --warm:#e8614a; --warm-deep:#cf4f39;
   --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
+  --safe-top: env(safe-area-inset-top); /* JS переопределит на реальный safeAreaInset+contentSafeAreaInset Telegram, если доступно */
 }
 
 /* ── Блобы на фоне (только тёмная тема — в светлой прозрачные через --blob*-op) ── */
@@ -102,7 +103,7 @@ body{
 }
 .shell{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:0 16px}
 
-header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header{padding:calc(var(--safe-top) + 68px) 0 30px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:14px;padding:2px 0}
 .theme-switch{width:52px;height:30px;border-radius:20px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:3px;cursor:pointer;flex-shrink:0}
 [data-theme="dark"] .theme-switch{justify-content:flex-end}
@@ -191,7 +192,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 
 .stream-hero{position:relative;height:220px;margin:0 -16px 0;overflow:hidden;border-radius:22px 22px 0 0}
 .stream-hero img{width:100%;height:100%;object-fit:cover;display:block;-webkit-mask-image:linear-gradient(to bottom,black 55%,transparent 100%);mask-image:linear-gradient(to bottom,black 55%,transparent 100%)}
-.stream-back{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(10px)}
+.stream-back{position:absolute;top:calc(var(--safe-top) + 16px);left:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(10px)}
 .stream-body{padding-top:4px}
 .stream-title{font-family:var(--disp);font-weight:700;font-size:19px;margin-bottom:8px}
 .stream-desc{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:20px}
@@ -260,7 +261,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
 
-.level-card{cursor:pointer;position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3)}
+.level-card{cursor:pointer;position:fixed;top:calc(var(--safe-top) + 14px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3)}
 .level-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .level-card-title{font-weight:700;font-size:13px}
 .level-card-frac{font-size:12px;color:var(--text-faint)}
@@ -287,9 +288,9 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 60px 9999px rgba(0,0,0,0.68);transition:all .35s ease;pointer-events:none;z-index:399}
 .tour-tooltip{position:absolute;left:16px;right:16px;max-width:488px;margin:0 auto;pointer-events:none;transition:all .35s ease;z-index:401}
 .tour-tooltip-text{font-size:14.5px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.65);text-align:center}
-.tour-skip{position:fixed;top:calc(env(safe-area-inset-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
+.tour-skip{position:fixed;top:calc(var(--safe-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
 
-body.onboarding-bar-visible .shell{padding-top:78px}
+body.onboarding-bar-visible .shell{padding-top:92px}
 
 .step-row{display:flex;align-items:center;gap:12px;padding:13px 4px;font-size:13.5px;color:var(--text-faint)}
 .step-row-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;margin-bottom:9px;border-radius:14px;background:var(--card2);border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit}
@@ -341,7 +342,7 @@ body.onboarding-bar-visible .shell{padding-top:78px}
 
 <div class="level-card" id="level-card" style="display:none" onclick="openStepsPopup()">
   <div class="level-card-top">
-    <span class="level-card-title">Уровень 1</span>
+    <span class="level-card-title" id="level-card-title">Уровень 1</span>
     <span class="level-card-frac" id="level-card-frac">1/4</span>
   </div>
   <div class="level-bar-track"><div class="level-bar-fill" id="level-bar-fill"></div></div>
@@ -1078,42 +1079,85 @@ function dismissOnboardingBanner(){
 /* ── Уровень 1: онбординг (прогресс-бар) — MVP, хранится локально ──
    Пока дизайним процесс регистрации (канал/чат) — шаги channel/chat пока
    не имеют реального сигнала выполнения, будут добавлены отдельно. */
-const LEVEL1_STEPS = [
-  { key: 'paid',    label: 'Оплатить доступ' },                          // всегда true для участника
-  { key: 'channel', label: 'Попасть в закрытый канал', action: 'placeholderChannelStep' },  // TODO: нужен сигнал от Salebot
-  { key: 'chat',    label: 'Попасть в закрытый чат', action: 'placeholderChatStep' },        // TODO: нужен сигнал от Salebot
-  { key: 'tour',    label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
-];
+/* ── Геймификация: перманентный прогресс-бар, который никогда не прячется —
+   как только уровень пройден, счётчик переключается на следующий и бар
+   стартует заново с 0 для его шагов. Level 2+ — пока плейсхолдер, содержание
+   ("изучать контент") ещё не решено окончательно. */
+const LEVELS = {
+  1: {
+    title: 'Уровень 1',
+    steps: [
+      { key: 'paid',    label: 'Оплатить доступ' },  // всегда true для участника
+      { key: 'channel', label: 'Попасть в закрытый канал', action: 'placeholderChannelStep' },  // TODO: нужен сигнал от Salebot
+      { key: 'chat',    label: 'Попасть в закрытый чат', action: 'placeholderChatStep' },        // TODO: нужен сигнал от Salebot
+      { key: 'tour',    label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
+      { key: 'say_hi',  label: 'Написать "привет" в чатике', action: 'placeholderSayHiStep' },   // TODO: нужен сигнал из чата
+    ],
+  },
+  2: {
+    title: 'Уровень 2',
+    steps: [
+      { key: 'explore_content', label: 'Изучать контент клуба (скоро подробнее)', action: 'placeholderExploreStep' },
+    ],
+  },
+};
+const MAX_LEVEL = Math.max(...Object.keys(LEVELS).map(Number));
+
+function currentLevelNum(){
+  try { return parseInt(localStorage.getItem('current_level') || '1', 10) || 1; } catch (e) { return 1; }
+}
+function currentLevelDef(){
+  const lvl = currentLevelNum();
+  return LEVELS[lvl] || LEVELS[MAX_LEVEL];
+}
 
 function onboardStepDone(key){
   if (key === 'paid') return isMember;
-  try { return localStorage.getItem('onboard_' + key) === '1'; } catch (e) { return false; }
+  const lvl = currentLevelNum();
+  try { return localStorage.getItem(`onboard_L${lvl}_${key}`) === '1'; } catch (e) { return false; }
 }
 
 function markOnboardStep(key){
-  try { localStorage.setItem('onboard_' + key, '1'); } catch (e) {}
+  const lvl = currentLevelNum();
+  try { localStorage.setItem(`onboard_L${lvl}_${key}`, '1'); } catch (e) {}
+  checkLevelUp();
   renderLevelCard();
   renderStepsPopup();
 }
 
-function resetOnboardingProgress(){
-  LEVEL1_STEPS.forEach(s => {
-    if (s.key !== 'paid') { try { localStorage.removeItem('onboard_' + s.key); } catch (e) {} }
+function checkLevelUp(){
+  const lvl = currentLevelNum();
+  const def = LEVELS[lvl];
+  if (!def) return;
+  const done = def.steps.filter(s => onboardStepDone(s.key)).length;
+  if (done >= def.steps.length && LEVELS[lvl + 1]) {
+    try { localStorage.setItem('current_level', String(lvl + 1)); } catch (e) {}
+  }
+}
+
+async function resetOnboardingProgress(){
+  Object.keys(LEVELS).forEach(lvl => {
+    LEVELS[lvl].steps.forEach(s => {
+      if (s.key !== 'paid') { try { localStorage.removeItem(`onboard_L${lvl}_${s.key}`); } catch (e) {} }
+    });
   });
+  try { localStorage.removeItem('current_level'); } catch (e) {}
   try { localStorage.removeItem('onboarding_banner_dismissed'); } catch (e) {}
+  try { await fetch(`${API_URL}/users/${telegramId}/reset-first-open`, { method: 'POST' }); } catch (e) {}
   renderLevelCard();
-  alert('Прогресс онбординга сброшен');
+  alert('Прогресс онбординга сброшен (включая метку первого визита)');
 }
 
 function renderLevelCard(){
   const card = document.getElementById('level-card');
   if (!card) return;
   if (!isMember) { card.style.display = 'none'; document.body.classList.remove('onboarding-bar-visible'); return; }
-  const done = LEVEL1_STEPS.filter(s => onboardStepDone(s.key)).length;
-  const total = LEVEL1_STEPS.length;
-  const complete = done >= total;
-  card.style.display = complete ? 'none' : 'block';
-  document.body.classList.toggle('onboarding-bar-visible', !complete);
+  const def = currentLevelDef();
+  const done = def.steps.filter(s => onboardStepDone(s.key)).length;
+  const total = def.steps.length;
+  card.style.display = 'block';
+  document.body.classList.add('onboarding-bar-visible'); // перманентно, больше никогда не прячем
+  document.getElementById('level-card-title').textContent = def.title;
   document.getElementById('level-card-frac').textContent = `${done}/${total}`;
   document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
 }
@@ -1129,7 +1173,8 @@ function closeStepsPopup(){
 function renderStepsPopup(){
   const el = document.getElementById('steps-popup-list');
   if (!el) return;
-  el.innerHTML = LEVEL1_STEPS.map(s => {
+  const def = currentLevelDef();
+  el.innerHTML = def.steps.map(s => {
     if (onboardStepDone(s.key)) {
       return `<div class="step-row"><span class="howto-check done">✓</span><span>${s.label}</span></div>`;
     }
@@ -1137,10 +1182,12 @@ function renderStepsPopup(){
   }).join('');
 }
 
-// Плейсхолдеры — реального сигнала о вступлении в канал/чат пока нет,
-// пока просто отмечают шаг выполненным для тестирования интерфейса
+// Плейсхолдеры — реального сигнала о вступлении в канал/чат/сообщении в чате
+// пока нет, кнопки просто отмечают шаг выполненным для тестирования интерфейса
 function placeholderChannelStep(){ markOnboardStep('channel'); }
 function placeholderChatStep(){ markOnboardStep('chat'); }
+function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
+function placeholderExploreStep(){ markOnboardStep('explore_content'); }
 function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
 
 /* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
@@ -1791,6 +1838,17 @@ async function renderAiAnswerCards(rawAnswer){
 }
 
 // ── Init ──
+function applyTelegramSafeArea(){
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return;
+  const deviceTop = tg.safeAreaInset?.top || 0;
+  const contentTop = tg.contentSafeAreaInset?.top || 0;
+  const total = deviceTop + contentTop;
+  if (total > 0) {
+    document.documentElement.style.setProperty('--safe-top', total + 'px');
+  }
+}
+
 (function init(){
   const tg = window.Telegram?.WebApp;
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -1798,6 +1856,12 @@ async function renderAiAnswerCards(rawAnswer){
     tg.expand();
     if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) {
       tg.disableVerticalSwipes();
+    }
+    applyTelegramSafeArea();
+    if (tg.onEvent) {
+      tg.onEvent('safeAreaChanged', applyTelegramSafeArea);
+      tg.onEvent('contentSafeAreaChanged', applyTelegramSafeArea);
+      tg.onEvent('fullscreenChanged', applyTelegramSafeArea);
     }
     telegramId = tg.initDataUnsafe.user.id;
     document.getElementById('app-shell').style.display = 'block';
