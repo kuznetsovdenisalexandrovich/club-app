@@ -8,6 +8,14 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
 
+:root {
+  --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
+  --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
+  --warm:#e8614a; --warm-deep:#cf4f39;
+  --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
+  --safe-top: env(safe-area-inset-top); /* JS переопределит на реальный safeAreaInset+contentSafeAreaInset Telegram, если доступно */
+}
+
 /* ── Светлая тема: Carton warm neumorphism (украдено 1:1 из редизайна дашборда) ── */
 [data-theme="light"] {
   --bg:#e2dbd2; --bg-b:#ddd6cc; --bg-c:#ede6de;
@@ -36,13 +44,6 @@
   --sh-i: inset 0 1px 0 rgba(255,255,255,0.06);
   --sh-is:inset 0 1px 0 rgba(255,255,255,0.04);
   --shadow:var(--sh-r);
-}
-:root {
-  --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
-  --coral:#ff8fa3; --green:#3ecf8e; --red:#ff453a; --amber:#ffb84d;
-  --warm:#e8614a; --warm-deep:#cf4f39;
-  --disp:'Unbounded',sans-serif; --body:'Manrope',sans-serif;
-  --safe-top: env(safe-area-inset-top); /* JS переопределит на реальный safeAreaInset+contentSafeAreaInset Telegram, если доступно */
 }
 
 /* ── Блобы на фоне (только тёмная тема — в светлой прозрачные через --blob*-op) ── */
@@ -274,7 +275,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 [data-theme="light"] .theme-switch{background:var(--bg);box-shadow:var(--sh-i);border:none}
 [data-theme="light"] .theme-switch-thumb{background:var(--warm);box-shadow:var(--sh-sm)}
 [data-theme="light"] .toggle{background:var(--bg);box-shadow:var(--sh-i);border:none}
-[data-theme="light"] .toggle.on{background:var(--bg);box-shadow:var(--sh-i)}
+[data-theme="light"] .toggle.on{background:rgba(232,97,74,0.22);box-shadow:var(--sh-i)}
 [data-theme="light"] .toggle-thumb{background:var(--bg);box-shadow:var(--sh-sm)}
 [data-theme="light"] .toggle.on .toggle-thumb{background:var(--warm)}
 
@@ -285,7 +286,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 
 .tour-overlay{display:none;z-index:400}
 .tour-overlay.open{display:block}
-.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 30px 10px rgba(0,0,0,0.25), 0 0 90px 60px rgba(0,0,0,0.45), 0 0 260px 9999px rgba(0,0,0,0.76);transition:all .35s ease;pointer-events:none;z-index:399}
+.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 55px 15px rgba(0,0,0,0.6), 0 0 260px 9999px rgba(0,0,0,0.8);transition:all .35s ease;pointer-events:none;z-index:399}
 .tour-tooltip{position:absolute;left:16px;right:16px;max-width:488px;margin:0 auto;pointer-events:none;transition:all .35s ease;z-index:401}
 .tour-tooltip-text{font-size:14.5px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.65);text-align:center}
 .tour-skip{position:fixed;top:calc(var(--safe-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
@@ -1246,10 +1247,11 @@ function showTourStep(){
     const docTop = rect.top + window.scrollY;
     const docLeft = rect.left + window.scrollX;
     const hole = document.getElementById('tour-hole');
-    hole.style.left = (docLeft - 10) + 'px';
-    hole.style.top = (docTop - 10) + 'px';
-    hole.style.width = (rect.width + 20) + 'px';
-    hole.style.height = (rect.height + 20) + 'px';
+    const holeInset = 16; // делаем прозрачную зону чуть МЕНЬШЕ реального элемента — тогда блюр естественно "съедает" её край
+    hole.style.left = (docLeft + holeInset) + 'px';
+    hole.style.top = (docTop + holeInset) + 'px';
+    hole.style.width = Math.max(0, rect.width - holeInset * 2) + 'px';
+    hole.style.height = Math.max(0, rect.height - holeInset * 2) + 'px';
     document.getElementById('tour-tooltip-text').textContent = step.text;
     const tooltip = document.getElementById('tour-tooltip');
     const spaceBelow = window.innerHeight - rect.bottom;
