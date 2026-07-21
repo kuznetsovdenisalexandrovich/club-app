@@ -208,7 +208,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 
 .tabbar{position:fixed;left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:488px;margin:0 auto;background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:24px;box-shadow:0 10px 30px -8px rgba(0,0,0,0.25);display:flex;padding:10px 16px;z-index:50}
-.scroll-fade{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom));left:0;right:0;height:36px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:49}
+.scroll-fade{position:fixed;bottom:0;left:0;right:0;height:110px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:49}
 .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-faint);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s}
 .tab-icon{font-size:20px;transition:filter .15s;display:flex;align-items:center;justify-content:center}
 .tab-item.active{color:var(--warm)}
@@ -269,7 +269,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 
 /* ── Неоморфизм для светлой темы: бары и переключатели (украдено 1:1 из Carton-макета) ── */
 [data-theme="light"] .level-bar-track{background:var(--card2);box-shadow:var(--sh-i);overflow:visible}
-[data-theme="light"] .level-bar-fill{background:linear-gradient(90deg,var(--warm)88,var(--warm));box-shadow:inset 2px 2px 6px rgba(0,0,0,0.18)}
+[data-theme="light"] .level-bar-fill{background:linear-gradient(90deg,rgba(232,97,74,0.65),var(--warm));box-shadow:inset 2px 2px 6px rgba(0,0,0,0.18)}
 [data-theme="light"] .theme-switch{background:var(--bg);box-shadow:var(--sh-i);border:none}
 [data-theme="light"] .theme-switch-thumb{background:var(--warm);box-shadow:var(--sh-sm)}
 [data-theme="light"] .toggle{background:var(--bg);box-shadow:var(--sh-i);border:none}
@@ -282,12 +282,16 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .howto-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-faint);flex-shrink:0}
 .howto-check.done{background:var(--green);border-color:var(--green);color:white}
 
-.tour-overlay{position:fixed;inset:0;z-index:400;display:none;pointer-events:none}
+.tour-overlay{display:none;z-index:400}
 .tour-overlay.open{display:block}
-.tour-hole{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);transition:all .35s ease;pointer-events:none}
-.tour-tooltip{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;background:var(--bg2);border-radius:16px;padding:14px 16px;box-shadow:0 10px 30px -8px rgba(0,0,0,0.4);pointer-events:auto;transition:all .35s ease}
-.tour-tooltip-text{font-size:13.5px;line-height:1.5;margin-bottom:10px;color:var(--text)}
-.tour-tooltip-skip{font-size:12px;color:var(--text-faint);text-decoration:underline;cursor:pointer;text-align:right}
+.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 60px 9999px rgba(0,0,0,0.68);transition:all .35s ease;pointer-events:none}
+.tour-tooltip{position:absolute;left:16px;right:16px;max-width:488px;margin:0 auto;pointer-events:none;transition:all .35s ease;z-index:401}
+.tour-tooltip-text{font-size:14.5px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.65);text-align:center}
+.tour-skip{position:fixed;top:calc(env(safe-area-inset-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
+
+.level-card.pinned{position:sticky;top:8px;z-index:40;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+
+.admin-reset-btn{font-size:11px;color:var(--text-faint);text-decoration:underline;cursor:pointer;text-align:center;margin-top:14px}
 .video-banner{position:relative;width:100%;aspect-ratio:16/8;border-radius:16px;overflow:hidden;cursor:pointer;margin:6px 0 16px;background-size:cover;background-position:center}
 .video-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.68),rgba(0,0,0,0.05) 60%)}
 .video-banner-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,0.45);color:white;font-size:19px;display:flex;align-items:center;justify-content:center;padding-left:3px;z-index:1}
@@ -381,7 +385,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 
     <div class="news-header" id="news-header" style="display:none">
       <div class="section-label" style="margin:0">Обновления клуба</div>
-      <button class="notif-btn-small" onclick="switchView('notifications')">Уведомления</button>
+      <button class="notif-btn-small" onclick="openNotificationsSection()">Уведомления</button>
     </div>
     <div class="card" id="news-card" style="display:none"></div>
 
@@ -417,7 +421,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
         <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Библиотека</div>
       </div>
-      <div class="tile" onclick="switchView('notifications')">
+      <div class="tile" onclick="openNotificationsSection()">
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Уведомления</div>
       </div>
@@ -450,17 +454,6 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
   </div>
 
   <!-- ── Уведомления ── -->
-  <div class="view" id="view-notifications">
-    <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
-      <span>Уведомления</span>
-    </div>
-    <div class="card" id="notif-list">
-      <div class="loading">Загрузка...</div>
-    </div>
-    <div class="scroll-spacer"></div>
-  </div>
-
   <!-- ── Библиотека ── -->
   <div class="view" id="view-library">
     <div class="section-label">Потоки</div>
@@ -514,6 +507,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
         <span class="profile-value" id="p-next">—</span>
       </div>
     </div>
+    <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
 
     <div class="section-label">Тест</div>
     <div class="card">
@@ -527,8 +521,11 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
   <div class="view" id="view-schedule">
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
       <span style="display:flex;align-items:center;gap:8px"><span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span><span>Расписание</span></span>
-      <button class="notif-btn-small" onclick="switchView('notifications')">Настроить уведомления</button>
+      <button class="notif-btn-small" onclick="openNotificationsSection()">Настроить уведомления</button>
     </div>
+
+    <div class="section-label" id="teaser-label" style="display:none">Скоро в клубе</div>
+    <div id="teaser-list"></div>
 
     <div id="cat-filter-row" class="tag-filter-row" style="display:none"></div>
 
@@ -542,8 +539,10 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       <div class="cal-grid" id="cal-grid"><div class="loading">Загрузка...</div></div>
     </div>
 
-    <div class="section-label" id="teaser-label" style="display:none">Скоро в клубе</div>
-    <div id="teaser-list"></div>
+    <div class="section-label" id="notif-section">Уведомления</div>
+    <div class="card" id="notif-list">
+      <div class="loading">Загрузка...</div>
+    </div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -730,8 +729,8 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
   <div class="tour-hole" id="tour-hole"></div>
   <div class="tour-tooltip" id="tour-tooltip">
     <div class="tour-tooltip-text" id="tour-tooltip-text"></div>
-    <div class="tour-tooltip-skip" onclick="endLibraryTour()">Пропустить</div>
   </div>
+  <div class="tour-skip" onclick="endLibraryTour()">Пропустить ✕</div>
 </div>
 
 <script>
@@ -764,8 +763,6 @@ async function refreshApp() {
     await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadWidgetMonth(), loadSavedSlugs()]);
     if (document.getElementById('view-schedule').classList.contains('active')) {
       await loadCalendarMonth();
-    }
-    if (document.getElementById('view-notifications').classList.contains('active')) {
       await loadNotifications();
     }
   } finally {
@@ -788,8 +785,15 @@ function switchView(name) {
   const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
-  if (name === 'notifications') loadNotifications();
-  if (name === 'schedule') loadCalendarMonth();
+  if (name === 'schedule') { loadCalendarMonth(); loadNotifications(); }
+}
+
+function openNotificationsSection(){
+  switchView('schedule');
+  setTimeout(() => {
+    const el = document.getElementById('notif-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
 }
 
 function monthsSince(dateStr) {
@@ -953,6 +957,7 @@ async function toggleNotif(key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id: telegramId, action: trigger, params: {} })
   }).catch(()=>{});
+  markOnboardStep('schedule_notif');
 
   // Оптимистично переключаем сразу, потом сверяемся с реальностью через пару секунд
   listMembership[key] = isOn ? 'False' : 'True';
@@ -1054,36 +1059,65 @@ function dismissOnboardingBanner(){
   if (el) el.style.display = 'none';
 }
 
-/* ── Уровень 1: онбординг (прогресс-бар) — MVP, хранится локально ── */
-// "Оплата" всегда засчитана для участника — бар не начинается с пустоты
-const LEVEL1_TOTAL_STEPS = 2;
+/* ── Уровень 1: онбординг (прогресс-бар) — MVP, хранится локально ──
+   Пока дизайним процесс регистрации (канал/чат) — шаги channel/chat пока
+   не имеют реального сигнала выполнения, будут добавлены отдельно. */
+const LEVEL1_STEPS = [
+  { key: 'paid',    label: 'Оплатить доступ' },           // всегда true для участника
+  { key: 'channel', label: 'Получить доступ к каналу' },   // TODO: нужен сигнал от Salebot
+  { key: 'chat',    label: 'Получить доступ в чатике' },   // TODO: нужен сигнал от Salebot
+  { key: 'ai_question', label: 'Задать вопрос ИИ-помощнику' },
+  { key: 'saved_lecture', label: 'Сохранить пару лекций на попозже' },
+  { key: 'schedule_notif', label: 'Открыть расписание и настроить уведомления' },
+];
 
-function libraryTourDone(){
-  try { return localStorage.getItem('library_tour_completed') === '1'; } catch (e) { return false; }
+function onboardStepDone(key){
+  if (key === 'paid') return isMember;
+  try { return localStorage.getItem('onboard_' + key) === '1'; } catch (e) { return false; }
+}
+
+function markOnboardStep(key){
+  try { localStorage.setItem('onboard_' + key, '1'); } catch (e) {}
+  renderLevelCard();
+}
+
+function resetOnboardingProgress(){
+  LEVEL1_STEPS.forEach(s => {
+    if (s.key !== 'paid') { try { localStorage.removeItem('onboard_' + s.key); } catch (e) {} }
+  });
+  try { localStorage.removeItem('onboarding_banner_dismissed'); } catch (e) {}
+  renderLevelCard();
+  alert('Прогресс онбординга сброшен');
+}
+
+function howToUseAppDone(){
+  return onboardStepDone('ai_question') && onboardStepDone('saved_lecture');
 }
 
 function renderLevelCard(){
   const card = document.getElementById('level-card');
   if (!card) return;
   if (!isMember) { card.style.display = 'none'; return; }
-  const done = 1 + (libraryTourDone() ? 1 : 0); // 1 = оплата, всегда засчитана
+  const done = LEVEL1_STEPS.filter(s => onboardStepDone(s.key)).length;
+  const total = LEVEL1_STEPS.length;
   card.style.display = 'block';
-  document.getElementById('level-card-frac').textContent = `${done}/${LEVEL1_TOTAL_STEPS}`;
-  document.getElementById('level-bar-fill').style.width = `${(done / LEVEL1_TOTAL_STEPS) * 100}%`;
+  card.classList.toggle('pinned', done < total);
+  document.getElementById('level-card-frac').textContent = `${done}/${total}`;
+  document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
 }
 
 /* ── "Как пользоваться клубом" — попап-чек-лист ── */
 function openHowToUsePopup(){
   const check = document.getElementById('howto-check-tour');
-  check.classList.toggle('done', libraryTourDone());
-  check.textContent = libraryTourDone() ? '✓' : '○';
+  check.classList.toggle('done', howToUseAppDone());
+  check.textContent = howToUseAppDone() ? '✓' : '○';
   document.getElementById('howto-popup-overlay').classList.add('open');
 }
 function closeHowToUsePopup(){
   document.getElementById('howto-popup-overlay').classList.remove('open');
 }
 
-/* ── Тур по библиотеке (spotlight) ── */
+/* ── Тур по библиотеке (spotlight) — приклеен к содержимому, не к экрану ── */
 const LIBRARY_TOUR_STEPS = [
   { targetId: 'ai-helper-btn', text: 'Напиши сюда любой вопрос своими словами — например, как продавать в переписке. Мы подберём подходящую лекцию.', completeEvent: 'ai_asked' },
   { targetSelector: '.save-btn', text: 'А тут можно сохранить лекцию «на потом» — тапни на значок часов у любой карточки.', completeEvent: 'lecture_saved' },
@@ -1100,25 +1134,28 @@ function startLibraryTour(){
 
 function showTourStep(){
   if (!tourActive) return;
-  if (tourStep >= LIBRARY_TOUR_STEPS.length) { endLibraryTour(true); return; }
+  if (tourStep >= LIBRARY_TOUR_STEPS.length) { endLibraryTour(); return; }
   const step = LIBRARY_TOUR_STEPS[tourStep];
   const target = step.targetId ? document.getElementById(step.targetId) : document.querySelector(step.targetSelector);
   if (!target) { tourStep++; showTourStep(); return; }
   const rect = target.getBoundingClientRect();
+  // Документо-относительные координаты (не viewport) — подсветка scrollится вместе со страницей
+  const docTop = rect.top + window.scrollY;
+  const docLeft = rect.left + window.scrollX;
   const hole = document.getElementById('tour-hole');
-  hole.style.left = (rect.left - 6) + 'px';
-  hole.style.top = (rect.top - 6) + 'px';
+  hole.style.left = (docLeft - 6) + 'px';
+  hole.style.top = (docTop - 6) + 'px';
   hole.style.width = (rect.width + 12) + 'px';
   hole.style.height = (rect.height + 12) + 'px';
   document.getElementById('tour-tooltip-text').textContent = step.text;
   const tooltip = document.getElementById('tour-tooltip');
   const spaceBelow = window.innerHeight - rect.bottom;
-  if (spaceBelow > 140) {
-    tooltip.style.top = (rect.bottom + 16) + 'px';
+  if (spaceBelow > 100) {
+    tooltip.style.top = (docTop + rect.height + 18) + 'px';
     tooltip.style.bottom = '';
   } else {
-    tooltip.style.bottom = (window.innerHeight - rect.top + 16) + 'px';
-    tooltip.style.top = '';
+    tooltip.style.top = (docTop - 46) + 'px';
+    tooltip.style.bottom = '';
   }
   document.getElementById('tour-overlay').classList.add('open');
 }
@@ -1132,13 +1169,9 @@ function tourAdvanceOn(eventName){
   }
 }
 
-function endLibraryTour(completed){
+function endLibraryTour(){
   tourActive = false;
   document.getElementById('tour-overlay').classList.remove('open');
-  if (completed) {
-    try { localStorage.setItem('library_tour_completed', '1'); } catch (e) {}
-    renderLevelCard();
-  }
 }
 
 let activeTagFilter = null;
@@ -1231,6 +1264,7 @@ function toggleSaved(slug){
       body: JSON.stringify({ telegram_id: telegramId, slug })
     }).catch(()=>{});
     tourAdvanceOn('lecture_saved');
+    markOnboardStep('saved_lecture');
   } else {
     savedSlugs.delete(slug);
     fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}&slug=${encodeURIComponent(slug)}`, { method: 'DELETE' }).catch(()=>{});
@@ -1666,6 +1700,7 @@ async function askAi(){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, action: 'ai_library_question', params: { lib_question: question } })
     });
+    markOnboardStep('ai_question');
   } catch (e) {
     answerEl.innerHTML = '<div class="ai-loading">Не получилось отправить вопрос — проверь соединение</div>';
     btn.disabled = false;
