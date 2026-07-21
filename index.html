@@ -1036,6 +1036,8 @@ async function loadProfile() {
     document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
 
     isMember = !!u.is_member;
+    channelJoined = !!u.channel_joined;
+    chatJoined = !!u.chat_joined;
     const pill = document.getElementById('sub-pill');
     if (u.is_member) {
       pill.textContent = 'Активна';
@@ -1087,13 +1089,18 @@ function dismissOnboardingBanner(){
    как только уровень пройден, счётчик переключается на следующий и бар
    стартует заново с 0 для его шагов. Level 2+ — пока плейсхолдер, содержание
    ("изучать контент") ещё не решено окончательно. */
+const CHANNEL_JOIN_LINK = 'https://t.me/+tqAEu2fTTfU0N2Ey';
+const CHAT_JOIN_LINK = 'https://t.me/+TxNRziNPk2hkZmVi';
+let channelJoined = false;
+let chatJoined = false;
+
 const LEVELS = {
   1: {
     title: 'Уровень 1',
     steps: [
       { key: 'paid',    label: 'Оплатить доступ' },  // всегда true для участника
-      { key: 'channel', label: 'Попасть в закрытый канал', action: 'placeholderChannelStep' },  // TODO: нужен сигнал от Salebot
-      { key: 'chat',    label: 'Попасть в закрытый чат', action: 'placeholderChatStep' },        // TODO: нужен сигнал от Salebot
+      { key: 'channel', label: 'Попасть в закрытый канал', action: 'openChannelJoinLink' },
+      { key: 'chat',    label: 'Попасть в закрытый чат', action: 'openChatJoinLink' },
       { key: 'tour',    label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
       { key: 'say_hi',  label: 'Написать "привет" в чатике', action: 'placeholderSayHiStep' },   // TODO: нужен сигнал из чата
     ],
@@ -1117,6 +1124,8 @@ function currentLevelDef(){
 
 function onboardStepDone(key){
   if (key === 'paid') return isMember;
+  if (key === 'channel') return channelJoined;   // реальный статус с сервера, не localStorage
+  if (key === 'chat') return chatJoined;          // реальный статус с сервера, не localStorage
   const lvl = currentLevelNum();
   try { return localStorage.getItem(`onboard_L${lvl}_${key}`) === '1'; } catch (e) { return false; }
 }
@@ -1148,8 +1157,10 @@ async function resetOnboardingProgress(){
   try { localStorage.removeItem('current_level'); } catch (e) {}
   try { localStorage.removeItem('onboarding_banner_dismissed'); } catch (e) {}
   try { await fetch(`${API_URL}/users/${telegramId}/reset-first-open`, { method: 'POST' }); } catch (e) {}
+  channelJoined = false;
+  chatJoined = false;
   renderLevelCard();
-  alert('Прогресс онбординга сброшен (включая метку первого визита)');
+  alert('Прогресс онбординга сброшен (включая метки первого визита, канала и чата)');
 }
 
 function renderLevelCard(){
@@ -1168,7 +1179,17 @@ function renderLevelCard(){
 }
 
 /* ── Попап шагов (открывается по тапу на прилипший прогресс-бар) ── */
-function openStepsPopup(){
+async function openStepsPopup(){
+  // На случай если канал/чат подтвердились, пока апп уже был открыт — освежаем перед показом
+  try {
+    const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
+    const u = await r.json();
+    if (u.found) {
+      channelJoined = !!u.channel_joined;
+      chatJoined = !!u.chat_joined;
+    }
+  } catch (e) {}
+  renderLevelCard();
   renderStepsPopup();
   document.getElementById('steps-popup-overlay').classList.add('open');
 }
@@ -1187,10 +1208,10 @@ function renderStepsPopup(){
   }).join('');
 }
 
-// Плейсхолдеры — реального сигнала о вступлении в канал/чат/сообщении в чате
-// пока нет, кнопки просто отмечают шаг выполненным для тестирования интерфейса
-function placeholderChannelStep(){ markOnboardStep('channel'); }
-function placeholderChatStep(){ markOnboardStep('chat'); }
+function openChannelJoinLink(){ openUrl(CHANNEL_JOIN_LINK); }
+function openChatJoinLink(){ openUrl(CHAT_JOIN_LINK); }
+// Плейсхолдеры — реального сигнала пока нет, кнопка просто отмечает шаг
+// выполненным для тестирования интерфейса
 function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
 function placeholderExploreStep(){ markOnboardStep('explore_content'); }
 function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
