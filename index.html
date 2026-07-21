@@ -285,7 +285,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 
 .tour-overlay{display:none;z-index:400}
 .tour-overlay.open{display:block}
-.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 50px 30px rgba(0,0,0,0.35), 0 0 220px 9999px rgba(0,0,0,0.74);transition:all .35s ease;pointer-events:none;z-index:399}
+.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 30px 10px rgba(0,0,0,0.25), 0 0 90px 60px rgba(0,0,0,0.45), 0 0 260px 9999px rgba(0,0,0,0.76);transition:all .35s ease;pointer-events:none;z-index:399}
 .tour-tooltip{position:absolute;left:16px;right:16px;max-width:488px;margin:0 auto;pointer-events:none;transition:all .35s ease;z-index:401}
 .tour-tooltip-text{font-size:14.5px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.65);text-align:center}
 .tour-skip{position:fixed;top:calc(var(--safe-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
@@ -1207,7 +1207,7 @@ function closeHowToUsePopup(){
 const LIBRARY_TOUR_STEPS = [
   { targetId: 'ai-helper-btn', text: 'Напиши сюда любой вопрос своими словами — например, как продавать в переписке. Мы подберём подходящую лекцию.', completeEvent: 'ai_asked' },
   { targetGroupSelector: '#ai-answer-area .save-btn', text: 'Тут можно сохранить любую лекцию «на потом» — тапни на значок часов у карточки, можно сохранить сразу несколько.', completeEvent: 'lecture_saved', holdAfterComplete: true },
-  { targetId: 'schedule-calendar-card', text: 'Это страница с расписанием. Выбери ниже, о каких событиях ты хочешь получать уведомления в боте.', completeEvent: 'notif_toggled' },
+  { targetId: 'notif-list', text: '↑ Выше — расписание. А тут можешь выбрать, о каких событиях ты хочешь получать уведомления в боте.', completeEvent: 'notif_toggled' },
 ];
 let tourActive = false;
 let tourStep = 0;
@@ -1794,9 +1794,13 @@ function openAiPopup(){
   // Прячем затемнение тура на время, пока человек печатает/отправляет вопрос —
   // вернём его уже вокруг результатов, см. renderAiAnswerCards()
   if (tourActive) document.getElementById('tour-overlay').classList.remove('open');
+  // Бар перекрывал верх попапа — прячем на время, пока попап открыт
+  const bar = document.getElementById('level-card');
+  if (bar) bar.style.display = 'none';
 }
 function closeAiPopup(){
   document.getElementById('ai-popup-overlay').classList.remove('open');
+  renderLevelCard(); // возвращает бар на место (если он вообще должен быть виден)
   if (readyForScheduleStep) {
     readyForScheduleStep = false;
     setTimeout(() => {
