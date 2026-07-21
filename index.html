@@ -260,7 +260,7 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
 
-.level-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:16px}
+.level-card{cursor:pointer;position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3)}
 .level-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .level-card-title{font-weight:700;font-size:13px}
 .level-card-frac{font-size:12px;color:var(--text-faint)}
@@ -284,12 +284,15 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 
 .tour-overlay{display:none;z-index:400}
 .tour-overlay.open{display:block}
-.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 60px 9999px rgba(0,0,0,0.68);transition:all .35s ease;pointer-events:none}
+.tour-hole{position:absolute;border-radius:14px;box-shadow:0 0 60px 9999px rgba(0,0,0,0.68);transition:all .35s ease;pointer-events:none;z-index:399}
 .tour-tooltip{position:absolute;left:16px;right:16px;max-width:488px;margin:0 auto;pointer-events:none;transition:all .35s ease;z-index:401}
 .tour-tooltip-text{font-size:14.5px;line-height:1.5;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.65);text-align:center}
 .tour-skip{position:fixed;top:calc(env(safe-area-inset-top) + 16px);right:16px;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:underline;cursor:pointer;z-index:402;pointer-events:auto}
 
-.level-card.pinned{position:sticky;top:8px;z-index:40;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+body.onboarding-bar-visible .shell{padding-top:78px}
+
+.step-row{display:flex;align-items:center;gap:12px;padding:13px 4px;font-size:13.5px;color:var(--text-faint)}
+.step-row-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;margin-bottom:9px;border-radius:14px;background:var(--card2);border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit}
 
 .admin-reset-btn{font-size:11px;color:var(--text-faint);text-decoration:underline;cursor:pointer;text-align:center;margin-top:14px}
 .video-banner{position:relative;width:100%;aspect-ratio:16/8;border-radius:16px;overflow:hidden;cursor:pointer;margin:6px 0 16px;background-size:cover;background-position:center}
@@ -336,6 +339,14 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
 <div class="blob blob-2"></div>
 <div class="blob blob-3"></div>
 
+<div class="level-card" id="level-card" style="display:none" onclick="openStepsPopup()">
+  <div class="level-card-top">
+    <span class="level-card-title">Уровень 1</span>
+    <span class="level-card-frac" id="level-card-frac">1/4</span>
+  </div>
+  <div class="level-bar-track"><div class="level-bar-fill" id="level-bar-fill"></div></div>
+</div>
+
 <div class="shell" id="app-shell" style="display:none">
 
   <header>
@@ -373,14 +384,6 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
       <button class="video-banner-dismiss" onclick="event.stopPropagation();dismissOnboardingBanner()">Скрыть ✕</button>
       <div class="video-banner-play">▶</div>
       <div class="video-banner-title">Как пользоваться клубом</div>
-    </div>
-
-    <div class="level-card" id="level-card" style="display:none">
-      <div class="level-card-top">
-        <span class="level-card-title">Уровень 1</span>
-        <span class="level-card-frac" id="level-card-frac">1/2</span>
-      </div>
-      <div class="level-bar-track"><div class="level-bar-fill" id="level-bar-fill"></div></div>
     </div>
 
     <div class="news-header" id="news-header" style="display:none">
@@ -725,6 +728,17 @@ header{padding:calc(env(safe-area-inset-top)+56px) 0 28px;display:flex;align-ite
   </div>
 </div>
 
+<div class="sched-popup-overlay" id="steps-popup-overlay" onclick="if(event.target===this) closeStepsPopup()">
+  <div class="sched-popup" id="steps-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Твои следующие шаги</div>
+      <button class="icon-btn" onclick="closeStepsPopup()">✕</button>
+    </div>
+    <div id="steps-popup-list"></div>
+  </div>
+</div>
+
 <div class="tour-overlay" id="tour-overlay">
   <div class="tour-hole" id="tour-hole"></div>
   <div class="tour-tooltip" id="tour-tooltip">
@@ -957,7 +971,6 @@ async function toggleNotif(key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id: telegramId, action: trigger, params: {} })
   }).catch(()=>{});
-  markOnboardStep('schedule_notif');
 
   // Оптимистично переключаем сразу, потом сверяемся с реальностью через пару секунд
   listMembership[key] = isOn ? 'False' : 'True';
@@ -1031,6 +1044,9 @@ async function loadProfile() {
       document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
     }
     renderDemoBanner();
+    if (u.is_first_open && isMember) {
+      setTimeout(openStepsPopup, 500);
+    }
   } catch (e) {
     document.getElementById('sub-name').textContent = 'Ошибка загрузки';
   }
@@ -1063,12 +1079,10 @@ function dismissOnboardingBanner(){
    Пока дизайним процесс регистрации (канал/чат) — шаги channel/chat пока
    не имеют реального сигнала выполнения, будут добавлены отдельно. */
 const LEVEL1_STEPS = [
-  { key: 'paid',    label: 'Оплатить доступ' },           // всегда true для участника
-  { key: 'channel', label: 'Получить доступ к каналу' },   // TODO: нужен сигнал от Salebot
-  { key: 'chat',    label: 'Получить доступ в чатике' },   // TODO: нужен сигнал от Salebot
-  { key: 'ai_question', label: 'Задать вопрос ИИ-помощнику' },
-  { key: 'saved_lecture', label: 'Сохранить пару лекций на попозже' },
-  { key: 'schedule_notif', label: 'Открыть расписание и настроить уведомления' },
+  { key: 'paid',    label: 'Оплатить доступ' },                          // всегда true для участника
+  { key: 'channel', label: 'Попасть в закрытый канал', action: 'placeholderChannelStep' },  // TODO: нужен сигнал от Salebot
+  { key: 'chat',    label: 'Попасть в закрытый чат', action: 'placeholderChatStep' },        // TODO: нужен сигнал от Salebot
+  { key: 'tour',    label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
 ];
 
 function onboardStepDone(key){
@@ -1079,6 +1093,7 @@ function onboardStepDone(key){
 function markOnboardStep(key){
   try { localStorage.setItem('onboard_' + key, '1'); } catch (e) {}
   renderLevelCard();
+  renderStepsPopup();
 }
 
 function resetOnboardingProgress(){
@@ -1090,27 +1105,50 @@ function resetOnboardingProgress(){
   alert('Прогресс онбординга сброшен');
 }
 
-function howToUseAppDone(){
-  return onboardStepDone('ai_question') && onboardStepDone('saved_lecture');
-}
-
 function renderLevelCard(){
   const card = document.getElementById('level-card');
   if (!card) return;
-  if (!isMember) { card.style.display = 'none'; return; }
+  if (!isMember) { card.style.display = 'none'; document.body.classList.remove('onboarding-bar-visible'); return; }
   const done = LEVEL1_STEPS.filter(s => onboardStepDone(s.key)).length;
   const total = LEVEL1_STEPS.length;
-  card.style.display = 'block';
-  card.classList.toggle('pinned', done < total);
+  const complete = done >= total;
+  card.style.display = complete ? 'none' : 'block';
+  document.body.classList.toggle('onboarding-bar-visible', !complete);
   document.getElementById('level-card-frac').textContent = `${done}/${total}`;
   document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
 }
 
-/* ── "Как пользоваться клубом" — попап-чек-лист ── */
+/* ── Попап шагов (открывается по тапу на прилипший прогресс-бар) ── */
+function openStepsPopup(){
+  renderStepsPopup();
+  document.getElementById('steps-popup-overlay').classList.add('open');
+}
+function closeStepsPopup(){
+  document.getElementById('steps-popup-overlay').classList.remove('open');
+}
+function renderStepsPopup(){
+  const el = document.getElementById('steps-popup-list');
+  if (!el) return;
+  el.innerHTML = LEVEL1_STEPS.map(s => {
+    if (onboardStepDone(s.key)) {
+      return `<div class="step-row"><span class="howto-check done">✓</span><span>${s.label}</span></div>`;
+    }
+    return `<button class="step-row-btn" onclick="${s.action}()"><span class="howto-check">○</span><span>${s.label}</span></button>`;
+  }).join('');
+}
+
+// Плейсхолдеры — реального сигнала о вступлении в канал/чат пока нет,
+// пока просто отмечают шаг выполненным для тестирования интерфейса
+function placeholderChannelStep(){ markOnboardStep('channel'); }
+function placeholderChatStep(){ markOnboardStep('chat'); }
+function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
+
+/* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
 function openHowToUsePopup(){
   const check = document.getElementById('howto-check-tour');
-  check.classList.toggle('done', howToUseAppDone());
-  check.textContent = howToUseAppDone() ? '✓' : '○';
+  const done = onboardStepDone('tour');
+  check.classList.toggle('done', done);
+  check.textContent = done ? '✓' : '○';
   document.getElementById('howto-popup-overlay').classList.add('open');
 }
 function closeHowToUsePopup(){
@@ -1134,30 +1172,33 @@ function startLibraryTour(){
 
 function showTourStep(){
   if (!tourActive) return;
-  if (tourStep >= LIBRARY_TOUR_STEPS.length) { endLibraryTour(); return; }
-  const step = LIBRARY_TOUR_STEPS[tourStep];
-  const target = step.targetId ? document.getElementById(step.targetId) : document.querySelector(step.targetSelector);
-  if (!target) { tourStep++; showTourStep(); return; }
-  const rect = target.getBoundingClientRect();
-  // Документо-относительные координаты (не viewport) — подсветка scrollится вместе со страницей
-  const docTop = rect.top + window.scrollY;
-  const docLeft = rect.left + window.scrollX;
-  const hole = document.getElementById('tour-hole');
-  hole.style.left = (docLeft - 6) + 'px';
-  hole.style.top = (docTop - 6) + 'px';
-  hole.style.width = (rect.width + 12) + 'px';
-  hole.style.height = (rect.height + 12) + 'px';
-  document.getElementById('tour-tooltip-text').textContent = step.text;
-  const tooltip = document.getElementById('tour-tooltip');
-  const spaceBelow = window.innerHeight - rect.bottom;
-  if (spaceBelow > 100) {
-    tooltip.style.top = (docTop + rect.height + 18) + 'px';
-    tooltip.style.bottom = '';
-  } else {
-    tooltip.style.top = (docTop - 46) + 'px';
-    tooltip.style.bottom = '';
+  try {
+    if (tourStep >= LIBRARY_TOUR_STEPS.length) { endLibraryTour(true); return; }
+    const step = LIBRARY_TOUR_STEPS[tourStep];
+    const target = step.targetId ? document.getElementById(step.targetId) : document.querySelector(step.targetSelector);
+    if (!target) { tourStep++; showTourStep(); return; }
+    const rect = target.getBoundingClientRect();
+    // Документо-относительные координаты (не viewport) — подсветка scrollится вместе со страницей
+    const docTop = rect.top + window.scrollY;
+    const docLeft = rect.left + window.scrollX;
+    const hole = document.getElementById('tour-hole');
+    hole.style.left = (docLeft - 6) + 'px';
+    hole.style.top = (docTop - 6) + 'px';
+    hole.style.width = (rect.width + 12) + 'px';
+    hole.style.height = (rect.height + 12) + 'px';
+    document.getElementById('tour-tooltip-text').textContent = step.text;
+    const tooltip = document.getElementById('tour-tooltip');
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow > 100) {
+      tooltip.style.top = (docTop + rect.height + 18) + 'px';
+    } else {
+      tooltip.style.top = (docTop - 46) + 'px';
+    }
+    document.getElementById('tour-overlay').classList.add('open');
+  } catch (e) {
+    console.error('Тур онбординга упал:', e);
+    endLibraryTour(false);
   }
-  document.getElementById('tour-overlay').classList.add('open');
 }
 
 function tourAdvanceOn(eventName){
@@ -1169,9 +1210,10 @@ function tourAdvanceOn(eventName){
   }
 }
 
-function endLibraryTour(){
+function endLibraryTour(completed){
   tourActive = false;
   document.getElementById('tour-overlay').classList.remove('open');
+  if (completed) markOnboardStep('tour');
 }
 
 let activeTagFilter = null;
@@ -1264,7 +1306,6 @@ function toggleSaved(slug){
       body: JSON.stringify({ telegram_id: telegramId, slug })
     }).catch(()=>{});
     tourAdvanceOn('lecture_saved');
-    markOnboardStep('saved_lecture');
   } else {
     savedSlugs.delete(slug);
     fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}&slug=${encodeURIComponent(slug)}`, { method: 'DELETE' }).catch(()=>{});
@@ -1700,7 +1741,6 @@ async function askAi(){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, action: 'ai_library_question', params: { lib_question: question } })
     });
-    markOnboardStep('ai_question');
   } catch (e) {
     answerEl.innerHTML = '<div class="ai-loading">Не получилось отправить вопрос — проверь соединение</div>';
     btn.disabled = false;
