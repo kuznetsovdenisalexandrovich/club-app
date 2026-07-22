@@ -1138,6 +1138,11 @@ function onboardStepDone(key){
   if (key === 'paid') return isMember;
   if (key === 'channel') return channelJoined;   // реальный статус с сервера, не localStorage
   if (key === 'chat') return chatJoined;          // реальный статус с сервера, не localStorage
+  if (key === 'say_hi') {
+    // Мягкий шаг — не требуем реального сообщения в чат. Засчитываем автоматически, как
+    // только остальные шаги уровня пройдены (оплата/канал/чат/обучение), плюс по клику вручную.
+    if (onboardStepDone('paid') && onboardStepDone('channel') && onboardStepDone('chat') && onboardStepDone('tour')) return true;
+  }
   const lvl = currentLevelNum();
   try { return localStorage.getItem(`onboard_L${lvl}_${key}`) === '1'; } catch (e) { return false; }
 }
@@ -1179,6 +1184,7 @@ function renderLevelCard(){
   const card = document.getElementById('level-card');
   if (!card) return;
   if (!isMember) { card.style.display = 'none'; document.body.classList.remove('onboarding-bar-visible'); return; }
+  checkLevelUp(); // шаги могли завершиться сами (напр. пришёл channel_joined с сервера) — проверяем переход на новый уровень при каждой отрисовке, не только по клику
   const def = currentLevelDef();
   const done = def.steps.filter(s => onboardStepDone(s.key)).length;
   const total = def.steps.length;
