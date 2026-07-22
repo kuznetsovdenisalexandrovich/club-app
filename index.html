@@ -1179,8 +1179,8 @@ function renderLevelCard(){
 }
 
 /* ── Попап шагов (открывается по тапу на прилипший прогресс-бар) ── */
-async function openStepsPopup(){
-  // На случай если канал/чат подтвердились, пока апп уже был открыт — освежаем перед показом
+async function refreshOnboardStatus(){
+  // На случай если канал/чат подтвердились, пока апп был свёрнут/в фоне — освежаем с сервера
   try {
     const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
     const u = await r.json();
@@ -1189,10 +1189,26 @@ async function openStepsPopup(){
       chatJoined = !!u.chat_joined;
     }
   } catch (e) {}
+}
+
+async function openStepsPopup(){
+  await refreshOnboardStatus();
   renderLevelCard();
   renderStepsPopup();
   document.getElementById('steps-popup-overlay').classList.add('open');
 }
+
+// Пользователь тапает "Вступить в канал/чат" → уходит из мини-аппа в Telegram → возвращается
+// свайпом назад. visibilitychange ловит именно этот возврат и подтягивает актуальный статус
+// без ожидания, пока человек сам откроет попап шагов заново.
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !isMember) return;
+  await refreshOnboardStatus();
+  renderLevelCard();
+  if (document.getElementById('steps-popup-overlay').classList.contains('open')) {
+    renderStepsPopup();
+  }
+});
 function closeStepsPopup(){
   document.getElementById('steps-popup-overlay').classList.remove('open');
 }
