@@ -1300,13 +1300,20 @@ const LIBRARY_TOUR_STEPS = [
 ];
 let tourActive = false;
 let tourStep = 0;
-let readyForScheduleStep = false;
+let tourResizeObserver = null;
 
 function startLibraryTour(){
   switchView('library');
   tourActive = true;
   tourStep = 0;
   setTimeout(showTourStep, 350);
+  // Картинки/шрифты иногда подгружаются позже и сдвигают вёрстку уже после того, как
+  // подсветка встала на место — ResizeObserver ловит любое изменение высоты страницы
+  // и пересчитывает позицию заново, пока тур активен.
+  if ('ResizeObserver' in window) {
+    tourResizeObserver = new ResizeObserver(() => { if (tourActive) showTourStep(); });
+    tourResizeObserver.observe(document.body);
+  }
 }
 
 function showTourStep(){
@@ -1361,9 +1368,8 @@ function tourAdvanceOn(eventName){
   document.getElementById('tour-overlay').classList.remove('open');
   tourStep++;
   if (step.holdAfterComplete) {
-    // Ждём — следующий шаг покажем только после того, как человек перейдёт
-    // на нужный экран (напр. закроет попап ИИ и попадёт в расписание)
-    readyForScheduleStep = true;
+    // Ждём — следующий шаг покажем только после того, как человек закроет попап ИИ
+    // (см. closeAiPopup — она сама двигает тур дальше по значению tourStep)
     return;
   }
   setTimeout(showTourStep, 400);
@@ -1372,6 +1378,7 @@ function tourAdvanceOn(eventName){
 function endLibraryTour(completed){
   tourActive = false;
   document.getElementById('tour-overlay').classList.remove('open');
+  if (tourResizeObserver) { tourResizeObserver.disconnect(); tourResizeObserver = null; }
   if (completed) markOnboardStep('tour');
 }
 
@@ -1890,8 +1897,12 @@ function openAiPopup(){
 function closeAiPopup(){
   document.getElementById('ai-popup-overlay').classList.remove('open');
   renderLevelCard(); // возвращает бар на место (если он вообще должен быть виден)
-  if (readyForScheduleStep) {
-    readyForScheduleStep = false;
+  // Пока шёл тур — закрытие этого попапа ВСЕГДА двигает тур дальше (к расписанию),
+  // даже если Salebot не успел ответить или человек не сохранил лекцию. Раньше застревали
+  // именно тут при медленном Salebot — переход зависел от события lecture_saved.
+  if (tourActive && tourStep < 2) {
+    tourStep = 2;
+    document.getElementById('tour-overlay').classList.remove('open');
     setTimeout(() => {
       switchView('schedule');
       setTimeout(() => {
