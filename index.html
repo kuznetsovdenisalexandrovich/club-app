@@ -191,6 +191,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .toggle.off{justify-content:flex-start}
 .toggle-thumb{width:20px;height:20px;border-radius:50%;background:white;transition:all .15s}
 .news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
+.news-block--urgent{background:rgba(232,97,74,0.1);border:1px solid rgba(232,97,74,0.3);border-radius:12px;padding:10px 12px;font-weight:600}
 .news-block:last-child{margin-bottom:0}
 .news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .streams-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;-webkit-overflow-scrolling:touch}
@@ -218,7 +219,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .tile-label{font-size:12px;font-weight:600;line-height:1.3}
 .tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
 
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:100;white-space:nowrap}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:700;white-space:nowrap}
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 .loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 
@@ -690,6 +691,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<!-- Срочная новость для ВСЕХ — видна и до логина (тут), и в ленте новостей после логина -->
+<div id="web-urgent-news-banner" class="news-block news-block--urgent" style="display:none;max-width:360px;margin:0 auto 16px"></div>
+
 <!-- Не в Telegram — веб-вход через Telegram Login Widget -->
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
@@ -704,7 +708,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="mark">БП</div>
   <h2>Добавь на главный экран</h2>
   <p id="web-add-home-screen-text">Это займёт 10 секунд — и апп будет открываться так же быстро, как обычное приложение.</p>
-  <button class="lec-link-btn access-btn" onclick="proceedPastHomeScreenInstructions()">Продолжить</button>
+  <div class="payment-help-link" style="position:fixed;left:0;right:0;bottom:calc(24px + env(safe-area-inset-bottom));text-align:center" onclick="proceedPastHomeScreenInstructions()">продолжить в браузере</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -995,18 +999,27 @@ async function loadNews() {
   const el = document.getElementById('news-card');
   const headerEl = document.getElementById('news-header');
   try {
-    const [news] = await Promise.all([
+    const [news, urgent] = await Promise.all([
       fetch(`${API_URL}/news/latest`).then(r => r.json()),
+      fetch(`${API_URL}/news/urgent`).then(r => r.json()).catch(() => ({ text: null })),
       listMembership ? Promise.resolve() : fetchListMembership(),
     ]);
 
-    if (!news.common_text || !news.common_text.trim()) {
+    const hasCommon = news.common_text && news.common_text.trim();
+    const hasUrgent = urgent && urgent.text && urgent.text.trim();
+    if (!hasCommon && !hasUrgent) {
       el.style.display = 'none';
       headerEl.style.display = 'none';
       return;
     }
 
-    let html = `<div class="news-block">${news.common_text}</div>`;
+    let html = '';
+    if (hasUrgent) {
+      html += `<div class="news-block news-block--urgent">${urgent.text}</div>`;
+    }
+    if (hasCommon) {
+      html += `<div class="news-block">${news.common_text}</div>`;
+    }
     (news.targeted || []).forEach(t => {
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
@@ -1428,7 +1441,7 @@ function closeAddToHomeScreenPopup(){
 function copyAppLink(){
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(APP_URL)
-      .then(() => showToast('Скопировано!'))
+      .then(() => showToast('Ссылка скопирована'))
       .catch(() => showToast('Не получилось — выдели ссылку вручную'));
   } else {
     showToast('Не получилось — выдели ссылку вручную');
@@ -2052,7 +2065,9 @@ function closeAiPopup(){
   // Пока шёл тур — закрытие этого попапа ВСЕГДА двигает тур дальше (к расписанию),
   // даже если Salebot не успел ответить или человек не сохранил лекцию. Раньше застревали
   // именно тут при медленном Salebot — переход зависел от события lecture_saved.
-  if (tourActive && tourStep < 2) {
+  // <= 2, не < 2: к моменту закрытия tourStep обычно УЖЕ равен 2 (tourAdvanceOn успел
+  // его увеличить при сохранении лекции, до этого клика) — строгое сравнение это пропускало.
+  if (tourActive && tourStep <= 2) {
     tourStep = 2;
     document.getElementById('tour-overlay').classList.remove('open');
     setTimeout(async () => {
@@ -2170,11 +2185,26 @@ function applyTelegramSafeArea(){
 function startApp(){
   document.getElementById('app-shell').style.display = 'block';
   document.getElementById('tabbar').style.display = 'flex';
+  const urgentBanner = document.getElementById('web-urgent-news-banner');
+  if (urgentBanner) urgentBanner.style.display = 'none';
   loadProfile();
   loadContinueWidget();
   loadNews();
   loadWidgetMonth();
   loadSavedSlugs();
+}
+
+function loadUrgentNewsForWebEntry(){
+  fetch(`${API_URL}/news/urgent`)
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.text && data.text.trim()) {
+        const el = document.getElementById('web-urgent-news-banner');
+        el.textContent = data.text;
+        el.style.display = 'block';
+      }
+    })
+    .catch(()=>{});
 }
 
 // display-mode:standalone — кросс-платформенный признак "открыт как установленный
@@ -2248,6 +2278,7 @@ function proceedPastHomeScreenInstructions(){
 }
 
 function startWebSession(){
+  loadUrgentNewsForWebEntry();
   if (isStandaloneWebApp()) {
     proceedToWebLogin();
     return;
