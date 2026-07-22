@@ -664,12 +664,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v10h5v-6h2v6h5V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-    <span>Портал</span>
+    <span>Главное меню</span>
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('library')" id="tab-library">
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-    <span>Библиотека</span>
+    <span>Что посмотреть?</span>
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
@@ -752,7 +752,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="tour-tooltip" id="tour-tooltip">
     <div class="tour-tooltip-text" id="tour-tooltip-text"></div>
   </div>
-  <div class="tour-skip" onclick="endLibraryTour()">Пропустить ✕</div>
+  <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
 <script>
@@ -807,7 +807,15 @@ function switchView(name) {
   const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
-  if (name === 'schedule') { loadCalendarMonth(); loadNotifications(); }
+  if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
+  // Дублируем открытие соответствующего раздела в самом боте фоновым колбеком — чтобы
+  // человек в любой момент мог закрыть апп и продолжить в боте с тем же меню на экране
+  if (name === 'portal') {
+    fetch(`${API_URL}/app/action`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: telegramId, action: 'menu', params: {} }) }).catch(()=>{});
+  }
+  if (name === 'library') {
+    fetch(`${API_URL}/app/action`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: telegramId, action: 'library', params: {} }) }).catch(()=>{});
+  }
   window.scrollTo(0, 0);
   updateLevelBarScrollPosition();
 }
@@ -899,6 +907,15 @@ async function fetchListMembership() {
       const data = await r.json();
       if (data.status === 'done') {
         listMembership = data.result;
+        // Открываем то же меню уведомлений в самом боте фоновым колбеком, с небольшой
+        // задержкой — чтобы человек в любой момент мог закрыть апп и продолжить в боте
+        setTimeout(() => {
+          fetch(`${API_URL}/app/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: telegramId, action: 'notifications', params: {} })
+          }).catch(()=>{});
+        }, 5000);
         return listMembership;
       }
     } catch (e) {}
@@ -941,16 +958,9 @@ async function loadNews() {
 
 async function loadNotifications() {
   const el = document.getElementById('notif-list');
-  // Дублируем открытие меню в бота колбеком — чтобы у клиента на фоне (без пуша) была та же менюшка,
-  // и бот с аппом не расходились в состоянии
-  fetch(`${API_URL}/app/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id: telegramId, action: 'notifications', params: {} })
-  }).catch(()=>{});
   if (!listMembership) await fetchListMembership();
   if (!listMembership) {
-    el.innerHTML = '<div class="empty">Не удалось загрузить — попробуй ещё раз</div>';
+    el.innerHTML = roundTripErrorHtml();
     return;
   }
   el.innerHTML = NOTIF_LISTS.map(cfg => {
@@ -1019,6 +1029,12 @@ async function loadContinueWidget() {
 }
 
 let isMember = false;
+// Захватываем "первый ли это раз как участник" РОВНО ОДИН РАЗ за сессию аппа. Сервер
+// консьюмит этот флаг при первом же обращении к /users/me — если потом дёрнуть /users/me
+// второй раз в ту же секунду (напр. авто-попап шагов сам обновляет статус), сервер уже
+// вернёт false, и предупреждение "закончи регистрацию" ошибочно вспыхнет у совсем нового
+// участника. Поэтому решение фиксируем один раз и переиспользуем во всех последующих проверках.
+let sessionFirstMemberOpen = null;
 
 async function loadProfile() {
   try {
@@ -1044,10 +1060,11 @@ async function loadProfile() {
     isMember = !!u.is_member;
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
+    if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
     // Предупреждение красным — только если это НЕ первый заход в апп (человек уже был
     // здесь раньше) и до сих пор не вступил в канал/чат. Тех, кто только оплатил и идёт
     // по шагам в первый раз, пугать не нужно — для них ниже и так открывается попап шагов.
-    showRegistrationWarning = isMember && !u.is_first_member_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
+    showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     const pill = document.getElementById('sub-pill');
     if (u.is_member) {
       pill.textContent = 'Активна';
@@ -1101,6 +1118,13 @@ function dismissOnboardingBanner(){
    ("изучать контент") ещё не решено окончательно. */
 const CHANNEL_JOIN_LINK = 'https://t.me/+tqAEu2fTTfU0N2Ey';
 const CHAT_JOIN_LINK = 'https://t.me/+TxNRziNPk2hkZmVi';
+const BOT_LINK = 'https://t.me/youselllikeagod_bot';
+// Общий фоллбек для любого зависшего раунд-трипа (Salebot не ответил/недоступен) —
+// человек не должен упираться в тупик, поэтому даём выход прямо в бота (сворачивает
+// апп и открывает чат с ботом внутри Telegram, не во внешнем браузере — см. openUrl)
+function roundTripErrorHtml(){
+  return `<div class="empty">Приложение тупит( можешь <a href="#" onclick="event.preventDefault();openUrl('${BOT_LINK}')">продолжить в боте</a></div>`;
+}
 let channelJoined = false;
 let chatJoined = false;
 let pendingJoinKey = null;       // 'channel' | 'chat' | null — ждём подтверждения с сервера после клика
@@ -1207,7 +1231,8 @@ async function refreshOnboardStatus(){
     if (u.found) {
       channelJoined = !!u.channel_joined;
       chatJoined = !!u.chat_joined;
-      showRegistrationWarning = isMember && !u.is_first_member_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
+      if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
+      showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     }
   } catch (e) {}
 }
@@ -1833,7 +1858,7 @@ async function openAccessPage(){
       body: JSON.stringify({ telegram_id: telegramId, action: 'get_payment_links', params: {} })
     });
   } catch (e) {
-    el.innerHTML = '<div class="empty">Не получилось отправить запрос — проверь соединение</div>';
+    el.innerHTML = roundTripErrorHtml();
     return;
   }
 
@@ -1848,7 +1873,7 @@ async function openAccessPage(){
       }
     } catch (e) {}
   }
-  el.innerHTML = '<div class="empty">Не дождались ответа — попробуй ещё раз чуть позже</div>';
+  el.innerHTML = roundTripErrorHtml();
 }
 
 function renderAccessButtons(result){
@@ -1860,7 +1885,7 @@ function renderAccessButtons(result){
   ].filter(b => b.link);
 
   if (!buttons.length) {
-    el.innerHTML = '<div class="empty">Не удалось получить ссылки — попробуй ещё раз</div>';
+    el.innerHTML = roundTripErrorHtml();
     return;
   }
 
@@ -1903,13 +1928,15 @@ function closeAiPopup(){
   if (tourActive && tourStep < 2) {
     tourStep = 2;
     document.getElementById('tour-overlay').classList.remove('open');
-    setTimeout(() => {
+    setTimeout(async () => {
       switchView('schedule');
-      setTimeout(() => {
-        const notifEl = document.getElementById('notif-list');
-        if (notifEl) notifEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(showTourStep, 550); // ждём, пока плавная прокрутка реально долистает
-      }, 350);
+      // Ждём реальной загрузки расписания/уведомлений, а не угаданной паузы — иначе
+      // блок уведомлений мог ещё не встать на своё финальное место, и прокрутка
+      // промахивалась мимо него.
+      try { await window._scheduleLoadPromise; } catch (e) {}
+      const notifEl = document.getElementById('notif-list');
+      if (notifEl) notifEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(showTourStep, 550); // ждём, пока плавная прокрутка реально долистает
     }, 300);
   }
 }
@@ -1954,7 +1981,7 @@ async function askAi(){
       }
     } catch (e) {}
   }
-  answerEl.innerHTML = '<div class="ai-loading">Не дождались ответа — попробуй ещё раз чуть позже</div>';
+  answerEl.innerHTML = roundTripErrorHtml();
   btn.disabled = false;
 }
 
