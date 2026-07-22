@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Ты Боженька Продаж</title>
+<!-- Название на иконке "Домой" — Safari/Chrome иногда игнорируют <title> и берут из URL,
+     эти теги — авторитетный источник имени независимо от причины -->
+<meta name="apple-mobile-web-app-title" content="Ты Боженька Продаж">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<!-- Иконку добавит Denis отдельно (images/icon-192.png, images/icon-512.png) — до тех пор
+     эти строки просто не найдут файл и браузер покажет иконку по умолчанию, без ошибок -->
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<link rel="icon" href="images/icon-192.png">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
@@ -332,6 +343,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .sched-popup-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 16px}
 .sched-popup-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .sched-popup-title{font-family:var(--disp);font-weight:700;font-size:15px}
+
+/* Центрированное модальное окно (не bottom-sheet) — z-index выше bottom-sheet попапов,
+   чтобы всегда быть НАД ними, даже если открыто поверх уже открытого попапа шагов */
+.center-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:600;display:none;align-items:center;justify-content:center;padding:24px}
+.center-modal-overlay.open{display:flex}
+.center-modal{background:var(--bg2);border-radius:20px;width:100%;max-width:360px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.45);animation:popupSlideUp .3s cubic-bezier(0.34,1.56,0.64,1) forwards}
+.center-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.center-modal-title{font-family:var(--disp);font-weight:700;font-size:15px}
+.copy-link-row{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;margin-top:6px}
+.copy-link-row span.copy-link-text{flex:1;font-size:12.5px;color:var(--text);word-break:break-all;user-select:all}
+.copy-link-row svg{flex-shrink:0;color:var(--text-faint)}
 .sched-event-item{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
 .sched-event-item:last-child{margin-bottom:0}
 .sched-event-time{font-size:11px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
@@ -430,9 +452,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
         <div class="tile-label">Как пользоваться клубом</div>
       </div>
+      <div class="tile" onclick="openUrl(CHANNEL_JOIN_LINK)">
+        <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <div class="tile-label">Открыть канал</div>
+      </div>
+      <div class="tile" onclick="openUrl(CHAT_JOIN_LINK)">
+        <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a7.5 7.5 0 0 1-11.4 6.4L4 19l1.2-4.3A7.5 7.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
+        <div class="tile-label">Открыть чат</div>
+      </div>
       <div class="tile" onclick="switchView('library')">
         <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-        <div class="tile-label">Библиотека</div>
+        <div class="tile-label">Что посмотреть?</div>
       </div>
       <div class="tile" onclick="openNotificationsSection()">
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
@@ -461,6 +491,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div class="tile-icon" style="background:var(--card2);color:var(--text-faint)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
         <div class="tile-label">Поддержка</div>
         <span class="tile-soon">Скоро</span>
+      </div>
+      <div class="tile" onclick="openUrl('https://vk.ru/im/channels/-237934122')">
+        <div class="tile-icon" style="background:rgba(0,119,255,0.16);color:#0077ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <div class="tile-label">Резервный канал ВК</div>
+      </div>
+      <div class="tile" onclick="openUrl('https://vk.me/join/VGhVV5r6VhK14fNSGsM4gCfuOFT_I0vnGtI=')">
+        <div class="tile-icon" style="background:rgba(0,119,255,0.16);color:#0077ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a7.5 7.5 0 0 1-11.4 6.4L4 19l1.2-4.3A7.5 7.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
+        <div class="tile-label">Резервный чат ВК</div>
       </div>
     </div>
     <div class="scroll-spacer"></div>
@@ -748,17 +786,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
-<div class="sched-popup-overlay" id="home-screen-popup-overlay" onclick="if(event.target===this) closeAddToHomeScreenPopup()">
-  <div class="sched-popup" id="home-screen-popup">
-    <div class="sched-popup-handle"></div>
-    <div class="sched-popup-header">
-      <div class="sched-popup-title">Добавить на главный экран</div>
+<div class="center-modal-overlay" id="home-screen-popup-overlay" onclick="if(event.target===this) closeAddToHomeScreenPopup()">
+  <div class="center-modal" id="home-screen-popup">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Добавить на главный экран</div>
       <button class="icon-btn" onclick="closeAddToHomeScreenPopup()">✕</button>
     </div>
-    <div style="padding:0 4px 4px;font-size:13.5px;color:var(--text-dim);line-height:1.5">
-      <p style="margin-bottom:12px">Скопируй ссылку и открой её <span id="home-screen-browser-hint">в браузере</span> — оттуда приложение можно будет добавить на главный экран, как обычное.</p>
-      <div class="lec-tag" style="display:block;width:100%;box-sizing:border-box;padding:12px 14px;font-size:13px;text-align:center;cursor:pointer;user-select:all" onclick="copyAppLink()">kuznetsovdenisalexandrovich.github.io/club-app/</div>
-      <button class="lec-link-btn" style="width:100%;margin-top:12px" onclick="copyAppLink()">Скопировать ссылку</button>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:4px">Скопируй ссылку и открой её <span id="home-screen-browser-hint">в браузере</span> — оттуда приложение можно будет добавить на главный экран, как обычное.</div>
+    <div class="copy-link-row" onclick="copyAppLink()">
+      <span class="copy-link-text">kuznetsovdenisalexandrovich.github.io/club-app/</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </div>
   </div>
 </div>
@@ -1092,6 +1129,7 @@ async function loadProfile() {
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
     homeScreenAdded = !!u.home_screen_added;
+    serverLevel = u.onboarding_level || 1;
     if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
     // Предупреждение красным — только если это НЕ первый заход в апп (человек уже был
     // здесь раньше) и до сих пор не вступил в канал/чат. Тех, кто только оплатил и идёт
@@ -1180,13 +1218,19 @@ const LEVELS = {
       { key: 'ask_denis',  label: 'Задать вопрос Денису', action: 'placeholderAskDenisStep' },      // TODO: окошко с вопросом + приглашение на пятничную встречу
       { key: 'build_path', label: 'Построить личный путь в клубе', action: 'placeholderBuildPathStep' }, // TODO: ИИ-бот в Salebot строит карту по предпочтениям
       { key: 'add_home_screen', label: 'Добавить приложение на главный экран', action: 'openAddToHomeScreenPopup' },
+      { key: 'enable_push', label: 'Включить пуш-уведомления', action: 'placeholderEnablePushStep' }, // TODO: настоящий Web Push (VAPID + service worker + подписка) — отдельная задача
     ],
   },
 };
 const MAX_LEVEL = Math.max(...Object.keys(LEVELS).map(Number));
 
+// Уровень — на сервере (User.onboarding_level), не в localStorage: иначе слетает при
+// заходе с другого браузера/устройства (ровно это случилось с веб-версией вне Telegram).
+// Синхронизируется из /users/me в loadProfile()/refreshOnboardStatus().
+let serverLevel = 1;
+
 function currentLevelNum(){
-  try { return parseInt(localStorage.getItem('current_level') || '1', 10) || 1; } catch (e) { return 1; }
+  return serverLevel;
 }
 function currentLevelDef(){
   const lvl = currentLevelNum();
@@ -1221,7 +1265,14 @@ function checkLevelUp(){
   if (!def) return;
   const done = def.steps.filter(s => onboardStepDone(s.key)).length;
   if (done >= def.steps.length && LEVELS[lvl + 1]) {
-    try { localStorage.setItem('current_level', String(lvl + 1)); } catch (e) {}
+    serverLevel = lvl + 1;
+    if (telegramId) {
+      fetch(`${API_URL}/users/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: telegramId, onboarding_level: serverLevel })
+      }).catch(()=>{});
+    }
   }
 }
 
@@ -1231,11 +1282,12 @@ async function resetOnboardingProgress(){
       if (s.key !== 'paid') { try { localStorage.removeItem(`onboard_L${lvl}_${s.key}`); } catch (e) {} }
     });
   });
-  try { localStorage.removeItem('current_level'); } catch (e) {}
   try { localStorage.removeItem('onboarding_banner_dismissed'); } catch (e) {}
   try { await fetch(`${API_URL}/users/${telegramId}/reset-first-open`, { method: 'POST' }); } catch (e) {}
   channelJoined = false;
   chatJoined = false;
+  homeScreenAdded = false;
+  serverLevel = 1; // уровень сброшен на сервере тем же вызовом reset-first-open
   renderLevelCard();
   alert('Прогресс онбординга сброшен (включая метки первого визита, канала и чата)');
 }
@@ -1268,6 +1320,7 @@ async function refreshOnboardStatus(){
       channelJoined = !!u.channel_joined;
       chatJoined = !!u.chat_joined;
       homeScreenAdded = !!u.home_screen_added;
+      serverLevel = u.onboarding_level || 1;
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     }
@@ -1341,6 +1394,7 @@ function openChatJoinLink(){ openUrl(CHAT_JOIN_LINK); pendingJoinKey = 'chat'; r
 function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
 function placeholderAskDenisStep(){ markOnboardStep('ask_denis'); }
 function placeholderBuildPathStep(){ markOnboardStep('build_path'); }
+function placeholderEnablePushStep(){ markOnboardStep('enable_push'); } // TODO: настоящая подписка на Web Push вместо заглушки
 function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
 
 /* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
