@@ -661,6 +661,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
 </div>
 
+<!-- Вне Telegram, не в standalone-режиме — сначала подсказка, как добавить на главный экран -->
+<div class="center-msg" id="web-add-home-screen-screen" style="display:none">
+  <div class="mark">БП</div>
+  <h2>Добавь на главный экран</h2>
+  <p id="web-add-home-screen-text">Это займёт 10 секунд — и апп будет открываться так же быстро, как обычное приложение.</p>
+  <button class="lec-link-btn access-btn" onclick="proceedPastHomeScreenInstructions()">Продолжить</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div class="scroll-fade"></div>
@@ -740,6 +748,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="sched-popup-overlay" id="home-screen-popup-overlay" onclick="if(event.target===this) closeAddToHomeScreenPopup()">
+  <div class="sched-popup" id="home-screen-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Добавить на главный экран</div>
+      <button class="icon-btn" onclick="closeAddToHomeScreenPopup()">✕</button>
+    </div>
+    <div style="padding:0 4px 4px;font-size:13.5px;color:var(--text-dim);line-height:1.5">
+      <p style="margin-bottom:12px">Скопируй ссылку и открой её <span id="home-screen-browser-hint">в браузере</span> — оттуда приложение можно будет добавить на главный экран, как обычное.</p>
+      <div class="lec-tag" style="display:block;width:100%;box-sizing:border-box;padding:12px 14px;font-size:13px;text-align:center;cursor:pointer;user-select:all" onclick="copyAppLink()">kuznetsovdenisalexandrovich.github.io/club-app/</div>
+      <button class="lec-link-btn" style="width:100%;margin-top:12px" onclick="copyAppLink()">Скопировать ссылку</button>
+    </div>
+  </div>
+</div>
+
 <div class="sched-popup-overlay" id="steps-popup-overlay" onclick="if(event.target===this) closeStepsPopup()">
   <div class="sched-popup" id="steps-popup">
     <div class="sched-popup-handle"></div>
@@ -796,12 +819,16 @@ async function refreshApp() {
   }
 }
 
-function comingSoon() {
+function showToast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = 'Скоро появится здесь!';
+  el.textContent = msg;
   el.classList.add('visible');
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => el.classList.remove('visible'), 1800);
+}
+
+function comingSoon() {
+  showToast('Скоро появится здесь!');
 }
 
 function switchView(name) {
@@ -1064,6 +1091,7 @@ async function loadProfile() {
     isMember = !!u.is_member;
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
+    homeScreenAdded = !!u.home_screen_added;
     if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
     // Предупреждение красным — только если это НЕ первый заход в апп (человек уже был
     // здесь раньше) и до сих пор не вступил в канал/чат. Тех, кто только оплатил и идёт
@@ -1131,6 +1159,7 @@ function roundTripErrorHtml(){
 }
 let channelJoined = false;
 let chatJoined = false;
+let homeScreenAdded = false;
 let pendingJoinKey = null;       // 'channel' | 'chat' | null — ждём подтверждения с сервера после клика
 let showRegistrationWarning = false; // true только если это НЕ первый заход и регистрация (уровень 1) не завершена
 
@@ -1148,7 +1177,9 @@ const LEVELS = {
   2: {
     title: 'Уровень 2',
     steps: [
-      { key: 'explore_content', label: 'Изучать контент клуба (скоро подробнее)', action: 'placeholderExploreStep' },
+      { key: 'ask_denis',  label: 'Задать вопрос Денису', action: 'placeholderAskDenisStep' },      // TODO: окошко с вопросом + приглашение на пятничную встречу
+      { key: 'build_path', label: 'Построить личный путь в клубе', action: 'placeholderBuildPathStep' }, // TODO: ИИ-бот в Salebot строит карту по предпочтениям
+      { key: 'add_home_screen', label: 'Добавить приложение на главный экран', action: 'openAddToHomeScreenPopup' },
     ],
   },
 };
@@ -1166,6 +1197,7 @@ function onboardStepDone(key){
   if (key === 'paid') return isMember;
   if (key === 'channel') return channelJoined;   // реальный статус с сервера, не localStorage
   if (key === 'chat') return chatJoined;          // реальный статус с сервера, не localStorage
+  if (key === 'add_home_screen') return homeScreenAdded; // реальный статус с сервера — фронтенд сам шлёт сигнал, когда веб-версия открыта в standalone
   if (key === 'say_hi') {
     // Мягкий шаг — не требуем реального сообщения в чат. Засчитываем автоматически, как
     // только остальные шаги уровня пройдены (оплата/канал/чат/обучение), плюс по клику вручную.
@@ -1235,6 +1267,7 @@ async function refreshOnboardStatus(){
     if (u.found) {
       channelJoined = !!u.channel_joined;
       chatJoined = !!u.chat_joined;
+      homeScreenAdded = !!u.home_screen_added;
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     }
@@ -1306,7 +1339,8 @@ function openChatJoinLink(){ openUrl(CHAT_JOIN_LINK); pendingJoinKey = 'chat'; r
 // Плейсхолдеры — реального сигнала пока нет, кнопка просто отмечает шаг
 // выполненным для тестирования интерфейса
 function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
-function placeholderExploreStep(){ markOnboardStep('explore_content'); }
+function placeholderAskDenisStep(){ markOnboardStep('ask_denis'); }
+function placeholderBuildPathStep(){ markOnboardStep('build_path'); }
 function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
 
 /* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
@@ -1319,6 +1353,32 @@ function openHowToUsePopup(){
 }
 function closeHowToUsePopup(){
   document.getElementById('howto-popup-overlay').classList.remove('open');
+}
+
+/* ── "Добавить на главный экран" (шаг уровня 2) ── */
+const APP_URL = 'https://kuznetsovdenisalexandrovich.github.io/club-app/';
+
+function openAddToHomeScreenPopup(){
+  // Telegram.WebApp.platform доступен только внутри самого Telegram — используем его,
+  // чтобы сразу подсказать нужный браузер (вне Telegram так точно не узнать)
+  const platform = window.Telegram?.WebApp?.platform || '';
+  const hintEl = document.getElementById('home-screen-browser-hint');
+  if (platform === 'ios') hintEl.textContent = 'в Safari';
+  else if (platform === 'android') hintEl.textContent = 'в Chrome';
+  else hintEl.textContent = 'в браузере';
+  document.getElementById('home-screen-popup-overlay').classList.add('open');
+}
+function closeAddToHomeScreenPopup(){
+  document.getElementById('home-screen-popup-overlay').classList.remove('open');
+}
+function copyAppLink(){
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(APP_URL)
+      .then(() => showToast('Скопировано!'))
+      .catch(() => showToast('Не получилось — выдели ссылку вручную'));
+  } else {
+    showToast('Не получилось — выдели ссылку вручную');
+  }
 }
 
 /* ── Тур по библиотеке (spotlight) — приклеен к содержимому, не к экрану ── */
@@ -2063,6 +2123,21 @@ function startApp(){
   loadSavedSlugs();
 }
 
+// display-mode:standalone — кросс-платформенный признак "открыт как установленный
+// PWA с экрана Домой" (работает и для navigator.standalone на iOS, и для Android/Chrome)
+function isStandaloneWebApp(){
+  return window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone === true;
+}
+
+function reportHomeScreenAdded(){
+  if (!telegramId) return;
+  fetch(`${API_URL}/users/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, home_screen_added: true })
+  }).catch(()=>{});
+}
+
 function loadTelegramLoginWidget(){
   const slot = document.getElementById('tg-login-widget-slot');
   const s = document.createElement('script');
@@ -2088,6 +2163,7 @@ function onTelegramAuth(user){
     .then(data => {
       telegramId = data.telegram_id;
       document.getElementById('web-login-screen').style.display = 'none';
+      if (isStandaloneWebApp()) reportHomeScreenAdded();
       startApp();
     })
     .catch(() => {
@@ -2095,7 +2171,7 @@ function onTelegramAuth(user){
     });
 }
 
-async function startWebSession(){
+async function proceedToWebLogin(){
   // Не внутри Telegram — проверяем, есть ли уже действующая веб-сессия (кука с прошлого
   // входа). Если нет — показываем виджет входа через Telegram вместо голого "открой в ТГ"
   try {
@@ -2103,12 +2179,38 @@ async function startWebSession(){
     if (r.ok) {
       const data = await r.json();
       telegramId = data.telegram_id;
+      if (isStandaloneWebApp()) reportHomeScreenAdded();
       startApp();
       return;
     }
   } catch (e) {}
   document.getElementById('web-login-screen').style.display = 'flex';
   loadTelegramLoginWidget();
+}
+
+function proceedPastHomeScreenInstructions(){
+  document.getElementById('web-add-home-screen-screen').style.display = 'none';
+  proceedToWebLogin();
+}
+
+function startWebSession(){
+  if (isStandaloneWebApp()) {
+    proceedToWebLogin();
+    return;
+  }
+  // Ещё не добавлено на главный экран — сначала показываем инструкцию (с подсказкой
+  // нужного браузера, определённой по User-Agent — Telegram.WebApp.platform тут
+  // недоступен, мы уже вне Telegram), и только после неё — вход
+  const ua = navigator.userAgent || '';
+  const textEl = document.getElementById('web-add-home-screen-text');
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    textEl.textContent = 'В Safari нажми на значок "Поделиться" внизу экрана → «На экран «Домой»». Если открыл(а) не в Safari — скопируй ссылку из адресной строки и вставь в Safari.';
+  } else if (/Android/i.test(ua)) {
+    textEl.textContent = 'В Chrome открой меню (три точки в правом верхнем углу) → «Установить приложение» или «Добавить на главный экран».';
+  } else {
+    textEl.textContent = 'Открой эту страницу с телефона и добавь на главный экран через меню браузера — тогда апп будет работать как обычное приложение.';
+  }
+  document.getElementById('web-add-home-screen-screen').style.display = 'flex';
 }
 
 (function init(){
