@@ -652,11 +652,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
-<!-- Не в Telegram -->
-<div class="center-msg" id="not-telegram-msg" style="display:none">
+<!-- Не в Telegram — веб-вход через Telegram Login Widget -->
+<div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
-  <h2>Открой в Telegram</h2>
-  <p>Сейчас приложение доступно только внутри Telegram-бота клуба. Отдельный вход по номеру телефона появится совсем скоро.</p>
+  <h2>Вход через Telegram</h2>
+  <p>Апп можно открыть и не заходя в Telegram — просто войди тем же аккаунтом Telegram, что и в клубе.</p>
+  <div id="tg-login-widget-slot" style="margin-top:6px"></div>
+  <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2051,6 +2053,64 @@ function applyTelegramSafeArea(){
   }
 }
 
+function startApp(){
+  document.getElementById('app-shell').style.display = 'block';
+  document.getElementById('tabbar').style.display = 'flex';
+  loadProfile();
+  loadContinueWidget();
+  loadNews();
+  loadWidgetMonth();
+  loadSavedSlugs();
+}
+
+function loadTelegramLoginWidget(){
+  const slot = document.getElementById('tg-login-widget-slot');
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://telegram.org/js/telegram-widget.js?22';
+  s.setAttribute('data-telegram-login', 'youselllikeagod_bot');
+  s.setAttribute('data-size', 'large');
+  s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+  s.setAttribute('data-request-access', 'write');
+  slot.appendChild(s);
+}
+
+// Вызывается виджетом Telegram (data-onauth) после успешного входа — данные подписаны
+// Telegram и проверяются бэкендом (не то же самое, что initDataUnsafe мини-аппа)
+function onTelegramAuth(user){
+  fetch(`${API_URL}/auth/telegram-login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user)
+  })
+    .then(r => { if (!r.ok) throw new Error('auth failed'); return r.json(); })
+    .then(data => {
+      telegramId = data.telegram_id;
+      document.getElementById('web-login-screen').style.display = 'none';
+      startApp();
+    })
+    .catch(() => {
+      document.getElementById('web-login-error').style.display = 'block';
+    });
+}
+
+async function startWebSession(){
+  // Не внутри Telegram — проверяем, есть ли уже действующая веб-сессия (кука с прошлого
+  // входа). Если нет — показываем виджет входа через Telegram вместо голого "открой в ТГ"
+  try {
+    const r = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      telegramId = data.telegram_id;
+      startApp();
+      return;
+    }
+  } catch (e) {}
+  document.getElementById('web-login-screen').style.display = 'flex';
+  loadTelegramLoginWidget();
+}
+
 (function init(){
   const tg = window.Telegram?.WebApp;
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -2066,15 +2126,9 @@ function applyTelegramSafeArea(){
       tg.onEvent('fullscreenChanged', applyTelegramSafeArea);
     }
     telegramId = tg.initDataUnsafe.user.id;
-    document.getElementById('app-shell').style.display = 'block';
-    document.getElementById('tabbar').style.display = 'flex';
-    loadProfile();
-    loadContinueWidget();
-    loadNews();
-    loadWidgetMonth();
-    loadSavedSlugs();
+    startApp();
   } else {
-    document.getElementById('not-telegram-msg').style.display = 'flex';
+    startWebSession();
   }
 })();
 </script>
