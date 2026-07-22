@@ -1047,7 +1047,7 @@ async function loadProfile() {
     // Предупреждение красным — только если это НЕ первый заход в апп (человек уже был
     // здесь раньше) и до сих пор не вступил в канал/чат. Тех, кто только оплатил и идёт
     // по шагам в первый раз, пугать не нужно — для них ниже и так открывается попап шагов.
-    showRegistrationWarning = isMember && !u.is_first_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
+    showRegistrationWarning = isMember && !u.is_first_member_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     const pill = document.getElementById('sub-pill');
     if (u.is_member) {
       pill.textContent = 'Активна';
@@ -1061,7 +1061,7 @@ async function loadProfile() {
       document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
     }
     renderDemoBanner();
-    if (u.is_first_open && isMember) {
+    if (u.is_first_member_open) {
       setTimeout(openStepsPopup, 500);
     }
   } catch (e) {
@@ -1201,7 +1201,7 @@ async function refreshOnboardStatus(){
     if (u.found) {
       channelJoined = !!u.channel_joined;
       chatJoined = !!u.chat_joined;
-      showRegistrationWarning = isMember && !u.is_first_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
+      showRegistrationWarning = isMember && !u.is_first_member_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     }
   } catch (e) {}
 }
