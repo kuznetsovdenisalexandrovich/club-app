@@ -95,6 +95,7 @@
 [data-theme="light"] .lec-link-btn:active,[data-theme="light"] .action-btn:active{box-shadow:var(--sh-is)!important}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+a{color:var(--warm)}
 html,body{background:var(--bg);transition:background .25s;overflow-x:hidden}
 body{
   position:relative;
@@ -136,6 +137,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 
 
 .lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
+.lec-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:12px;display:block;background:var(--card2)}
 .lec-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .save-btn{background:none;border:none;line-height:1;color:var(--text-faint);cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center}
 .save-btn.saved{color:var(--warm)}
@@ -1475,6 +1477,7 @@ function lecCardHtml(l, i){
     : `openLectureLink(${i},'vk')`;
   return `
     <div class="lec-card">
+      <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
       <div class="lec-card-top">
         <div class="lec-title">${l.title}</div>
         <button class="save-btn${isSaved ? ' saved' : ''}" data-slug="${l.slug}" onclick="event.stopPropagation();toggleSaved('${l.slug}')" aria-label="Смотреть позже">${SAVE_ICON}</button>
@@ -1930,13 +1933,16 @@ function closeAiPopup(){
     document.getElementById('tour-overlay').classList.remove('open');
     setTimeout(async () => {
       switchView('schedule');
-      // Ждём реальной загрузки расписания/уведомлений, а не угаданной паузы — иначе
-      // блок уведомлений мог ещё не встать на своё финальное место, и прокрутка
-      // промахивалась мимо него.
+      // Ждём реальной загрузки расписания/уведомлений, а не угаданной паузы.
       try { await window._scheduleLoadPromise; } catch (e) {}
-      const notifEl = document.getElementById('notif-list');
-      if (notifEl) notifEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(showTourStep, 550); // ждём, пока плавная прокрутка реально долистает
+      // Прокручиваем НЕСКОЛЬКО раз с паузами — если что-то на странице (картинки, календарь)
+      // ещё чуть досдвигает вёрстку уже после первой прокрутки, следующая попытка поправит.
+      for (let i = 0; i < 4; i++) {
+        const notifEl = document.getElementById('notif-list');
+        if (notifEl) notifEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 400));
+      }
+      showTourStep();
     }, 300);
   }
 }
