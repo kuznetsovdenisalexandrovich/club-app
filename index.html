@@ -262,9 +262,11 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .demo-banner-title{font-weight:700;font-size:13.5px}
 .demo-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
 
-.level-card{cursor:pointer;position:fixed;top:calc(var(--safe-top) + 88px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3)}
+.level-card{cursor:pointer;position:fixed;top:calc(var(--safe-top) + 88px);left:16px;right:16px;max-width:488px;margin:0 auto;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 24px -8px rgba(0,0,0,0.3);transition:background .3s ease,border-color .3s ease}
+.level-card.level-card--warning{background:linear-gradient(135deg,rgba(220,68,68,0.18),rgba(220,68,68,0.06));border-color:rgba(220,68,68,0.55)}
 .level-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .level-card-title{font-weight:700;font-size:13px}
+.level-card.level-card--warning .level-card-title{color:#e05252}
 .level-card-frac{font-size:12px;color:var(--text-faint)}
 .level-bar-track{width:100%;height:8px;border-radius:6px;background:var(--card2);overflow:hidden}
 .level-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--warm),var(--lav));width:0%;transition:width .5s ease}
@@ -295,6 +297,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 .step-row{display:flex;align-items:center;gap:12px;padding:13px 4px;font-size:13.5px;color:var(--text-faint)}
 .step-row-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;margin-bottom:9px;border-radius:14px;background:var(--card2);border:1px solid var(--border);font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit}
+.step-row-btn.step-row-btn--loading{opacity:.55;cursor:default;pointer-events:none}
+.step-spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--warm);flex-shrink:0;animation:step-spin .7s linear infinite}
+@keyframes step-spin{to{transform:rotate(360deg)}}
 
 .admin-reset-btn{font-size:11px;color:var(--text-faint);text-decoration:underline;cursor:pointer;text-align:center;margin-top:14px}
 .video-banner{position:relative;width:100%;aspect-ratio:16/8;border-radius:16px;overflow:hidden;cursor:pointer;margin:6px 0 16px;background-size:cover;background-position:center}
@@ -343,10 +348,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 <div class="level-card" id="level-card" style="display:none" onclick="openStepsPopup()">
   <div class="level-card-top">
-    <span class="level-card-title" id="level-card-title">Уровень 1</span>
+    <span class="level-card-title" id="level-card-title">Регистрация</span>
     <span class="level-card-frac" id="level-card-frac">1/4</span>
   </div>
   <div class="level-bar-track"><div class="level-bar-fill" id="level-bar-fill"></div></div>
+  <div id="level-card-warning" style="display:none;font-size:11.5px;font-weight:700;color:#e05252;margin-top:8px">⚠️ Обязательно закончи регистрацию!</div>
 </div>
 
 <div class="shell" id="app-shell" style="display:none">
@@ -1038,6 +1044,10 @@ async function loadProfile() {
     isMember = !!u.is_member;
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
+    // Предупреждение красным — только если это НЕ первый заход в апп (человек уже был
+    // здесь раньше) и до сих пор не вступил в канал/чат. Тех, кто только оплатил и идёт
+    // по шагам в первый раз, пугать не нужно — для них ниже и так открывается попап шагов.
+    showRegistrationWarning = isMember && !u.is_first_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     const pill = document.getElementById('sub-pill');
     if (u.is_member) {
       pill.textContent = 'Активна';
@@ -1093,10 +1103,12 @@ const CHANNEL_JOIN_LINK = 'https://t.me/+tqAEu2fTTfU0N2Ey';
 const CHAT_JOIN_LINK = 'https://t.me/+TxNRziNPk2hkZmVi';
 let channelJoined = false;
 let chatJoined = false;
+let pendingJoinKey = null;       // 'channel' | 'chat' | null — ждём подтверждения с сервера после клика
+let showRegistrationWarning = false; // true только если это НЕ первый заход и регистрация (уровень 1) не завершена
 
 const LEVELS = {
   1: {
-    title: 'Уровень 1',
+    title: 'Регистрация',
     steps: [
       { key: 'paid',    label: 'Оплатить доступ' },  // всегда true для участника
       { key: 'channel', label: 'Попасть в закрытый канал', action: 'openChannelJoinLink' },
@@ -1175,6 +1187,8 @@ function renderLevelCard(){
   document.getElementById('level-card-title').textContent = def.title;
   document.getElementById('level-card-frac').textContent = `${done}/${total}`;
   document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
+  card.classList.toggle('level-card--warning', showRegistrationWarning);
+  document.getElementById('level-card-warning').style.display = showRegistrationWarning ? 'block' : 'none';
   updateLevelBarScrollPosition();
 }
 
@@ -1187,6 +1201,7 @@ async function refreshOnboardStatus(){
     if (u.found) {
       channelJoined = !!u.channel_joined;
       chatJoined = !!u.chat_joined;
+      showRegistrationWarning = isMember && !u.is_first_open && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     }
   } catch (e) {}
 }
@@ -1199,8 +1214,10 @@ async function openStepsPopup(){
 }
 
 // Пользователь тапает "Вступить в канал/чат" → уходит из мини-аппа в Telegram → возвращается
-// свайпом назад. visibilitychange ловит именно этот возврат и подтягивает актуальный статус
-// без ожидания, пока человек сам откроет попап шагов заново.
+// свайпом назад. visibilitychange ловит именно этот возврат и подтягивает актуальный статус.
+// Colбек от Salebot может прийти не мгновенно (задержка на их стороне), поэтому если статус
+// ещё не подтвердился — запускаем несколько повторных проверок с паузой (pollForJoinUpdate),
+// а не одну попытку.
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !isMember) return;
   await refreshOnboardStatus();
@@ -1208,7 +1225,29 @@ document.addEventListener('visibilitychange', async () => {
   if (document.getElementById('steps-popup-overlay').classList.contains('open')) {
     renderStepsPopup();
   }
+  if (pendingJoinKey && !onboardStepDone(pendingJoinKey)) {
+    pollForJoinUpdate();
+  } else {
+    pendingJoinKey = null;
+  }
 });
+
+async function pollForJoinUpdate(attempts = 6, delayMs = 3000){
+  for (let i = 0; i < attempts; i++){
+    if (!pendingJoinKey || onboardStepDone(pendingJoinKey)) break;
+    await new Promise(res => setTimeout(res, delayMs));
+    await refreshOnboardStatus();
+    renderLevelCard();
+    if (document.getElementById('steps-popup-overlay').classList.contains('open')) {
+      renderStepsPopup();
+    }
+  }
+  // Лимит попыток исчерпан (или шаг подтвердился) — в любом случае снимаем "загрузку",
+  // кнопка не должна оставаться серой навсегда
+  pendingJoinKey = null;
+  renderStepsPopup();
+}
+
 function closeStepsPopup(){
   document.getElementById('steps-popup-overlay').classList.remove('open');
 }
@@ -1220,12 +1259,15 @@ function renderStepsPopup(){
     if (onboardStepDone(s.key)) {
       return `<div class="step-row"><span class="howto-check done">✓</span><span>${s.label}</span></div>`;
     }
+    if (s.key === pendingJoinKey) {
+      return `<button class="step-row-btn step-row-btn--loading"><span class="step-spinner"></span><span>${s.label} — проверяем...</span></button>`;
+    }
     return `<button class="step-row-btn" onclick="${s.action}()"><span class="howto-check">○</span><span>${s.label}</span></button>`;
   }).join('');
 }
 
-function openChannelJoinLink(){ openUrl(CHANNEL_JOIN_LINK); }
-function openChatJoinLink(){ openUrl(CHAT_JOIN_LINK); }
+function openChannelJoinLink(){ openUrl(CHANNEL_JOIN_LINK); pendingJoinKey = 'channel'; renderStepsPopup(); }
+function openChatJoinLink(){ openUrl(CHAT_JOIN_LINK); pendingJoinKey = 'chat'; renderStepsPopup(); }
 // Плейсхолдеры — реального сигнала пока нет, кнопка просто отмечает шаг
 // выполненным для тестирования интерфейса
 function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
