@@ -1338,7 +1338,15 @@ function startLibraryTour(){
   // подсветка встала на место — ResizeObserver ловит любое изменение высоты страницы
   // и пересчитывает позицию заново, пока тур активен.
   if ('ResizeObserver' in window) {
-    tourResizeObserver = new ResizeObserver(() => { if (tourActive) showTourStep(); });
+    tourResizeObserver = new ResizeObserver(() => {
+      if (!tourActive) return;
+      const aiOpen = document.getElementById('ai-popup-overlay')?.classList.contains('open');
+      // На шаге 0 (печатает вопрос/ждём ответа) попап сам прячет затемнение — не возвращаем его.
+      // На шаге 1 (подсветка кнопки "сохранить" в уже пришедшем ответе) — наоборот, нужно
+      // разрешить пересчёт как обычно, попап всё ещё открыт, это ожидаемо.
+      if (aiOpen && tourStep === 0) return;
+      showTourStep();
+    });
     tourResizeObserver.observe(document.body);
   }
 }
