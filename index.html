@@ -1689,6 +1689,10 @@ function endLibraryTour(completed){
   document.getElementById('tour-overlay').classList.remove('open');
   if (tourResizeObserver) { tourResizeObserver.disconnect(); tourResizeObserver = null; }
   if (completed) markOnboardStep('tour');
+  // Карточки лекций рендерятся один раз при первом открытии вкладки (см. switchView) и
+  // "запекают" в себе состояние блокировки (isMember && tourActive) на тот момент — без
+  // этого повторного рендера они оставались бы заблокированными навсегда после тура.
+  if (allLectures.length) applyTagFilter();
 }
 
 let activeTagFilter = null;
