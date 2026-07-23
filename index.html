@@ -1324,6 +1324,7 @@ function checkLevelUp(){
 
 async function resetOnboardingProgress(){
   Object.keys(LEVELS).forEach(lvl => {
+    if (LEVELS[lvl].pointsMode) return; // очковый уровень — нет чек-листа шагов
     LEVELS[lvl].steps.forEach(s => {
       if (s.key !== 'paid') { try { localStorage.removeItem(`onboard_L${lvl}_${s.key}`); } catch (e) {} }
     });
@@ -1335,6 +1336,8 @@ async function resetOnboardingProgress(){
   homeScreenAdded = false;
   askedDenis = false;
   builtPath = false;
+  points = 0;
+  hasPushSubscription = false;
   serverLevel = 1; // уровень сброшен на сервере тем же вызовом reset-first-open
   renderLevelCard();
   alert('Прогресс онбординга сброшен (включая метки первого визита, канала и чата)');
