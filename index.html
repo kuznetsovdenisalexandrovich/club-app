@@ -699,12 +699,19 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 <!-- Срочная новость для ВСЕХ — видна и до логина (тут), и в ленте новостей после логина -->
 <div id="web-urgent-news-banner" class="news-block news-block--urgent" style="display:none;max-width:360px;margin:0 auto 16px"></div>
 
-<!-- Не в Telegram — веб-вход через Telegram Login Widget -->
+<!-- Не в Telegram — веб-вход по номеру телефона (SMS-код) -->
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
-  <h2>Вход через Telegram</h2>
-  <p>Апп можно открыть и не заходя в Telegram — просто войди тем же аккаунтом Telegram, что и в клубе.</p>
-  <div id="tg-login-widget-slot" style="margin-top:6px"></div>
+  <h2>Вход по номеру телефона</h2>
+  <p>Укажи номер, которым оплачивал(а) подписку — пришлём код по SMS.</p>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
+    <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" placeholder="+7 999 123-45-67" inputmode="tel">
+    <button class="lec-link-btn access-btn" id="phone-send-code-btn" onclick="sendPhoneCode()">Получить код</button>
+    <div id="phone-code-block" style="display:none;flex-direction:column;gap:10px">
+      <input class="ai-question-input" style="text-align:center;letter-spacing:4px" type="tel" id="phone-code-input" placeholder="Код из SMS" inputmode="numeric" maxlength="4">
+      <button class="lec-link-btn access-btn" onclick="verifyPhoneCode()">Войти</button>
+    </div>
+  </div>
   <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
 </div>
 
@@ -2380,42 +2387,62 @@ function reportHomeScreenAdded(){
   }).catch(()=>{});
 }
 
-function loadTelegramLoginWidget(){
-  const slot = document.getElementById('tg-login-widget-slot');
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = 'https://telegram.org/js/telegram-widget.js?22';
-  s.setAttribute('data-telegram-login', 'youselllikeagod_bot');
-  s.setAttribute('data-size', 'large');
-  s.setAttribute('data-onauth', 'onTelegramAuth(user)');
-  s.setAttribute('data-request-access', 'write');
-  slot.appendChild(s);
+function sendPhoneCode(){
+  const phone = document.getElementById('phone-login-input').value.trim();
+  const errEl = document.getElementById('web-login-error');
+  errEl.style.display = 'none';
+  if (!phone) return;
+  const btn = document.getElementById('phone-send-code-btn');
+  btn.disabled = true;
+  fetch(`${API_URL}/auth/phone/send-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone })
+  })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || 'Не получилось отправить код');
+      document.getElementById('phone-code-block').style.display = 'flex';
+      showToast('Код отправлен по SMS');
+    })
+    .catch(e => {
+      errEl.textContent = e.message || 'Не получилось отправить код — попробуй ещё раз чуть позже.';
+      errEl.style.display = 'block';
+    })
+    .finally(() => { btn.disabled = false; });
 }
 
-// Вызывается виджетом Telegram (data-onauth) после успешного входа — данные подписаны
-// Telegram и проверяются бэкендом (не то же самое, что initDataUnsafe мини-аппа)
-function onTelegramAuth(user){
-  fetch(`${API_URL}/auth/telegram-login`, {
+function verifyPhoneCode(){
+  const phone = document.getElementById('phone-login-input').value.trim();
+  const code = document.getElementById('phone-code-input').value.trim();
+  const errEl = document.getElementById('web-login-error');
+  errEl.style.display = 'none';
+  if (!code) return;
+  fetch(`${API_URL}/auth/phone/verify-code`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(user)
+    body: JSON.stringify({ phone, code })
   })
-    .then(r => { if (!r.ok) throw new Error('auth failed'); return r.json(); })
-    .then(data => {
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
       telegramId = data.telegram_id;
       document.getElementById('web-login-screen').style.display = 'none';
       if (isStandaloneWebApp()) reportHomeScreenAdded();
       startApp();
     })
-    .catch(() => {
-      document.getElementById('web-login-error').style.display = 'block';
+    .catch(e => {
+      errEl.textContent = e.message || 'Не получилось войти — попробуй ещё раз чуть позже.';
+      errEl.style.display = 'block';
     });
 }
 
 async function proceedToWebLogin(){
   // Не внутри Telegram — проверяем, есть ли уже действующая веб-сессия (кука с прошлого
-  // входа). Если нет — показываем виджет входа через Telegram вместо голого "открой в ТГ"
+  // входа). Если нет — показываем форму входа по номеру телефона (SMS-код) — не через
+  // Telegram Login Widget: закон 406-ФЗ запрещает иностранные сервисы авторизации на
+  // российских сайтах, штрафы действуют с июля 2026.
   try {
     const r = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
     if (r.ok) {
@@ -2427,7 +2454,6 @@ async function proceedToWebLogin(){
     }
   } catch (e) {}
   document.getElementById('web-login-screen').style.display = 'flex';
-  loadTelegramLoginWidget();
 }
 
 function proceedPastHomeScreenInstructions(){
