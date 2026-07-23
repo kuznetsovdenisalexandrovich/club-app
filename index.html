@@ -1159,7 +1159,14 @@ async function loadProfile() {
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
     homeScreenAdded = !!u.home_screen_added;
-    serverLevel = u.onboarding_level || 1;
+    askedDenis = !!u.asked_denis;
+    builtPath = !!u.built_path;
+    points = u.points || 0;
+    hasPushSubscription = !!u.has_push_subscription;
+    // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
+    // (например, старое тестовое значение) — не пытаемся рендерить несуществующий контент,
+    // просто остаёмся на последнем реальном уровне.
+    serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
     if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
     // Предупреждение красным — только если это НЕ первый заход в апп (человек уже был
     // здесь раньше) и до сих пор не вступил в канал/чат. Тех, кто только оплатил и идёт
@@ -1228,6 +1235,8 @@ function roundTripErrorHtml(){
 let channelJoined = false;
 let chatJoined = false;
 let homeScreenAdded = false;
+let points = 0;
+let hasPushSubscription = false;
 let pendingJoinKey = null;       // 'channel' | 'chat' | null — ждём подтверждения с сервера после клика
 let showRegistrationWarning = false; // true только если это НЕ первый заход и регистрация (уровень 1) не завершена
 
@@ -1248,8 +1257,12 @@ const LEVELS = {
       { key: 'ask_denis',  label: 'Задать вопрос Денису', action: 'openAskDenisPopup' },
       { key: 'build_path', label: 'Построить личный путь в клубе', action: 'placeholderBuildPathStep' }, // TODO: ИИ-бот в Salebot строит карту по предпочтениям
       { key: 'add_home_screen', label: 'Добавить приложение на главный экран', action: 'openAddToHomeScreenPopup' },
-      { key: 'enable_push', label: 'Включить пуш-уведомления', action: 'placeholderEnablePushStep' }, // TODO: настоящий Web Push (VAPID + service worker + подписка) — отдельная задача
+      { key: 'enable_push', label: 'Включить пуш-уведомления', action: 'enablePushNotifications' },
     ],
+  },
+  3: {
+    title: 'Уровень 3',
+    pointsMode: true, // открытый уровень — не чек-лист, а очки за действия (см. renderStepsPopup)
   },
 };
 const MAX_LEVEL = Math.max(...Object.keys(LEVELS).map(Number));
@@ -1274,6 +1287,7 @@ function onboardStepDone(key){
   if (key === 'add_home_screen') return homeScreenAdded; // реальный статус с сервера — фронтенд сам шлёт сигнал, когда веб-версия открыта в standalone
   if (key === 'ask_denis') return askedDenis;   // реальный статус с сервера — ставится в POST /questions, не по клику
   if (key === 'build_path') return builtPath;    // на сервере, не в localStorage — чтобы не слетало в другом браузере (веб-версия)
+  if (key === 'enable_push') return hasPushSubscription; // реальная подписка на сервере, не localStorage
   if (key === 'say_hi') {
     // Мягкий шаг — не требуем реального сообщения в чат. Засчитываем автоматически, как
     // только остальные шаги уровня пройдены (оплата/канал/чат/обучение), плюс по клику вручную.
@@ -1294,7 +1308,7 @@ function markOnboardStep(key){
 function checkLevelUp(){
   const lvl = currentLevelNum();
   const def = LEVELS[lvl];
-  if (!def) return;
+  if (!def || def.pointsMode) return; // очковый уровень — открытый, порог для следующего ещё не решён
   const done = def.steps.filter(s => onboardStepDone(s.key)).length;
   if (done >= def.steps.length && LEVELS[lvl + 1]) {
     serverLevel = lvl + 1;
@@ -1332,13 +1346,20 @@ function renderLevelCard(){
   if (!isMember) { card.style.display = 'none'; document.body.classList.remove('onboarding-bar-visible'); return; }
   checkLevelUp(); // шаги могли завершиться сами (напр. пришёл channel_joined с сервера) — проверяем переход на новый уровень при каждой отрисовке, не только по клику
   const def = currentLevelDef();
-  const done = def.steps.filter(s => onboardStepDone(s.key)).length;
-  const total = def.steps.length;
   card.style.display = 'block';
   document.body.classList.add('onboarding-bar-visible'); // перманентно, больше никогда не прячем
   document.getElementById('level-card-title').textContent = def.title;
-  document.getElementById('level-card-frac').textContent = `${done}/${total}`;
-  document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
+  if (def.pointsMode) {
+    document.getElementById('level-card-frac').textContent = `${points} очков`;
+    // Порог следующего уровня ещё не решён — бар просто показывает прогресс "по кругу"
+    // каждые 1000 очков, чисто декоративно, чтобы бар не стоял на месте
+    document.getElementById('level-bar-fill').style.width = `${(points % 1000) / 10}%`;
+  } else {
+    const done = def.steps.filter(s => onboardStepDone(s.key)).length;
+    const total = def.steps.length;
+    document.getElementById('level-card-frac').textContent = `${done}/${total}`;
+    document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
+  }
   card.classList.toggle('level-card--warning', showRegistrationWarning);
   document.getElementById('level-card-warning').style.display = showRegistrationWarning ? 'block' : 'none';
   updateLevelBarScrollPosition();
@@ -1356,7 +1377,9 @@ async function refreshOnboardStatus(){
       homeScreenAdded = !!u.home_screen_added;
       askedDenis = !!u.asked_denis;
       builtPath = !!u.built_path;
-      serverLevel = u.onboarding_level || 1;
+      points = u.points || 0;
+      hasPushSubscription = !!u.has_push_subscription;
+      serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
     }
@@ -1412,6 +1435,18 @@ function renderStepsPopup(){
   const el = document.getElementById('steps-popup-list');
   if (!el) return;
   const def = currentLevelDef();
+  if (def.pointsMode) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:8px 0 18px">
+        <div style="font-family:var(--disp);font-weight:800;font-size:30px">${points}</div>
+        <div style="font-size:12px;color:var(--text-dim)">очков заработано</div>
+      </div>
+      <div class="step-row"><span>📚 Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
+      <div class="step-row"><span>💳 Оплатить ещё месяц</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
+      <div class="step-row"><span>🗺️ Построить свой путь</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
+    `;
+    return;
+  }
   el.innerHTML = def.steps.map(s => {
     if (onboardStepDone(s.key)) {
       return `<div class="step-row"><span class="howto-check done">✓</span><span>${s.label}</span></div>`;
@@ -1470,7 +1505,47 @@ function placeholderBuildPathStep(){
   renderLevelCard();
   renderStepsPopup();
 }
-function placeholderEnablePushStep(){ markOnboardStep('enable_push'); } // TODO: настоящая подписка на Web Push вместо заглушки
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function enablePushNotifications(){
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('Этот браузер не поддерживает push-уведомления');
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.register('service-worker.js');
+    await navigator.serviceWorker.ready;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showToast('Уведомления не разрешены — включить можно в настройках браузера');
+      return;
+    }
+    const { public_key } = await fetch(`${API_URL}/push/vapid-public-key`).then(r => r.json());
+    if (!public_key) { showToast('Пуши временно недоступны — попробуй позже'); return; }
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(public_key),
+    });
+    const subJson = subscription.toJSON();
+    await fetch(`${API_URL}/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, endpoint: subJson.endpoint, keys: subJson.keys }),
+    });
+    hasPushSubscription = true;
+    checkLevelUp();
+    renderLevelCard();
+    renderStepsPopup();
+    showToast('Уведомления включены!');
+  } catch (e) {
+    showToast('Не получилось включить — попробуй ещё раз');
+  }
+}
 function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
 
 /* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
@@ -1819,6 +1894,15 @@ function openLectureLink(index, platform) {
   if (!l) return;
   rememberLastLecture(l);
   openUrl(platform === 'vk' ? l.link_vk : l.link);
+  if (telegramId && l.slug) {
+    fetch(`${API_URL}/lectures/viewed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, slug: l.slug })
+    }).then(r => r.json()).then(data => {
+      if (data.points_awarded) { points += data.points_awarded; renderLevelCard(); }
+    }).catch(()=>{});
+  }
 }
 
 function openLecture(index) {
