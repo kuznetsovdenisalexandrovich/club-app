@@ -1,0 +1,28 @@
+name: Deploy to Beget
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ftp-deploy:
+    name: Deploy via FTP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Beget
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.BEGET_FTP_SERVER }}
+          username: ${{ secrets.BEGET_FTP_USERNAME }}
+          password: ${{ secrets.BEGET_FTP_PASSWORD }}
+          protocol: ftps
+          server-dir: ${{ secrets.BEGET_FTP_DIR }}
+          # Не заливаем служебные файлы репозитория на хостинг
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
