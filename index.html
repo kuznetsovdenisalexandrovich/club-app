@@ -241,6 +241,15 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 
 .center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 24px;gap:14px}
 .center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
+.hs-step{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--border)}
+.hs-step:last-child{border-bottom:none}
+.hs-step-num{font-family:var(--disp);font-weight:900;font-size:19px;flex-shrink:0;width:64px;color:var(--text)}
+.hs-step-content{display:flex;align-items:center;gap:12px;font-size:13.5px;color:var(--text-dim);flex:1;min-width:0}
+.hs-icon-circle{width:36px;height:36px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text);font-weight:700;letter-spacing:1px}
+.hs-icon-pill{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card2);border-radius:14px;padding:11px 14px;color:var(--text);font-size:13.5px;font-weight:600;width:100%}
+.hs-icon-square{width:26px;height:26px;border-radius:8px;border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0}
+.hs-step-3{flex-direction:column;gap:6px;text-align:center}
+.hs-step-3 .hs-caption{font-size:11.5px;color:var(--text-faint)}
 .center-msg h2{font-family:var(--disp);font-weight:700;font-size:17px}
 .center-msg p{font-size:13px;color:var(--text-dim);line-height:1.6}
 
@@ -713,18 +722,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 <!-- Срочная новость для ВСЕХ — видна и до логина (тут), и в ленте новостей после логина -->
 <div id="web-urgent-news-banner" class="news-block news-block--urgent" style="display:none;max-width:360px;margin:0 auto 16px"></div>
 
-<!-- Не в Telegram — веб-вход по номеру телефона (SMS-код) -->
+<!-- Не в Telegram — веб-вход по номеру телефона (временно без SMS-кода, пока ждём одобрение SMS.RU) -->
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
   <h2>Вход по номеру телефона</h2>
-  <p>Укажи номер, которым оплачивал(а) подписку — пришлём код по SMS.</p>
+  <p>Укажи номер, которым оплачивал(а) подписку.</p>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
     <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" placeholder="+7 999 123-45-67" inputmode="tel">
-    <button class="lec-link-btn access-btn" id="phone-send-code-btn" onclick="sendPhoneCode()">Получить код</button>
-    <div id="phone-code-block" style="display:none;flex-direction:column;gap:10px">
-      <input class="ai-question-input" style="text-align:center;letter-spacing:4px" type="tel" id="phone-code-input" placeholder="Код из SMS" inputmode="numeric" maxlength="4">
-      <button class="lec-link-btn access-btn" onclick="verifyPhoneCode()">Войти</button>
-    </div>
+    <button class="lec-link-btn access-btn" onclick="quickPhoneLogin()">Войти</button>
   </div>
   <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
   <div style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
@@ -735,6 +740,35 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="mark">БП</div>
   <h2>Добавь на главный экран</h2>
   <p id="web-add-home-screen-text">Это займёт 10 секунд — и апп будет открываться так же быстро, как обычное приложение.</p>
+  <div id="web-add-home-screen-steps" style="display:none;width:100%;max-width:360px;margin-top:6px">
+    <div class="hs-step">
+      <div class="hs-step-num">1 шаг</div>
+      <div class="hs-step-content">
+        <span>В Safari внизу экрана нажми на значок</span>
+        <span class="hs-icon-circle">•••</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">2 шаг</div>
+      <div class="hs-step-content">
+        <span class="hs-icon-pill"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l4 4M12 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Поделиться</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">3 шаг</div>
+      <div class="hs-step-content hs-step-3">
+        <span class="hs-icon-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="hs-caption">Показать больше</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">4 шаг</div>
+      <div class="hs-step-content">
+        <span class="hs-icon-square">+</span>
+        <span>Добавить на экран «Домой»</span>
+      </div>
+    </div>
+  </div>
   <div style="text-align:center;font-size:13px;color:#fff;margin-top:8px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
   <div class="payment-help-link" style="position:fixed;left:0;right:0;bottom:calc(24px + env(safe-area-inset-bottom));text-align:center" onclick="proceedPastHomeScreenInstructions()">продолжить в браузере</div>
 </div>
@@ -825,7 +859,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="icon-btn" onclick="closeAddToHomeScreenPopup()">✕</button>
     </div>
     <div class="copy-link-row" onclick="copyAppLink()">
-      <span class="copy-link-text">app.youselllikeagod-magazine.ru</span>
+      <span class="copy-link-text">kuznetsovdenisalexandrovich.github.io/club-app/</span>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </div>
     <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-top:10px">Скопируй ссылку и открой её <span id="home-screen-browser-hint">в браузере</span> — оттуда приложение можно будет добавить на главный экран, как обычное.</div>
@@ -1658,7 +1692,7 @@ function closeHowToUsePopup(){
 }
 
 /* ── "Добавить на главный экран" (шаг уровня 2) ── */
-const APP_URL = 'https://app.youselllikeagod-magazine.ru/';
+const APP_URL = 'https://kuznetsovdenisalexandrovich.github.io/club-app/';
 
 function openAddToHomeScreenPopup(){
   // Telegram.WebApp.platform доступен только внутри самого Telegram — используем его,
@@ -2470,42 +2504,19 @@ function reportHomeScreenAdded(){
   }).catch(()=>{});
 }
 
-function sendPhoneCode(){
+// TODO ВРЕМЕННО: пока не одобрен SMS.RU — вход просто по номеру + активной подписке,
+// без кода подтверждения. Вернуть sendPhoneCode/verifyPhoneCode (двухшаговый SMS-вход),
+// когда SMS реально заработают.
+function quickPhoneLogin(){
   const phone = document.getElementById('phone-login-input').value.trim();
   const errEl = document.getElementById('web-login-error');
   errEl.style.display = 'none';
   if (!phone) return;
-  const btn = document.getElementById('phone-send-code-btn');
-  btn.disabled = true;
-  fetch(`${API_URL}/auth/phone/send-code`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone })
-  })
-    .then(async r => {
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.detail || 'Не получилось отправить код');
-      document.getElementById('phone-code-block').style.display = 'flex';
-      showToast('Код отправлен по SMS');
-    })
-    .catch(e => {
-      errEl.textContent = e.message || 'Не получилось отправить код — попробуй ещё раз чуть позже.';
-      errEl.style.display = 'block';
-    })
-    .finally(() => { btn.disabled = false; });
-}
-
-function verifyPhoneCode(){
-  const phone = document.getElementById('phone-login-input').value.trim();
-  const code = document.getElementById('phone-code-input').value.trim();
-  const errEl = document.getElementById('web-login-error');
-  errEl.style.display = 'none';
-  if (!code) return;
-  fetch(`${API_URL}/auth/phone/verify-code`, {
+  fetch(`${API_URL}/auth/phone/quick-login`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, code })
+    body: JSON.stringify({ phone })
   })
     .then(async r => {
       const data = await r.json().catch(() => ({}));
@@ -2555,8 +2566,10 @@ function startWebSession(){
   // недоступен, мы уже вне Telegram), и только после неё — вход
   const ua = navigator.userAgent || '';
   const textEl = document.getElementById('web-add-home-screen-text');
+  const stepsEl = document.getElementById('web-add-home-screen-steps');
   if (/iPhone|iPad|iPod/i.test(ua)) {
-    textEl.textContent = 'В Safari нажми на значок "Поделиться" внизу экрана → «На экран «Домой»». Если открыл(а) не в Safari — скопируй ссылку из адресной строки и вставь в Safari.';
+    textEl.style.display = 'none';
+    stepsEl.style.display = 'block';
   } else if (/Android/i.test(ua)) {
     textEl.textContent = 'В Chrome открой меню (три точки в правом верхнем углу) → «Установить приложение» или «Добавить на главный экран».';
   } else {
