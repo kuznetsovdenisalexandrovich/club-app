@@ -1493,7 +1493,7 @@ function renderSubManage(){
   const cancelledBlock = (s.cancelled && s.cancel_reversible) ? `
     <div class="sm-block">
       <div class="sm-title">Подписка остановлена</div>
-      <div class="sm-hint">Автосписаний не будет. Доступ действует до ${s.next_payment || 'конца оплаченного периода'} — можно вернуть всё как было.</div>
+      <div class="sm-hint">Автосписаний не будет. Доступ действует до ${s.next_payment || 'конца оплаченного периода'} — можно вернуть всё как было.${s.points ? ` Баллы (${s.points}) пока при тебе, но сгорят вместе с доступом.` : ''}</div>
       <div class="sm-row"><button class="sm-btn" onclick="reactivateSubscription(this)">Восстановить подписку</button></div>
     </div>` : '';
 
@@ -1821,9 +1821,15 @@ async function freezeFromFunnel(months){
 
 function renderCancelStep3(){
   const until = (subStatus && subStatus.next_payment) ? subStatus.next_payment : 'конца оплаченного периода';
+  const pts = (subStatus && subStatus.points) || 0;
+  // Про сгорание говорим честно и заранее — узнать об этом постфактум куда обиднее
+  const burnWarning = pts > 0
+    ? `<div class="sm-hint" style="margin-top:10px">И ещё: накопленные <b>${pts}</b> баллов сгорят, когда доступ закончится. Пока он действует — они при тебе.</div>`
+    : '';
   document.getElementById('sub-cancel-title').textContent = 'Точно отменяем?';
   document.getElementById('sub-cancel-body').innerHTML = `
     <div class="sm-hint">Автосписания прекратятся, доступ останется до ${until}. Если передумаешь — вернуть подписку можно будет одной кнопкой, заново оформлять не придётся.</div>
+    ${burnWarning}
     <button class="sm-danger" onclick="confirmCancel(this)">Да, отменить подписку</button>
     <button class="sm-quiet" onclick="closeCancelFunnel()">Я передумал(а)</button>`;
 }
@@ -1832,12 +1838,12 @@ async function reactivateSubscription(btn){
   btn.disabled = true;
   btn.textContent = 'Возвращаю…';
   try {
-    await apiRequest(`${API_URL}/subscription/reactivate`, {
+    const d = await apiRequest(`${API_URL}/subscription/reactivate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId })
     }, 20000);
-    showToast('С возвращением!');
+    showToast(d.bonus ? `С возвращением! Держи ${d.bonus} баллов` : 'С возвращением!');
     await loadProfile();
     await loadSubStatus();
   } catch (e) {
