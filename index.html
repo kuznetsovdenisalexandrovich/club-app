@@ -220,6 +220,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
 .tile:active{transform:scale(0.96)}
 .tile-icon{width:36px;height:36px;border-radius:12px;background:var(--lav-dim);color:var(--lav);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
+.tile-icon-number{font-family:var(--disp);font-weight:800;font-size:13px}
 .tile-label{font-size:12px;font-weight:600;line-height:1.3}
 .tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
 
@@ -538,7 +539,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="switchView('points-info')">
-        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5v9M9 9.8c0-1.3 1.2-2.3 3-2.3s3 .9 3 2.1c0 2.8-6 1.4-6 4.2 0 1.3 1.3 2.2 3 2.2s3-.9 3-2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <div class="tile-icon tile-icon-number" id="menu-points-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Баллы</div>
       </div>
       <div class="tile" onclick="comingSoon()">
@@ -661,16 +662,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
     <div class="section-label">Как заработать</div>
     <div class="card">
-      <div class="step-row"><span>📚 Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
-      <div class="step-row"><span>💳 Продлить подписку</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
-      <div class="step-row"><span>🗺️ Пройти личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
-      <div class="step-row"><span>🎁 Живые встречи, хорошие вопросы и просто так</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
+      <div class="step-row"><span>Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
+      <div class="step-row"><span>Продлить подписку</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
+      <div class="step-row"><span>Пройти личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
+      <div class="step-row"><span>Живые встречи, хорошие вопросы и просто так</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
     </div>
 
     <div class="section-label">На что потратить</div>
-    <div class="card">
-      <div class="reward-hint" style="margin-bottom:10px">Скидка на следующий платёж, доступ к архиву, созвон или консультация — полный список всегда под рукой в Профиле.</div>
-      <button class="lec-link-btn access-btn" onclick="openRewards()">Открыть каталог наград</button>
+    <div class="card" id="pi-rewards-card">
+      <div id="pi-rewards-list"><div class="loading">Загрузка...</div></div>
     </div>
 
     <div class="section-label">Уровни клуба</div>
@@ -954,6 +954,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </div>
     <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-top:10px">Скопируй ссылку и открой её <span id="home-screen-browser-hint">в браузере</span> — оттуда приложение можно будет добавить на главный экран, как обычное.</div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="markHomeScreenAddedManually()">Уже добавил(а)</div>
   </div>
 </div>
 
@@ -1035,6 +1036,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="reward-confirm-overlay" onclick="if(event.target===this) closeRewardConfirm()">
+  <div class="center-modal" id="reward-confirm-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title" id="reward-confirm-title">Награда</div>
+      <button class="icon-btn" onclick="closeRewardConfirm()">✕</button>
+    </div>
+    <div id="reward-confirm-body"></div>
+  </div>
+</div>
+
 <div class="tour-overlay" id="tour-overlay">
   <div class="tour-hole" id="tour-hole"></div>
   <div class="tour-tooltip" id="tour-tooltip">
@@ -1109,6 +1120,10 @@ function switchView(name) {
   if (name === 'points-info') {
     const el = document.getElementById('pi-points');
     if (el) el.textContent = points;
+    loadRewardsData().then(() => {
+      const listEl = document.getElementById('pi-rewards-list');
+      if (listEl) listEl.innerHTML = lastRewardsData ? rewardsListHtml() : '<div class="empty">Не удалось загрузить</div>';
+    });
   }
   // Дублируем открытие соответствующего раздела в самом боте фоновым колбеком — чтобы
   // человек в любой момент мог закрыть апп и продолжить в боте с тем же меню на экране
@@ -1779,49 +1794,117 @@ async function applyFreeze(months, btn){
    Оплата месяца открывает экран управления подпиской со слайдером, остальное —
    заявка Денису: он выдаёт руками, баллы списываются сразу. */
 
+/* ── Награды ───────────────────────────────────────────────────────────────────
+   Каждая карточка (кроме "оплатить месяц" — та ведёт прямиком в управление
+   подпиской, там уже есть слайдер частичной оплаты) — одна большая кнопка.
+   Тап всегда открывает окошко-подтверждение внутри аппа (не системный alert):
+   хватает баллов — предложение потратить; не хватает — предложение купить за рубли. */
+
+let lastRewardsData = null;
+
 async function openRewards(){
   document.getElementById('rewards-overlay').classList.add('open');
   document.getElementById('rewards-body').innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Загружаю…</div>';
-  try {
-    const d = await apiRequest(`${API_URL}/rewards?telegram_id=${telegramId}`, {}, 10000);
-    renderRewards(d);
-  } catch (e) {
-    document.getElementById('rewards-body').innerHTML =
-      `<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить.<br><br>${e.message || ''}</div>`;
-  }
+  await loadRewardsData();
+  document.getElementById('rewards-body').innerHTML = lastRewardsData
+    ? `<div class="sm-hint" style="margin-bottom:4px">У тебя <b>${lastRewardsData.points}</b> баллов.</div>${rewardsListHtml()}`
+    : `<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить.</div>`;
 }
 
 function closeRewards(){
   document.getElementById('rewards-overlay').classList.remove('open');
 }
 
-function renderRewards(d){
-  const items = (d.rewards || []).map(r => {
-    const action = r.affordable
-      ? (r.kind === 'payment' ? `closeRewards();openSubManage()` : `requestReward('${r.key}', this)`)
-      : '';
-    let hint = r.affordable ? r.hint : `Не хватает ${r.missing} баллов`;
-    if (r.level_locked) hint = `Откроется на уровне ${r.unlock_level}`;
-    const cashBtn = r.cash_buy_available
-      ? `<button class="sm-btn" style="margin-top:8px" onclick="event.stopPropagation();buyRewardWithRubles('${r.key}', this)">Купить за ${r.cost} ₽</button>`
-      : '';
+async function loadRewardsData(){
+  try {
+    lastRewardsData = await apiRequest(`${API_URL}/rewards?telegram_id=${telegramId}`, {}, 10000);
+  } catch (e) {
+    lastRewardsData = null;
+  }
+  return lastRewardsData;
+}
+
+function rewardsListHtml(){
+  if (!lastRewardsData) return '';
+  return (lastRewardsData.rewards || []).map(r => {
+    if (r.kind === 'payment') {
+      return `
+        <div class="reward-item" onclick="closeRewards();openSubManage()" style="cursor:pointer">
+          <div class="reward-body">
+            <div class="reward-title">${r.title}</div>
+            <div class="reward-hint">${r.hint}</div>
+          </div>
+          <div class="reward-cost">${r.cost}</div>
+        </div>`;
+    }
     return `
-      <div class="reward-item${r.affordable ? '' : ' locked'}" ${r.affordable ? `onclick="${action}"` : ''} style="${r.affordable ? 'cursor:pointer' : ''};flex-wrap:wrap">
+      <div class="reward-item${r.affordable ? '' : ' locked'}" onclick="openRewardConfirm('${r.key}')" style="cursor:pointer">
         <div class="reward-body">
           <div class="reward-title">${r.title}</div>
-          <div class="reward-hint">${hint}</div>
-          ${cashBtn}
+          <div class="reward-hint">${r.hint}</div>
         </div>
         <div class="reward-cost">${r.cost}</div>
       </div>`;
   }).join('');
-
-  document.getElementById('rewards-body').innerHTML =
-    `<div class="sm-hint" style="margin-bottom:4px">У тебя <b>${d.points}</b> баллов.</div>${items}`;
 }
 
-async function buyRewardWithRubles(key, btn){
-  if (btn){ btn.disabled = true; btn.textContent = 'Открываю…'; }
+/* Попап-подтверждение — свой, не системный alert. Три ветки: не хватает уровня
+   (просто информируем), хватает баллов (подтверждение траты), не хватает баллов
+   (предложение купить за рубли + неяркая ссылка на страницу про баллы). */
+
+function openRewardConfirm(key){
+  const r = lastRewardsData && (lastRewardsData.rewards || []).find(x => x.key === key);
+  if (!r) return;
+
+  let body;
+  if (r.level_locked){
+    body = `<div class="sm-hint">Откроется на уровне ${r.unlock_level}. Пока продолжай копить баллы.</div>`;
+  } else if (r.affordable){
+    body = `
+      <div class="sm-hint" style="text-align:center;margin-bottom:14px">Хочешь получить «${r.title}» за ${r.cost} баллов?</div>
+      <button class="lec-link-btn access-btn" onclick="confirmRewardRequest('${key}', this)">Давай!</button>`;
+  } else {
+    body = `
+      <div class="sm-hint" style="text-align:center;margin-bottom:14px">«${r.title}» доступен за ${r.cost} баллов, но если тебе прям хочется получить его сейчас, можешь просто купить его за рубли.</div>
+      <button class="lec-link-btn access-btn" onclick="confirmRewardBuy('${key}', this)">Хочу!</button>
+      <div class="payment-help-link" style="margin-top:10px" onclick="closeRewardConfirm();closeRewards();switchView('points-info')">Что такое баллы</div>`;
+  }
+
+  document.getElementById('reward-confirm-title').textContent = r.title;
+  document.getElementById('reward-confirm-body').innerHTML = body;
+  document.getElementById('reward-confirm-overlay').classList.add('open');
+}
+
+function closeRewardConfirm(){
+  document.getElementById('reward-confirm-overlay').classList.remove('open');
+}
+
+async function confirmRewardRequest(key, btn){
+  btn.disabled = true;
+  btn.textContent = 'Отправляю…';
+  try {
+    const d = await apiRequest(`${API_URL}/rewards/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, key })
+    }, 20000);
+    points = d.points_left;
+    const pointsEl = document.getElementById('p-points');
+    if (pointsEl) pointsEl.textContent = points;
+    updateMenuPointsBadge();
+    closeRewardConfirm();
+    closeRewards();
+    showToast('Заявка отправлена — Денис свяжется с тобой');
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    btn.disabled = false;
+    btn.textContent = 'Давай!';
+  }
+}
+
+async function confirmRewardBuy(key, btn){
+  btn.disabled = true;
+  btn.textContent = 'Открываю…';
   try {
     const d = await apiRequest(`${API_URL}/rewards/buy-with-rubles`, {
       method: 'POST',
@@ -1829,11 +1912,13 @@ async function buyRewardWithRubles(key, btn){
       body: JSON.stringify({ telegram_id: telegramId, key })
     }, 20000);
     openUrl(d.link);
+    closeRewardConfirm();
     closeRewards();
     showToast('Открыл страницу оплаты — баллы для покупки не нужны, всё за рубли');
   } catch (e) {
     showToast(e.message || 'Не получилось');
-    if (btn){ btn.disabled = false; btn.textContent = 'Купить за рубли'; }
+    btn.disabled = false;
+    btn.textContent = 'Хочу!';
   }
 }
 
@@ -1857,25 +1942,6 @@ async function submitDonation(){
   } finally {
     btn.disabled = false;
     btn.textContent = 'Задонатить';
-  }
-}
-
-async function requestReward(key, el){
-  if (el) el.style.pointerEvents = 'none';
-  try {
-    const d = await apiRequest(`${API_URL}/rewards/request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, key })
-    }, 20000);
-    points = d.points_left;
-    const pointsEl = document.getElementById('p-points');
-    if (pointsEl) pointsEl.textContent = points;
-    closeRewards();
-    showToast('Заявка отправлена — Денис свяжется с тобой');
-  } catch (e) {
-    showToast(e.message || 'Не получилось');
-    if (el) el.style.pointerEvents = '';
   }
 }
 
@@ -2219,7 +2285,13 @@ async function resetOnboardingProgress(){
   alert('Прогресс онбординга сброшен (включая метки первого визита, канала и чата)');
 }
 
+function updateMenuPointsBadge(){
+  const el = document.getElementById('menu-points-badge');
+  if (el) el.textContent = points > 9999 ? Math.round(points / 1000) + 'k' : points;
+}
+
 function renderLevelCard(){
+  updateMenuPointsBadge();
   const card = document.getElementById('level-card');
   if (!card) return;
   if (!isMember) {
@@ -2384,9 +2456,9 @@ function renderStepsPopup(){
         <div style="font-family:var(--disp);font-weight:800;font-size:30px">${points}</div>
         <div style="font-size:12px;color:var(--text-dim)">баллов на балансе · ${progressLine}</div>
       </div>
-      <button class="step-row-btn" onclick="closeStepsPopup();switchView('library')"><span>📚</span><span>Посмотреть лекции</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></button>
-      <button class="step-row-btn" onclick="closeStepsPopup();openPersonalPlan()"><span>🗺️</span><span>Пройти свой личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></button>
-      <div class="step-row" id="steps-next-event"><span>📅</span><span>Сходить на живую встречу</span></div>
+      <button class="step-row-btn" onclick="closeStepsPopup();switchView('library')"><span>Посмотреть лекции</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></button>
+      <button class="step-row-btn" onclick="closeStepsPopup();openPersonalPlan()"><span>Пройти свой личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></button>
+      <div class="step-row" id="steps-next-event"><span>Сходить на живую встречу</span></div>
     `;
     loadNextEventIntoSteps();
     return;
@@ -2408,9 +2480,9 @@ async function loadNextEventIntoSteps(){
   try {
     const d = await apiRequest(`${API_URL}/schedule/next`, {}, 8000);
     if (d.found) {
-      row.outerHTML = `<button class="step-row-btn" onclick="closeStepsPopup();switchView('schedule')"><span>📅</span><span>${d.title} — ${d.label}</span></button>`;
+      row.outerHTML = `<button class="step-row-btn" onclick="closeStepsPopup();switchView('schedule')"><span>${d.title} — ${d.label}</span></button>`;
     } else {
-      row.outerHTML = `<button class="step-row-btn" onclick="closeStepsPopup();switchView('schedule')"><span>📅</span><span>Посмотреть расписание</span></button>`;
+      row.outerHTML = `<button class="step-row-btn" onclick="closeStepsPopup();switchView('schedule')"><span>Посмотреть расписание</span></button>`;
     }
   } catch (e) {}
 }
@@ -3448,6 +3520,18 @@ function reportHomeScreenAdded(){
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id: telegramId, home_screen_added: true })
   }).catch(()=>{});
+}
+
+// Реальный сигнал (standalone-режим) не всегда доступен во время тестирования в Telegram —
+// человек может честно подтвердить шаг сам, без повторной установки ради каждого теста
+function markHomeScreenAddedManually(){
+  homeScreenAdded = true;
+  reportHomeScreenAdded();
+  closeAddToHomeScreenPopup();
+  checkLevelUp();
+  renderLevelCard();
+  renderStepsPopup();
+  showToast('Шаг засчитан');
 }
 
 /* ── Вход в веб-версию ────────────────────────────────────────────────────────
