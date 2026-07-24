@@ -294,6 +294,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .level-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .level-card-title{font-weight:700;font-size:13px}
 .level-card.level-card--warning .level-card-title{color:#e05252}
+.reward-level-badge{position:fixed;top:calc(var(--safe-top) + 74px);right:20px;z-index:501;width:34px;height:34px;border-radius:50%;background:var(--warm);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:14px;box-shadow:0 6px 16px -4px rgba(0,0,0,0.4);cursor:pointer}
 .level-card-frac{font-size:12px;color:var(--text-faint)}
 .level-bar-track{width:100%;height:8px;border-radius:6px;background:var(--card2);overflow:hidden}
 .level-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--warm),var(--lav));width:0%;transition:width .5s ease}
@@ -428,6 +429,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div id="level-card-warning" style="display:none;font-size:11.5px;font-weight:700;color:#e05252;margin-top:8px">⚠️ Обязательно закончи регистрацию!</div>
 </div>
 
+<!-- Круглый индикатор уровня (только для pointsMode, уровень 3+) — намеренно отдельно
+     от прогресс-бара, тап открывает "что открывается на каком уровне" -->
+<div class="reward-level-badge" id="reward-level-badge" style="display:none" onclick="event.stopPropagation();openLevelsPopup()">
+  <span id="reward-level-badge-num">3</span>
+</div>
+
 <div class="shell" id="app-shell" style="display:none">
 
   <header>
@@ -560,6 +567,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <!-- ── Уведомления ── -->
   <!-- ── Библиотека ── -->
   <div class="view" id="view-library">
+    <div class="section-label">Твой личный план</div>
+    <div class="card" id="personal-plan-card">
+      <div class="reward-hint" style="margin-bottom:10px">Скоро здесь появится маршрут, который ИИ-помощник составит специально под тебя — какие лекции смотреть и в каком порядке.</div>
+      <div id="personal-plan-saved"></div>
+    </div>
+
     <div class="section-label">Потоки</div>
     <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
 
@@ -964,6 +977,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="icon-btn" onclick="closeRewards()">✕</button>
     </div>
     <div id="rewards-body"></div>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="levels-overlay" onclick="if(event.target===this) closeLevelsPopup()">
+  <div class="sched-popup" id="levels-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Уровни клуба</div>
+      <button class="icon-btn" onclick="closeLevelsPopup()">✕</button>
+    </div>
+    <div id="levels-body"></div>
   </div>
 </div>
 
@@ -1378,6 +1402,11 @@ async function loadProfile() {
     builtPath = !!u.built_path;
     points = u.points || 0;
     hasPushSubscription = !!u.has_push_subscription;
+    rewardLevel = u.reward_level || 3;
+    lifetimePoints = u.lifetime_points || 0;
+    nextLevelPoints = u.next_level_points ?? null;
+    pointsToNext = u.points_to_next ?? null;
+    progressFraction = u.progress_fraction ?? 0;
     // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
     // (например, старое тестовое значение) — не пытаемся рендерить несуществующий контент,
     // просто остаёмся на последнем реальном уровне.
@@ -1986,6 +2015,11 @@ let chatJoined = false;
 let homeScreenAdded = false;
 let points = 0;
 let hasPushSubscription = false;
+let rewardLevel = 3;
+let lifetimePoints = 0;
+let nextLevelPoints = null;
+let pointsToNext = null;
+let progressFraction = 0;
 let pendingJoinKey = null;       // 'channel' | 'chat' | null — ждём подтверждения с сервера после клика
 let showRegistrationWarning = false; // true только если это НЕ первый заход и регистрация (уровень 1) не завершена
 
@@ -2095,26 +2129,82 @@ async function resetOnboardingProgress(){
 function renderLevelCard(){
   const card = document.getElementById('level-card');
   if (!card) return;
-  if (!isMember) { card.style.display = 'none'; document.body.classList.remove('onboarding-bar-visible'); return; }
+  if (!isMember) {
+    card.style.display = 'none';
+    document.body.classList.remove('onboarding-bar-visible');
+    const badge = document.getElementById('reward-level-badge');
+    if (badge) badge.style.display = 'none';
+    return;
+  }
   checkLevelUp(); // шаги могли завершиться сами (напр. пришёл channel_joined с сервера) — проверяем переход на новый уровень при каждой отрисовке, не только по клику
   const def = currentLevelDef();
   card.style.display = 'block';
   document.body.classList.add('onboarding-bar-visible'); // перманентно, больше никогда не прячем
   document.getElementById('level-card-title').textContent = def.title;
+  const badge = document.getElementById('reward-level-badge');
   if (def.pointsMode) {
-    document.getElementById('level-card-frac').textContent = `${points} очков`;
-    // Порог следующего уровня ещё не решён — бар просто показывает прогресс "по кругу"
-    // каждые 1000 очков, чисто декоративно, чтобы бар не стоял на месте
-    document.getElementById('level-bar-fill').style.width = `${(points % 1000) / 10}%`;
+    // Прогресс считается от lifetime_points (сколько заработано за всё время), а не от
+    // баланса к трате — трата баллов на скидку/награду никогда не откатывает бар назад
+    if (nextLevelPoints){
+      document.getElementById('level-card-frac').textContent = `${pointsToNext} до след. уровня`;
+      document.getElementById('level-bar-fill').style.width = `${progressFraction * 100}%`;
+    } else {
+      // Уровни ещё не настроены в дашборде — тот же декоративный бар "по кругу", что был раньше
+      document.getElementById('level-card-frac').textContent = `${points} баллов`;
+      document.getElementById('level-bar-fill').style.width = `${progressFraction * 100}%`;
+    }
+    if (badge){
+      badge.style.display = 'flex';
+      document.getElementById('reward-level-badge-num').textContent = rewardLevel;
+    }
   } else {
     const done = def.steps.filter(s => onboardStepDone(s.key)).length;
     const total = def.steps.length;
     document.getElementById('level-card-frac').textContent = `${done}/${total}`;
     document.getElementById('level-bar-fill').style.width = `${(done / total) * 100}%`;
+    if (badge) badge.style.display = 'none';
   }
   card.classList.toggle('level-card--warning', showRegistrationWarning);
   document.getElementById('level-card-warning').style.display = showRegistrationWarning ? 'block' : 'none';
   updateLevelBarScrollPosition();
+}
+
+/* ── Попап уровней (тап по круглому индикатору) — что открывается на каком уровне ── */
+
+function openLevelsPopup(){
+  document.getElementById('levels-overlay').classList.add('open');
+  document.getElementById('levels-body').innerHTML = '<div class="sm-hint" style="padding:16px 0;text-align:center">Загружаю…</div>';
+  loadLevels();
+}
+function closeLevelsPopup(){ document.getElementById('levels-overlay').classList.remove('open'); }
+
+async function loadLevels(){
+  try {
+    const levels = await apiRequest(`${API_URL}/levels`, {}, 10000);
+    renderLevels(levels);
+  } catch (e) {
+    document.getElementById('levels-body').innerHTML = '<div class="sm-hint" style="padding:16px 0;text-align:center">Не получилось загрузить</div>';
+  }
+}
+
+function renderLevels(levels){
+  const el = document.getElementById('levels-body');
+  if (!levels.length){
+    el.innerHTML = `<div class="sm-hint" style="padding:16px 0;text-align:center">Ты на уровне ${rewardLevel} · ${lifetimePoints} баллов заработано всего</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="sm-hint" style="margin-bottom:10px">Сейчас ты на уровне <b>${rewardLevel}</b> · заработано всего <b>${lifetimePoints}</b> баллов</div>` +
+    levels.map(l => {
+      const reached = rewardLevel >= l.level;
+      const rewardsText = l.rewards.length ? l.rewards.join(', ') : '—';
+      return `<div class="reward-item${reached ? '' : ' locked'}">
+        <div class="reward-body">
+          <div class="reward-title">Уровень ${l.level}${reached ? ' ✓' : ''}</div>
+          <div class="reward-hint">${rewardsText}</div>
+        </div>
+        <div class="reward-cost">${l.points_required}</div>
+      </div>`;
+    }).join('');
 }
 
 /* ── Попап шагов (открывается по тапу на прилипший прогресс-бар) ── */
@@ -2131,6 +2221,11 @@ async function refreshOnboardStatus(){
       builtPath = !!u.built_path;
       points = u.points || 0;
       hasPushSubscription = !!u.has_push_subscription;
+      rewardLevel = u.reward_level || 3;
+      lifetimePoints = u.lifetime_points || 0;
+      nextLevelPoints = u.next_level_points ?? null;
+      pointsToNext = u.points_to_next ?? null;
+      progressFraction = u.progress_fraction ?? 0;
       serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
@@ -2188,15 +2283,19 @@ function renderStepsPopup(){
   if (!el) return;
   const def = currentLevelDef();
   if (def.pointsMode) {
+    const progressLine = nextLevelPoints
+      ? `${pointsToNext} баллов до уровня ${rewardLevel + 1}`
+      : `${lifetimePoints} баллов заработано всего`;
     el.innerHTML = `
       <div style="text-align:center;padding:8px 0 18px">
         <div style="font-family:var(--disp);font-weight:800;font-size:30px">${points}</div>
-        <div style="font-size:12px;color:var(--text-dim)">очков заработано</div>
+        <div style="font-size:12px;color:var(--text-dim)">баллов на балансе · ${progressLine}</div>
       </div>
-      <div class="step-row"><span>📚 Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
-      <div class="step-row"><span>💳 Оплатить ещё месяц</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
-      <div class="step-row"><span>🗺️ Построить свой путь</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
+      <button class="step-row-btn" onclick="closeStepsPopup();switchView('library')"><span>📚</span><span>Посмотреть лекции</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></button>
+      <button class="step-row-btn" onclick="closeStepsPopup();openPersonalPlan()"><span>🗺️</span><span>Пройти свой личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></button>
+      <div class="step-row" id="steps-next-event"><span>📅</span><span>Сходить на живую встречу</span></div>
     `;
+    loadNextEventIntoSteps();
     return;
   }
   el.innerHTML = def.steps.map(s => {
@@ -2208,6 +2307,19 @@ function renderStepsPopup(){
     }
     return `<button class="step-row-btn" onclick="${s.action}()"><span class="howto-check">○</span><span>${s.label}</span></button>`;
   }).join('');
+}
+
+async function loadNextEventIntoSteps(){
+  const row = document.getElementById('steps-next-event');
+  if (!row) return;
+  try {
+    const d = await apiRequest(`${API_URL}/schedule/next`, {}, 8000);
+    if (d.found) {
+      row.outerHTML = `<button class="step-row-btn" onclick="closeStepsPopup();switchView('schedule')"><span>📅</span><span>${d.title} — ${d.label}</span></button>`;
+    } else {
+      row.outerHTML = `<button class="step-row-btn" onclick="closeStepsPopup();switchView('schedule')"><span>📅</span><span>Посмотреть расписание</span></button>`;
+    }
+  } catch (e) {}
 }
 
 function openChannelJoinLink(){ openUrl(CHANNEL_JOIN_LINK); pendingJoinKey = 'channel'; renderStepsPopup(); }
@@ -2530,6 +2642,7 @@ async function loadSavedSlugs(){
   try {
     const slugs = await fetch(`${API_URL}/saved-lectures?telegram_id=${telegramId}`).then(r => r.json());
     savedSlugs = new Set(slugs);
+    renderPersonalPlanSection();
   } catch (e) {}
 }
 
@@ -2554,6 +2667,7 @@ function toggleSaved(slug){
   document.querySelectorAll('.save-btn').forEach(el => {
     if (el.dataset.slug === slug) el.classList.toggle('saved', willBeSaved);
   });
+  renderPersonalPlanSection();
 
   // Если сейчас открыт отфильтрованный список "Смотреть позже" и лекцию убрали — карточка
   // должна пропасть из списка сразу, а не просто сменить цвет иконки.
@@ -2611,9 +2725,28 @@ async function loadLibrary() {
     allTags = collectTags(data);
     renderTagFilter();
     applyTagFilter();
+    renderPersonalPlanSection();
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
+}
+
+function renderPersonalPlanSection(){
+  const el = document.getElementById('personal-plan-saved');
+  if (!el) return;
+  const saved = allLectures.filter(l => savedSlugs.has(l.slug));
+  if (!saved.length) {
+    el.innerHTML = '<div class="reward-hint">Пока пусто — сохраняй лекции звёздочкой, и они появятся здесь</div>';
+    return;
+  }
+  el.innerHTML = `<div class="section-label" style="margin-top:14px">Сохранено на потом</div>` +
+    saved.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderLibrary(items) {
