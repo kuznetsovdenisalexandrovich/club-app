@@ -958,6 +958,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="push-telegram-notice-overlay" onclick="if(event.target===this) closePushTelegramNotice()">
+  <div class="center-modal" id="push-telegram-notice">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Уведомления недоступны здесь</div>
+      <button class="icon-btn" onclick="closePushTelegramNotice()">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:16px">Пуш-уведомления возможны только для веб-версии. В Telegram уведомления будут приходить только в бота.</div>
+    <button class="lec-link-btn access-btn" onclick="goInstallFromPushNotice()">Установить приложение</button>
+    <div class="payment-help-link" style="margin-top:10px" onclick="pushSkippedInTelegram()">Пропустить</div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="ask-denis-popup-overlay" onclick="if(event.target===this) closeAskDenisPopup()">
   <div class="center-modal" id="ask-denis-popup">
     <div class="center-modal-header">
@@ -2229,7 +2241,13 @@ function onboardStepDone(key){
   if (key === 'add_home_screen') return homeScreenAdded; // реальный статус с сервера — фронтенд сам шлёт сигнал, когда веб-версия открыта в standalone
   if (key === 'ask_denis') return askedDenis;   // реальный статус с сервера — ставится в POST /questions, не по клику
   if (key === 'build_path') return builtPath;    // на сервере, не в localStorage — чтобы не слетало в другом браузере (веб-версия)
-  if (key === 'enable_push') return hasPushSubscription; // реальная подписка на сервере, не localStorage
+  if (key === 'enable_push') {
+    // Реальная подписка — основной путь. Внутри Telegram Web Push технически недоступен,
+    // поэтому там же даём честный путь "пропустить с объяснением", а не просто фейково
+    // засчитываем шаг по клику — см. pushSkippedInTelegram()
+    if (hasPushSubscription) return true;
+    try { return localStorage.getItem('onboard_push_skipped_telegram') === '1'; } catch (e) { return false; }
+  }
   if (key === 'say_hi') {
     // Мягкий шаг — не требуем реального сообщения в чат. Засчитываем автоматически, как
     // только остальные шаги уровня пройдены (оплата/канал/чат/обучение), плюс по клику вручную.
@@ -2542,6 +2560,13 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function enablePushNotifications(){
+  // Web Push технически недоступен внутри WebView самого Telegram (это не наш баг —
+  // среда не поддерживает Notification API так, как в обычном браузере). Вместо того
+  // чтобы пытаться и молча проваливаться, честно объясняем и даём выбор.
+  if (isInTelegramApp()) {
+    openPushTelegramNotice();
+    return;
+  }
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     showToast('Этот браузер не поддерживает push-уведомления');
     return;
@@ -2580,6 +2605,30 @@ async function enablePushNotifications(){
   }
 }
 function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
+
+/* ── "Пуш недоступен внутри Telegram" — честное объяснение вместо попытки, которая
+   всё равно не сработает. "Установить приложение" возвращает на шаг назад — к попапу
+   со ссылкой (тот же, что и у шага "Добавить на экран"). "Пропустить" — короткое
+   объяснение тем же тостом, что и у копирования ссылки, и шаг засчитывается. */
+
+function openPushTelegramNotice(){
+  document.getElementById('push-telegram-notice-overlay').classList.add('open');
+}
+function closePushTelegramNotice(){
+  document.getElementById('push-telegram-notice-overlay').classList.remove('open');
+}
+function goInstallFromPushNotice(){
+  closePushTelegramNotice();
+  openAddToHomeScreenPopup();
+}
+function pushSkippedInTelegram(){
+  try { localStorage.setItem('onboard_push_skipped_telegram', '1'); } catch (e) {}
+  closePushTelegramNotice();
+  checkLevelUp();
+  renderLevelCard();
+  renderStepsPopup();
+  showToast('Уведомления будут приходить в Telegram бота');
+}
 
 /* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
 function openHowToUsePopup(){
@@ -3511,6 +3560,13 @@ function loadUrgentNewsForWebEntry(){
 // PWA с экрана Домой" (работает и для navigator.standalone на iOS, и для Android/Chrome)
 function isStandaloneWebApp(){
   return window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone === true;
+}
+
+function isInTelegramApp(){
+  // initDataUnsafe.user заполняется только при реальном запуске внутри Telegram —
+  // в отличие от platform, который иногда присутствует и вне Telegram
+  const tg = window.Telegram?.WebApp;
+  return !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
 }
 
 function reportHomeScreenAdded(){
