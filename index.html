@@ -373,6 +373,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .points-value{font-family:var(--disp);font-weight:700;font-size:44px;line-height:1;color:var(--warm)}
 .points-caption{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
 .points-hint{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:12px}
+.sm-slider-row{margin-top:14px}
+.sm-slider{width:100%;accent-color:var(--warm)}
+.sm-slider-value{font-size:13px;color:var(--text);text-align:center;margin-top:8px}
+.reward-item{display:flex;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid var(--line)}
+.reward-item:last-child{border-bottom:none}
+.reward-item.locked{opacity:.5}
+.reward-body{flex:1}
+.reward-title{font-size:13.5px;font-weight:700}
+.reward-hint{font-size:12px;color:var(--text-dim);line-height:1.45;margin-top:3px}
+.reward-cost{font-size:13px;font-weight:700;color:var(--warm);white-space:nowrap}
 /* ── Управление подпиской ── */
 .sub-manage-btn{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:none}
 .sub-manage-btn:active{transform:scale(0.98)}
@@ -575,7 +585,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <!-- ── Профиль ── -->
   <div class="view" id="view-profile">
     <div class="section-label">Подписка</div>
-    <div class="card sub-card">
+    <div class="card sub-card" onclick="openSubManage()" style="cursor:pointer">
       <div class="sub-left">
         <div class="sub-icon">◆</div>
         <div>
@@ -589,22 +599,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <button class="sub-manage-btn" id="sub-manage-btn" onclick="openSubManage()">Управление подпиской</button>
 
     <div class="section-label">Баллы</div>
-    <div class="card points-card">
+    <div class="card points-card" onclick="openRewards()" style="cursor:pointer">
       <div class="points-value" id="p-points">0</div>
       <div class="points-caption" id="p-points-caption">баллов</div>
-      <div class="points-hint">Копятся за просмотр лекций и продление подписки. 1000 баллов — следующий месяц за 1 ₽.</div>
-    </div>
-
-    <div class="section-label">Профиль</div>
-    <div class="card">
-      <div class="profile-row">
-        <span class="profile-label">Месяцев в клубе</span>
-        <span class="profile-value" id="p-months">—</span>
-      </div>
-      <div class="profile-row">
-        <span class="profile-label">Следующий платёж</span>
-        <span class="profile-value" id="p-next">—</span>
-      </div>
+      <div class="points-hint">Нажми, чтобы посмотреть, на что их можно потратить</div>
     </div>
 
     <div class="section-label">Помощь</div>
@@ -951,6 +949,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px">Опиши, что случилось — сообщение придёт Денису напрямую.</div>
     <textarea class="ai-question-input" id="support-input" rows="4" maxlength="2000" placeholder="Например: оплатил, но приложение не видит подписку"></textarea>
     <button class="lec-link-btn access-btn" id="support-send-btn" onclick="submitSupportMessage()">Отправить</button>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="rewards-overlay" onclick="if(event.target===this) closeRewards()">
+  <div class="sched-popup" id="rewards-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">На что потратить баллы</div>
+      <button class="icon-btn" onclick="closeRewards()">✕</button>
+    </div>
+    <div id="rewards-body"></div>
   </div>
 </div>
 
@@ -1350,8 +1359,7 @@ async function loadProfile() {
     }
 
     document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
-    document.getElementById('p-months').textContent = monthsSince(u.first_payment_date);
-    document.getElementById('p-next').textContent = u.next_payment_date || '—';
+    // Месяцы в клубе и дата платежа переехали в экран управления подпиской
     const pointsEl = document.getElementById('p-points');
     if (pointsEl) pointsEl.textContent = u.points || 0;
 
@@ -1485,14 +1493,21 @@ function renderSubManage(){
       <div class="sm-row"><button class="sm-btn" onclick="reactivateSubscription(this)">Восстановить подписку</button></div>
     </div>` : '';
 
-  let discountBlock;
+  // Оплата баллами: один балл = один рубль скидки. Слайдер, а не "всё или ничего" —
+  // человеку, не готовому отдать полную сумму, часто нормально заплатить 300-500
+  let pointsBlock;
   if (s.discount_pending){
-    discountBlock = `<div class="sm-hint">Скидка уже применена — ближайшее списание пройдёт как ${s.discount_price} ₽.</div>`;
-  } else if (s.can_get_discount){
-    discountBlock = `<div class="sm-hint">Обменяй ${s.discount_cost} очков — и следующее списание пройдёт как ${s.discount_price} ₽ вместо ${s.cost} ₽.</div>
-      <div class="sm-row"><button class="sm-btn" onclick="applyDiscount(this)">Обменять ${s.discount_cost} очков</button></div>`;
+    pointsBlock = `<div class="sm-hint">Баллы на ближайший платёж уже потрачены.</div>`;
+  } else if (s.can_pay_with_points){
+    const max = s.points_payment_max;
+    pointsBlock = `<div class="sm-hint">Один балл = один рубль. Можно закрыть баллами часть платежа или почти весь.</div>
+      <div class="sm-slider-row">
+        <input type="range" class="sm-slider" id="sm-points-slider" min="${s.points_payment_min}" max="${max}" step="10" value="${max}" oninput="updatePointsPreview()">
+      </div>
+      <div class="sm-slider-value" id="sm-points-preview"></div>
+      <div class="sm-row"><button class="sm-btn" onclick="applyDiscount(this)">Списать баллы</button></div>`;
   } else {
-    discountBlock = `<div class="sm-hint">Нужно ${s.discount_cost} очков, у тебя ${s.points}. Очки копятся за просмотр лекций и продление подписки.</div>`;
+    pointsBlock = `<div class="sm-hint">Нужно минимум ${s.points_payment_min} баллов, у тебя ${s.points}.</div>`;
   }
 
   body.innerHTML = `
@@ -1500,11 +1515,12 @@ function renderSubManage(){
     <div class="sm-block">
       <div class="sm-title">Следующее списание</div>
       <div class="sm-hint">${s.next_payment || '—'}${s.cost ? ' · ' + s.cost + ' ₽' : ''}</div>
+      <div class="sm-hint">В клубе ${monthsSince(s.first_payment_date)} мес.</div>
       ${frozen}
     </div>
     <div class="sm-block">
-      <div class="sm-title">Платёж за ${s.discount_price} ₽</div>
-      ${discountBlock}
+      <div class="sm-title">Оплатить баллами</div>
+      ${pointsBlock}
     </div>
     <div class="sm-block">
       <div class="sm-title">Сдвинуть платёж</div>
@@ -1521,10 +1537,22 @@ function renderSubManage(){
       <button class="sm-quiet" onclick="openCancelFunnel()">Кажется, я хочу остановить подписку</button>
     </div>
   `;
+  updatePointsPreview();
+}
+
+function updatePointsPreview(){
+  const slider = document.getElementById('sm-points-slider');
+  const preview = document.getElementById('sm-points-preview');
+  if (!slider || !preview || !subStatus) return;
+  const spend = parseInt(slider.value, 10);
+  const left = Math.max(subStatus.cost - spend, 0);
+  preview.innerHTML = `<b>${spend}</b> баллов → заплатишь <b>${left} ₽</b> вместо ${subStatus.cost} ₽`;
 }
 
 async function applyDiscount(btn){
-  // Двойное нажатие вместо системного confirm: очки тратятся безвозвратно,
+  const slider = document.getElementById('sm-points-slider');
+  const spend = slider ? parseInt(slider.value, 10) : 0;
+  // Двойное нажатие вместо системного confirm: баллы тратятся безвозвратно,
   // а нативный confirm внутри Telegram выглядит чужеродно
   if (!discountArmed){
     discountArmed = true;
@@ -1537,7 +1565,7 @@ async function applyDiscount(btn){
     const d = await apiRequest(`${API_URL}/subscription/discount`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId })
+      body: JSON.stringify({ telegram_id: telegramId, points: spend })
     }, 20000);
     showToast(`Готово — следующий платёж ${d.new_price} ₽`);
     points = d.points_left;
@@ -1565,8 +1593,6 @@ async function applyShift(btn){
       body: JSON.stringify({ telegram_id: telegramId, date })
     }, 20000);
     showToast(`Платёж перенесён на ${d.next_payment}`);
-    const pn = document.getElementById('p-next');
-    if (pn) pn.textContent = d.next_payment;
     await loadSubStatus();
   } catch (e) {
     showToast(e.message || 'Не получилось');
@@ -1584,12 +1610,70 @@ async function applyFreeze(days, btn){
       body: JSON.stringify({ telegram_id: telegramId, days })
     }, 20000);
     showToast(`Пауза до ${d.frozen_until}`);
-    const pn = document.getElementById('p-next');
-    if (pn) pn.textContent = d.next_payment;
     await loadSubStatus();
   } catch (e) {
     showToast(e.message || 'Не получилось');
     if (btn){ btn.disabled = false; btn.textContent = days + ' дней'; }
+  }
+}
+
+/* ── Награды за баллы ─────────────────────────────────────────────────────────
+   Каталог живёт на бэкенде, чтобы дашборд и приложение видели одно и то же.
+   Оплата месяца открывает экран управления подпиской со слайдером, остальное —
+   заявка Денису: он выдаёт руками, баллы списываются сразу. */
+
+async function openRewards(){
+  document.getElementById('rewards-overlay').classList.add('open');
+  document.getElementById('rewards-body').innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Загружаю…</div>';
+  try {
+    const d = await apiRequest(`${API_URL}/rewards?telegram_id=${telegramId}`, {}, 10000);
+    renderRewards(d);
+  } catch (e) {
+    document.getElementById('rewards-body').innerHTML =
+      `<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить.<br><br>${e.message || ''}</div>`;
+  }
+}
+
+function closeRewards(){
+  document.getElementById('rewards-overlay').classList.remove('open');
+}
+
+function renderRewards(d){
+  const items = (d.rewards || []).map(r => {
+    const action = r.affordable
+      ? (r.kind === 'payment' ? `closeRewards();openSubManage()` : `requestReward('${r.key}', this)`)
+      : '';
+    const hint = r.affordable ? r.hint : `Не хватает ${r.missing} баллов`;
+    return `
+      <div class="reward-item${r.affordable ? '' : ' locked'}" ${r.affordable ? `onclick="${action}"` : ''} style="${r.affordable ? 'cursor:pointer' : ''}">
+        <div class="reward-body">
+          <div class="reward-title">${r.title}</div>
+          <div class="reward-hint">${hint}</div>
+        </div>
+        <div class="reward-cost">${r.cost}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('rewards-body').innerHTML =
+    `<div class="sm-hint" style="margin-bottom:4px">У тебя <b>${d.points}</b> баллов.</div>${items}`;
+}
+
+async function requestReward(key, el){
+  if (el) el.style.pointerEvents = 'none';
+  try {
+    const d = await apiRequest(`${API_URL}/rewards/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, key })
+    }, 20000);
+    points = d.points_left;
+    const pointsEl = document.getElementById('p-points');
+    if (pointsEl) pointsEl.textContent = points;
+    closeRewards();
+    showToast('Заявка отправлена — Денис свяжется с тобой');
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    if (el) el.style.pointerEvents = '';
   }
 }
 
@@ -1635,8 +1719,8 @@ function renderCancelStep2(reason, alt){
   let offerHtml;
 
   if (offer === 'discount' && alt && alt.discount && alt.discount.available){
-    offerHtml = `<div class="sm-hint">У тебя ${alt.discount.points_have} очков — этого хватает, чтобы следующий месяц стоил ${alt.discount.new_price} ₽.</div>
-      <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openSubManage()">Посмотреть скидку</button></div>`;
+    offerHtml = `<div class="sm-hint">У тебя ${alt.discount.points_have} баллов — ими можно закрыть до ${alt.discount.max_spend} ₽ следующего платежа.</div>
+      <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openSubManage()">Оплатить баллами</button></div>`;
   } else if (offer === 'ask'){
     offerHtml = `<div class="sm-hint">Часто дело в том, что нужный материал просто не нашёлся. Спроси напрямую — разберём на ближайшей встрече.</div>
       <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openAskDenisPopup()">Задать вопрос Денису</button></div>`;
