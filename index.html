@@ -1103,6 +1103,18 @@ async function fetchWithTimeout(url, options, timeoutMs){
   }
 }
 
+/* fetchWithTimeout возвращает СВОЙ объект {ok, status, elapsed, response}, где ok — это
+   "сеть не отвалилась", а не "HTTP 200". Для обычных запросов к API нужен помощник,
+   который разворачивает всё это в данные или во внятную ошибку. */
+async function apiRequest(url, options, timeoutMs = 15000){
+  const res = await fetchWithTimeout(url, options, timeoutMs);
+  if (!res.ok) throw new Error(res.error || 'нет связи с сервером');
+  const r = res.response;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || `сервер ответил ${r.status}`);
+  return data;
+}
+
 async function diagPingApi(){
   const el = document.getElementById('diag-result');
   el.textContent = `Стучусь в ${API_URL}/ ...`;
@@ -1440,9 +1452,7 @@ function closeSubManage(){
 
 async function loadSubStatus(){
   try {
-    const r = await fetchWithTimeout(`${API_URL}/subscription/status?telegram_id=${telegramId}`, {}, 10000);
-    if (!r.ok) throw new Error('сервер ответил ' + r.status);
-    subStatus = await r.json();
+    subStatus = await apiRequest(`${API_URL}/subscription/status?telegram_id=${telegramId}`, {}, 10000);
     renderSubManage();
   } catch (e) {
     // Показываем реальную причину, а не глухое "не получилось": без неё непонятно,
@@ -1524,13 +1534,11 @@ async function applyDiscount(btn){
   btn.disabled = true;
   btn.textContent = 'Отправляю…';
   try {
-    const r = await fetchWithTimeout(`${API_URL}/subscription/discount`, {
+    const d = await apiRequest(`${API_URL}/subscription/discount`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId })
     }, 20000);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Не получилось');
     showToast(`Готово — следующий платёж ${d.new_price} ₽`);
     points = d.points_left;
     discountArmed = false;
@@ -1551,13 +1559,11 @@ async function applyShift(btn){
   btn.disabled = true;
   btn.textContent = 'Переношу…';
   try {
-    const r = await fetchWithTimeout(`${API_URL}/subscription/shift`, {
+    const d = await apiRequest(`${API_URL}/subscription/shift`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, date })
     }, 20000);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Не получилось');
     showToast(`Платёж перенесён на ${d.next_payment}`);
     const pn = document.getElementById('p-next');
     if (pn) pn.textContent = d.next_payment;
@@ -1572,13 +1578,11 @@ async function applyShift(btn){
 async function applyFreeze(days, btn){
   if (btn){ btn.disabled = true; btn.textContent = '…'; }
   try {
-    const r = await fetchWithTimeout(`${API_URL}/subscription/freeze`, {
+    const d = await apiRequest(`${API_URL}/subscription/freeze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, days })
     }, 20000);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Не получилось');
     showToast(`Пауза до ${d.frozen_until}`);
     const pn = document.getElementById('p-next');
     if (pn) pn.textContent = d.next_payment;
@@ -1615,12 +1619,11 @@ async function chooseCancelReason(key){
   try {
     // confirm:false — подписку не трогаем, только сохраняем причину и получаем,
     // что можно предложить взамен
-    const r = await fetchWithTimeout(`${API_URL}/subscription/cancel`, {
+    const d = await apiRequest(`${API_URL}/subscription/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, reason: reason ? reason.label : key, confirm: false })
     }, 20000);
-    const d = await r.json();
     alt = d.alternatives || null;
   } catch (e) {}
   renderCancelStep2(reason, alt);
@@ -1665,13 +1668,11 @@ async function reactivateSubscription(btn){
   btn.disabled = true;
   btn.textContent = 'Возвращаю…';
   try {
-    const r = await fetchWithTimeout(`${API_URL}/subscription/reactivate`, {
+    await apiRequest(`${API_URL}/subscription/reactivate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId })
     }, 20000);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Не получилось');
     showToast('С возвращением!');
     await loadProfile();
     await loadSubStatus();
@@ -1687,13 +1688,11 @@ async function confirmCancel(btn){
   btn.textContent = 'Отменяю…';
   try {
     const reason = CANCEL_REASONS.find(r => r.key === cancelReasonKey);
-    const r = await fetchWithTimeout(`${API_URL}/subscription/cancel`, {
+    await apiRequest(`${API_URL}/subscription/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, reason: reason ? reason.label : '', confirm: true })
     }, 20000);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'Не получилось');
     document.getElementById('sub-cancel-title').textContent = 'Подписка отменена';
     document.getElementById('sub-cancel-body').innerHTML =
       '<div class="sm-hint">Автосписаний больше не будет. Доступ сохранится до конца оплаченного периода, а вернуть подписку можно будет одной кнопкой в этом же разделе.</div>' +
@@ -1724,8 +1723,7 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
 
 async function loadAppSettings(){
   try {
-    const r = await fetchWithTimeout(`${API_URL}/settings`, {}, 8000);
-    appSettings = Object.assign(appSettings, await r.json());
+    appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
   } catch (e) {}
   applyAppSettings();
 }
@@ -1776,12 +1774,11 @@ async function submitSupportMessage(){
   btn.disabled = true;
   btn.textContent = 'Отправляю…';
   try {
-    const r = await fetchWithTimeout(`${API_URL}/support`, {
+    await apiRequest(`${API_URL}/support`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, text })
     }, 15000);
-    if (!r.ok) throw new Error('Не получилось отправить');
     closeSupportPopup();
     showToast('Отправлено — Денис увидит сообщение');
   } catch (e) {
@@ -2784,8 +2781,7 @@ async function pollPaymentOnce(){
 
   let paid = false;
   try {
-    const r = await fetchWithTimeout(`${API_URL}/users/me?telegram_id=${telegramId}`, {}, 8000);
-    const u = await r.json();
+    const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}`, {}, 8000);
     paid = !!(u && u.found && u.is_member);
   } catch (e) {}
 
