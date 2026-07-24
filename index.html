@@ -368,6 +368,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .copy-link-row{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;margin-top:6px}
 .copy-link-row span.copy-link-text{flex:1;font-size:12.5px;color:var(--text);word-break:break-all;user-select:all}
 .copy-link-row svg{flex-shrink:0;color:var(--text-faint)}
+/* ── Баллы в профиле ── */
+.points-card{text-align:center}
+.points-value{font-family:var(--disp);font-weight:700;font-size:44px;line-height:1;color:var(--warm)}
+.points-caption{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
+.points-hint{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:12px}
 /* ── Управление подпиской ── */
 .sub-manage-btn{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:none}
 .sub-manage-btn:active{transform:scale(0.98)}
@@ -583,6 +588,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div class="sub-note" id="sub-note"></div>
     <button class="sub-manage-btn" id="sub-manage-btn" onclick="openSubManage()">Управление подпиской</button>
 
+    <div class="section-label">Баллы</div>
+    <div class="card points-card">
+      <div class="points-value" id="p-points">0</div>
+      <div class="points-caption" id="p-points-caption">баллов</div>
+      <div class="points-hint">Копятся за просмотр лекций и продление подписки. 1000 баллов — следующий месяц за 1 ₽.</div>
+    </div>
+
     <div class="section-label">Профиль</div>
     <div class="card">
       <div class="profile-row">
@@ -594,23 +606,26 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <span class="profile-value" id="p-next">—</span>
       </div>
     </div>
-    <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
 
-    <div style="text-align:center;font-size:13px;color:#fff;margin-top:20px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
-
-    <div class="section-label">Тест</div>
+    <div class="section-label">Помощь</div>
     <div class="card">
-      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="testCheckMembership()">Проверить членство (тест)</button>
-      <div style="font-size:12.5px;color:var(--text-dim);margin-top:10px;text-align:center" id="test-result"></div>
+      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="openSupportPopup()">Написать в поддержку</button>
     </div>
 
-    <div class="section-label">Диагностика соединения</div>
-    <div class="card">
-      <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="diagPingApi()">Проверить бэкенд (простой пинг)</button>
-      <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="diagPingUsersMe()">Проверить загрузку профиля (/users/me)</button>
-      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="diagShowEnv()">Показать инфо о среде</button>
-      <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="diag-result"></div>
+    <div id="debug-blocks" style="display:none">
+      <div class="section-label">Отладка</div>
+      <div class="card">
+        <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="testCheckMembership()">Проверить членство (тест)</button>
+        <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:10px;text-align:center" id="test-result"></div>
+        <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="diagPingApi()">Проверить бэкенд (простой пинг)</button>
+        <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="diagPingUsersMe()">Проверить загрузку профиля (/users/me)</button>
+        <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="diagShowEnv()">Показать инфо о среде</button>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="diag-result"></div>
+      </div>
+      <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
     </div>
+
+    <div id="requisites-line" style="text-align:center;font-size:13px;color:#fff;margin-top:28px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -735,18 +750,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 <!-- Срочная новость для ВСЕХ — видна и до логина (тут), и в ленте новостей после логина -->
 <div id="web-urgent-news-banner" class="news-block news-block--urgent" style="display:none;max-width:360px;margin:0 auto 16px"></div>
 
-<!-- Не в Telegram — веб-вход по номеру телефона (временно без SMS-кода, пока ждём одобрение SMS.RU) -->
+<!-- Не в Telegram — веб-вход по номеру. Один и тот же экран работает в двух режимах:
+     с SMS-кодом и без него (зависит от глобального тумблера sms_login_enabled) -->
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
-  <h2>Вход по номеру телефона</h2>
-  <p>Укажи номер, которым оплачивал(а) подписку.</p>
+  <h2 id="web-login-title">Вход по номеру телефона</h2>
+  <p id="web-login-subtitle">Укажи номер, которым оплачивал(а) подписку.</p>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
     <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" placeholder="+7 999 123-45-67" inputmode="tel">
-    <button class="lec-link-btn access-btn" onclick="quickPhoneLogin()">Войти</button>
+    <button class="lec-link-btn access-btn" id="web-login-btn" onclick="handleLoginButton()">Войти</button>
   </div>
   <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
+  <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
+  <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
-  <div style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+  <div class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
 <!-- Вне Telegram, не в standalone-режиме — сначала подсказка, как добавить на главный экран -->
@@ -921,6 +939,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="icon-btn" onclick="closeCancelFunnel()">✕</button>
     </div>
     <div id="sub-cancel-body"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="support-popup-overlay" onclick="if(event.target===this) closeSupportPopup()">
+  <div class="center-modal" id="support-popup">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Написать в поддержку</div>
+      <button class="icon-btn" onclick="closeSupportPopup()">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px">Опиши, что случилось — сообщение придёт Денису напрямую.</div>
+    <textarea class="ai-question-input" id="support-input" rows="4" maxlength="2000" placeholder="Например: оплатил, но приложение не видит подписку"></textarea>
+    <button class="lec-link-btn access-btn" id="support-send-btn" onclick="submitSupportMessage()">Отправить</button>
   </div>
 </div>
 
@@ -1310,6 +1340,8 @@ async function loadProfile() {
     document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
     document.getElementById('p-months').textContent = monthsSince(u.first_payment_date);
     document.getElementById('p-next').textContent = u.next_payment_date || '—';
+    const pointsEl = document.getElementById('p-points');
+    if (pointsEl) pointsEl.textContent = u.points || 0;
 
     document.getElementById('sub-name').textContent = u.sub_name || 'Без подписки';
     document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
@@ -1409,10 +1441,16 @@ function closeSubManage(){
 async function loadSubStatus(){
   try {
     const r = await fetchWithTimeout(`${API_URL}/subscription/status?telegram_id=${telegramId}`, {}, 10000);
+    if (!r.ok) throw new Error('сервер ответил ' + r.status);
     subStatus = await r.json();
     renderSubManage();
   } catch (e) {
-    document.getElementById('sub-manage-body').innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить. Проверь соединение и попробуй ещё раз.</div>';
+    // Показываем реальную причину, а не глухое "не получилось": без неё непонятно,
+    // упал ли запрос по сети, вернул ли сервер ошибку, или дело в чём-то третьем
+    document.getElementById('sub-manage-body').innerHTML =
+      '<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить.<br><br>' +
+      (e && e.message ? String(e.message) : 'причина неизвестна') +
+      '<br><br>API: ' + API_URL + '</div>';
   }
 }
 
@@ -1633,6 +1671,93 @@ async function confirmCancel(btn){
     showToast(e.message || 'Не получилось');
     btn.disabled = false;
     btn.textContent = 'Да, отменить подписку';
+  }
+}
+
+/* ── Глобальные настройки и отладочный режим ──────────────────────────────────
+   Настройки приходят с бэкенда и меняются из дашборда — без передеплоя приложения.
+   Отладочный режим живёт только в localStorage этого устройства: серверу про него
+   знать незачем, а включается он кодовой фразой через форму поддержки. */
+
+let appSettings = {
+  show_requisites: true,
+  sms_login_enabled: false,
+  allow_direct_phone_login: true,
+};
+
+let debugMode = false;
+try { debugMode = localStorage.getItem('debug_mode') === '1'; } catch (e) {}
+
+const DEBUG_ON_PHRASE  = 'отладочный режим';
+const DEBUG_OFF_PHRASE = 'обычный режим';
+
+async function loadAppSettings(){
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/settings`, {}, 8000);
+    appSettings = Object.assign(appSettings, await r.json());
+  } catch (e) {}
+  applyAppSettings();
+}
+
+function applyAppSettings(){
+  document.querySelectorAll('.requisites').forEach(el => {
+    el.style.display = appSettings.show_requisites ? '' : 'none';
+  });
+  const line = document.getElementById('requisites-line');
+  if (line) line.style.display = appSettings.show_requisites ? '' : 'none';
+}
+
+function applyDebugMode(){
+  const blocks = document.getElementById('debug-blocks');
+  if (blocks) blocks.style.display = debugMode ? '' : 'none';
+}
+
+function setDebugMode(on){
+  debugMode = on;
+  try { localStorage.setItem('debug_mode', on ? '1' : '0'); } catch (e) {}
+  applyDebugMode();
+  showToast(on ? 'Отладочный режим включён' : 'Отладочный режим выключен');
+}
+
+function openSupportPopup(){
+  document.getElementById('support-input').value = '';
+  document.getElementById('support-popup-overlay').classList.add('open');
+}
+
+function closeSupportPopup(){
+  document.getElementById('support-popup-overlay').classList.remove('open');
+}
+
+async function submitSupportMessage(){
+  const input = document.getElementById('support-input');
+  const text = (input.value || '').trim();
+  if (!text) return;
+
+  // Кодовые фразы — не сообщения, а переключатель. Наружу не уходят.
+  const normalized = text.toLowerCase().replace(/[.!]/g, '').trim();
+  if (normalized === DEBUG_ON_PHRASE || normalized === DEBUG_OFF_PHRASE){
+    setDebugMode(normalized === DEBUG_ON_PHRASE);
+    closeSupportPopup();
+    return;
+  }
+
+  const btn = document.getElementById('support-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Отправляю…';
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/support`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, text })
+    }, 15000);
+    if (!r.ok) throw new Error('Не получилось отправить');
+    closeSupportPopup();
+    showToast('Отправлено — Денис увидит сообщение');
+  } catch (e) {
+    showToast(e.message || 'Не получилось отправить');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Отправить';
   }
 }
 
@@ -2707,6 +2832,14 @@ function renderAccessButtons(result){
 function goToPayment(i){
   const b = window._paymentLinks[i];
   if (!b) return;
+  // Регистрируем намерение оплатить: в колбеке Продамуса telegram_id не приходит
+  // (customer_extra занят описанием, которое видит покупатель), так что это
+  // единственный способ связать будущий платёж с конкретным человеком
+  fetch(`${API_URL}/payments/intent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId })
+  }).catch(() => {});
   openUrl(b.link);
   openPostPay();
   startPaymentWatch();
@@ -2857,6 +2990,8 @@ function startApp(){
   document.getElementById('tabbar').style.display = 'flex';
   const urgentBanner = document.getElementById('web-urgent-news-banner');
   if (urgentBanner) urgentBanner.style.display = 'none';
+  applyDebugMode();
+  loadAppSettings();
   loadProfile();
   loadContinueWidget();
   loadNews();
@@ -2892,32 +3027,153 @@ function reportHomeScreenAdded(){
   }).catch(()=>{});
 }
 
-// TODO ВРЕМЕННО: пока не одобрен SMS.RU — вход просто по номеру + активной подписке,
-// без кода подтверждения. Вернуть sendPhoneCode/verifyPhoneCode (двухшаговый SMS-вход),
-// когда SMS реально заработают.
-function quickPhoneLogin(){
+/* ── Вход в веб-версию ────────────────────────────────────────────────────────
+   Экран один, стадии две. На первой — поле для номера и кнопка "Получить код",
+   на второй то же самое поле становится полем для кода, а кнопка — "Войти".
+   Второго поля и второй кнопки не появляется: меняются подписи, а не элементы.
+   Прямой вход по номеру без кода — запасной путь, показывается только после
+   второй попытки получить смс, и только если он разрешён тумблером в дашборде. */
+
+let loginStage = 'phone';      // phone | code
+let loginPhone = '';
+let codeSendAttempts = 0;
+
+function setLoginError(message){
+  const el = document.getElementById('web-login-error');
+  if (!message){ el.style.display = 'none'; return; }
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+function renderLoginStage(){
+  const input    = document.getElementById('phone-login-input');
+  const btn      = document.getElementById('web-login-btn');
+  const title    = document.getElementById('web-login-title');
+  const subtitle = document.getElementById('web-login-subtitle');
+  const resend   = document.getElementById('web-login-resend');
+  const fallback = document.getElementById('web-login-fallback');
+
+  if (loginStage === 'code'){
+    title.textContent = 'Введи код из смс';
+    subtitle.textContent = `Отправили смс с кодом на ${loginPhone}`;
+    input.type = 'tel';
+    input.inputMode = 'numeric';
+    input.maxLength = 4;
+    input.placeholder = '0000';
+    input.value = '';
+    btn.textContent = 'Войти';
+    resend.style.display = '';
+    // Запасной путь предлагаем не сразу: сначала пусть человек честно подождёт смс
+    fallback.style.display = (codeSendAttempts >= 2 && appSettings.allow_direct_phone_login) ? '' : 'none';
+  } else {
+    title.textContent = 'Вход по номеру телефона';
+    subtitle.textContent = 'Укажи номер, которым оплачивал(а) подписку.';
+    input.type = 'tel';
+    input.inputMode = 'tel';
+    input.removeAttribute('maxlength');
+    input.placeholder = '+7 999 123-45-67';
+    btn.textContent = appSettings.sms_login_enabled ? 'Получить код' : 'Войти';
+    resend.style.display = 'none';
+    fallback.style.display = 'none';
+  }
+  input.focus();
+}
+
+function handleLoginButton(){
+  if (loginStage === 'code') return verifyLoginCode();
   const phone = document.getElementById('phone-login-input').value.trim();
-  const errEl = document.getElementById('web-login-error');
-  errEl.style.display = 'none';
   if (!phone) return;
-  fetch(`${API_URL}/auth/phone/quick-login`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone })
-  })
-    .then(async r => {
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
-      telegramId = data.telegram_id;
-      document.getElementById('web-login-screen').style.display = 'none';
-      if (isStandaloneWebApp()) reportHomeScreenAdded();
-      startApp();
-    })
-    .catch(e => {
-      errEl.textContent = e.message || 'Не получилось войти — попробуй ещё раз чуть позже.';
-      errEl.style.display = 'block';
+  if (appSettings.sms_login_enabled){
+    loginPhone = phone;
+    sendLoginCode();
+  } else {
+    quickPhoneLogin(phone);
+  }
+}
+
+async function sendLoginCode(){
+  setLoginError('');
+  const btn = document.getElementById('web-login-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API_URL}/auth/phone/send-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: loginPhone })
     });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Не получилось отправить код');
+    codeSendAttempts += 1;
+    loginStage = 'code';
+    renderLoginStage();
+  } catch (e) {
+    setLoginError(e.message);
+    // Даже если смс не ушла, вторая неудачная попытка должна открыть запасной путь
+    codeSendAttempts += 1;
+    if (codeSendAttempts >= 2 && appSettings.allow_direct_phone_login){
+      document.getElementById('web-login-fallback').style.display = '';
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function resendLoginCode(){
+  loginStage = 'phone';
+  sendLoginCode();
+}
+
+async function verifyLoginCode(){
+  setLoginError('');
+  const code = document.getElementById('phone-login-input').value.trim();
+  if (!code) return;
+  const btn = document.getElementById('web-login-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API_URL}/auth/phone/verify-code`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: loginPhone, code })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
+    finishWebLogin(data.telegram_id);
+  } catch (e) {
+    setLoginError(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function loginWithoutCode(){
+  quickPhoneLogin(loginPhone);
+}
+
+async function quickPhoneLogin(phone){
+  setLoginError('');
+  const value = (phone || document.getElementById('phone-login-input').value || '').trim();
+  if (!value) return;
+  try {
+    const r = await fetch(`${API_URL}/auth/phone/quick-login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: value })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
+    finishWebLogin(data.telegram_id);
+  } catch (e) {
+    setLoginError(e.message || 'Не получилось войти — попробуй ещё раз чуть позже.');
+  }
+}
+
+function finishWebLogin(id){
+  telegramId = id;
+  document.getElementById('web-login-screen').style.display = 'none';
+  if (isStandaloneWebApp()) reportHomeScreenAdded();
+  startApp();
 }
 
 async function proceedToWebLogin(){
@@ -2935,7 +3191,12 @@ async function proceedToWebLogin(){
       return;
     }
   } catch (e) {}
+  // Настройки нужны ДО показа экрана: от них зависит, спрашивать код или пускать по номеру
+  await loadAppSettings();
+  loginStage = 'phone';
+  codeSendAttempts = 0;
   document.getElementById('web-login-screen').style.display = 'flex';
+  renderLoginStage();
 }
 
 function proceedPastHomeScreenInstructions(){
