@@ -864,7 +864,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 </div>
 
 <script>
-const API_URL = 'https://api.youselllikeagod-magazine.ru';
+// Быстрый контур для разработки (GitHub Pages → Railway напрямую, минуя кастомный
+// api.-домен, который сейчас периодически "плавает" из-за DPI-блокировок в РФ) —
+// и "чистовой" контур (Beget → api.youselllikeagod-magazine.ru) — на одном и том же
+// коде, без ручного переключения: адрес бэкенда определяется по хосту фронтенда.
+const API_URL = location.hostname.endsWith('github.io')
+  ? 'https://club-backend-production-fc7f.up.railway.app'
+  : 'https://api.youselllikeagod-magazine.ru';
 
 function applyThemeIcon(theme){
   document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
