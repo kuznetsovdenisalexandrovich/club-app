@@ -1466,6 +1466,15 @@ function renderSubManage(){
   const shiftMin = s.next_payment_iso ? nextDayIso(s.next_payment_iso) : '';
   const frozen = s.frozen_until ? `<div class="sm-hint" style="margin-top:6px">Пауза до ${s.frozen_until}</div>` : '';
 
+  // Подписка остановлена, но доступ ещё действует — это то самое окно, в котором человека
+  // можно вернуть. Показываем возврат первым делом, а не прячем внизу
+  const cancelledBlock = (s.cancelled && s.cancel_reversible) ? `
+    <div class="sm-block">
+      <div class="sm-title">Подписка остановлена</div>
+      <div class="sm-hint">Автосписаний не будет. Доступ действует до ${s.next_payment || 'конца оплаченного периода'} — можно вернуть всё как было.</div>
+      <div class="sm-row"><button class="sm-btn" onclick="reactivateSubscription(this)">Восстановить подписку</button></div>
+    </div>` : '';
+
   let discountBlock;
   if (s.discount_pending){
     discountBlock = `<div class="sm-hint">Скидка уже применена — ближайшее списание пройдёт как ${s.discount_price} ₽.</div>`;
@@ -1477,6 +1486,7 @@ function renderSubManage(){
   }
 
   body.innerHTML = `
+    ${cancelledBlock}
     <div class="sm-block">
       <div class="sm-title">Следующее списание</div>
       <div class="sm-hint">${s.next_payment || '—'}${s.cost ? ' · ' + s.cost + ' ₽' : ''}</div>
@@ -1646,9 +1656,30 @@ function renderCancelStep3(){
   const until = (subStatus && subStatus.next_payment) ? subStatus.next_payment : 'конца оплаченного периода';
   document.getElementById('sub-cancel-title').textContent = 'Точно отменяем?';
   document.getElementById('sub-cancel-body').innerHTML = `
-    <div class="sm-hint">Отмена необратима: возобновить эту же подписку не получится, только оформить новую. Доступ останется до ${until}.</div>
+    <div class="sm-hint">Автосписания прекратятся, доступ останется до ${until}. Если передумаешь — вернуть подписку можно будет одной кнопкой, заново оформлять не придётся.</div>
     <button class="sm-danger" onclick="confirmCancel(this)">Да, отменить подписку</button>
     <button class="sm-quiet" onclick="closeCancelFunnel()">Я передумал(а)</button>`;
+}
+
+async function reactivateSubscription(btn){
+  btn.disabled = true;
+  btn.textContent = 'Возвращаю…';
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/subscription/reactivate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId })
+    }, 20000);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Не получилось');
+    showToast('С возвращением!');
+    await loadProfile();
+    await loadSubStatus();
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    btn.disabled = false;
+    btn.textContent = 'Восстановить подписку';
+  }
 }
 
 async function confirmCancel(btn){
@@ -1665,7 +1696,7 @@ async function confirmCancel(btn){
     if (!r.ok) throw new Error(d.detail || 'Не получилось');
     document.getElementById('sub-cancel-title').textContent = 'Подписка отменена';
     document.getElementById('sub-cancel-body').innerHTML =
-      '<div class="sm-hint">Автосписаний больше не будет. Доступ сохранится до конца оплаченного периода. Будем рады, если вернёшься.</div>' +
+      '<div class="sm-hint">Автосписаний больше не будет. Доступ сохранится до конца оплаченного периода, а вернуть подписку можно будет одной кнопкой в этом же разделе.</div>' +
       '<button class="sm-quiet" onclick="closeCancelFunnel()">Закрыть</button>';
   } catch (e) {
     showToast(e.message || 'Не получилось');
