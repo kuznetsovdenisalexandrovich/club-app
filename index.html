@@ -375,6 +375,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .points-hint{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:12px}
 .sm-slider-row{margin-top:14px}
 .sm-slider{width:100%;accent-color:var(--warm)}
+.sm-slider:disabled{opacity:.4}
+.sm-slider-row{position:relative}
+.sm-slider-cap{position:absolute;top:-4px;bottom:12px;width:2px;background:var(--warm);opacity:.65;pointer-events:none}
+.sm-slider-cap span{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--warm);white-space:nowrap}
 .sm-slider-value{font-size:13px;color:var(--text);text-align:center;margin-top:8px}
 .reward-item{display:flex;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid var(--line)}
 .reward-item:last-child{border-bottom:none}
@@ -1495,19 +1499,29 @@ function renderSubManage(){
 
   // Оплата баллами: один балл = один рубль скидки. Слайдер, а не "всё или ничего" —
   // человеку, не готовому отдать полную сумму, часто нормально заплатить 300-500
+  // Шкала всегда до 1000, даже если баллов меньше: человек видит, сколько ещё копить.
+  // Дальше своего баланса ползунок не уезжает — упирается в отметку.
+  const scaleMax = 1000;
+  const cap = s.points_payment_max;
   let pointsBlock;
   if (s.discount_pending){
     pointsBlock = `<div class="sm-hint">Баллы на ближайший платёж уже потрачены.</div>`;
-  } else if (s.can_pay_with_points){
-    const max = s.points_payment_max;
-    pointsBlock = `<div class="sm-hint">Один балл = один рубль. Можно закрыть баллами часть платежа или почти весь.</div>
-      <div class="sm-slider-row">
-        <input type="range" class="sm-slider" id="sm-points-slider" min="${s.points_payment_min}" max="${max}" step="10" value="${max}" oninput="updatePointsPreview()">
-      </div>
-      <div class="sm-slider-value" id="sm-points-preview"></div>
-      <div class="sm-row"><button class="sm-btn" onclick="applyDiscount(this)">Списать баллы</button></div>`;
   } else {
-    pointsBlock = `<div class="sm-hint">Нужно минимум ${s.points_payment_min} баллов, у тебя ${s.points}.</div>`;
+    const usable = cap >= s.points_payment_min;
+    const startValue = Math.min(100, cap);
+    const capMark = cap < scaleMax
+      ? `<div class="sm-slider-cap" style="left:${(cap / scaleMax) * 100}%"><span>${cap}</span></div>`
+      : '';
+    pointsBlock = `<div class="sm-hint">Один балл = один рубль. Можно закрыть баллами часть платежа или почти весь.</div>
+      <div class="sm-slider-value" id="sm-points-preview"></div>
+      <div class="sm-slider-row">
+        <input type="range" class="sm-slider" id="sm-points-slider" min="0" max="${scaleMax}" step="10"
+               value="${usable ? startValue : 0}" ${usable ? '' : 'disabled'}
+               data-cap="${cap}" oninput="clampPointsSlider()">
+        ${capMark}
+      </div>
+      <div class="sm-row"><button class="sm-btn" onclick="applyDiscount(this)" ${usable ? '' : 'disabled'}>Списать баллы</button></div>
+      ${usable ? '' : `<div class="sm-hint" style="margin-top:8px">Пока нечего списывать — нужно минимум ${s.points_payment_min} баллов.</div>`}`;
   }
 
   body.innerHTML = `
@@ -1525,18 +1539,49 @@ function renderSubManage(){
     <div class="sm-block">
       <div class="sm-title">Сдвинуть платёж</div>
       <div class="sm-hint">Дату списания можно отодвинуть максимум на ${s.max_shift_days} дней вперёд.</div>
-      <input type="date" class="sm-date" id="sm-shift-date" min="${shiftMin}" max="${s.max_shift_date}" value="${shiftMin}">
-      <div class="sm-row"><button class="sm-btn" onclick="applyShift(this)">Перенести</button></div>
+      <div class="sm-row">
+        ${(s.shift_presets || []).map(d => `<button class="sm-btn" onclick="shiftByDays(${d}, this)">${plural(d, 'день', 'дня', 'дней')}</button>`).join('')}
+        <button class="sm-btn" onclick="toggleShiftDate()">Дата</button>
+      </div>
+      <div id="sm-shift-date-wrap" style="display:none">
+        <input type="date" class="sm-date" id="sm-shift-date" min="${shiftMin}" max="${s.max_shift_date}" value="${shiftMin}">
+        <div class="sm-row"><button class="sm-btn" onclick="applyShift(this)">Перенести</button></div>
+      </div>
     </div>
     <div class="sm-block">
       <div class="sm-title">Взять паузу</div>
       <div class="sm-hint">Доступ к клубу остаётся, деньги спишутся просто позже.</div>
-      <div class="sm-row">${(s.freeze_days_allowed || []).map(d => `<button class="sm-btn" onclick="applyFreeze(${d}, this)">${d} дней</button>`).join('')}</div>
+      <div class="sm-row">
+        ${(s.freeze_presets || []).map(mo => `<button class="sm-btn" onclick="applyFreeze(${mo}, this)">${plural(mo, 'месяц', 'месяца', 'месяцев')}</button>`).join('')}
+        <button class="sm-btn" onclick="toggleFreezeCustom()">Свой срок</button>
+      </div>
+      <div id="sm-freeze-custom" style="display:none">
+        <div class="sm-slider-value" id="sm-freeze-preview"></div>
+        <div class="sm-slider-row">
+          <input type="range" class="sm-slider" id="sm-freeze-slider" min="1" max="${s.freeze_max_months || 6}" step="1" value="3" oninput="updateFreezePreview()">
+        </div>
+        <div class="sm-row"><button class="sm-btn" onclick="applyFreezeCustom(this)">Поставить на паузу</button></div>
+      </div>
     </div>
     <div class="sm-block">
       <button class="sm-quiet" onclick="openCancelFunnel()">Кажется, я хочу остановить подписку</button>
     </div>
   `;
+  updatePointsPreview();
+}
+
+function plural(n, one, few, many){
+  const mod10 = n % 10, mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} ${one}`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ${few}`;
+  return `${n} ${many}`;
+}
+
+function clampPointsSlider(){
+  const slider = document.getElementById('sm-points-slider');
+  if (!slider) return;
+  const cap = parseInt(slider.dataset.cap, 10) || 0;
+  if (parseInt(slider.value, 10) > cap) slider.value = cap;
   updatePointsPreview();
 }
 
@@ -1547,6 +1592,37 @@ function updatePointsPreview(){
   const spend = parseInt(slider.value, 10);
   const left = Math.max(subStatus.cost - spend, 0);
   preview.innerHTML = `<b>${spend}</b> баллов → заплатишь <b>${left} ₽</b> вместо ${subStatus.cost} ₽`;
+}
+
+function toggleShiftDate(){
+  const wrap = document.getElementById('sm-shift-date-wrap');
+  if (wrap) wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+}
+
+function toggleFreezeCustom(){
+  const wrap = document.getElementById('sm-freeze-custom');
+  if (!wrap) return;
+  wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+  updateFreezePreview();
+}
+
+function updateFreezePreview(){
+  const slider = document.getElementById('sm-freeze-slider');
+  const preview = document.getElementById('sm-freeze-preview');
+  if (slider && preview) preview.innerHTML = `Пауза на <b>${plural(parseInt(slider.value, 10), 'месяц', 'месяца', 'месяцев')}</b>`;
+}
+
+function applyFreezeCustom(btn){
+  const slider = document.getElementById('sm-freeze-slider');
+  return applyFreeze(slider ? parseInt(slider.value, 10) : 1, btn);
+}
+
+async function shiftByDays(days, btn){
+  const s = subStatus;
+  if (!s || !s.next_payment_iso){ showToast('Не знаю текущую дату платежа'); return; }
+  const target = new Date(s.next_payment_iso + 'T12:00:00');
+  target.setDate(target.getDate() + days);
+  await applyShiftToDate(target.toISOString().slice(0, 10), btn, plural(days, 'день', 'дня', 'дней'));
 }
 
 async function applyDiscount(btn){
@@ -1584,6 +1660,10 @@ async function applyShift(btn){
   const input = document.getElementById('sm-shift-date');
   const date = input ? input.value : '';
   if (!date){ showToast('Сначала выбери дату'); return; }
+  return applyShiftToDate(date, btn, 'Перенести');
+}
+
+async function applyShiftToDate(date, btn, label){
   btn.disabled = true;
   btn.textContent = 'Переношу…';
   try {
@@ -1597,23 +1677,23 @@ async function applyShift(btn){
   } catch (e) {
     showToast(e.message || 'Не получилось');
     btn.disabled = false;
-    btn.textContent = 'Перенести';
+    btn.textContent = label;
   }
 }
 
-async function applyFreeze(days, btn){
+async function applyFreeze(months, btn){
   if (btn){ btn.disabled = true; btn.textContent = '…'; }
   try {
     const d = await apiRequest(`${API_URL}/subscription/freeze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, days })
+      body: JSON.stringify({ telegram_id: telegramId, months })
     }, 20000);
     showToast(`Пауза до ${d.frozen_until}`);
     await loadSubStatus();
   } catch (e) {
     showToast(e.message || 'Не получилось');
-    if (btn){ btn.disabled = false; btn.textContent = days + ' дней'; }
+    if (btn){ btn.disabled = false; btn.textContent = plural(months, 'месяц', 'месяца', 'месяцев'); }
   }
 }
 
@@ -1725,18 +1805,18 @@ function renderCancelStep2(reason, alt){
     offerHtml = `<div class="sm-hint">Часто дело в том, что нужный материал просто не нашёлся. Спроси напрямую — разберём на ближайшей встрече.</div>
       <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openAskDenisPopup()">Задать вопрос Денису</button></div>`;
   } else {
-    const days = (alt && alt.freeze && alt.freeze.days) || [7, 14, 30];
+    const months = (alt && alt.freeze && alt.freeze.months) || [1, 2];
     offerHtml = `<div class="sm-hint">Можно не отменять, а просто отодвинуть списание — доступ при этом остаётся.</div>
-      <div class="sm-row">${days.map(d => `<button class="sm-btn" onclick="freezeFromFunnel(${d})">${d} дней</button>`).join('')}</div>`;
+      <div class="sm-row">${months.map(mo => `<button class="sm-btn" onclick="freezeFromFunnel(${mo})">${plural(mo, 'месяц', 'месяца', 'месяцев')}</button>`).join('')}</div>`;
   }
 
   document.getElementById('sub-cancel-body').innerHTML =
     offerHtml + '<button class="sm-danger" onclick="renderCancelStep3()">Всё равно отменить подписку</button>';
 }
 
-async function freezeFromFunnel(days){
+async function freezeFromFunnel(months){
   closeCancelFunnel();
-  await applyFreeze(days, null);
+  await applyFreeze(months, null);
 }
 
 function renderCancelStep3(){
