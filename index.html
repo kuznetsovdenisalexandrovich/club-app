@@ -15,9 +15,16 @@
      эти строки просто не найдут файл и браузер покажет иконку по умолчанию, без ошибок -->
 <link rel="apple-touch-icon" href="images/icon-192.png">
 <link rel="icon" href="images/icon-192.png">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Google Fonts не блокирует рендер: preload сразу, подмена на настоящий stylesheet
+     после загрузки (если fonts.googleapis.com недоступен без VPN — страница просто
+     останется на системном шрифте, а не зависнет в ожидании) -->
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap"></noscript>
+<!-- async — если telegram.org недоступен без VPN, скрипт просто не даст объект
+     Telegram.WebApp (мы уже проверяем его через опциональную цепочку везде), но не
+     заблокирует парсинг и выполнение остального JS на странице (см. запуск ниже) -->
+<script src="https://telegram.org/js/telegram-web-app.js" async id="tg-sdk-script"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap');
 
 :root {
   --lav:#9b8cf2; --lav-deep:#7c6cf0; --lav-dim:rgba(155,140,242,0.16);
@@ -2486,7 +2493,7 @@ function startWebSession(){
   document.getElementById('web-add-home-screen-screen').style.display = 'flex';
 }
 
-(function init(){
+function runInit(){
   const tg = window.Telegram?.WebApp;
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.ready();
@@ -2505,7 +2512,27 @@ function startWebSession(){
   } else {
     startWebSession();
   }
+}
+
+// Скрипт Telegram грузится асинхронно (async) — не ждём его безусловно: как только он
+// либо загрузится, либо явно провалится, либо пройдёт разумный таймаут (на случай, если
+// telegram.org недоступен без VPN и просто "висит" без ответа) — запускаем инициализацию
+// один раз, что бы из этого ни случилось первым.
+(function(){
+  let started = false;
+  function startOnce(){
+    if (started) return;
+    started = true;
+    runInit();
+  }
+  const sdkScript = document.getElementById('tg-sdk-script');
+  if (sdkScript) {
+    sdkScript.addEventListener('load', startOnce);
+    sdkScript.addEventListener('error', startOnce);
+  }
+  setTimeout(startOnce, 3000);
 })();
 </script>
 </body>
+
 </html>
