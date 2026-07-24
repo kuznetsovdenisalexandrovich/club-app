@@ -703,7 +703,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <span>Оплата не из РФ / проблема с оплатой</span>
     </div>
     <div class="card">
-      <div class="access-intro">Данные об оплате идут минуту-две, бывает три. Знаю, это мучительные минуты, но не переживай, скоро доступы автоматически придут тебе в бота <a href="https://t.me/youselllikeagod_bot" style="color:var(--warm)">@youselllikeagod_bot</a>.<br><br>Если же ты не можешь оплатить вообще, или у тебя карта не РФ, дай знать:</div>
+      <div class="access-intro">После оплаты приложение само поймает платёж — обычно на это уходят секунды, иногда до пары минут. Никуда уходить не нужно, просто вернись сюда, и я сразу покажу, что делать дальше.<br><br>Если оплатить не получается или карта не РФ, дай знать:</div>
       <button class="lec-link-btn access-btn" onclick="openUrl('https://t.me/kuznetsov_denis?text=Приветики_хочу_оплатить_доступ_зарубежной_картой')">Оплата не из РФ</button>
       <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_получается_оплатить_доступ')">Проблемы с оплатой</button>
     </div>
@@ -724,15 +724,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
-<!-- Напоминание про регистрацию после клика по оплате -->
+<!-- Ожидание оплаты: апп сам ловит момент, когда платёж дошёл -->
 <div class="sched-popup-overlay" id="postpay-overlay" onclick="if(event.target===this) closePostPay()">
   <div class="sched-popup" id="postpay-popup" style="text-align:center">
     <div class="sched-popup-handle"></div>
-    <div style="font-size:34px;margin:6px 0 10px">📝</div>
-    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Почти готово!</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">После оплаты бот сам проведёт тебя через регистрацию — просто открой с ним диалог и следуй подсказкам.</div>
-    <button class="lec-link-btn access-btn" onclick="openUrl('https://t.me/youselllikeagod_bot')">Перейти в бота</button>
-    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_получить_доступ')">Написать в поддержку</button>
+    <div id="postpay-body"></div>
   </div>
 </div>
 
@@ -2567,12 +2563,97 @@ function expandClubInfo(){
   document.getElementById('club-info-fade-wrap').classList.add('expanded');
 }
 
+
+/* ── Ожидание оплаты ──────────────────────────────────────────────────────────
+   Раньше после клика по оплате человека отправляли в бота за инструкцией. Теперь
+   апп сам ждёт платёж: наш бэкенд принимает колбек Продамуса напрямую и ставит
+   is_member, поэтому ждать Salebot не нужно — обычно это секунды.
+   Оплата открывается во внешнем браузере, так что дополнительно проверяем статус
+   каждый раз, когда человек возвращается в приложение. */
+
+let paymentWatchTimer = null;
+let paymentWatchUntil = 0;
+
+const PAYMENT_WATCH_MINUTES = 10;
+const PAYMENT_POLL_MS = 4000;
+
 function openPostPay(){
   document.getElementById('postpay-overlay').classList.add('open');
 }
+
 function closePostPay(){
   document.getElementById('postpay-overlay').classList.remove('open');
+  stopPaymentWatch();
 }
+
+function stopPaymentWatch(){
+  if (paymentWatchTimer){ clearTimeout(paymentWatchTimer); paymentWatchTimer = null; }
+  paymentWatchUntil = 0;
+}
+
+function renderPostPayWaiting(){
+  document.getElementById('postpay-body').innerHTML = `
+    <div style="font-size:34px;margin:6px 0 10px">⏳</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Ждём подтверждение оплаты</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Обычно это занимает несколько секунд. Приложение поймает платёж само — можно просто вернуться сюда после оплаты.</div>
+    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePostPay()">Закрыть</button>`;
+}
+
+function renderPostPaySuccess(){
+  document.getElementById('postpay-body').innerHTML = `
+    <div style="font-size:34px;margin:6px 0 10px">🎉</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Оплата прошла, добро пожаловать!</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Осталось вступить в канал и чат — это пара нажатий, покажу прямо сейчас.</div>
+    <button class="lec-link-btn access-btn" onclick="closePostPay();openStepsPopup()">Продолжить</button>`;
+}
+
+function renderPostPayTimeout(){
+  document.getElementById('postpay-body').innerHTML = `
+    <div style="font-size:34px;margin:6px 0 10px">🤔</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Платёж пока не дошёл</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Иногда банк думает чуть дольше. Проверь ещё раз или напиши — разберёмся руками.</div>
+    <button class="lec-link-btn access-btn" onclick="startPaymentWatch()">Проверить ещё раз</button>
+    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_получить_доступ')">Написать в поддержку</button>`;
+}
+
+function startPaymentWatch(){
+  stopPaymentWatch();
+  paymentWatchUntil = Date.now() + PAYMENT_WATCH_MINUTES * 60 * 1000;
+  renderPostPayWaiting();
+  pollPaymentOnce();
+}
+
+async function pollPaymentOnce(){
+  if (!paymentWatchUntil) return;
+
+  let paid = false;
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/users/me?telegram_id=${telegramId}`, {}, 8000);
+    const u = await r.json();
+    paid = !!(u && u.found && u.is_member);
+  } catch (e) {}
+
+  if (paid){
+    stopPaymentWatch();
+    await loadProfile();   // подтянет тариф, дату списания и покажет кнопку управления подпиской
+    renderPostPaySuccess();
+    return;
+  }
+
+  if (Date.now() >= paymentWatchUntil){
+    stopPaymentWatch();
+    renderPostPayTimeout();
+    return;
+  }
+
+  paymentWatchTimer = setTimeout(pollPaymentOnce, PAYMENT_POLL_MS);
+}
+
+// Человек уходит платить во внешний браузер и возвращается — проверяем сразу,
+// не дожидаясь очередного тика опроса
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && paymentWatchUntil) pollPaymentOnce();
+});
 
 async function openAccessPage(){
   switchView('access');
@@ -2628,6 +2709,7 @@ function goToPayment(i){
   if (!b) return;
   openUrl(b.link);
   openPostPay();
+  startPaymentWatch();
 }
 
 
