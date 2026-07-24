@@ -368,6 +368,22 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .copy-link-row{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;margin-top:6px}
 .copy-link-row span.copy-link-text{flex:1;font-size:12.5px;color:var(--text);word-break:break-all;user-select:all}
 .copy-link-row svg{flex-shrink:0;color:var(--text-faint)}
+/* ── Управление подпиской ── */
+.sub-manage-btn{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:none}
+.sub-manage-btn:active{transform:scale(0.98)}
+.sm-block{border-bottom:1px solid var(--line);padding:16px 0}
+.sm-block:last-child{border-bottom:none}
+.sm-title{font-size:13.5px;font-weight:700;margin-bottom:6px}
+.sm-hint{font-size:12.5px;color:var(--text-dim);line-height:1.5}
+.sm-row{display:flex;gap:8px;margin-top:10px}
+.sm-btn{flex:1;padding:11px 8px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--warm);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.sm-btn:active{transform:scale(0.97)}
+.sm-btn[disabled]{opacity:.45;color:var(--text-dim);cursor:default}
+.sm-date{width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-family:inherit;font-size:13px;color:var(--text);margin-top:10px}
+.sm-quiet{width:100%;margin-top:6px;padding:12px;border-radius:12px;border:none;background:none;color:var(--text-faint);font-family:inherit;font-size:12.5px;cursor:pointer;text-decoration:underline}
+.sm-danger{width:100%;padding:12px;border-radius:12px;border:1px solid var(--red);background:none;color:var(--red);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;margin-top:10px}
+.sm-reason{display:block;width:100%;text-align:left;padding:14px 4px;font-size:13.5px;font-weight:600;background:none;border:none;border-bottom:1px solid var(--line);color:var(--text);font-family:inherit;cursor:pointer}
+.sm-reason:last-of-type{border-bottom:none}
 .sched-event-item{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
 .sched-event-item:last-child{margin-bottom:0}
 .sched-event-time{font-size:11px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
@@ -565,6 +581,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <span class="pill" id="sub-pill">—</span>
     </div>
     <div class="sub-note" id="sub-note"></div>
+    <button class="sub-manage-btn" id="sub-manage-btn" onclick="openSubManage()">Управление подпиской</button>
 
     <div class="section-label">Профиль</div>
     <div class="card">
@@ -887,6 +904,27 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="icon-btn" onclick="closeStepsPopup()">✕</button>
     </div>
     <div id="steps-popup-list"></div>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="sub-manage-overlay" onclick="if(event.target===this) closeSubManage()">
+  <div class="sched-popup" id="sub-manage-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Управление подпиской</div>
+      <button class="icon-btn" onclick="closeSubManage()">✕</button>
+    </div>
+    <div id="sub-manage-body"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="sub-cancel-overlay" onclick="if(event.target===this) closeCancelFunnel()">
+  <div class="center-modal" id="sub-cancel-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title" id="sub-cancel-title">Останавливаем подписку</div>
+      <button class="icon-btn" onclick="closeCancelFunnel()">✕</button>
+    </div>
+    <div id="sub-cancel-body"></div>
   </div>
 </div>
 
@@ -1321,6 +1359,9 @@ async function loadProfile() {
 function renderDemoBanner(){
   const el = document.getElementById('demo-banner');
   if (el) el.style.display = isMember ? 'none' : 'flex';
+  // Управление подпиской показываем только участникам: не-участнику нечем управлять
+  const subManageBtn = document.getElementById('sub-manage-btn');
+  if (subManageBtn) subManageBtn.style.display = isMember ? 'block' : 'none';
   const salesVideo = document.getElementById('sales-video-banner');
   if (salesVideo) salesVideo.style.display = isMember ? 'none' : 'block';
   const onboardingVideo = document.getElementById('onboarding-video-banner');
@@ -1333,6 +1374,270 @@ function renderDemoBanner(){
     aiBtn.textContent = (isMember ? '' : '🔒 ') + 'Спросить ИИ-помощника своими словами';
   }
   renderLevelCard();
+}
+
+/* ── Управление подпиской ─────────────────────────────────────────────────────
+   Все четыре действия идут в наш бэкенд, а он уже дальше в Продамус.
+   Заморозка намеренно НЕ отключает подписку: отключение от лица пользователя
+   в Продамусе необратимо, поэтому пауза — это просто отодвинутая дата списания. */
+
+let subStatus = null;
+let cancelReasonKey = '';
+let discountArmed = false;
+
+const CANCEL_REASONS = [
+  { key:'price', label:'Дороговато сейчас',   offer:'discount' },
+  { key:'time',  label:'Нет времени на клуб', offer:'freeze'   },
+  { key:'value', label:'Не хватает пользы',   offer:'ask'      },
+  { key:'pause', label:'Временные трудности', offer:'freeze'   },
+  { key:'other', label:'Другая причина',      offer:'freeze'   },
+];
+
+function nextDayIso(iso){
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function openSubManage(){
+  document.getElementById('sub-manage-overlay').classList.add('open');
+  document.getElementById('sub-manage-body').innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Загружаю…</div>';
+  loadSubStatus();
+}
+
+function closeSubManage(){
+  document.getElementById('sub-manage-overlay').classList.remove('open');
+  discountArmed = false;
+}
+
+async function loadSubStatus(){
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/subscription/status?telegram_id=${telegramId}`, {}, 10000);
+    subStatus = await r.json();
+    renderSubManage();
+  } catch (e) {
+    document.getElementById('sub-manage-body').innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить. Проверь соединение и попробуй ещё раз.</div>';
+  }
+}
+
+function renderSubManage(){
+  const s = subStatus;
+  const body = document.getElementById('sub-manage-body');
+  if (!body) return;
+  if (!s || !s.found || !s.is_member){
+    body.innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Активной подписки не нашлось.</div>';
+    return;
+  }
+
+  const shiftMin = s.next_payment_iso ? nextDayIso(s.next_payment_iso) : '';
+  const frozen = s.frozen_until ? `<div class="sm-hint" style="margin-top:6px">Пауза до ${s.frozen_until}</div>` : '';
+
+  let discountBlock;
+  if (s.discount_pending){
+    discountBlock = `<div class="sm-hint">Скидка уже применена — ближайшее списание пройдёт как ${s.discount_price} ₽.</div>`;
+  } else if (s.can_get_discount){
+    discountBlock = `<div class="sm-hint">Обменяй ${s.discount_cost} очков — и следующее списание пройдёт как ${s.discount_price} ₽ вместо ${s.cost} ₽.</div>
+      <div class="sm-row"><button class="sm-btn" onclick="applyDiscount(this)">Обменять ${s.discount_cost} очков</button></div>`;
+  } else {
+    discountBlock = `<div class="sm-hint">Нужно ${s.discount_cost} очков, у тебя ${s.points}. Очки копятся за просмотр лекций и продление подписки.</div>`;
+  }
+
+  body.innerHTML = `
+    <div class="sm-block">
+      <div class="sm-title">Следующее списание</div>
+      <div class="sm-hint">${s.next_payment || '—'}${s.cost ? ' · ' + s.cost + ' ₽' : ''}</div>
+      ${frozen}
+    </div>
+    <div class="sm-block">
+      <div class="sm-title">Платёж за ${s.discount_price} ₽</div>
+      ${discountBlock}
+    </div>
+    <div class="sm-block">
+      <div class="sm-title">Сдвинуть платёж</div>
+      <div class="sm-hint">Дату списания можно отодвинуть максимум на ${s.max_shift_days} дней вперёд.</div>
+      <input type="date" class="sm-date" id="sm-shift-date" min="${shiftMin}" max="${s.max_shift_date}" value="${shiftMin}">
+      <div class="sm-row"><button class="sm-btn" onclick="applyShift(this)">Перенести</button></div>
+    </div>
+    <div class="sm-block">
+      <div class="sm-title">Взять паузу</div>
+      <div class="sm-hint">Доступ к клубу остаётся, деньги спишутся просто позже.</div>
+      <div class="sm-row">${(s.freeze_days_allowed || []).map(d => `<button class="sm-btn" onclick="applyFreeze(${d}, this)">${d} дней</button>`).join('')}</div>
+    </div>
+    <div class="sm-block">
+      <button class="sm-quiet" onclick="openCancelFunnel()">Кажется, я хочу остановить подписку</button>
+    </div>
+  `;
+}
+
+async function applyDiscount(btn){
+  // Двойное нажатие вместо системного confirm: очки тратятся безвозвратно,
+  // а нативный confirm внутри Telegram выглядит чужеродно
+  if (!discountArmed){
+    discountArmed = true;
+    btn.textContent = 'Точно? Нажми ещё раз';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Отправляю…';
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/subscription/discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId })
+    }, 20000);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Не получилось');
+    showToast(`Готово — следующий платёж ${d.new_price} ₽`);
+    points = d.points_left;
+    discountArmed = false;
+    renderLevelCard();
+    await loadSubStatus();
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    discountArmed = false;
+    btn.disabled = false;
+    btn.textContent = 'Попробовать ещё раз';
+  }
+}
+
+async function applyShift(btn){
+  const input = document.getElementById('sm-shift-date');
+  const date = input ? input.value : '';
+  if (!date){ showToast('Сначала выбери дату'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Переношу…';
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/subscription/shift`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, date })
+    }, 20000);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Не получилось');
+    showToast(`Платёж перенесён на ${d.next_payment}`);
+    const pn = document.getElementById('p-next');
+    if (pn) pn.textContent = d.next_payment;
+    await loadSubStatus();
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    btn.disabled = false;
+    btn.textContent = 'Перенести';
+  }
+}
+
+async function applyFreeze(days, btn){
+  if (btn){ btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const r = await fetchWithTimeout(`${API_URL}/subscription/freeze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, days })
+    }, 20000);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Не получилось');
+    showToast(`Пауза до ${d.frozen_until}`);
+    const pn = document.getElementById('p-next');
+    if (pn) pn.textContent = d.next_payment;
+    await loadSubStatus();
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    if (btn){ btn.disabled = false; btn.textContent = days + ' дней'; }
+  }
+}
+
+function openCancelFunnel(){
+  closeSubManage();
+  cancelReasonKey = '';
+  document.getElementById('sub-cancel-overlay').classList.add('open');
+  renderCancelStep1();
+}
+
+function closeCancelFunnel(){
+  document.getElementById('sub-cancel-overlay').classList.remove('open');
+}
+
+function renderCancelStep1(){
+  document.getElementById('sub-cancel-title').textContent = 'Что не так?';
+  document.getElementById('sub-cancel-body').innerHTML =
+    '<div class="sm-hint" style="margin-bottom:6px">Скажи честно — от ответа зависит, что мы можем предложить.</div>' +
+    CANCEL_REASONS.map(r => `<button class="sm-reason" onclick="chooseCancelReason('${r.key}')">${r.label}</button>`).join('');
+}
+
+async function chooseCancelReason(key){
+  cancelReasonKey = key;
+  const reason = CANCEL_REASONS.find(r => r.key === key);
+  document.getElementById('sub-cancel-body').innerHTML = '<div class="sm-hint">Секунду…</div>';
+  let alt = null;
+  try {
+    // confirm:false — подписку не трогаем, только сохраняем причину и получаем,
+    // что можно предложить взамен
+    const r = await fetchWithTimeout(`${API_URL}/subscription/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, reason: reason ? reason.label : key, confirm: false })
+    }, 20000);
+    const d = await r.json();
+    alt = d.alternatives || null;
+  } catch (e) {}
+  renderCancelStep2(reason, alt);
+}
+
+function renderCancelStep2(reason, alt){
+  document.getElementById('sub-cancel-title').textContent = 'Прежде чем уйдёшь';
+  const offer = reason ? reason.offer : 'freeze';
+  let offerHtml;
+
+  if (offer === 'discount' && alt && alt.discount && alt.discount.available){
+    offerHtml = `<div class="sm-hint">У тебя ${alt.discount.points_have} очков — этого хватает, чтобы следующий месяц стоил ${alt.discount.new_price} ₽.</div>
+      <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openSubManage()">Посмотреть скидку</button></div>`;
+  } else if (offer === 'ask'){
+    offerHtml = `<div class="sm-hint">Часто дело в том, что нужный материал просто не нашёлся. Спроси напрямую — разберём на ближайшей встрече.</div>
+      <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openAskDenisPopup()">Задать вопрос Денису</button></div>`;
+  } else {
+    const days = (alt && alt.freeze && alt.freeze.days) || [7, 14, 30];
+    offerHtml = `<div class="sm-hint">Можно не отменять, а просто отодвинуть списание — доступ при этом остаётся.</div>
+      <div class="sm-row">${days.map(d => `<button class="sm-btn" onclick="freezeFromFunnel(${d})">${d} дней</button>`).join('')}</div>`;
+  }
+
+  document.getElementById('sub-cancel-body').innerHTML =
+    offerHtml + '<button class="sm-danger" onclick="renderCancelStep3()">Всё равно отменить подписку</button>';
+}
+
+async function freezeFromFunnel(days){
+  closeCancelFunnel();
+  await applyFreeze(days, null);
+}
+
+function renderCancelStep3(){
+  const until = (subStatus && subStatus.next_payment) ? subStatus.next_payment : 'конца оплаченного периода';
+  document.getElementById('sub-cancel-title').textContent = 'Точно отменяем?';
+  document.getElementById('sub-cancel-body').innerHTML = `
+    <div class="sm-hint">Отмена необратима: возобновить эту же подписку не получится, только оформить новую. Доступ останется до ${until}.</div>
+    <button class="sm-danger" onclick="confirmCancel(this)">Да, отменить подписку</button>
+    <button class="sm-quiet" onclick="closeCancelFunnel()">Я передумал(а)</button>`;
+}
+
+async function confirmCancel(btn){
+  btn.disabled = true;
+  btn.textContent = 'Отменяю…';
+  try {
+    const reason = CANCEL_REASONS.find(r => r.key === cancelReasonKey);
+    const r = await fetchWithTimeout(`${API_URL}/subscription/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, reason: reason ? reason.label : '', confirm: true })
+    }, 20000);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Не получилось');
+    document.getElementById('sub-cancel-title').textContent = 'Подписка отменена';
+    document.getElementById('sub-cancel-body').innerHTML =
+      '<div class="sm-hint">Автосписаний больше не будет. Доступ сохранится до конца оплаченного периода. Будем рады, если вернёшься.</div>' +
+      '<button class="sm-quiet" onclick="closeCancelFunnel()">Закрыть</button>';
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    btn.disabled = false;
+    btn.textContent = 'Да, отменить подписку';
+  }
 }
 
 function dismissOnboardingBanner(){
