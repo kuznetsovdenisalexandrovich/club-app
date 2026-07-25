@@ -220,7 +220,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:transform .1s;position:relative;min-height:88px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.18)}
 .tile:active{transform:scale(0.96)}
 .tile-icon{width:36px;height:36px;border-radius:12px;background:var(--lav-dim);color:var(--lav);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
-.tile-icon-number{font-family:var(--disp);font-weight:800;font-size:13px}
+.tile-icon-number{font-family:var(--body);font-weight:700;font-size:14px;letter-spacing:-0.01em}
 .tile-label{font-size:12px;font-weight:600;line-height:1.3}
 .tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
 
@@ -542,16 +542,6 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div class="tile-icon tile-icon-number" id="menu-points-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Баллы</div>
       </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 3 9l9 13 9-13-9-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 9h18M8.5 9 12 2l3.5 7M8.5 9 12 22M15.5 9 12 22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
-        <div class="tile-label">Настройки подписки</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
-      <div class="tile" onclick="comingSoon()">
-        <div class="tile-icon" style="background:var(--card2);color:var(--text-faint)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
-        <div class="tile-label">Поддержка</div>
-        <span class="tile-soon">Скоро</span>
-      </div>
       <div class="tile" onclick="openUrl('https://vk.ru/im/channels/-237934122')">
         <div class="tile-icon" style="background:rgba(0,119,255,0.16);color:#0077ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Резервный канал ВК</div>
@@ -613,7 +603,6 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <span class="pill" id="sub-pill">—</span>
     </div>
     <div class="sub-note" id="sub-note"></div>
-    <button class="sub-manage-btn" id="sub-manage-btn" onclick="openSubManage()">Управление подпиской</button>
 
     <div class="section-label">Баллы</div>
     <div class="card points-card" onclick="openRewards()" style="cursor:pointer">
@@ -936,9 +925,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <div class="sched-popup-title">Как пользоваться клубом</div>
       <button class="icon-btn" onclick="closeHowToUsePopup()">✕</button>
     </div>
+    <div class="howto-path-item" onclick="closeHowToUsePopup();openVideoPopup('onboarding')">
+      <span class="howto-check">▶</span>
+      <span>Видео-инструкция</span>
+    </div>
     <div class="howto-path-item" onclick="closeHowToUsePopup();startLibraryTour()">
       <span class="howto-check" id="howto-check-tour">○</span>
       <span>Как работает приложение</span>
+    </div>
+    <div class="howto-path-item" onclick="closeHowToUsePopup();openPersonalPlan()">
+      <span class="howto-check">○</span>
+      <span>Составить свой план</span>
     </div>
   </div>
 </div>
@@ -1495,9 +1492,9 @@ async function loadProfile() {
     if (u.is_member) {
       pill.textContent = 'Активна';
       pill.className = 'pill active';
-      document.getElementById('sub-note').textContent = u.next_payment_date
-        ? `Следующее списание — ${u.next_payment_date}`
-        : '';
+      // Дату списания теперь показываем только внутри "Управление подпиской" —
+      // карточка и так кликабельна, дублировать на странице Профиля не нужно
+      document.getElementById('sub-note').textContent = '';
     } else {
       pill.textContent = 'Неактивна';
       pill.className = 'pill inactive';
@@ -3512,9 +3509,12 @@ async function renderAiAnswerCards(rawAnswer){
 const LEVEL_BAR_MAX_SHIFT = 74; // разница между стартовой позицией (88px) и позицией "прилипания" (14px)
 function updateLevelBarScrollPosition(){
   const bar = document.getElementById('level-card');
+  const badge = document.getElementById('reward-level-badge');
   if (!bar || bar.style.display === 'none') return;
   const shift = Math.min(window.scrollY, LEVEL_BAR_MAX_SHIFT);
-  bar.style.transform = shift > 0 ? `translateY(-${shift}px)` : '';
+  const transform = shift > 0 ? `translateY(-${shift}px)` : '';
+  bar.style.transform = transform;
+  if (badge) badge.style.transform = transform; // тот же сдвиг, что и у бара — иначе бейдж отстаёт при скролле
 }
 window.addEventListener('scroll', updateLevelBarScrollPosition, { passive: true });
 
