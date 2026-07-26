@@ -591,6 +591,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
   <!-- ── Профиль ── -->
   <div class="view" id="view-profile">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Профиль</span>
+      <span onclick="openAppSettingsPopup()" style="cursor:pointer;font-size:16px">⚙️</span>
+    </div>
+
     <div class="section-label">Подписка</div>
     <div class="card sub-card" onclick="openSubManage()" style="cursor:pointer">
       <div class="sub-left">
@@ -1052,6 +1057,22 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="icon-btn" onclick="closeRewardConfirm()">✕</button>
     </div>
     <div id="reward-confirm-body"></div>
+  </div>
+</div>
+
+<div class="sched-popup-overlay" id="app-settings-overlay" onclick="if(event.target===this) closeAppSettingsPopup()">
+  <div class="sched-popup" id="app-settings-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Настройки приложения</div>
+      <button class="icon-btn" onclick="closeAppSettingsPopup()">✕</button>
+    </div>
+    <div class="sm-block">
+      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openAddToHomeScreenPopup()">Добавить на экран домой</button>
+    </div>
+    <div class="sm-block">
+      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();enablePushNotifications()">Включить push-уведомления</button>
+    </div>
   </div>
 </div>
 
@@ -1952,6 +1973,13 @@ async function submitDonation(){
     btn.disabled = false;
     btn.textContent = 'Задонатить';
   }
+}
+
+function openAppSettingsPopup(){
+  document.getElementById('app-settings-overlay').classList.add('open');
+}
+function closeAppSettingsPopup(){
+  document.getElementById('app-settings-overlay').classList.remove('open');
 }
 
 function openCancelFunnel(){
