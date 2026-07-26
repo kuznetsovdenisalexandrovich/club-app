@@ -814,7 +814,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
   <h2 id="web-login-title">Вход по номеру телефона</h2>
-  <p id="web-login-subtitle">Укажи номер, которым оплачивал(а) подписку.</p>
+  <p id="web-login-subtitle">Укажи номер телефона, использованный для оплаты подписки.</p>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
     <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" placeholder="+7 999 123-45-67" inputmode="tel">
     <button class="lec-link-btn access-btn" id="web-login-btn" onclick="handleLoginButton()">Войти</button>
@@ -962,7 +962,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </div>
     <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-top:10px">Скопируй ссылку и открой её <span id="home-screen-browser-hint">в браузере</span> — оттуда приложение можно будет добавить на главный экран, как обычное.</div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="markHomeScreenAddedManually()">Уже добавил(а)</div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="markHomeScreenAddedManually()">Уже добавлено</div>
   </div>
 </div>
 
@@ -1215,14 +1215,6 @@ function switchView(name) {
       if (listEl) listEl.innerHTML = lastRewardsData ? rewardsListHtml() : '<div class="empty">Не удалось загрузить</div>';
     });
   }
-  // Дублируем открытие соответствующего раздела в самом боте фоновым колбеком — чтобы
-  // человек в любой момент мог закрыть апп и продолжить в боте с тем же меню на экране
-  if (name === 'portal') {
-    fetch(`${API_URL}/app/action`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: telegramId, action: 'menu', params: {} }) }).catch(()=>{});
-  }
-  if (name === 'library') {
-    fetch(`${API_URL}/app/action`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: telegramId, action: 'library', params: {} }) }).catch(()=>{});
-  }
   window.scrollTo(0, 0);
   updateLevelBarScrollPosition();
 }
@@ -1387,15 +1379,6 @@ async function fetchListMembership() {
       const data = await r.json();
       if (data.status === 'done') {
         listMembership = data.result;
-        // Открываем то же меню уведомлений в самом боте фоновым колбеком, с небольшой
-        // задержкой — чтобы человек в любой момент мог закрыть апп и продолжить в боте
-        setTimeout(() => {
-          fetch(`${API_URL}/app/action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegram_id: telegramId, action: 'notifications', params: {} })
-          }).catch(()=>{});
-        }, 5000);
         return listMembership;
       }
     } catch (e) {}
@@ -1537,7 +1520,7 @@ async function loadProfile() {
     if (!u.found) {
       isMember = false;
       document.getElementById('sub-name').textContent = 'Профиль не найден';
-      document.getElementById('sub-meta').textContent = 'Похоже, ты ещё не оформлял(а) подписку';
+      document.getElementById('sub-meta').textContent = 'Похоже, подписка ещё не оформлена';
       document.getElementById('sub-pill').textContent = '—';
       renderDemoBanner();
       return;
@@ -2046,7 +2029,7 @@ function renderWinbackReason(key){
 
 const WINBACK_RENDERERS = {
   no_direction: () => `
-    <div class="sm-hint" style="margin-bottom:10px">Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 1₽, чтобы точно успел(а) посмотреть.</div>
+    <div class="sm-hint" style="margin-bottom:10px">Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 1₽, чтобы у тебя точно получилось посмотреть.</div>
     <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="Например: как настроить рекламу, как продавать дороже..."></textarea>
     <div class="sm-row" style="margin-top:10px">
       <button class="sm-btn" onclick="submitWinbackWithText('no_direction','guide_only')">Личный гайд</button>
@@ -2143,7 +2126,7 @@ function renderWinbackResult(d){
   if (d.cancelled) { showPostCancelOffer(); return; }
 
   if (d.shift_blocked) {
-    body.innerHTML = `<div class="sm-hint" style="text-align:center;padding:16px 0">Ты уже сдвигал(а) платёж недавно — эта возможность вернётся после ближайшего реального платежа.</div>
+    body.innerHTML = `<div class="sm-hint" style="text-align:center;padding:16px 0">Сдвиг платежа уже использовался недавно — эта возможность вернётся после ближайшего реального платежа.</div>
       <button class="lec-link-btn access-btn" onclick="closeWinbackFunnel();loadProfile();loadSubStatus()">Понятно</button>`;
     return;
   }
@@ -2152,7 +2135,7 @@ function renderWinbackResult(d){
   if ('bonus_granted' in d) {
     msg = d.bonus_granted
       ? 'Готово! Баллы и скидка на следующий месяц уже у тебя.'
-      : 'Этот подарок уже использован максимум раз, но я всё равно всё передал(а) — Денис на связи.';
+      : 'Этот подарок уже использован максимум раз, но информация всё равно передана Денису — он на связи.';
   }
   if (d.next_payment)  msg += ` Платёж перенесён на ${d.next_payment}.`;
   if (d.frozen_until)  msg += ` Пауза до ${d.frozen_until}.`;
@@ -2182,7 +2165,7 @@ async function submitWinbackOwnReasonWait(){
   try {
     await submitWinback('own_reason', 'own_reason_wait', { free_text: text });
     document.getElementById('winback-body').innerHTML = `
-      <div class="sm-hint">Записал(а), Денис уже думает. Кстати, могу сразу подвинуть тебе платёж на недельку, чтобы было время без спешки.</div>
+      <div class="sm-hint">Записано, Денис уже думает. Кстати, могу сразу подвинуть тебе платёж на недельку, чтобы было время без спешки.</div>
       <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackSimple('own_reason','shift_payment')">Давай, подвинь платёж</button></div>
       <div class="payment-help-link" style="margin-top:10px" onclick="closeWinbackFunnel()">Не надо, просто жду</div>`;
   } catch (e) { showToast(e.message || 'Не получилось'); }
@@ -2252,7 +2235,7 @@ async function submitPostCancelFeedback(){
   const text = (document.getElementById('postcancel-feedback-input').value || '').trim();
   try { await submitWinback('post_cancel', 'feedback', { free_text: text }); } catch (e) {}
   document.getElementById('postcancel-body').innerHTML =
-    '<div class="sm-hint" style="text-align:center;padding:16px 0">Спасибо, что сказал(а) честно 🙏</div>' +
+    '<div class="sm-hint" style="text-align:center;padding:16px 0">Спасибо за честность 🙏</div>' +
     '<button class="lec-link-btn access-btn" onclick="closePostCancelOffer()">Закрыть</button>';
 }
 
@@ -2279,7 +2262,7 @@ function renderCancelStep3(){
     <div class="sm-hint">Автосписания прекратятся, доступ останется до ${until}. Если передумаешь — вернуть подписку можно будет одной кнопкой, заново оформлять не придётся.</div>
     ${burnWarning}
     <button class="sm-danger" onclick="confirmCancel(this)">Да, отменить подписку</button>
-    <button class="sm-quiet" onclick="closeCancelFunnel()">Я передумал(а)</button>`;
+    <button class="sm-quiet" onclick="closeCancelFunnel()">Я остаюсь</button>`;
 }
 
 async function reactivateSubscription(btn){
@@ -3964,7 +3947,7 @@ function renderLoginStage(){
     fallback.style.display = (codeSendAttempts >= 2 && appSettings.allow_direct_phone_login) ? '' : 'none';
   } else {
     title.textContent = 'Вход по номеру телефона';
-    subtitle.textContent = 'Укажи номер, которым оплачивал(а) подписку.';
+    subtitle.textContent = 'Укажи номер телефона, использованный для оплаты подписки.';
     input.type = 'tel';
     input.inputMode = 'tel';
     input.removeAttribute('maxlength');
