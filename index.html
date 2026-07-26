@@ -1728,23 +1728,7 @@ function renderSubManage(){
       </div>
     </div>
     <div class="sm-block">
-      <div class="sm-title">Взять паузу</div>
-      <div class="sm-hint">Доступ к клубу остаётся, деньги спишутся просто позже.</div>
-      <div class="sm-row">
-        ${(s.freeze_presets || []).map(mo => `<button class="sm-btn" onclick="applyFreeze(${mo}, this)">${plural(mo, 'месяц', 'месяца', 'месяцев')}</button>`).join('')}
-        <button class="sm-btn" onclick="toggleFreezeCustom()">Свой срок</button>
-      </div>
-      <div id="sm-freeze-custom" style="display:none">
-        <div class="sm-slider-value" id="sm-freeze-preview"></div>
-        <div class="sm-slider-row">
-          <input type="range" class="sm-slider" id="sm-freeze-slider" min="1" max="${s.freeze_max_months || 6}" step="1" value="3" oninput="updateFreezePreview()">
-        </div>
-        <div class="sm-row"><button class="sm-btn" onclick="applyFreezeCustom(this)">Поставить на паузу</button></div>
-      </div>
-    </div>
-    <div class="sm-block">
-      <button class="sm-btn" style="width:100%" onclick="openWinbackMenu()">Контент классный, но…</button>
-      <button class="sm-quiet" style="margin-top:8px" onclick="openHardCancelConfirm()">Всё плохо, ухожу навсегда!!!</button>
+      <button class="sm-quiet" onclick="openCancelChoice()">Кажется, я хочу уйти</button>
     </div>
   `;
   updatePointsPreview();
@@ -1777,24 +1761,6 @@ function updatePointsPreview(){
 function toggleShiftDate(){
   const wrap = document.getElementById('sm-shift-date-wrap');
   if (wrap) wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
-}
-
-function toggleFreezeCustom(){
-  const wrap = document.getElementById('sm-freeze-custom');
-  if (!wrap) return;
-  wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
-  updateFreezePreview();
-}
-
-function updateFreezePreview(){
-  const slider = document.getElementById('sm-freeze-slider');
-  const preview = document.getElementById('sm-freeze-preview');
-  if (slider && preview) preview.innerHTML = `Пауза на <b>${plural(parseInt(slider.value, 10), 'месяц', 'месяца', 'месяцев')}</b>`;
-}
-
-function applyFreezeCustom(btn){
-  const slider = document.getElementById('sm-freeze-slider');
-  return applyFreeze(slider ? parseInt(slider.value, 10) : 1, btn);
 }
 
 async function shiftByDays(days, btn){
@@ -1858,22 +1824,6 @@ async function applyShiftToDate(date, btn, label){
     showToast(e.message || 'Не получилось');
     btn.disabled = false;
     btn.textContent = label;
-  }
-}
-
-async function applyFreeze(months, btn){
-  if (btn){ btn.disabled = true; btn.textContent = '…'; }
-  try {
-    const d = await apiRequest(`${API_URL}/subscription/freeze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, months })
-    }, 20000);
-    showToast(`Пауза до ${d.frozen_until}`);
-    await loadSubStatus();
-  } catch (e) {
-    showToast(e.message || 'Не получилось');
-    if (btn){ btn.disabled = false; btn.textContent = plural(months, 'месяц', 'месяца', 'месяцев'); }
   }
 }
 
@@ -2049,11 +1999,23 @@ const WINBACK_REASON_LIST = [
   { key:'life_circumstances', label:'Жизненные обстоятельства' },
   { key:'work_overload',      label:'Завал на работе/учёбе/другом курсе' },
   { key:'no_fit',             label:'Не помогает с моей конкретной проблемой' },
-  { key:'competitor',         label:'Ушёл к другому эксперту/курсу' },
+  { key:'own_reason',         label:'Своя причина' },
 ];
 
-function openWinbackMenu(){
+function openCancelChoice(){
   closeSubManage();
+  document.getElementById('winback-title').textContent = 'Уходишь?';
+  document.getElementById('winback-body').innerHTML = `
+    <div class="sm-row">
+      <button class="sm-btn" onclick="openWinbackMenu()">Контент классный, но…</button>
+    </div>
+    <div class="sm-row" style="margin-top:8px">
+      <button class="sm-btn" onclick="closeWinbackFunnel();openHardCancelConfirm()">Всё плохо, ухожу навсегда!!!</button>
+    </div>`;
+  document.getElementById('winback-overlay').classList.add('open');
+}
+
+function openWinbackMenu(){
   document.getElementById('winback-title').textContent = 'Что не так?';
   document.getElementById('winback-body').innerHTML =
     '<div class="sm-hint" style="margin-bottom:6px">Выбери — тут же попробуем решить.</div>' +
@@ -2068,6 +2030,17 @@ function closeWinbackFunnel(){
 function renderWinbackReason(key){
   const item = WINBACK_REASON_LIST.find(r => r.key === key);
   document.getElementById('winback-title').textContent = item.label;
+
+  if (key === 'temp_money') {
+    // Разовый бонус "за честность" — начисляется в момент открытия ЭТОЙ причины,
+    // не по клику на кнопку, поэтому в тексте и звучит "я уже начислил"
+    document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+    submitWinback('temp_money', 'honesty_bonus_grant', {})
+      .then(d => { document.getElementById('winback-body').innerHTML = WINBACK_RENDERERS.temp_money(d); })
+      .catch(() => { document.getElementById('winback-body').innerHTML = WINBACK_RENDERERS.temp_money({}); });
+    return;
+  }
+
   document.getElementById('winback-body').innerHTML = WINBACK_RENDERERS[key]();
 }
 
@@ -2079,7 +2052,7 @@ const WINBACK_RENDERERS = {
       <button class="sm-btn" onclick="submitWinbackWithText('no_direction','guide_only')">Личный гайд</button>
       <button class="sm-btn" onclick="submitWinbackWithText('no_direction','guide_discount')">Гайд + скидка</button>
     </div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_direction')">Нет, хочу уйти навсегда</div>`,
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_direction')">Нет, хочу уйти навсегда!!!</div>`,
 
   no_onboarding: () => `
     <div class="sm-hint">Давай проведу тебе персональный тур по приложению — покажу, что где лежит и как этим пользоваться.</div>
@@ -2087,7 +2060,7 @@ const WINBACK_RENDERERS = {
       <button class="sm-btn" onclick="submitWinbackSimple('no_onboarding','tour_only')">Провести тур</button>
       <button class="sm-btn" onclick="submitWinbackSimple('no_onboarding','tour_discount')">Тур + скидка</button>
     </div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_onboarding')">Нет, хочу уйти навсегда</div>`,
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_onboarding')">Нет, хочу уйти навсегда!!!</div>`,
 
   nothing_watched: () => `
     <div class="sm-hint">Дам тебе доступ к лучшим материалам и подарю возможность скачать себе выжимки и скрипты со всех занятий — заберёшь, чтобы точно не потерялось.</div>
@@ -2095,7 +2068,7 @@ const WINBACK_RENDERERS = {
       <button class="sm-btn" onclick="submitWinbackSimple('nothing_watched','materials_only')">Дать материалы</button>
       <button class="sm-btn" onclick="submitWinbackSimple('nothing_watched','materials_discount')">Материалы + скидка</button>
     </div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('nothing_watched')">Нет, хочу уйти навсегда</div>`,
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('nothing_watched')">Нет, хочу уйти навсегда!!!</div>`,
 
   no_time: () => `
     <div class="sm-hint">Смотри, вообще я сильно ругаю ребят, кто пытается посмотреть «всё». Я построил клуб так, чтобы любое небольшое касание давало 110% пользы и быстро решало все (ну или почти все) острые запросы участника. Давай я сделаю для тебя персонализированную выжимку — подберу списком самый классный контент за последний месяц-два и сделаю для тебя выжимку.</div>
@@ -2103,43 +2076,45 @@ const WINBACK_RENDERERS = {
       <button class="sm-btn" onclick="submitWinbackSimple('no_time','accept_no_discount')">А давай! Можно без скидки</button>
       <button class="sm-btn" onclick="submitWinbackSimple('no_time','accept_discount')">Супер! Давай со скидкой</button>
     </div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_time')">Нет, хочу уйти навсегда</div>`,
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_time')">Нет, хочу уйти навсегда!!!</div>`,
 
-  temp_money: () => `
-    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я начислю тебе 1000 бонусов за честность. Вторая — теперь ты можешь оплатить этими бонусами следующий месяц, хоть целиком. Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
+  temp_money: (d) => `
+    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я${d && d.already_granted ? ' уже когда-то' : ' только что'} начислил тебе 1000 бонусов за честность${d && d.points ? ` (сейчас у тебя ${d.points})` : ''}. Вторая — теперь ты можешь оплатить этими бонусами следующий месяц, хоть целиком. Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
     <div class="sm-row" style="margin-top:10px">
-      <button class="sm-btn" onclick="submitWinbackSimple('temp_money','pay_with_points')">Оплатить бонусами</button>
+      <button class="sm-btn" onclick="closeWinbackFunnel();openSubManage()">Оплатить бонусами</button>
       <button class="sm-btn" onclick="submitWinbackSimple('temp_money','shift_payment')">Сдвинуть платёж</button>
     </div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('temp_money')">Нет, ухожу навсегда</div>`,
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('temp_money')">Нет, ухожу навсегда!!!</div>`,
 
   life_circumstances: () => `
-    <div class="sm-hint">Понимаю, жизнь жить это не на балалайке играть. Я очень ценю твоё участие в клубе и поддержку моего проекта. Если хочешь, мы можем заморозить твоё участие на какое-то время — доступ останется открытым, и я буду присылать тебе выжимки закрытых занятий просто почитать на досуге, пять минут и океан пользы.</div>
-    ${winbackFreezeControls('life_circumstances')}
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('life_circumstances')">Нет, ухожу навсегда</div>`,
+    ${winbackFreezeControls('life_circumstances', 'Понимаю, жизнь жить это не на балалайке играть. Я очень ценю твоё участие в клубе и поддержку моего проекта. Если хочешь, мы можем заморозить твоё участие на какое-то время — доступ останется открытым, и я буду присылать тебе выжимки закрытых занятий просто почитать на досуге, пять минут и океан пользы.')}
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('life_circumstances')">Нет, ухожу навсегда!!!</div>`,
 
   work_overload: () => `
-    <div class="sm-hint">Да ты ж мой роскошный человек, как никто наверное тебя понимаю! Спасибо тебе огромное за поддержку моего проекта, я это безумно ценю! Если хочешь, я соберу тебе выжимку всего самого интересного, что происходило за последний месяц-два в клубе, и просто поставлю списания на паузу, но оставлю доступ к клубу открытым. Кайф сохранить всех деятельных пирожочков, а тебя в особенности.</div>
-    ${winbackFreezeControls('work_overload')}
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('work_overload')">Нет, ухожу навсегда</div>`,
+    ${winbackFreezeControls('work_overload', 'Да ты ж мой роскошный человек, как никто наверное тебя понимаю! Спасибо тебе огромное за поддержку моего проекта, я это безумно ценю! Если хочешь, я соберу тебе выжимку всего самого интересного, что происходило за последний месяц-два в клубе, и просто поставлю списания на паузу, но оставлю доступ к клубу открытым. Кайф сохранить всех деятельных пирожочков, а тебя в особенности.')}
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('work_overload')">Нет, ухожу навсегда!!!</div>`,
 
   no_fit: () => `
-    <div class="sm-hint">Понимаю — иногда контент есть, а конкретно твоя ситуация требует отдельного разговора. Давай разберём её лично.</div>
-    <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackSimple('no_fit','no_fit_consultation')">Хочу личный разбор</button></div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_fit')">Нет, хочу уйти навсегда</div>`,
+    <div class="sm-hint" style="margin-bottom:10px">Понимаю — иногда контент есть, а конкретно твоя ситуация требует отдельного разговора. Задай вопрос — разберу его лично на ближайшей пятничной встрече.</div>
+    <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="В чём именно затык?"></textarea>
+    <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackWithText('no_fit','no_fit_question')">Задать вопрос</button></div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_fit')">Нет, хочу уйти навсегда!!!</div>`,
 
-  competitor: () => `
-    <div class="sm-hint">Жалко это слышать, но спасибо, что сказал(а) честно. Расскажи, чего не хватило — это по-настоящему помогает мне становиться лучше.</div>
-    <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="Чего не хватило?"></textarea>
-    <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackWithText('competitor','competitor_feedback')">Отправить</button></div>
-    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('competitor')">Всё равно ухожу</div>`,
+  own_reason: () => `
+    <div class="sm-hint" style="margin-bottom:10px">Расскажи, что случилось — я бы очень хотел сохранить такого классного участника. Я получу твой запрос и подумаю, что можно сделать. Подождёшь?</div>
+    <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="Что случилось?"></textarea>
+    <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackOwnReasonWait()">Подожду</button></div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('own_reason')">Нет, ухожу навсегда!!!</div>`,
 };
 
-function winbackFreezeControls(reasonKey){
+function winbackFreezeControls(reasonKey, introText){
   return `
-    <div class="sm-row" style="margin-top:10px">
-      <button class="sm-btn" onclick="submitWinbackSimple('${reasonKey}','freeze_1mo')">Давай на месяц</button>
-      <button class="sm-btn" onclick="toggleWinbackFreezeMore()">Нужно больше</button>
+    <div id="winback-freeze-intro">
+      <div class="sm-hint">${introText}</div>
+      <div class="sm-row" style="margin-top:10px">
+        <button class="sm-btn" onclick="submitWinbackSimple('${reasonKey}','freeze_1mo')">Давай на месяц</button>
+        <button class="sm-btn" onclick="toggleWinbackFreezeMore()">Нужно больше</button>
+      </div>
     </div>
     <div id="winback-freeze-more" style="display:none;margin-top:10px">
       <input type="range" min="2" max="6" value="3" id="winback-freeze-months" oninput="document.getElementById('winback-freeze-months-val').textContent=this.value" style="width:100%;accent-color:var(--lav-deep)">
@@ -2149,8 +2124,10 @@ function winbackFreezeControls(reasonKey){
 }
 
 function toggleWinbackFreezeMore(){
-  const el = document.getElementById('winback-freeze-more');
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  // Одностороннее раскрытие: убираем вводный текст и верхние кнопки — они уже
+  // сделали своё дело, дальше нужен только слайдер и подтверждение
+  document.getElementById('winback-freeze-intro').style.display = 'none';
+  document.getElementById('winback-freeze-more').style.display = 'block';
 }
 
 async function submitWinback(reasonKey, choiceKey, extra){
@@ -2190,6 +2167,18 @@ async function submitWinbackWithText(reasonKey, choiceKey){
   document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
   try {
     renderWinbackResult(await submitWinback(reasonKey, choiceKey, { free_text: text }));
+  } catch (e) { showToast(e.message || 'Не получилось'); }
+}
+
+async function submitWinbackOwnReasonWait(){
+  const text = (document.getElementById('winback-free-text')?.value || '').trim();
+  document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+  try {
+    await submitWinback('own_reason', 'own_reason_wait', { free_text: text });
+    document.getElementById('winback-body').innerHTML = `
+      <div class="sm-hint">Записал(а), Денис уже думает. Кстати, могу сразу подвинуть тебе платёж на недельку, чтобы было время без спешки.</div>
+      <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackSimple('own_reason','shift_payment')">Давай, подвинь платёж</button></div>
+      <div class="payment-help-link" style="margin-top:10px" onclick="closeWinbackFunnel()">Не надо, просто жду</div>`;
   } catch (e) { showToast(e.message || 'Не получилось'); }
 }
 
@@ -2270,11 +2259,6 @@ function openHardCancelConfirm(){
 
 function closeCancelFunnel(){
   document.getElementById('sub-cancel-overlay').classList.remove('open');
-}
-
-async function freezeFromFunnel(months){
-  closeCancelFunnel();
-  await applyFreeze(months, null);
 }
 
 function renderCancelStep3(){
