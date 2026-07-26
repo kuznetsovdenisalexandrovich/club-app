@@ -1090,6 +1090,26 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="winback-overlay" onclick="if(event.target===this) closeWinbackFunnel()">
+  <div class="center-modal" id="winback-modal" style="max-width:420px;max-height:82vh;overflow-y:auto">
+    <div class="center-modal-header">
+      <div class="center-modal-title" id="winback-title">Контент классный, но…</div>
+      <button class="icon-btn" onclick="closeWinbackFunnel()">✕</button>
+    </div>
+    <div id="winback-body"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="postcancel-overlay" onclick="if(event.target===this) closePostCancelOffer()">
+  <div class="center-modal" id="postcancel-modal" style="max-width:420px">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Подписка уже остановлена</div>
+      <button class="icon-btn" onclick="closePostCancelOffer()">✕</button>
+    </div>
+    <div id="postcancel-body"></div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="reward-confirm-overlay" onclick="if(event.target===this) closeRewardConfirm()">
   <div class="center-modal" id="reward-confirm-modal">
     <div class="center-modal-header">
@@ -1604,14 +1624,6 @@ let subStatus = null;
 let cancelReasonKey = '';
 let discountArmed = false;
 
-const CANCEL_REASONS = [
-  { key:'price', label:'Дороговато сейчас',   offer:'discount' },
-  { key:'time',  label:'Нет времени на клуб', offer:'freeze'   },
-  { key:'value', label:'Не хватает пользы',   offer:'ask'      },
-  { key:'pause', label:'Временные трудности', offer:'freeze'   },
-  { key:'other', label:'Другая причина',      offer:'freeze'   },
-];
-
 function nextDayIso(iso){
   const d = new Date(iso + 'T12:00:00');
   d.setDate(d.getDate() + 1);
@@ -1731,7 +1743,8 @@ function renderSubManage(){
       </div>
     </div>
     <div class="sm-block">
-      <button class="sm-quiet" onclick="openCancelFunnel()">Кажется, я хочу остановить подписку</button>
+      <button class="sm-btn" style="width:100%" onclick="openWinbackMenu()">Контент классный, но…</button>
+      <button class="sm-quiet" style="margin-top:8px" onclick="openHardCancelConfirm()">Всё плохо, ухожу навсегда!!!</button>
     </div>
   `;
   updatePointsPreview();
@@ -1901,17 +1914,11 @@ async function loadRewardsData(){
 
 function rewardsListHtml(){
   if (!lastRewardsData) return '';
-  return (lastRewardsData.rewards || []).map(r => {
-    if (r.kind === 'payment') {
-      return `
-        <div class="reward-item" onclick="closeRewards();openSubManage()" style="cursor:pointer">
-          <div class="reward-body">
-            <div class="reward-title">${r.title}</div>
-            <div class="reward-hint">${r.hint}</div>
-          </div>
-          <div class="reward-cost">${r.cost}</div>
-        </div>`;
-    }
+  // "Оплатить месяц баллами" сознательно НЕ показываем в этом списке — раньше она стояла
+  // первой и выглядела как реклама именно этой опции, а Denis не хочет активно агитировать
+  // за оплату баллами (риск вырастить вовлечённых, но не платящих участников). Она никуда
+  // не делась — доступна в "Управление подпиской" тем, кто сам туда придёт за скидкой.
+  return (lastRewardsData.rewards || []).filter(r => r.kind !== 'payment').map(r => {
     return `
       <div class="reward-item${r.affordable ? '' : ' locked'}" onclick="openRewardConfirm('${r.key}')" style="cursor:pointer">
         <div class="reward-body">
@@ -2027,61 +2034,242 @@ function closeAppSettingsPopup(){
   document.getElementById('app-settings-overlay').classList.remove('open');
 }
 
-function openCancelFunnel(){
+/* ── "Контент классный, но..." — соблазнение перед отменой ────────────────────
+   В отличие от жёсткого пути, эта воронка НЕ отменяет подписку — только пытается
+   решить проблему. Девять причин, у каждой свой тон и свой подарок, тексты Дениса
+   почти дословно. Общая механика подтверждения/подарка — на бэкенде (POST
+   /subscription/winback), тут только рендер и сбор выбора. */
+
+const WINBACK_REASON_LIST = [
+  { key:'no_direction',       label:'Не понял, что смотреть' },
+  { key:'no_onboarding',      label:'Не разобрался в клубе' },
+  { key:'nothing_watched',    label:'Ничего не посмотрел' },
+  { key:'no_time',            label:'Не успеваю' },
+  { key:'temp_money',         label:'Временный напряг по деньгам' },
+  { key:'life_circumstances', label:'Жизненные обстоятельства' },
+  { key:'work_overload',      label:'Завал на работе/учёбе/другом курсе' },
+  { key:'no_fit',             label:'Не помогает с моей конкретной проблемой' },
+  { key:'competitor',         label:'Ушёл к другому эксперту/курсу' },
+];
+
+function openWinbackMenu(){
+  closeSubManage();
+  document.getElementById('winback-title').textContent = 'Что не так?';
+  document.getElementById('winback-body').innerHTML =
+    '<div class="sm-hint" style="margin-bottom:6px">Выбери — тут же попробуем решить.</div>' +
+    WINBACK_REASON_LIST.map(r => `<button class="sm-reason" onclick="renderWinbackReason('${r.key}')">${r.label}</button>`).join('');
+  document.getElementById('winback-overlay').classList.add('open');
+}
+
+function closeWinbackFunnel(){
+  document.getElementById('winback-overlay').classList.remove('open');
+}
+
+function renderWinbackReason(key){
+  const item = WINBACK_REASON_LIST.find(r => r.key === key);
+  document.getElementById('winback-title').textContent = item.label;
+  document.getElementById('winback-body').innerHTML = WINBACK_RENDERERS[key]();
+}
+
+const WINBACK_RENDERERS = {
+  no_direction: () => `
+    <div class="sm-hint" style="margin-bottom:10px">Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 1₽, чтобы точно успел(а) посмотреть.</div>
+    <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="Например: как настроить рекламу, как продавать дороже..."></textarea>
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="submitWinbackWithText('no_direction','guide_only')">Личный гайд</button>
+      <button class="sm-btn" onclick="submitWinbackWithText('no_direction','guide_discount')">Гайд + скидка</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_direction')">Нет, хочу уйти навсегда</div>`,
+
+  no_onboarding: () => `
+    <div class="sm-hint">Давай проведу тебе персональный тур по приложению — покажу, что где лежит и как этим пользоваться.</div>
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="submitWinbackSimple('no_onboarding','tour_only')">Провести тур</button>
+      <button class="sm-btn" onclick="submitWinbackSimple('no_onboarding','tour_discount')">Тур + скидка</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_onboarding')">Нет, хочу уйти навсегда</div>`,
+
+  nothing_watched: () => `
+    <div class="sm-hint">Дам тебе доступ к лучшим материалам и подарю возможность скачать себе выжимки и скрипты со всех занятий — заберёшь, чтобы точно не потерялось.</div>
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="submitWinbackSimple('nothing_watched','materials_only')">Дать материалы</button>
+      <button class="sm-btn" onclick="submitWinbackSimple('nothing_watched','materials_discount')">Материалы + скидка</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('nothing_watched')">Нет, хочу уйти навсегда</div>`,
+
+  no_time: () => `
+    <div class="sm-hint">Смотри, вообще я сильно ругаю ребят, кто пытается посмотреть «всё». Я построил клуб так, чтобы любое небольшое касание давало 110% пользы и быстро решало все (ну или почти все) острые запросы участника. Давай я сделаю для тебя персонализированную выжимку — подберу списком самый классный контент за последний месяц-два и сделаю для тебя выжимку.</div>
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="submitWinbackSimple('no_time','accept_no_discount')">А давай! Можно без скидки</button>
+      <button class="sm-btn" onclick="submitWinbackSimple('no_time','accept_discount')">Супер! Давай со скидкой</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_time')">Нет, хочу уйти навсегда</div>`,
+
+  temp_money: () => `
+    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я начислю тебе 1000 бонусов за честность. Вторая — теперь ты можешь оплатить этими бонусами следующий месяц, хоть целиком. Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="submitWinbackSimple('temp_money','pay_with_points')">Оплатить бонусами</button>
+      <button class="sm-btn" onclick="submitWinbackSimple('temp_money','shift_payment')">Сдвинуть платёж</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('temp_money')">Нет, ухожу навсегда</div>`,
+
+  life_circumstances: () => `
+    <div class="sm-hint">Понимаю, жизнь жить это не на балалайке играть. Я очень ценю твоё участие в клубе и поддержку моего проекта. Если хочешь, мы можем заморозить твоё участие на какое-то время — доступ останется открытым, и я буду присылать тебе выжимки закрытых занятий просто почитать на досуге, пять минут и океан пользы.</div>
+    ${winbackFreezeControls('life_circumstances')}
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('life_circumstances')">Нет, ухожу навсегда</div>`,
+
+  work_overload: () => `
+    <div class="sm-hint">Да ты ж мой роскошный человек, как никто наверное тебя понимаю! Спасибо тебе огромное за поддержку моего проекта, я это безумно ценю! Если хочешь, я соберу тебе выжимку всего самого интересного, что происходило за последний месяц-два в клубе, и просто поставлю списания на паузу, но оставлю доступ к клубу открытым. Кайф сохранить всех деятельных пирожочков, а тебя в особенности.</div>
+    ${winbackFreezeControls('work_overload')}
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('work_overload')">Нет, ухожу навсегда</div>`,
+
+  no_fit: () => `
+    <div class="sm-hint">Понимаю — иногда контент есть, а конкретно твоя ситуация требует отдельного разговора. Давай разберём её лично.</div>
+    <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackSimple('no_fit','no_fit_consultation')">Хочу личный разбор</button></div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_fit')">Нет, хочу уйти навсегда</div>`,
+
+  competitor: () => `
+    <div class="sm-hint">Жалко это слышать, но спасибо, что сказал(а) честно. Расскажи, чего не хватило — это по-настоящему помогает мне становиться лучше.</div>
+    <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="Чего не хватило?"></textarea>
+    <div class="sm-row" style="margin-top:10px"><button class="sm-btn" onclick="submitWinbackWithText('competitor','competitor_feedback')">Отправить</button></div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('competitor')">Всё равно ухожу</div>`,
+};
+
+function winbackFreezeControls(reasonKey){
+  return `
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="submitWinbackSimple('${reasonKey}','freeze_1mo')">Давай на месяц</button>
+      <button class="sm-btn" onclick="toggleWinbackFreezeMore()">Нужно больше</button>
+    </div>
+    <div id="winback-freeze-more" style="display:none;margin-top:10px">
+      <input type="range" min="2" max="6" value="3" id="winback-freeze-months" oninput="document.getElementById('winback-freeze-months-val').textContent=this.value" style="width:100%;accent-color:var(--lav-deep)">
+      <div class="sm-hint" style="text-align:center">На <b><span id="winback-freeze-months-val">3</span></b> мес.</div>
+      <button class="sm-btn" style="width:100%;margin-top:8px" onclick="submitWinbackFreezeMore('${reasonKey}')">Поставить на паузу</button>
+    </div>`;
+}
+
+function toggleWinbackFreezeMore(){
+  const el = document.getElementById('winback-freeze-more');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitWinback(reasonKey, choiceKey, extra){
+  return apiRequest(`${API_URL}/subscription/winback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, reason_key: reasonKey, choice_key: choiceKey, ...extra })
+  }, 20000);
+}
+
+function renderWinbackResult(d){
+  const body = document.getElementById('winback-body');
+  if (d.cancelled) { showPostCancelOffer(); return; }
+
+  let msg = 'Записал — Денис скоро с тобой свяжется.';
+  if ('bonus_granted' in d) {
+    msg = d.bonus_granted
+      ? 'Готово! Баллы и скидка на следующий месяц уже у тебя.'
+      : 'Этот подарок уже использован максимум раз, но я всё равно всё передал(а) — Денис на связи.';
+  }
+  if (d.next_payment)  msg += ` Платёж перенесён на ${d.next_payment}.`;
+  if (d.frozen_until)  msg += ` Пауза до ${d.frozen_until}.`;
+
+  body.innerHTML = `<div class="sm-hint" style="text-align:center;padding:16px 0">${msg}</div>
+    <button class="lec-link-btn access-btn" onclick="closeWinbackFunnel();loadProfile();loadSubStatus()">Отлично</button>`;
+}
+
+async function submitWinbackSimple(reasonKey, choiceKey){
+  document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+  try {
+    renderWinbackResult(await submitWinback(reasonKey, choiceKey, {}));
+  } catch (e) { showToast(e.message || 'Не получилось'); }
+}
+
+async function submitWinbackWithText(reasonKey, choiceKey){
+  const text = (document.getElementById('winback-free-text')?.value || '').trim();
+  document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+  try {
+    renderWinbackResult(await submitWinback(reasonKey, choiceKey, { free_text: text }));
+  } catch (e) { showToast(e.message || 'Не получилось'); }
+}
+
+async function submitWinbackFreezeMore(reasonKey){
+  const months = parseInt(document.getElementById('winback-freeze-months').value, 10);
+  document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+  try {
+    renderWinbackResult(await submitWinback(reasonKey, 'freeze_more', { freeze_months: months }));
+  } catch (e) { showToast(e.message || 'Не получилось'); }
+}
+
+async function declineWinbackForever(reasonKey){
+  document.getElementById('winback-body').innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+  try {
+    renderWinbackResult(await submitWinback(reasonKey, 'decline_forever', {}));
+  } catch (e) { showToast(e.message || 'Не получилось'); }
+}
+
+/* ── Предложение ПОСЛЕ реальной отмены — независимо от того, каким путём до неё
+   дошли (жёсткая кнопка или "всё равно ухожу" внутри одной из девяти причин) ── */
+
+function showPostCancelOffer(){
+  closeCancelFunnel();
+  closeWinbackFunnel();
+  document.getElementById('postcancel-body').innerHTML = `
+    <div class="sm-hint">Подписка остановлена. Будем благодарны узнать, чего не хватило клубу, чтобы тебя сохранить.</div>
+    <div class="sm-hint" style="margin-top:10px">А что скажешь, если мы тебе сейчас соберём самого классного контентика, откроем возможность скачать выжимки, и подарим месяц участия за 1₽ — просто в благодарность за то, что мне удалось тебя соблазнить остаться?</div>
+    <div class="sm-row" style="margin-top:10px">
+      <button class="sm-btn" onclick="acceptPostCancelOffer(false)">А давай! Можно без скидки</button>
+      <button class="sm-btn" onclick="acceptPostCancelOffer(true)">Супер! Давай со скидкой</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="openPostCancelFeedback()">Дать обратную связь</div>`;
+  document.getElementById('postcancel-overlay').classList.add('open');
+}
+
+function closePostCancelOffer(){
+  document.getElementById('postcancel-overlay').classList.remove('open');
+}
+
+async function acceptPostCancelOffer(withDiscount){
+  const body = document.getElementById('postcancel-body');
+  body.innerHTML = '<div class="sm-hint" style="text-align:center;padding:20px 0">Секунду…</div>';
+  try {
+    await apiRequest(`${API_URL}/subscription/reactivate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId })
+    }, 20000);
+    const d = await submitWinback('post_cancel', withDiscount ? 'accept_discount' : 'accept_no_discount', {});
+    body.innerHTML = `<div class="sm-hint" style="text-align:center;padding:10px 0">Готово! Ты снова с нами${d.bonus_granted ? ' — баллы и скидка на месяц уже у тебя' : ''}.</div>
+      <button class="lec-link-btn access-btn" onclick="closePostCancelOffer();loadProfile();loadSubStatus()">Ура</button>`;
+  } catch (e) {
+    body.innerHTML = `<div class="sm-hint" style="text-align:center;color:var(--red)">Не получилось: ${e.message || ''}</div>
+      <button class="lec-link-btn access-btn" onclick="closePostCancelOffer()">Закрыть</button>`;
+  }
+}
+
+function openPostCancelFeedback(){
+  document.getElementById('postcancel-body').innerHTML = `
+    <div class="sm-hint">Расскажи, чего не хватило — это по-настоящему помогает.</div>
+    <textarea class="ai-question-input" id="postcancel-feedback-input" rows="3"></textarea>
+    <button class="lec-link-btn access-btn" style="margin-top:10px" onclick="submitPostCancelFeedback()">Отправить</button>`;
+}
+
+async function submitPostCancelFeedback(){
+  const text = (document.getElementById('postcancel-feedback-input').value || '').trim();
+  try { await submitWinback('post_cancel', 'feedback', { free_text: text }); } catch (e) {}
+  document.getElementById('postcancel-body').innerHTML =
+    '<div class="sm-hint" style="text-align:center;padding:16px 0">Спасибо, что сказал(а) честно 🙏</div>' +
+    '<button class="lec-link-btn access-btn" onclick="closePostCancelOffer()">Закрыть</button>';
+}
+
+function openHardCancelConfirm(){
   closeSubManage();
   cancelReasonKey = '';
   document.getElementById('sub-cancel-overlay').classList.add('open');
-  renderCancelStep1();
+  renderCancelStep3(); // никаких промежуточных отговоров — решение уже принято, идём прямо к подтверждению
 }
 
 function closeCancelFunnel(){
   document.getElementById('sub-cancel-overlay').classList.remove('open');
-}
-
-function renderCancelStep1(){
-  document.getElementById('sub-cancel-title').textContent = 'Что не так?';
-  document.getElementById('sub-cancel-body').innerHTML =
-    '<div class="sm-hint" style="margin-bottom:6px">Скажи честно — от ответа зависит, что мы можем предложить.</div>' +
-    CANCEL_REASONS.map(r => `<button class="sm-reason" onclick="chooseCancelReason('${r.key}')">${r.label}</button>`).join('');
-}
-
-async function chooseCancelReason(key){
-  cancelReasonKey = key;
-  const reason = CANCEL_REASONS.find(r => r.key === key);
-  document.getElementById('sub-cancel-body').innerHTML = '<div class="sm-hint">Секунду…</div>';
-  let alt = null;
-  try {
-    // confirm:false — подписку не трогаем, только сохраняем причину и получаем,
-    // что можно предложить взамен
-    const d = await apiRequest(`${API_URL}/subscription/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, reason: reason ? reason.label : key, confirm: false })
-    }, 20000);
-    alt = d.alternatives || null;
-  } catch (e) {}
-  renderCancelStep2(reason, alt);
-}
-
-function renderCancelStep2(reason, alt){
-  document.getElementById('sub-cancel-title').textContent = 'Прежде чем уйдёшь';
-  const offer = reason ? reason.offer : 'freeze';
-  let offerHtml;
-
-  if (offer === 'discount' && alt && alt.discount && alt.discount.available){
-    offerHtml = `<div class="sm-hint">У тебя ${alt.discount.points_have} баллов — ими можно закрыть до ${alt.discount.max_spend} ₽ следующего платежа.</div>
-      <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openSubManage()">Оплатить баллами</button></div>`;
-  } else if (offer === 'ask'){
-    offerHtml = `<div class="sm-hint">Часто дело в том, что нужный материал просто не нашёлся. Спроси напрямую — разберём на ближайшей встрече.</div>
-      <div class="sm-row"><button class="sm-btn" onclick="closeCancelFunnel();openAskDenisPopup()">Задать вопрос Денису</button></div>`;
-  } else {
-    const months = (alt && alt.freeze && alt.freeze.months) || [1, 2];
-    offerHtml = `<div class="sm-hint">Можно не отменять, а просто отодвинуть списание — доступ при этом остаётся.</div>
-      <div class="sm-row">${months.map(mo => `<button class="sm-btn" onclick="freezeFromFunnel(${mo})">${plural(mo, 'месяц', 'месяца', 'месяцев')}</button>`).join('')}</div>`;
-  }
-
-  document.getElementById('sub-cancel-body').innerHTML =
-    offerHtml + '<button class="sm-danger" onclick="renderCancelStep3()">Всё равно отменить подписку</button>';
 }
 
 async function freezeFromFunnel(months){
@@ -2127,16 +2315,13 @@ async function confirmCancel(btn){
   btn.disabled = true;
   btn.textContent = 'Отменяю…';
   try {
-    const reason = CANCEL_REASONS.find(r => r.key === cancelReasonKey);
     await apiRequest(`${API_URL}/subscription/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, reason: reason ? reason.label : '', confirm: true })
+      body: JSON.stringify({ telegram_id: telegramId, reason: 'Всё плохо, ухожу навсегда', confirm: true })
     }, 20000);
-    document.getElementById('sub-cancel-title').textContent = 'Подписка отменена';
-    document.getElementById('sub-cancel-body').innerHTML =
-      '<div class="sm-hint">Автосписаний больше не будет. Доступ сохранится до конца оплаченного периода, а вернуть подписку можно будет одной кнопкой в этом же разделе.</div>' +
-      '<button class="sm-quiet" onclick="closeCancelFunnel()">Закрыть</button>';
+    closeCancelFunnel();
+    showPostCancelOffer();
   } catch (e) {
     showToast(e.message || 'Не получилось');
     btn.disabled = false;
