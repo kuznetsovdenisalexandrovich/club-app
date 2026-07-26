@@ -165,6 +165,8 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .lec-tags{display:flex;flex-wrap:wrap;gap:6px}
 .lec-links{display:flex;gap:8px;margin-top:12px}
 .lec-link-btn{flex:1;font-size:12px;font-weight:700;padding:9px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--lav);cursor:pointer}
+.lec-link-btn.insights-btn{color:var(--lav-deep)}
+[data-theme="light"] .lec-link-btn.insights-btn{color:var(--warm)}
 .lec-link-btn:active{transform:scale(0.97)}
 .lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
 
@@ -649,17 +651,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <div class="points-caption">баллов на балансе</div>
     </div>
 
-    <div class="section-label">Что такое баллы</div>
+    <div class="section-label">Что такое баллы и уровень</div>
     <div class="card">
-      <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность: просмотр лекций, продление подписки, участие в живых встречах, хорошие вопросы — иногда просто «потому что молодец». Часть баллов можно потратить, а сколько ты заработал за всё время — двигает твой уровень в клубе и никогда не уменьшается, даже когда ты что-то покупаешь.</div>
+      <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и особенно за <span style="color:var(--warm);font-weight:700;cursor:pointer" onclick="comingSoon()">приглашение друзей в клуб</span>. Баллы можно потратить на кучу разных ништяков — от личной консультации до доступа к очень особенным материалам. Ими даже можно оплатить участие в клубе.</div>
+      <div class="reward-hint" style="margin-top:12px">Уровень — это твой ранг. Если баллы можно тратить, то уровень лишь растёт. Уровень сам по себе открывает доступ к разным материалам и функциям. Например, с какого-то уровня ты сможешь скачивать себе красивые выжимки занятий и скрипты продаж в PDF — и оставлять их себе, даже после окончания подписки.</div>
     </div>
 
     <div class="section-label">Как заработать</div>
     <div class="card">
       <div class="step-row"><span>Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
-      <div class="step-row"><span>Продлить подписку</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
-      <div class="step-row"><span>Пройти личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
-      <div class="step-row"><span>Живые встречи, хорошие вопросы и просто так</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
+      <div class="step-row"><span>Посетить живое занятие</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
+      <div class="step-row"><span>Быть участником</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+500 / мес</span></div>
+      <div class="step-row"><span>Составить свою личную карту контента</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
+      <div class="step-row"><span>Пройти карту</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+2000</span></div>
+      <div class="step-row"><span>Активничать — иногда просто так, по решению Дениса</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
+      <div class="step-row" style="cursor:pointer" onclick="document.getElementById('donate-section').scrollIntoView({behavior:'smooth'})"><span style="color:var(--warm)">Или просто задонатить любую сумму ↓</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">1₽ = 1</span></div>
     </div>
 
     <div class="section-label">На что потратить</div>
@@ -673,7 +679,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="lec-link-btn access-btn" onclick="openLevelsPopup()">Посмотреть уровни</button>
     </div>
 
-    <div class="section-label">Поддержать проект</div>
+    <div class="section-label" id="donate-section">Поддержать проект</div>
     <div class="card">
       <div class="reward-hint" style="margin-bottom:10px">Любая сумма превращается в баллы 1:1 — и заодно помогает клубу.</div>
       <input type="number" class="ai-question-input" id="donate-amount" placeholder="Сумма в ₽" min="10" style="margin-bottom:10px">
@@ -1047,6 +1053,29 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <button class="icon-btn" onclick="closeLevelsPopup()">✕</button>
     </div>
     <div id="levels-body"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="vk-access-overlay" onclick="if(event.target===this) document.getElementById('vk-access-overlay').classList.remove('open')">
+  <div class="center-modal" id="vk-access-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Видео в закрытой группе</div>
+      <button class="icon-btn" onclick="document.getElementById('vk-access-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px">Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.</div>
+    <button class="lec-link-btn access-btn" onclick="grantVkAccessAndJoin()">Получить доступ к ВК</button>
+    <div class="payment-help-link" style="margin-top:10px" onclick="alreadyHaveVkAccess()">У меня уже есть доступ</div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="insights-lock-overlay" onclick="if(event.target===this) closeInsightsLevelLockNotice()">
+  <div class="center-modal" id="insights-lock-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Пока закрыто</div>
+      <button class="icon-btn" onclick="closeInsightsLevelLockNotice()">✕</button>
+    </div>
+    <div id="insights-lock-text" style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px"></div>
+    <button class="lec-link-btn access-btn" onclick="closeInsightsLevelLockNotice();switchView('points-info')">Как поднять уровень</button>
   </div>
 </div>
 
@@ -1469,6 +1498,10 @@ async function loadContinueWidget() {
 }
 
 let isMember = false;
+let vkAccessGranted = false;
+// TODO: подтвердить у Denis'а точную ссылку на закрытую группу ВК с видео —
+// сейчас переиспользуем ту же, что и у тайла "Резервный канал ВК" на главной
+const VK_GROUP_JOIN_LINK = 'https://vk.ru/im/channels/-237934122';
 // Захватываем "первый ли это раз как участник" РОВНО ОДИН РАЗ за сессию аппа. Сервер
 // консьюмит этот флаг при первом же обращении к /users/me — если потом дёрнуть /users/me
 // второй раз в ту же секунду (напр. авто-попап шагов сам обновляет статус), сервер уже
@@ -1506,6 +1539,7 @@ async function loadProfile() {
     builtPath = !!u.built_path;
     points = u.points || 0;
     hasPushSubscription = !!u.has_push_subscription;
+    vkAccessGranted = !!u.vk_access_granted;
     rewardLevel = u.reward_level || 3;
     lifetimePoints = u.lifetime_points || 0;
     nextLevelPoints = u.next_level_points ?? null;
@@ -1626,7 +1660,7 @@ function renderSubManage(){
   const cancelledBlock = (s.cancelled && s.cancel_reversible) ? `
     <div class="sm-block">
       <div class="sm-title">Подписка остановлена</div>
-      <div class="sm-hint">Автосписаний не будет. Доступ действует до ${s.next_payment || 'конца оплаченного периода'} — можно вернуть всё как было.${s.points ? ` Баллы (${s.points}) пока при тебе, но сгорят вместе с доступом.` : ''}</div>
+      <div class="sm-hint">Автосписаний не будет. Доступ действует до ${s.next_payment || 'конца оплаченного периода'} — можно вернуть всё как было.${s.points ? ` Баллы (${s.points}) и уровень пока при тебе, но сгорят вместе с доступом.` : ''}</div>
       <div class="sm-row"><button class="sm-btn" onclick="reactivateSubscription(this)">Восстановить подписку</button></div>
     </div>` : '';
 
@@ -2060,7 +2094,7 @@ function renderCancelStep3(){
   const pts = (subStatus && subStatus.points) || 0;
   // Про сгорание говорим честно и заранее — узнать об этом постфактум куда обиднее
   const burnWarning = pts > 0
-    ? `<div class="sm-hint" style="margin-top:10px">И ещё: накопленные <b>${pts}</b> баллов сгорят, когда доступ закончится. Пока он действует — они при тебе.</div>`
+    ? `<div class="sm-hint" style="margin-top:10px">И ещё: накопленные <b>${pts}</b> баллов и весь твой уровень сгорят, когда доступ закончится — придётся набирать заново с нуля. Пока доступ действует — они при тебе.</div>`
     : '';
   document.getElementById('sub-cancel-title').textContent = 'Точно отменяем?';
   document.getElementById('sub-cancel-body').innerHTML = `
@@ -2119,6 +2153,7 @@ let appSettings = {
   show_requisites: true,
   sms_login_enabled: false,
   allow_direct_phone_login: true,
+  insights_unlock_level: 2,
 };
 
 let debugMode = false;
@@ -2130,6 +2165,7 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
 async function loadAppSettings(){
   try {
     appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
+    appSettings.insights_unlock_level = parseInt(appSettings.insights_unlock_level, 10) || 2;
   } catch (e) {}
   applyAppSettings();
 }
@@ -2440,6 +2476,7 @@ async function refreshOnboardStatus(){
       builtPath = !!u.built_path;
       points = u.points || 0;
       hasPushSubscription = !!u.has_push_subscription;
+    vkAccessGranted = !!u.vk_access_granted;
       rewardLevel = u.reward_level || 3;
       lifetimePoints = u.lifetime_points || 0;
       nextLevelPoints = u.next_level_points ?? null;
@@ -2872,9 +2909,10 @@ function lecCardHtml(l, i){
   const vkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'vk')`;
+  const insightsLevelLocked = rewardLevel < (appSettings.insights_unlock_level || 2);
   const insightsClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
-    : `openInsightsModal(${i})`;
+    : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i})`);
   return `
     <div class="lec-card">
       <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
@@ -2885,7 +2923,7 @@ function lecCardHtml(l, i){
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
       <div class="lec-links">
-        ${(l.key_insights||[]).length ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${insightsClick}">${lockIcon}Главные идеи</button>` : ''}
+        ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${lockCls}" onclick="event.stopPropagation();${insightsClick}">${lockIcon}Главные идеи</button>` : ''}
         ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
       </div>
@@ -3035,6 +3073,16 @@ function openUrl(url) {
   }
 }
 
+function openInsightsLevelLockNotice(){
+  const need = appSettings.insights_unlock_level || 2;
+  document.getElementById('insights-lock-text').textContent =
+    `Выжимки с занятий откроются тебе на ${need} уровне.`;
+  document.getElementById('insights-lock-overlay').classList.add('open');
+}
+function closeInsightsLevelLockNotice(){
+  document.getElementById('insights-lock-overlay').classList.remove('open');
+}
+
 function openInsightsModal(index){
   if (!isMember) { openPaywall(); return; }
   const l = renderedItems[index];
@@ -3067,8 +3115,44 @@ function closeInsightsModal(){
   document.getElementById('insights-modal-overlay').classList.remove('open');
 }
 
+let pendingVkOpenIndex = null;
+
+function openVkAccessGate(index){
+  pendingVkOpenIndex = index;
+  document.getElementById('vk-access-overlay').classList.add('open');
+}
+
+function markVkAccessGranted(){
+  vkAccessGranted = true;
+  if (!telegramId) return;
+  fetch(`${API_URL}/users/vk-access-granted`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId })
+  }).catch(()=>{});
+}
+
+function grantVkAccessAndJoin(){
+  markVkAccessGranted();
+  openUrl(VK_GROUP_JOIN_LINK);
+  proceedAfterVkAccess();
+}
+
+function alreadyHaveVkAccess(){
+  markVkAccessGranted();
+  proceedAfterVkAccess();
+}
+
+function proceedAfterVkAccess(){
+  document.getElementById('vk-access-overlay').classList.remove('open');
+  const idx = pendingVkOpenIndex;
+  pendingVkOpenIndex = null;
+  if (idx !== null) openLectureLink(idx, 'vk'); // vkAccessGranted уже true — на этот раз пройдёт
+}
+
 function openLectureLink(index, platform) {
   if (!isMember) { openPaywall(); return; }
+  if (platform === 'vk' && !vkAccessGranted) { openVkAccessGate(index); return; }
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
