@@ -1050,6 +1050,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="insights-modal-overlay" onclick="if(event.target===this) closeInsightsModal()">
+  <div class="center-modal" id="insights-modal" style="max-width:420px;max-height:82vh;display:flex;flex-direction:column">
+    <div class="center-modal-header">
+      <div class="center-modal-title" id="insights-modal-title">Главные идеи</div>
+      <button class="icon-btn" onclick="closeInsightsModal()">✕</button>
+    </div>
+    <div id="insights-modal-body" style="overflow-y:auto;flex:1"></div>
+    <div id="insights-modal-links" style="display:flex;gap:8px;margin-top:14px"></div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="reward-confirm-overlay" onclick="if(event.target===this) closeRewardConfirm()">
   <div class="center-modal" id="reward-confirm-modal">
     <div class="center-modal-header">
@@ -2861,6 +2872,9 @@ function lecCardHtml(l, i){
   const vkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'vk')`;
+  const insightsClick = tourLocked
+    ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
+    : `openInsightsModal(${i})`;
   return `
     <div class="lec-card">
       <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
@@ -2871,6 +2885,7 @@ function lecCardHtml(l, i){
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
       <div class="lec-links">
+        ${(l.key_insights||[]).length ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${insightsClick}">${lockIcon}Главные идеи</button>` : ''}
         ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
       </div>
@@ -3018,6 +3033,38 @@ function openUrl(url) {
   } else {
     window.open(url, '_blank');
   }
+}
+
+function openInsightsModal(index){
+  if (!isMember) { openPaywall(); return; }
+  const l = renderedItems[index];
+  if (!l || !(l.key_insights||[]).length) return;
+
+  document.getElementById('insights-modal-title').textContent = l.title;
+
+  document.getElementById('insights-modal-body').innerHTML = l.key_insights.map(ins => {
+    const hasPhrase = ins.phrase && ins.phrase.trim();
+    return `
+      <div style="padding:14px 0;border-bottom:1px solid var(--line)">
+        <div style="font-size:14px;line-height:1.55;font-weight:600">${ins.insight}</div>
+        ${hasPhrase ? `
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;color:var(--warm);font-size:12.5px;font-weight:700">Пример фразы ›</summary>
+            <div style="font-style:italic;color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.5">${ins.phrase}</div>
+          </details>` : ''}
+      </div>`;
+  }).join('');
+
+  const links = [];
+  if (l.link)    links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link}')">Смотреть в ТГ</button>`);
+  if (l.link_vk) links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link_vk}')">Смотреть в VK</button>`);
+  document.getElementById('insights-modal-links').innerHTML = links.join('');
+
+  document.getElementById('insights-modal-overlay').classList.add('open');
+}
+
+function closeInsightsModal(){
+  document.getElementById('insights-modal-overlay').classList.remove('open');
 }
 
 function openLectureLink(index, platform) {
