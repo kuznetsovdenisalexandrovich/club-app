@@ -2142,6 +2142,12 @@ function renderWinbackResult(d){
   const body = document.getElementById('winback-body');
   if (d.cancelled) { showPostCancelOffer(); return; }
 
+  if (d.shift_blocked) {
+    body.innerHTML = `<div class="sm-hint" style="text-align:center;padding:16px 0">Ты уже сдвигал(а) платёж недавно — эта возможность вернётся после ближайшего реального платежа.</div>
+      <button class="lec-link-btn access-btn" onclick="closeWinbackFunnel();loadProfile();loadSubStatus()">Понятно</button>`;
+    return;
+  }
+
   let msg = 'Записал — Денис скоро с тобой свяжется.';
   if ('bonus_granted' in d) {
     msg = d.bonus_granted
