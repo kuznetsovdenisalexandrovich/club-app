@@ -885,7 +885,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
-  <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+  <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff;display:none">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
 <!-- Вне Telegram, не в standalone-режиме — сначала подсказка, как добавить на главный экран -->
@@ -924,6 +924,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
   <div style="text-align:center;font-size:13px;color:#fff;margin-top:8px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
   <div class="payment-help-link" style="position:fixed;left:0;right:0;bottom:calc(24px + env(safe-area-inset-bottom));text-align:center" onclick="proceedPastHomeScreenInstructions()">продолжить в браузере</div>
+  <div style="margin-top:14px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -4350,6 +4351,8 @@ async function proceedToWebLogin(){
   loginStage = 'phone';
   codeSendAttempts = 0;
   document.getElementById('web-login-screen').style.display = 'flex';
+  var wrbShow = document.getElementById('web-requisites-bar');
+  if (wrbShow) wrbShow.style.display = '';
   renderLoginStage();
 }
 
