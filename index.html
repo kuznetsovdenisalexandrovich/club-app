@@ -4140,9 +4140,13 @@ function loadUrgentNewsForWebEntry(){
     .then(r => r.json())
     .then(data => {
       if (data && data.text && data.text.trim()) {
-        const el = document.getElementById('web-urgent-news-banner');
+        var el = document.getElementById('web-urgent-news-banner');
         el.textContent = data.text;
-        el.style.display = 'block';
+        // Показываем только если login-screen уже открыт
+        var ls = document.getElementById('web-login-screen');
+        if (ls && ls.style.display !== 'none') {
+          el.style.display = 'block';
+        }
       }
     })
     .catch(()=>{});
@@ -4353,6 +4357,8 @@ async function proceedToWebLogin(){
   document.getElementById('web-login-screen').style.display = 'flex';
   var wrbShow = document.getElementById('web-requisites-bar');
   if (wrbShow) wrbShow.style.display = '';
+  var ubn = document.getElementById('web-urgent-news-banner');
+  if (ubn && ubn.textContent) ubn.style.display = 'block';
   renderLoginStage();
 }
 
