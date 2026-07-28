@@ -654,6 +654,19 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
       </div>
       <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Демо-режим</div>
+        <div style="display:flex;gap:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#ef4444"
+            onclick="isMember=false;renderDemoBanner();document.getElementById('debug-level-result').textContent='Демо-режим включён'">
+            Включить демо
+          </button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#4ade80"
+            onclick="isMember=true;renderDemoBanner();document.getElementById('debug-level-result').textContent='Режим участника включён'">
+            Режим участника
+          </button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Быстрые тесты</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('showLevelUpPopup(4,{reward_keys:[\"Архивные лекции\"],unlock_keys:[\"Скачивание PDF-выжимок\"]});'')">Попап уровня</button>
