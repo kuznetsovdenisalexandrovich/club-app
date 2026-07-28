@@ -416,6 +416,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* ── Конфетти при достижении уровня ── */
 .confetti-piece{position:fixed;top:-10px;border-radius:2px;opacity:0;pointer-events:none;z-index:9999;animation:confettiFall linear forwards}
 @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+.confetti-piece{position:fixed;top:-10px;border-radius:2px;opacity:0;pointer-events:none;z-index:9999;animation:confettiFall linear forwards}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -638,6 +641,42 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="diag-result"></div>
       </div>
       <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Симуляция уровня и баллов</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(1)">Уровень 1</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(2)">Уровень 2</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(3)">Уровень 3</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(5)">Уровень 5</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugAddPoints(500)">+500 баллов</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugAddPoints(2000)">+2000 баллов</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugResetPoints()">Сбросить</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Демо-режим</div>
+        <div style="display:flex;gap:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#ef4444" onclick="isMember=false;renderDemoBanner();document.getElementById('debug-level-result').textContent='Демо включён'">Включить демо</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#4ade80" onclick="isMember=true;renderDemoBanner();document.getElementById('debug-level-result').textContent='Режим участника'">Режим участника</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Быстрые тесты</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('showLevelUpPopup(4,{rewards:[\"Архивные лекции\"],unlock_keys:[\"pdf\"]})')">Попап уровня</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('launchConfetti()')">Конфетти</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPdfLockNotice(3,false)')">Замок PDF</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPaywall()')">Пейволл</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input id="debug-cmd-input" placeholder="JS выражение..." style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
+          <button class="lec-card" style="border:none;font-size:12px;padding:6px 12px" onclick="debugRunCmd(document.getElementById('debug-cmd-input').value)">▶</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;min-height:20px" id="debug-cmd-output"></div>
+      </div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Симуляция уровня и баллов</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -885,7 +924,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
-  <div class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+  <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
 <!-- Вне Telegram, не в standalone-режиме — сначала подсказка, как добавить на главный экран -->
@@ -945,6 +984,19 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
     <span>Профиль</span>
     <div class="tab-underline"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="level-up-overlay" onclick="if(event.target===this)closeLevelUpPopup()">
+  <div class="center-modal" id="level-up-modal" style="text-align:center">
+    <div class="center-modal-header" style="justify-content:flex-end">
+      <button class="icon-btn" onclick="closeLevelUpPopup()">✕</button>
+    </div>
+    <div style="font-size:36px;margin-bottom:6px">🏆</div>
+    <div class="center-modal-title" id="level-up-title">Новый уровень!</div>
+    <div style="font-size:14px;color:var(--text-dim);margin:8px 0 16px" id="level-up-subtitle"></div>
+    <div id="level-up-unlocks" style="text-align:left;margin-bottom:16px"></div>
+    <button class="lec-link-btn access-btn" style="width:100%" onclick="closeLevelUpPopup()">Отлично!</button>
   </div>
 </div>
 
@@ -1151,6 +1203,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     </div>
     <div id="pdf-lock-text" style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px"></div>
     <button class="lec-link-btn access-btn" onclick="closePdfLockNotice();switchView('points-info')">Как поднять уровень</button>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="pdf-lock-overlay" onclick="if(event.target===this)closePdfLockNotice()" style="z-index:650">
+  <div class="center-modal" id="pdf-lock-modal">
+    <div class="center-modal-header" style="justify-content:flex-end">
+      <button class="icon-btn" onclick="closePdfLockNotice()">✕</button>
+    </div>
+    <div class="center-modal-title" style="margin-bottom:8px">Пока закрыто</div>
+    <div id="pdf-lock-text" style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px"></div>
+    <button class="lec-link-btn access-btn" style="width:100%" onclick="closePdfLockNotice();switchView('points-info')">Как поднять уровень</button>
   </div>
 </div>
 
@@ -1499,7 +1562,7 @@ async function loadNews() {
       html += `<div class="news-block">${news.common_text}</div>`;
     }
     (news.targeted || []).forEach(t => {
-      if (!isMember) return; // в демо-режиме таргетированные новости не показываем
+      if (!isMember) return;
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
       const isListMember = key && listMembership && listMembership[key] === 'True';
@@ -1631,6 +1694,7 @@ async function loadProfile() {
     points = u.points || 0;
     hasPushSubscription = !!u.has_push_subscription;
     vkAccessGranted = !!u.vk_access_granted;
+    const prevRewardLevel = rewardLevel;
     const prevRewardLevel = rewardLevel;
     rewardLevel = u.reward_level || 3;
     lifetimePoints = u.lifetime_points || 0;
@@ -2430,6 +2494,7 @@ async function loadAppSettings(){
     appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
     appSettings.insights_unlock_level = parseInt(appSettings.insights_unlock_level, 10) || 2;
     appSettings.pdf_unlock_level = parseInt(appSettings.pdf_unlock_level, 10) || 3;
+    appSettings.pdf_unlock_level = parseInt(appSettings.pdf_unlock_level, 10) || 3;
   } catch (e) {}
   applyAppSettings();
 }
@@ -2440,6 +2505,8 @@ function applyAppSettings(){
   });
   const line = document.getElementById('requisites-line');
   if (line) line.style.display = appSettings.show_requisites ? '' : 'none';
+  const webBar = document.getElementById('web-requisites-bar');
+  if (webBar) webBar.style.display = appSettings.show_requisites ? '' : 'none';
 }
 
 function applyDebugMode(){
@@ -2656,6 +2723,27 @@ function debugRunCmd(cmd){
   }
 }
 
+function debugSetLevel(level){
+  rewardLevel = level;
+  const pts = { 1:0, 2:500, 3:1600, 4:3500, 5:7000 };
+  lifetimePoints = pts[level]||level*1500;
+  const badge = document.getElementById('reward-level-badge-num');
+  if (badge) badge.textContent = rewardLevel;
+  document.getElementById('debug-level-result').textContent = `Симуляция: уровень ${rewardLevel}, ${lifetimePoints} баллов (локально)`;
+  try { renderLevels && renderLevels(); } catch(e){}
+}
+function debugAddPoints(amount){ lifetimePoints=(lifetimePoints||0)+amount; document.getElementById('debug-level-result').textContent=`Симуляция: ${lifetimePoints} баллов (локально)`; }
+function debugResetPoints(){ lifetimePoints=0; rewardLevel=1; const b=document.getElementById('reward-level-badge-num'); if(b)b.textContent=1; document.getElementById('debug-level-result').textContent='Сброшено: уровень 1, 0 баллов'; }
+
+function debugRunCmd(cmd){
+  const out = document.getElementById('debug-cmd-output');
+  try {
+    const result = eval(cmd);
+    if (result instanceof Promise) result.then(r=>{out.textContent='✓ '+JSON.stringify(r,null,2);}).catch(e=>{out.textContent='✗ '+e;});
+    else out.textContent = result!==undefined ? ('✓ '+JSON.stringify(result)) : '✓ выполнено';
+  } catch(e){ out.textContent='✗ '+e; }
+}
+
 async function resetOnboardingProgress(){
   Object.keys(LEVELS).forEach(lvl => {
     if (LEVELS[lvl].pointsMode) return; // очковый уровень — нет чек-листа шагов
@@ -2743,6 +2831,32 @@ function launchConfetti(){
     const size=Math.random()*8+5;
     el.style.cssText=`width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${Math.random()*100}vw;animation-duration:${Math.random()*1.5+1}s;animation-delay:${Math.random()*0.4}s`;
     document.body.appendChild(el);
+    setTimeout(()=>el.remove(),2000);
+  }
+}
+function showLevelUpPopup(newLevel, levelConfig){
+  document.getElementById('level-up-title').textContent = `Уровень ${newLevel}!`;
+  document.getElementById('level-up-subtitle').textContent = 'Поздравляем — ты перешёл на новый уровень клуба';
+  const unl = document.getElementById('level-up-unlocks');
+  const rewardTitles = (levelConfig && levelConfig.rewards) || [];
+  const unlockKeys   = (levelConfig && levelConfig.unlock_keys) || [];
+  const UNLOCK_NAMES = { insights: 'Главные идеи в карточке лекции', pdf: 'Скачивание PDF-выжимок' };
+  const allItems = [...rewardTitles, ...unlockKeys.map(k => UNLOCK_NAMES[k]||k)];
+  const items = allItems.map(t => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px"><span style="color:var(--warm);font-size:16px">★</span><span>${t}</span></div>`);
+  unl.innerHTML = items.length ? items.join('') : '<div style="font-size:13px;color:var(--text-dim);text-align:center">Продолжай зарабатывать баллы — впереди ещё много наград</div>';
+  document.getElementById('level-up-overlay').classList.add('open');
+  launchConfetti();
+}
+function closeLevelUpPopup(){ document.getElementById('level-up-overlay').classList.remove('open'); }
+
+function launchConfetti(){
+  const colors=['#E8614A','#C8952B','#16131E','#E6DDCE','#5E5768'];
+  for(let i=0;i<60;i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    const size=Math.random()*8+5;
+    el.style.cssText=`width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${Math.random()*100}vw;animation-duration:${Math.random()*1.5+1}s;animation-delay:${Math.random()*0.4}s`;
+    document.body.appendChild(el);
     setTimeout(()=>el.remove(),(2000));
   }
 }
@@ -2820,16 +2934,17 @@ async function refreshOnboardStatus(){
       nextLevelPoints = u.next_level_points ?? null;
       pointsToNext = u.points_to_next ?? null;
       progressFraction = u.progress_fraction ?? 0;
-    // Детект нового уровня — показываем попап только если апп уже инициализирован
-    // (prevRewardLevel > 0 исключает первый запуск)
-    if (prevRewardLevel > 0 && rewardLevel > prevRewardLevel) {
+    // Детект нового уровня — показываем попап только если этот уровень ещё не показывали
+    const shownLevelKey = 'level_up_shown_' + telegramId;
+    let shownLevel = 0;
+    try { shownLevel = parseInt(localStorage.getItem(shownLevelKey)||'0',10); } catch(e){}
+    if (rewardLevel > shownLevel) {
       try {
         const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
         const cfg = levels.find(l => l.level === rewardLevel) || null;
         showLevelUpPopup(rewardLevel, cfg);
-      } catch(e) {
-        showLevelUpPopup(rewardLevel, null);
-      }
+      } catch(e) { showLevelUpPopup(rewardLevel, null); }
+      try { localStorage.setItem(shownLevelKey, String(rewardLevel)); } catch(e){}
     }
       serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
@@ -3252,7 +3367,6 @@ function lecCardHtml(l, i){
   const locked = !isMember || tourLocked;
   const lockCls = locked ? ' locked' : '';
   const lockIcon = locked ? '🔒 ' : '';
-  // Для кнопки "Главные идеи" замок только по уровню, не по членству
   const insightsLocked = tourLocked || insightsLevelLocked;
   const insightsLockCls = insightsLocked ? ' locked' : '';
   const insightsLockIcon = insightsLocked ? '🔒 ' : '';
@@ -3482,7 +3596,7 @@ function _renderPdfBtn(slug) {
   // Для демо-пользователей PDF всегда заблокирован
   const locked = !isMember || curLevel < pdfLevel;
   if (locked) {
-    pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с ${pdfLevel} уровня)</button>`;
+    pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPdfLockNotice(${pdfLevel},${!isMember})">${!isMember ? 'Доступно участникам клуба' : `Скачивание с ${pdfLevel} уровня`}</button>`;
   } else {
     pdfEl.innerHTML = `<button class="lec-link-btn access-btn" style="width:100%" data-slug="${slug}" onclick="downloadPdf('${slug}', this)">Скачать выжимку</button>`;
   }
@@ -3797,20 +3911,15 @@ function closeDemoEntryPopup(){
   document.getElementById('demo-entry-overlay').classList.remove('open');
 }
 function enterDemoMode(){
-  // Скрываем экран логина, показываем основной интерфейс в демо-режиме
   isMember = false;
-  const loginScreen = document.getElementById('web-login-screen');
-  if (loginScreen) loginScreen.style.display = 'none';
-  // Показываем основное приложение
-  const mainContent = document.getElementById('main-content') || document.getElementById('app-root');
-  if (mainContent) mainContent.style.display = '';
+  ['web-login-screen','home-screen-screen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const webReqBar = document.getElementById('web-requisites-bar');
+  if (webReqBar) webReqBar.style.display = 'none';
+  startApp();
   renderDemoBanner();
-  // Загружаем данные без авторизации
-  Promise.all([
-    loadLibrary && loadLibrary(),
-    loadSchedule && loadSchedule(),
-    loadStreams && loadStreams(),
-  ].filter(Boolean)).catch(()=>{});
 }
 
 function closePaywall(){
@@ -4129,6 +4238,8 @@ function startApp(){
   document.getElementById('tabbar').style.display = 'flex';
   const urgentBanner = document.getElementById('web-urgent-news-banner');
   if (urgentBanner) urgentBanner.style.display = 'none';
+  const webReqBar = document.getElementById('web-requisites-bar');
+  if (webReqBar) webReqBar.style.display = 'none';
   applyDebugMode();
   loadAppSettings();
   loadProfile();
