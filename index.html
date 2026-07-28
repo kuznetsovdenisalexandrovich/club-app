@@ -1510,7 +1510,11 @@ async function loadNews() {
     if (hasUrgent) {
       html += `<div class="news-block news-block--urgent">${urgent.text}</div>`;
     }
-    if (hasCommon) {
+    // Срочная новость приходит отдельным эндпоинтом. Если свежая новость помечена
+    // срочной, её текст возвращают ОБА эндпоинта — рисуем один раз, в рамке
+    const sameText = hasUrgent && hasCommon
+      && urgent.text.trim() === news.common_text.trim();
+    if (hasCommon && !sameText) {
       html += `<div class="news-block">${news.common_text}</div>`;
     }
     (news.targeted || []).forEach(t => {
