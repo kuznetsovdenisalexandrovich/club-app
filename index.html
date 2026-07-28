@@ -634,6 +634,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="diag-result"></div>
       </div>
       <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Симуляция уровня и баллов</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(1)">Уровень 1</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(2)">Уровень 2</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(3)">Уровень 3</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugSetLevel(5)">Уровень 5</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugAddPoints(500)">+500 баллов</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugAddPoints(2000)">+2000 баллов</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugResetPoints()">Сбросить баллы</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
+      </div>
     </div>
 
     <div id="requisites-line" style="text-align:center;font-size:13px;color:#fff;margin-top:28px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
@@ -2526,6 +2541,32 @@ function checkLevelUp(){
   }
 }
 
+function debugSetLevel(level){
+  rewardLevel = level;
+  // Симулируем нужное количество баллов для уровня
+  const pts = { 1: 0, 2: 500, 3: 1600, 4: 3500, 5: 7000 };
+  lifetimePoints = pts[level] || (level * 1500);
+  document.getElementById('debug-level-result').textContent =
+    `Симуляция: уровень ${rewardLevel}, ${lifetimePoints} баллов (только локально, не сохраняется)`;
+  // Обновляем отображение везде где показывается уровень
+  const badge = document.getElementById('reward-level-badge-num');
+  if (badge) badge.textContent = rewardLevel;
+  renderLevels && renderLevels();
+}
+
+function debugAddPoints(amount){
+  lifetimePoints = (lifetimePoints || 0) + amount;
+  document.getElementById('debug-level-result').textContent =
+    `Симуляция: ${lifetimePoints} баллов (локально)`;
+}
+
+function debugResetPoints(){
+  lifetimePoints = 0; rewardLevel = 1;
+  document.getElementById('debug-level-result').textContent = 'Сброшено: уровень 1, 0 баллов';
+  const badge = document.getElementById('reward-level-badge-num');
+  if (badge) badge.textContent = rewardLevel;
+}
+
 async function resetOnboardingProgress(){
   Object.keys(LEVELS).forEach(lvl => {
     if (LEVELS[lvl].pointsMode) return; // очковый уровень — нет чек-листа шагов
@@ -3285,11 +3326,9 @@ function openInsightsModal(index){
   const pdfLocked = rewardLevel < pdfLevel;
   const pdfEl = document.getElementById('insights-modal-pdf');
   if (pdfEl) {
-    if (pdfLocked) {
-      pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.55" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку 🔒</button>`;
-    } else {
-      pdfEl.innerHTML = `<button class="lec-link-btn access-btn" style="width:100%" onclick="downloadPdf('${l.slug}')">Скачать выжимку</button>`;
-    }
+    pdfEl.innerHTML = pdfLocked
+      ? `<button class="lec-link-btn" style="width:100%;opacity:.5" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с уровня ${pdfLevel})</button>`
+      : `<button class="lec-link-btn access-btn" style="width:100%" onclick="downloadPdf('${l.slug}', this)">Скачать выжимку</button>`;
   }
 
   document.getElementById('insights-modal-overlay').classList.add('open');
@@ -3300,30 +3339,37 @@ function closeInsightsModal(){
 }
 
 function openPdfLockNotice(level){
-  document.getElementById('pdf-lock-text').textContent =
-    `Скачивать выжимки можно с ${level} уровня. Зарабатывай баллы — и буклеты откроются.`;
+  document.getElementById('pdf-lock-text').innerHTML =
+    `Скачивать выжимки можно с ${level} уровня.<br><br>Зарабатывай баллы — и буклеты откроются.`;
   document.getElementById('pdf-lock-overlay').classList.add('open');
 }
 function closePdfLockNotice(){
   document.getElementById('pdf-lock-overlay').classList.remove('open');
 }
 
-async function downloadPdf(slug){
-  const btn = event.currentTarget;
-  const origText = btn.textContent;
+async function downloadPdf(slug, btn){
+  const orig = btn.textContent;
   btn.textContent = 'Отправляю…';
   btn.disabled = true;
   try {
     const res = await apiRequest(`${API_URL}/lectures/${slug}/pdf?telegram_id=${userProfile.telegram_id}`);
     if (res && res.ok) {
       btn.textContent = 'Отправлено в Telegram';
-      setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
     } else {
-      throw new Error(res?.detail || 'Ошибка');
+      throw new Error(res?.detail || 'err');
     }
   } catch(e) {
-    btn.textContent = 'Не получилось, попробуй позже';
-    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+    const msg = String(e.message || e);
+    if (msg.includes('403') || msg.includes('уровня')) {
+      // Сервер вернул 403 — показываем попап уровня
+      closePdfLockNotice && closePdfLockNotice();
+      const level = appSettings.pdf_unlock_level || 3;
+      openPdfLockNotice(level);
+    } else {
+      btn.textContent = 'Что-то пошло не так, попробуй позже';
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
+    }
     btn.disabled = false;
   }
 }
