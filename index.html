@@ -605,7 +605,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div class="card" id="demo-profile-card" style="display:none">
       <div style="font-size:14px;font-weight:600;margin-bottom:4px">Ты смотришь клуб в демо-режиме</div>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px">Оплати участие — откроются записи занятий, живые эфиры и баллы. Или войди, если подписка уже есть.</div>
-      <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:8px" onclick="openPaywall()">Оплатить доступ</button>
+      <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:8px" onclick="openAccessPage()">Оплатить доступ</button>
       <button class="lec-link-btn" id="demo-profile-login-btn" style="width:100%" onclick="exitDemoToLogin()">Войти по номеру</button>
     </div>
 
@@ -680,6 +680,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('launchConfetti()')">Конфетти</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPdfLockNotice(3)')">Замок PDF</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPaywall()')">Пейволл</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugShowLevelFlag()">Флаг поздравления</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetLevelFlag()">Сбросить флаг</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:6px">
           <input id="debug-cmd-input" placeholder="JS выражение..." style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
@@ -874,7 +876,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:20px">Можешь посмотреть что внутри — без входа. Или сразу оплатить участие.</div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">Посмотреть демо</button>
-      <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openPaywall()">Оплатить доступ</button>
+      <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openAccessPage()">Оплатить доступ</button>
     </div>
   </div>
 </div>
@@ -887,15 +889,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" value="+" placeholder="+7 999 123-45-67" inputmode="tel" oninput="keepPlusPrefix(this)">
     <button class="lec-link-btn access-btn" id="web-login-btn" onclick="handleLoginButton()">Войти</button>
   </div>
-  <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
-  <div id="web-login-notfound" style="display:none;width:100%;max-width:320px;margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:14px">
-    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">Такого номера пока нет в базе клуба. Если ты уже оплачивал подписку — напиши Денису, он разберётся вручную.</div>
-    <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:8px" onclick="openPaywall()">Оплатить доступ</button>
-    <div class="payment-help-link" style="margin:0" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_залогиниться_в_приложении')">Написать Денису</div>
+  <p id="web-login-error" style="display:none;color:var(--warm);max-width:320px;line-height:1.45">Не получилось войти — попробуй ещё раз чуть позже.</p>
+  <div id="web-login-notfound" style="display:none;width:100%;max-width:320px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:14px">
+    <div id="web-login-notfound-text" style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px"></div>
+    <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:6px" onclick="openAccessPage()">Оплатить доступ</button>
+    <div class="payment-help-link" style="margin:0" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_залогиниться_в_приложении')">Уже оплачивал — написать Денису</div>
   </div>
   <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
-  <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
+  <div class="payment-help-link" id="web-login-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
   <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff;display:none">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
@@ -1650,21 +1652,28 @@ async function loadProfile() {
     nextLevelPoints = u.next_level_points ?? null;
     pointsToNext = u.points_to_next ?? null;
     progressFraction = u.progress_fraction ?? 0;
-    // Детект нового уровня — показываем попап только если этот уровень ещё не показывали
-    // Храним в localStorage по ключу с telegramId чтобы не спутать пользователей
-    const shownLevelKey = 'level_up_shown_' + telegramId;
-    let shownLevel = 0;
-    try { shownLevel = parseInt(localStorage.getItem(shownLevelKey) || '0', 10); } catch(e){}
-    if (rewardLevel > shownLevel) {
-      try {
-        const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
-        const cfg = levels.find(l => l.level === rewardLevel) || null;
+    // Детект нового уровня. Три предохранителя, потому что поздравление, всплывающее
+    // при каждом открытии, раздражает сильнее, чем пропущенное:
+    //   1) флаг в localStorage — между запусками
+    //   2) флаг в памяти — loadProfile за сессию вызывается несколько раз
+    //   3) внешний try — сбой в попапе не должен обрывать загрузку профиля,
+    //      иначе ниже не выставится serverLevel и бар онбординга застынет
+    try {
+      const shownLevelKey = 'level_up_shown_' + telegramId;
+      let shownLevel = 0;
+      try { shownLevel = parseInt(localStorage.getItem(shownLevelKey) || '0', 10) || 0; } catch(e){}
+      if (telegramId && !levelUpShownThisSession && rewardLevel > shownLevel) {
+        // Запоминаем ДО показа: если попап упадёт, поздравление всё равно не повторится
+        levelUpShownThisSession = true;
+        try { localStorage.setItem(shownLevelKey, String(rewardLevel)); } catch(e){}
+        let cfg = null;
+        try {
+          const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
+          cfg = levels.find(l => l.level === rewardLevel) || null;
+        } catch(e){}
         showLevelUpPopup(rewardLevel, cfg);
-      } catch(e) {
-        showLevelUpPopup(rewardLevel, null);
       }
-      try { localStorage.setItem(shownLevelKey, String(rewardLevel)); } catch(e){}
-    }
+    } catch(e){}
         // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
     // (например, старое тестовое значение) — не пытаемся рендерить несуществующий контент,
     // просто остаёмся на последнем реальном уровне.
@@ -2547,6 +2556,7 @@ let homeScreenAdded = false;
 let points = 0;
 let hasPushSubscription = false;
 let rewardLevel = 3;
+let levelUpShownThisSession = false;  // поздравление с уровнем — один раз за сессию
 let lifetimePoints = 0;
 let nextLevelPoints = null;
 let pointsToNext = null;
@@ -2664,6 +2674,27 @@ function debugResetPoints(){
   const badge = document.getElementById('reward-level-badge-num');
   if (badge) badge.textContent = 1;
   document.getElementById('debug-level-result').textContent = 'Сброшено: уровень 1, 0 баллов';
+}
+
+// Диагностика поздравления с уровнем: что реально лежит в localStorage
+function debugShowLevelFlag(){
+  const out = document.getElementById('debug-cmd-output');
+  const key = 'level_up_shown_' + telegramId;
+  let stored = '(недоступно)';
+  try { stored = localStorage.getItem(key); } catch(e){ stored = 'localStorage недоступен: ' + e; }
+  out.textContent = 'ключ: ' + key
+    + '\nзаписано: ' + stored
+    + '\nуровень наград сейчас: ' + rewardLevel
+    + '\nпоказано в этой сессии: ' + levelUpShownThisSession;
+}
+
+function debugResetLevelFlag(){
+  const out = document.getElementById('debug-cmd-output');
+  try {
+    localStorage.removeItem('level_up_shown_' + telegramId);
+    levelUpShownThisSession = false;
+    out.textContent = 'Флаг сброшен — поздравление покажется при следующей загрузке профиля';
+  } catch(e){ out.textContent = 'Не вышло: ' + e; }
 }
 
 function debugRunCmd(cmd){
@@ -2844,17 +2875,6 @@ async function refreshOnboardStatus(){
       nextLevelPoints = u.next_level_points ?? null;
       pointsToNext = u.points_to_next ?? null;
       progressFraction = u.progress_fraction ?? 0;
-    // Детект нового уровня — показываем попап только если апп уже инициализирован
-    // (prevRewardLevel > 0 исключает первый запуск)
-    if (prevRewardLevel > 0 && rewardLevel > prevRewardLevel) {
-      try {
-        const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
-        const cfg = levels.find(l => l.level === rewardLevel) || null;
-        showLevelUpPopup(rewardLevel, cfg);
-      } catch(e) {
-        showLevelUpPopup(rewardLevel, null);
-      }
-    }
       serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
@@ -3282,7 +3302,8 @@ function lecCardHtml(l, i){
   const vkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'vk')`;
-  const insightsLevelLocked = rewardLevel < (appSettings.insights_unlock_level || 2);
+  // Уровень копится только у участников, поэтому демо им не ограничиваем
+  const insightsLevelLocked = isMember && rewardLevel < (appSettings.insights_unlock_level || 2);
   // Для кнопки "Главные идеи" замок только по уровню, не по членству
   const insightsLocked = tourLocked || insightsLevelLocked;
   const insightsLockCls = insightsLocked ? ' locked' : '';
@@ -3461,7 +3482,8 @@ function closeInsightsLevelLockNotice(){
 }
 
 function openInsightsModal(index){
-  if (!isMember) { openPaywall(); return; }
+  // Демо-пользователя пускаем: выжимка — это как раз то, чем он прогревается.
+  // Видео и PDF внутри попапа для него закрыты.
   const l = renderedItems[index];
   if (!l || !(l.key_insights||[]).length) return;
 
@@ -3952,6 +3974,14 @@ async function openAccessPage(){
   const el = document.getElementById('access-buttons');
   el.innerHTML = '<div class="loading">Готовим ссылки...</div>';
 
+  // Вне Telegram telegram_id нет, а ссылку на оплату Salebot делает под конкретного
+  // человека — отправляем в бота, там он опознается сам
+  if (!telegramId) {
+    el.innerHTML = '<div class="empty" style="line-height:1.5">Оплата проходит в боте — так платёж сразу свяжется с твоим аккаунтом.</div>'
+      + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(BOT_LINK)">Открыть бота</button>';
+    return;
+  }
+
   try {
     await fetch(`${API_URL}/app/action`, {
       method: 'POST',
@@ -4251,9 +4281,14 @@ function keepPlusPrefix(input){
 
 // Показываем запасные пути, когда номера нет в базе: часть подписчиков ещё не заведена,
 // им проще написать Денису напрямую, чем разбираться самим.
-function setLoginNotFound(show){
-  const el = document.getElementById('web-login-notfound');
+function setLoginNotFound(show, message){
+  const el   = document.getElementById('web-login-notfound');
+  const txt  = document.getElementById('web-login-notfound-text');
+  const help = document.getElementById('web-login-help-link');
   if (el) el.style.display = show ? 'block' : 'none';
+  if (txt && show) txt.textContent = message || 'Такого номера пока нет в базе клуба.';
+  // Пока блок показан, отдельная ссылка помощи ведёт туда же — прячем, чтобы не дублировать
+  if (help) help.style.display = show ? 'none' : '';
 }
 
 // Выход из демо обратно на экран входа — человек решил залогиниться
@@ -4392,8 +4427,10 @@ async function quickPhoneLogin(phone){
     if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
     finishWebLogin(data.telegram_id);
   } catch (e) {
-    setLoginError(e.message || 'Не получилось войти — попробуй ещё раз чуть позже.');
-    setLoginNotFound(true);
+    // Текст ошибки от бэкенда показываем внутри блока — иначе получаются два
+    // сообщения об одном и том же
+    setLoginError('');
+    setLoginNotFound(true, e.message);
   }
 }
 
