@@ -1068,6 +1068,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="pdf-lock-overlay" onclick="if(event.target===this) closePdfLockNotice()">
+  <div class="center-modal" id="pdf-lock-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Пока закрыто</div>
+      <button class="icon-btn" onclick="closePdfLockNotice()">✕</button>
+    </div>
+    <div id="pdf-lock-text" style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px"></div>
+    <button class="lec-link-btn access-btn" onclick="closePdfLockNotice();switchView('points-info')">Как поднять уровень</button>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="insights-lock-overlay" onclick="if(event.target===this) closeInsightsLevelLockNotice()">
   <div class="center-modal" id="insights-lock-modal">
     <div class="center-modal-header">
@@ -1087,6 +1098,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     </div>
     <div id="insights-modal-body" style="overflow-y:auto;flex:1"></div>
     <div id="insights-modal-links" style="display:flex;gap:8px;margin-top:14px"></div>
+  <div id="insights-modal-pdf" style="margin-top:10px"></div>
   </div>
 </div>
 
@@ -2312,6 +2324,7 @@ let appSettings = {
   sms_login_enabled: false,
   allow_direct_phone_login: true,
   insights_unlock_level: 2,
+  pdf_unlock_level: 3,
 };
 
 let debugMode = false;
@@ -2324,6 +2337,7 @@ async function loadAppSettings(){
   try {
     appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
     appSettings.insights_unlock_level = parseInt(appSettings.insights_unlock_level, 10) || 2;
+    appSettings.pdf_unlock_level = parseInt(appSettings.pdf_unlock_level, 10) || 3;
   } catch (e) {}
   applyAppSettings();
 }
@@ -3266,11 +3280,52 @@ function openInsightsModal(index){
   if (l.link_vk) links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link_vk}')">Смотреть в VK</button>`);
   document.getElementById('insights-modal-links').innerHTML = links.join('');
 
+  // Кнопка PDF
+  const pdfLevel = appSettings.pdf_unlock_level || 3;
+  const pdfLocked = rewardLevel < pdfLevel;
+  const pdfEl = document.getElementById('insights-modal-pdf');
+  if (pdfEl) {
+    if (pdfLocked) {
+      pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.55" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку 🔒</button>`;
+    } else {
+      pdfEl.innerHTML = `<button class="lec-link-btn access-btn" style="width:100%" onclick="downloadPdf('${l.slug}')">Скачать выжимку</button>`;
+    }
+  }
+
   document.getElementById('insights-modal-overlay').classList.add('open');
 }
 
 function closeInsightsModal(){
   document.getElementById('insights-modal-overlay').classList.remove('open');
+}
+
+function openPdfLockNotice(level){
+  document.getElementById('pdf-lock-text').textContent =
+    `Скачивать выжимки можно с ${level} уровня. Зарабатывай баллы — и буклеты откроются.`;
+  document.getElementById('pdf-lock-overlay').classList.add('open');
+}
+function closePdfLockNotice(){
+  document.getElementById('pdf-lock-overlay').classList.remove('open');
+}
+
+async function downloadPdf(slug){
+  const btn = event.currentTarget;
+  const origText = btn.textContent;
+  btn.textContent = 'Отправляю…';
+  btn.disabled = true;
+  try {
+    const res = await apiRequest(`${API_URL}/lectures/${slug}/pdf?telegram_id=${userProfile.telegram_id}`);
+    if (res && res.ok) {
+      btn.textContent = 'Отправлено в Telegram';
+      setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+    } else {
+      throw new Error(res?.detail || 'Ошибка');
+    }
+  } catch(e) {
+    btn.textContent = 'Не получилось, попробуй позже';
+    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+    btn.disabled = false;
+  }
 }
 
 let pendingVkOpenIndex = null;
