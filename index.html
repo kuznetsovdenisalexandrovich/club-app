@@ -3253,10 +3253,6 @@ function lecCardHtml(l, i){
   const locked = !isMember || tourLocked;
   const lockCls = locked ? ' locked' : '';
   const lockIcon = locked ? '🔒 ' : '';
-  // Для кнопки "Главные идеи" замок только по уровню, не по членству
-  const insightsLocked = tourLocked || insightsLevelLocked;
-  const insightsLockCls = insightsLocked ? ' locked' : '';
-  const insightsLockIcon = insightsLocked ? '🔒 ' : '';
   const linkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'tg')`;
@@ -3264,6 +3260,10 @@ function lecCardHtml(l, i){
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'vk')`;
   const insightsLevelLocked = rewardLevel < (appSettings.insights_unlock_level || 2);
+  // Для кнопки "Главные идеи" замок только по уровню, не по членству
+  const insightsLocked = tourLocked || insightsLevelLocked;
+  const insightsLockCls = insightsLocked ? ' locked' : '';
+  const insightsLockIcon = insightsLocked ? '🔒 ' : '';
   const insightsClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i})`);
@@ -3800,7 +3800,7 @@ function closeDemoEntryPopup(){
 function enterDemoMode(){
   isMember = false;
   // Скрываем экраны входа
-  var demoScreens = ['web-login-screen','home-screen-screen','web-add-home-screen-screen'];
+  var demoScreens = ['web-login-screen','web-add-home-screen-screen'];
   demoScreens.forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -3818,9 +3818,7 @@ function enterDemoMode(){
   loadStreams();
   loadLibrary();
   loadWidgetMonth();
-  loadSavedSlugs();
   renderDemoBanner();
-  switchView('home');
 }
 
 function closePaywall(){
