@@ -412,6 +412,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .sched-event-time{font-size:11px;font-weight:700;color:var(--warm);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
 .sched-event-title{font-weight:700;font-size:14px;margin-bottom:6px}
 .sched-event-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;white-space:pre-wrap}
+
+/* ── Конфетти при достижении уровня ── */
+.confetti-piece{position:fixed;top:-10px;border-radius:2px;opacity:0;pointer-events:none;z-index:9999;animation:confettiFall linear forwards}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -898,6 +902,19 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
     <span>Профиль</span>
     <div class="tab-underline"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="level-up-overlay" onclick="if(event.target===this)closeLevelUpPopup()">
+  <div class="center-modal" id="level-up-modal" style="text-align:center">
+    <div class="center-modal-header" style="justify-content:flex-end">
+      <button class="icon-btn" onclick="closeLevelUpPopup()">✕</button>
+    </div>
+    <div style="font-size:36px;margin-bottom:6px">🏆</div>
+    <div class="center-modal-title" id="level-up-title">Новый уровень!</div>
+    <div style="font-size:14px;color:var(--text-dim);margin:8px 0 16px" id="level-up-subtitle"></div>
+    <div id="level-up-unlocks" style="text-align:left;margin-bottom:16px"></div>
+    <button class="lec-link-btn access-btn" style="width:100%" onclick="closeLevelUpPopup()">Отлично!</button>
   </div>
 </div>
 
@@ -1570,11 +1587,23 @@ async function loadProfile() {
     points = u.points || 0;
     hasPushSubscription = !!u.has_push_subscription;
     vkAccessGranted = !!u.vk_access_granted;
+    const prevRewardLevel = rewardLevel;
     rewardLevel = u.reward_level || 3;
     lifetimePoints = u.lifetime_points || 0;
     nextLevelPoints = u.next_level_points ?? null;
     pointsToNext = u.points_to_next ?? null;
     progressFraction = u.progress_fraction ?? 0;
+    // Детект нового уровня — показываем попап только если апп уже инициализирован
+    // (prevRewardLevel > 0 исключает первый запуск)
+    if (prevRewardLevel > 0 && rewardLevel > prevRewardLevel) {
+      try {
+        const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
+        const cfg = levels.find(l => l.level === rewardLevel) || null;
+        showLevelUpPopup(rewardLevel, cfg);
+      } catch(e) {
+        showLevelUpPopup(rewardLevel, null);
+      }
+    }
     // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
     // (например, старое тестовое значение) — не пытаемся рендерить несуществующий контент,
     // просто остаёмся на последнем реальном уровне.
@@ -2644,6 +2673,40 @@ function openLevelsPopup(){
 }
 function closeLevelsPopup(){ document.getElementById('levels-overlay').classList.remove('open'); }
 
+function launchConfetti(){
+  const colors=['#E8614A','#C8952B','#16131E','#E6DDCE','#5E5768'];
+  for(let i=0;i<60;i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    const size=Math.random()*8+5;
+    el.style.cssText=`width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${Math.random()*100}vw;animation-duration:${Math.random()*1.5+1}s;animation-delay:${Math.random()*0.4}s`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),(2000));
+  }
+}
+
+function showLevelUpPopup(newLevel, levelConfig){
+  const title = document.getElementById('level-up-title');
+  const sub   = document.getElementById('level-up-subtitle');
+  const unl   = document.getElementById('level-up-unlocks');
+  title.textContent = `Уровень ${newLevel}!`;
+  sub.textContent   = `Поздравляем — ты перешёл на новый уровень клуба`;
+
+  // Формируем список открытий
+  const rewards  = (levelConfig && levelConfig.reward_keys) || [];
+  const unlocks  = (levelConfig && levelConfig.unlock_keys) || [];
+  const items    = [...rewards.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--warm)">★</span> ${r}</div>`),
+                    ...unlocks.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--warm)">★</span> ${u}</div>`)];
+  unl.innerHTML  = items.length ? items.join('') : '<div style="font-size:13px;color:var(--text-dim);text-align:center">Продолжай зарабатывать баллы — впереди ещё много наград</div>';
+
+  document.getElementById('level-up-overlay').classList.add('open');
+  launchConfetti();
+}
+
+function closeLevelUpPopup(){
+  document.getElementById('level-up-overlay').classList.remove('open');
+}
+
 async function loadLevels(){
   try {
     const levels = await apiRequest(`${API_URL}/levels`, {}, 10000);
@@ -2693,6 +2756,17 @@ async function refreshOnboardStatus(){
       nextLevelPoints = u.next_level_points ?? null;
       pointsToNext = u.points_to_next ?? null;
       progressFraction = u.progress_fraction ?? 0;
+    // Детект нового уровня — показываем попап только если апп уже инициализирован
+    // (prevRewardLevel > 0 исключает первый запуск)
+    if (prevRewardLevel > 0 && rewardLevel > prevRewardLevel) {
+      try {
+        const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
+        const cfg = levels.find(l => l.level === rewardLevel) || null;
+        showLevelUpPopup(rewardLevel, cfg);
+      } catch(e) {
+        showLevelUpPopup(rewardLevel, null);
+      }
+    }
       serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
@@ -3592,6 +3666,7 @@ function openDayPopup(dateStr){
       <div class="sched-event-title">${e.title}</div>
       ${e.description ? `<div class="sched-event-desc">${e.description}</div>` : ''}
       ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn${isMember?'':' locked'}" onclick="isMember ? openUrl(popupDayEvents[${i}].link) : openPaywall()">${isMember?'':'🔒 '}Перейти</button></div>` : ''}
+      ${!isMember ? `<div style="margin-top:8px;text-align:center"><span style="font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline" onclick="openPaywall()">Попасть на занятие</span></div>` : ''}
     </div>`).join('');
   document.getElementById('sched-popup-overlay').classList.add('open');
 }
