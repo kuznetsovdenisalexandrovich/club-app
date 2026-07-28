@@ -1660,18 +1660,25 @@ async function loadProfile() {
     //      иначе ниже не выставится serverLevel и бар онбординга застынет
     try {
       const shownLevelKey = 'level_up_shown_' + telegramId;
-      let shownLevel = 0;
-      try { shownLevel = parseInt(localStorage.getItem(shownLevelKey) || '0', 10) || 0; } catch(e){}
+      let raw = null;
+      try { raw = localStorage.getItem(shownLevelKey); } catch(e){}
+      // Первый запуск: отметки ещё нет. Просто запоминаем текущий уровень молча —
+      // иначе новичок получит «Уровень 3!» просто за то, что открыл приложение
+      // (BASE_REWARD_LEVEL = 3, он у всех с самого начала)
+      const firstRun = (raw === null);
+      const shownLevel = parseInt(raw || '0', 10) || 0;
       if (telegramId && !levelUpShownThisSession && rewardLevel > shownLevel) {
         // Запоминаем ДО показа: если попап упадёт, поздравление всё равно не повторится
         levelUpShownThisSession = true;
         try { localStorage.setItem(shownLevelKey, String(rewardLevel)); } catch(e){}
-        let cfg = null;
-        try {
-          const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
-          cfg = levels.find(l => l.level === rewardLevel) || null;
-        } catch(e){}
-        showLevelUpPopup(rewardLevel, cfg);
+        if (!firstRun) {
+          let cfg = null;
+          try {
+            const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
+            cfg = levels.find(l => l.level === rewardLevel) || null;
+          } catch(e){}
+          showLevelUpPopup(rewardLevel, cfg);
+        }
       }
     } catch(e){}
         // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
@@ -2752,7 +2759,11 @@ function renderLevelCard(){
   const def = currentLevelDef();
   card.style.display = 'block';
   document.body.classList.add('onboarding-bar-visible'); // перманентно, больше никогда не прячем
-  document.getElementById('level-card-title').textContent = def.title;
+  // В балльном режиме номер берём из уровня наград: заголовок в LEVELS[3] —
+  // захардкоженная строка, иначе бар навсегда застывает на «Уровень 3».
+  // Math.max страхует от отката назад, если пороги в дашборде настроены не с 3-го
+  document.getElementById('level-card-title').textContent =
+    def.pointsMode ? `Уровень ${Math.max(rewardLevel, currentLevelNum())}` : def.title;
   const badge = document.getElementById('reward-level-badge');
   if (def.pointsMode) {
     // Прогресс считается от lifetime_points (сколько заработано за всё время), а не от
