@@ -3436,11 +3436,18 @@ function openInsightsModal(index){
   }).join('');
 
   const links = [];
-  if (l.link)    links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link}')">Смотреть в ТГ</button>`);
-  if (l.link_vk) links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link_vk}')">Смотреть в VK</button>`);
+  if (isMember) {
+    // Участник — обычные кнопки видео
+    if (l.link)    links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link}')">Смотреть в ТГ</button>`);
+    if (l.link_vk) links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link_vk}')">Смотреть в VK</button>`);
+  } else {
+    // Демо — кнопки с замком, ведут на paywall
+    if (l.link)    links.push(`<button class="lec-link-btn" style="flex:1;opacity:.55" onclick="openPaywall()">Смотреть в ТГ 🔒</button>`);
+    if (l.link_vk) links.push(`<button class="lec-link-btn" style="flex:1;opacity:.55" onclick="openPaywall()">Смотреть в VK 🔒</button>`);
+  }
   document.getElementById('insights-modal-links').innerHTML = links.join('');
 
-  // Кнопка PDF
+  // Кнопка PDF — для демо всегда заблокирована
   _renderPdfBtn(l.slug);
 
   document.getElementById('insights-modal-overlay').classList.add('open');
@@ -3450,10 +3457,9 @@ function _renderPdfBtn(slug) {
   const pdfEl = document.getElementById('insights-modal-pdf');
   if (!pdfEl) return;
   const pdfLevel = appSettings.pdf_unlock_level || 3;
-  // Используем lifetimePoints + levelConfigs для точного расчёта уровня
-  // если они загружены; иначе fallback на rewardLevel
   const curLevel = rewardLevel || 0;
-  const locked = curLevel < pdfLevel;
+  // Для демо-пользователей PDF всегда заблокирован
+  const locked = !isMember || curLevel < pdfLevel;
   if (locked) {
     pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с ${pdfLevel} уровня)</button>`;
   } else {
