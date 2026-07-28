@@ -602,6 +602,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <span onclick="openAppSettingsPopup()" style="cursor:pointer;font-size:16px">⚙️</span>
     </div>
 
+    <div class="card" id="demo-profile-card" style="display:none">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">Ты смотришь клуб в демо-режиме</div>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px">Оплати участие — откроются записи занятий, живые эфиры и баллы. Или войди, если подписка уже есть.</div>
+      <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:8px" onclick="openPaywall()">Оплатить доступ</button>
+      <button class="lec-link-btn" id="demo-profile-login-btn" style="width:100%" onclick="exitDemoToLogin()">Войти по номеру</button>
+    </div>
+
     <div class="section-label">Подписка</div>
     <div class="card sub-card" onclick="openSubManage()" style="cursor:pointer">
       <div class="sub-left">
@@ -877,10 +884,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <h2 id="web-login-title">Вход по номеру телефона</h2>
   <p id="web-login-subtitle">Укажи номер телефона, использованный для оплаты подписки.</p>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
-    <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" placeholder="+7 999 123-45-67" inputmode="tel">
+    <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" value="+" placeholder="+7 999 123-45-67" inputmode="tel" oninput="keepPlusPrefix(this)">
     <button class="lec-link-btn access-btn" id="web-login-btn" onclick="handleLoginButton()">Войти</button>
   </div>
   <p id="web-login-error" style="display:none;color:var(--warm)">Не получилось войти — попробуй ещё раз чуть позже.</p>
+  <div id="web-login-notfound" style="display:none;width:100%;max-width:320px;margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:14px">
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:12px">Такого номера пока нет в базе клуба. Если ты уже оплачивал подписку — напиши Денису, он разберётся вручную.</div>
+    <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:8px" onclick="openPaywall()">Оплатить доступ</button>
+    <div class="payment-help-link" style="margin:0" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_залогиниться_в_приложении')">Написать Денису</div>
+  </div>
   <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
@@ -1691,6 +1703,17 @@ function renderDemoBanner(){
   if (subManageBtn) subManageBtn.style.display = isMember ? 'block' : 'none';
   const salesVideo = document.getElementById('sales-video-banner');
   if (salesVideo) salesVideo.style.display = isMember ? 'none' : 'block';
+  // Карточка в профиле: оплатить или войти. Кнопку входа показываем только вне
+  // Telegram — внутри ТГ человек уже опознан, входить ему некуда.
+  const demoCard = document.getElementById('demo-profile-card');
+  if (demoCard) demoCard.style.display = isMember ? 'none' : 'block';
+  const demoLoginBtn = document.getElementById('demo-profile-login-btn');
+  if (demoLoginBtn) {
+    const inTelegram = !!(window.Telegram && window.Telegram.WebApp
+                          && window.Telegram.WebApp.initDataUnsafe
+                          && window.Telegram.WebApp.initDataUnsafe.user);
+    demoLoginBtn.style.display = inTelegram ? 'none' : 'block';
+  }
   const onboardingVideo = document.getElementById('onboarding-video-banner');
   let onboardingDismissed = false;
   try { onboardingDismissed = localStorage.getItem('onboarding_banner_dismissed') === '1'; } catch (e) {}
@@ -4217,6 +4240,36 @@ function setLoginError(message){
   el.style.display = 'block';
 }
 
+// Плюс в начале номера набран за человека, чтобы не писали 8 и не забывали код страны.
+// В стадии ввода кода из смс не вмешиваемся — там то же поле, но для четырёх цифр.
+function keepPlusPrefix(input){
+  if (loginStage === 'code') return;
+  if (input.value.indexOf('+') !== 0) {
+    input.value = '+' + input.value.replace(/\+/g, '');
+  }
+}
+
+// Показываем запасные пути, когда номера нет в базе: часть подписчиков ещё не заведена,
+// им проще написать Денису напрямую, чем разбираться самим.
+function setLoginNotFound(show){
+  const el = document.getElementById('web-login-notfound');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+// Выход из демо обратно на экран входа — человек решил залогиниться
+function exitDemoToLogin(){
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('tabbar').style.display = 'none';
+  const ls = document.getElementById('web-login-screen');
+  if (ls) ls.style.display = 'flex';
+  const wrb = document.getElementById('web-requisites-bar');
+  if (wrb) wrb.style.display = appSettings.show_requisites ? '' : 'none';
+  loginStage = 'phone';
+  setLoginError('');
+  setLoginNotFound(false);
+  renderLoginStage();
+}
+
 function renderLoginStage(){
   const input    = document.getElementById('phone-login-input');
   const btn      = document.getElementById('web-login-btn');
@@ -4244,6 +4297,7 @@ function renderLoginStage(){
     input.inputMode = 'tel';
     input.removeAttribute('maxlength');
     input.placeholder = '+7 999 123-45-67';
+    if (input.value.indexOf('+') !== 0) input.value = '+';
     btn.textContent = appSettings.sms_login_enabled ? 'Получить код' : 'Войти';
     resend.style.display = 'none';
     fallback.style.display = 'none';
@@ -4252,6 +4306,7 @@ function renderLoginStage(){
 }
 
 function handleLoginButton(){
+  setLoginNotFound(false);
   if (loginStage === 'code') return verifyLoginCode();
   const phone = document.getElementById('phone-login-input').value.trim();
   if (!phone) return;
@@ -4338,6 +4393,7 @@ async function quickPhoneLogin(phone){
     finishWebLogin(data.telegram_id);
   } catch (e) {
     setLoginError(e.message || 'Не получилось войти — попробуй ещё раз чуть позже.');
+    setLoginNotFound(true);
   }
 }
 
