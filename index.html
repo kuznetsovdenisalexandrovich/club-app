@@ -872,6 +872,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="demo-entry-overlay" onclick="if(event.target===this)closeDemoEntryPopup()" style="z-index:700">
+  <div class="center-modal" style="text-align:center">
+    <div class="center-modal-header" style="justify-content:flex-end">
+      <button class="icon-btn" onclick="closeDemoEntryPopup()">&#x2715;</button>
+    </div>
+    <div style="font-size:22px;margin-bottom:8px">&#x1F440;</div>
+    <div class="center-modal-title" style="margin-bottom:8px">&#x417;&#x430;&#x433;&#x43B;&#x44F;&#x43D;&#x443;&#x442;&#x44C; &#x432; &#x43A;&#x43B;&#x443;&#x431;</div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:20px">&#x41C;&#x43E;&#x436;&#x435;&#x448;&#x44C; &#x43F;&#x43E;&#x441;&#x43C;&#x43E;&#x442;&#x440;&#x435;&#x442;&#x44C; &#x447;&#x442;&#x43E; &#x432;&#x43D;&#x443;&#x442;&#x440;&#x438; &#x2014; &#x431;&#x435;&#x437; &#x432;&#x445;&#x43E;&#x434;&#x430;. &#x418;&#x43B;&#x438; &#x441;&#x440;&#x430;&#x437;&#x443; &#x43E;&#x43F;&#x43B;&#x430;&#x442;&#x438;&#x442;&#x44C; &#x443;&#x447;&#x430;&#x441;&#x442;&#x438;&#x435;.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">&#x41F;&#x43E;&#x441;&#x43C;&#x43E;&#x442;&#x440;&#x435;&#x442;&#x44C; &#x434;&#x435;&#x43C;&#x43E;</button>
+      <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openPaywall()">&#x41E;&#x43F;&#x43B;&#x430;&#x442;&#x438;&#x442;&#x44C; &#x434;&#x43E;&#x441;&#x442;&#x443;&#x43F;</button>
+    </div>
+  </div>
+</div>
+
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
   <h2 id="web-login-title">Вход по номеру телефона</h2>
@@ -885,7 +900,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
-  <div class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+  <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
+  <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
 <!-- Вне Telegram, не в standalone-режиме — сначала подсказка, как добавить на главный экран -->
@@ -2440,6 +2456,8 @@ function applyAppSettings(){
   });
   const line = document.getElementById('requisites-line');
   if (line) line.style.display = appSettings.show_requisites ? '' : 'none';
+  var wb = document.getElementById('web-requisites-bar');
+  if (wb) wb.style.display = appSettings.show_requisites ? '' : 'none';
 }
 
 function applyDebugMode(){
@@ -3252,6 +3270,9 @@ function lecCardHtml(l, i){
   const locked = !isMember || tourLocked;
   const lockCls = locked ? ' locked' : '';
   const lockIcon = locked ? '🔒 ' : '';
+  const insightsLocked = tourLocked || insightsLevelLocked;
+  const insightsLockCls = insightsLocked ? ' locked' : '';
+  const insightsLockIcon = insightsLocked ? '🔒 ' : '';
   // Для кнопки "Главные идеи" замок только по уровню, не по членству
   const insightsLocked = tourLocked || insightsLevelLocked;
   const insightsLockCls = insightsLocked ? ' locked' : '';
@@ -3813,6 +3834,24 @@ function enterDemoMode(){
   ].filter(Boolean)).catch(()=>{});
 }
 
+function openDemoEntryPopup(){
+  document.getElementById('demo-entry-overlay').classList.add('open');
+}
+function closeDemoEntryPopup(){
+  document.getElementById('demo-entry-overlay').classList.remove('open');
+}
+function enterDemoMode(){
+  isMember = false;
+  var ids = ['web-login-screen','home-screen-screen'];
+  ids.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var wb = document.getElementById('web-requisites-bar');
+  if (wb) wb.style.display = 'none';
+  startApp();
+  renderDemoBanner();
+}
 function closePaywall(){
   document.getElementById('paywall-overlay').classList.remove('open');
 }
@@ -4129,6 +4168,8 @@ function startApp(){
   document.getElementById('tabbar').style.display = 'flex';
   const urgentBanner = document.getElementById('web-urgent-news-banner');
   if (urgentBanner) urgentBanner.style.display = 'none';
+  var webRb = document.getElementById('web-requisites-bar');
+  if (webRb) webRb.style.display = 'none';
   applyDebugMode();
   loadAppSettings();
   loadProfile();
