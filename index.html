@@ -653,6 +653,20 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         </div>
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
       </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Быстрые тесты</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('showLevelUpPopup(4,{reward_keys:[\"Архивные лекции\"],unlock_keys:[\"Скачивание PDF-выжимок\"]});'')">Попап уровня</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('launchConfetti()')">Конфетти</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPdfLockNotice(3)')">Замок PDF</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPaywall()')">Пейволл</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input id="debug-cmd-input" placeholder="JS выражение..." style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
+          <button class="lec-card" style="border:none;font-size:12px;padding:6px 12px" onclick="debugRunCmd(document.getElementById('debug-cmd-input').value)">▶</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;min-height:20px" id="debug-cmd-output"></div>
+      </div>
     </div>
 
     <div id="requisites-line" style="text-align:center;font-size:13px;color:#fff;margin-top:28px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
@@ -2592,6 +2606,20 @@ function debugResetPoints(){
   const badge = document.getElementById('reward-level-badge-num');
   if (badge) badge.textContent = 1;
   document.getElementById('debug-level-result').textContent = 'Сброшено: уровень 1, 0 баллов';
+}
+
+function debugRunCmd(cmd){
+  const out = document.getElementById('debug-cmd-output');
+  try {
+    const result = eval(cmd);
+    if (result instanceof Promise) {
+      result.then(r => { out.textContent = '✓ ' + JSON.stringify(r, null, 2); }).catch(e => { out.textContent = '✗ ' + e; });
+    } else {
+      out.textContent = result !== undefined ? ('✓ ' + JSON.stringify(result)) : '✓ выполнено';
+    }
+  } catch(e) {
+    out.textContent = '✗ ' + e;
+  }
 }
 
 async function resetOnboardingProgress(){
