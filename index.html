@@ -645,7 +645,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugAddPoints(500)">+500 баллов</button>
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugAddPoints(2000)">+2000 баллов</button>
-          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugResetPoints()">Сбросить баллы</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugResetPoints()">Сбросить</button>
         </div>
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
       </div>
@@ -2543,15 +2543,13 @@ function checkLevelUp(){
 
 function debugSetLevel(level){
   rewardLevel = level;
-  // Симулируем нужное количество баллов для уровня
   const pts = { 1: 0, 2: 500, 3: 1600, 4: 3500, 5: 7000 };
-  lifetimePoints = pts[level] || (level * 1500);
-  document.getElementById('debug-level-result').textContent =
-    `Симуляция: уровень ${rewardLevel}, ${lifetimePoints} баллов (только локально, не сохраняется)`;
-  // Обновляем отображение везде где показывается уровень
+  lifetimePoints = pts[level] || level * 1500;
   const badge = document.getElementById('reward-level-badge-num');
   if (badge) badge.textContent = rewardLevel;
-  renderLevels && renderLevels();
+  document.getElementById('debug-level-result').textContent =
+    `Симуляция: уровень ${rewardLevel}, ${lifetimePoints} баллов (локально)`;
+  try { renderLevels && renderLevels(); } catch(e){}
 }
 
 function debugAddPoints(amount){
@@ -2562,9 +2560,9 @@ function debugAddPoints(amount){
 
 function debugResetPoints(){
   lifetimePoints = 0; rewardLevel = 1;
-  document.getElementById('debug-level-result').textContent = 'Сброшено: уровень 1, 0 баллов';
   const badge = document.getElementById('reward-level-badge-num');
-  if (badge) badge.textContent = rewardLevel;
+  if (badge) badge.textContent = 1;
+  document.getElementById('debug-level-result').textContent = 'Сброшено: уровень 1, 0 баллов';
 }
 
 async function resetOnboardingProgress(){
@@ -3322,16 +3320,24 @@ function openInsightsModal(index){
   document.getElementById('insights-modal-links').innerHTML = links.join('');
 
   // Кнопка PDF
-  const pdfLevel = appSettings.pdf_unlock_level || 3;
-  const pdfLocked = rewardLevel < pdfLevel;
-  const pdfEl = document.getElementById('insights-modal-pdf');
-  if (pdfEl) {
-    pdfEl.innerHTML = pdfLocked
-      ? `<button class="lec-link-btn" style="width:100%;opacity:.5" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с уровня ${pdfLevel})</button>`
-      : `<button class="lec-link-btn access-btn" style="width:100%" onclick="downloadPdf('${l.slug}', this)">Скачать выжимку</button>`;
-  }
+  _renderPdfBtn(l.slug);
 
   document.getElementById('insights-modal-overlay').classList.add('open');
+}
+
+function _renderPdfBtn(slug) {
+  const pdfEl = document.getElementById('insights-modal-pdf');
+  if (!pdfEl) return;
+  const pdfLevel = appSettings.pdf_unlock_level || 3;
+  // Используем lifetimePoints + levelConfigs для точного расчёта уровня
+  // если они загружены; иначе fallback на rewardLevel
+  const curLevel = rewardLevel || 0;
+  const locked = curLevel < pdfLevel;
+  if (locked) {
+    pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с ${pdfLevel} уровня)</button>`;
+  } else {
+    pdfEl.innerHTML = `<button class="lec-link-btn access-btn" style="width:100%" data-slug="${slug}" onclick="downloadPdf('${slug}', this)">Скачать выжимку</button>`;
+  }
 }
 
 function closeInsightsModal(){
@@ -3343,6 +3349,7 @@ function openPdfLockNotice(level){
     `Скачивать выжимки можно с ${level} уровня.<br><br>Зарабатывай баллы — и буклеты откроются.`;
   document.getElementById('pdf-lock-overlay').classList.add('open');
 }
+
 function closePdfLockNotice(){
   document.getElementById('pdf-lock-overlay').classList.remove('open');
 }
@@ -3352,25 +3359,23 @@ async function downloadPdf(slug, btn){
   btn.textContent = 'Отправляю…';
   btn.disabled = true;
   try {
-    const res = await apiRequest(`${API_URL}/lectures/${slug}/pdf?telegram_id=${userProfile.telegram_id}`);
-    if (res && res.ok) {
-      btn.textContent = 'Отправлено в Telegram';
-      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
-    } else {
-      throw new Error(res?.detail || 'err');
+    // Используем fetch напрямую чтобы поймать статус-код
+    const url = `${API_URL}/lectures/${slug}/pdf?telegram_id=${userProfile.telegram_id}`;
+    const r = await fetch(url);
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 403) {
+      btn.textContent = orig;
+      btn.disabled = false;
+      openPdfLockNotice(appSettings.pdf_unlock_level || 3);
+      return;
     }
+    if (!r.ok) throw new Error(data.detail || `ошибка ${r.status}`);
+    btn.textContent = 'Отправлено в Telegram';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
   } catch(e) {
-    const msg = String(e.message || e);
-    if (msg.includes('403') || msg.includes('уровня')) {
-      // Сервер вернул 403 — показываем попап уровня
-      closePdfLockNotice && closePdfLockNotice();
-      const level = appSettings.pdf_unlock_level || 3;
-      openPdfLockNotice(level);
-    } else {
-      btn.textContent = 'Что-то пошло не так, попробуй позже';
-      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
-    }
+    btn.textContent = 'Что-то пошло не так, попробуй позже';
     btn.disabled = false;
+    setTimeout(() => { btn.textContent = orig; }, 3000);
   }
 }
 
