@@ -857,6 +857,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 <!-- Не в Telegram — веб-вход по номеру. Один и тот же экран работает в двух режимах:
      с SMS-кодом и без него (зависит от глобального тумблера sms_login_enabled) -->
+<div class="center-modal-overlay" id="demo-entry-overlay" onclick="if(event.target===this)closeDemoEntryPopup()" style="z-index:700">
+  <div class="center-modal" style="text-align:center">
+    <div class="center-modal-header" style="justify-content:flex-end">
+      <button class="icon-btn" onclick="closeDemoEntryPopup()">✕</button>
+    </div>
+    <div style="font-size:22px;margin-bottom:8px">👀</div>
+    <div class="center-modal-title" style="margin-bottom:8px">Заглянуть в клуб</div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:20px">Можешь посмотреть что внутри — без входа. Или сразу оплатить участие.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">Посмотреть демо</button>
+      <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openPaywall()">Оплатить доступ</button>
+    </div>
+  </div>
+</div>
+
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
   <h2 id="web-login-title">Вход по номеру телефона</h2>
@@ -869,6 +884,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
+  <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
   <div class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
@@ -1483,10 +1499,11 @@ async function loadNews() {
       html += `<div class="news-block">${news.common_text}</div>`;
     }
     (news.targeted || []).forEach(t => {
+      if (!isMember) return; // в демо-режиме таргетированные новости не показываем
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
-      const isMember = key && listMembership && listMembership[key] === 'True';
-      if (isMember) {
+      const isListMember = key && listMembership && listMembership[key] === 'True';
+      if (isListMember) {
         html += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
       }
     });
@@ -3235,6 +3252,10 @@ function lecCardHtml(l, i){
   const locked = !isMember || tourLocked;
   const lockCls = locked ? ' locked' : '';
   const lockIcon = locked ? '🔒 ' : '';
+  // Для кнопки "Главные идеи" замок только по уровню, не по членству
+  const insightsLocked = tourLocked || insightsLevelLocked;
+  const insightsLockCls = insightsLocked ? ' locked' : '';
+  const insightsLockIcon = insightsLocked ? '🔒 ' : '';
   const linkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'tg')`;
@@ -3255,7 +3276,7 @@ function lecCardHtml(l, i){
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
       <div class="lec-links">
-        ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${lockCls}" onclick="event.stopPropagation();${insightsClick}">${lockIcon}Главные идеи</button>` : ''}
+        ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${insightsLockCls}" onclick="event.stopPropagation();${insightsClick}">${insightsLockIcon}Главные идеи</button>` : ''}
         ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
       </div>
@@ -3769,6 +3790,29 @@ initSwipeToClose('postpay-popup', closePostPay);
 function openPaywall(){
   document.getElementById('paywall-overlay').classList.add('open');
 }
+function openDemoEntryPopup(){
+  document.getElementById('demo-entry-overlay').classList.add('open');
+}
+function closeDemoEntryPopup(){
+  document.getElementById('demo-entry-overlay').classList.remove('open');
+}
+function enterDemoMode(){
+  // Скрываем экран логина, показываем основной интерфейс в демо-режиме
+  isMember = false;
+  const loginScreen = document.getElementById('web-login-screen');
+  if (loginScreen) loginScreen.style.display = 'none';
+  // Показываем основное приложение
+  const mainContent = document.getElementById('main-content') || document.getElementById('app-root');
+  if (mainContent) mainContent.style.display = '';
+  renderDemoBanner();
+  // Загружаем данные без авторизации
+  Promise.all([
+    loadLibrary && loadLibrary(),
+    loadSchedule && loadSchedule(),
+    loadStreams && loadStreams(),
+  ].filter(Boolean)).catch(()=>{});
+}
+
 function closePaywall(){
   document.getElementById('paywall-overlay').classList.remove('open');
 }
