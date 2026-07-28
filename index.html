@@ -3799,13 +3799,28 @@ function closeDemoEntryPopup(){
 }
 function enterDemoMode(){
   isMember = false;
-  var demoScreens = ['web-login-screen','home-screen-screen'];
+  // Скрываем экраны входа
+  var demoScreens = ['web-login-screen','home-screen-screen','web-add-home-screen-screen'];
   demoScreens.forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  startApp();
+  var wb = document.getElementById('web-requisites-bar');
+  if (wb) wb.style.display = 'none';
+  var ub = document.getElementById('web-urgent-news-banner');
+  if (ub) ub.style.display = 'none';
+  // Показываем оболочку приложения
+  document.getElementById('app-shell').style.display = 'block';
+  document.getElementById('tabbar').style.display = 'flex';
+  applyDebugMode();
+  // Загружаем только то что НЕ требует telegram_id
+  loadAppSettings();
+  loadStreams();
+  loadLibrary();
+  loadWidgetMonth();
+  loadSavedSlugs();
   renderDemoBanner();
+  switchView('home');
 }
 
 function closePaywall(){
