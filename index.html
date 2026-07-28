@@ -885,7 +885,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
-  <div class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+  <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
 <!-- Вне Telegram, не в standalone-режиме — сначала подсказка, как добавить на главный экран -->
@@ -3797,20 +3797,14 @@ function closeDemoEntryPopup(){
   document.getElementById('demo-entry-overlay').classList.remove('open');
 }
 function enterDemoMode(){
-  // Скрываем экран логина, показываем основной интерфейс в демо-режиме
   isMember = false;
-  const loginScreen = document.getElementById('web-login-screen');
-  if (loginScreen) loginScreen.style.display = 'none';
-  // Показываем основное приложение
-  const mainContent = document.getElementById('main-content') || document.getElementById('app-root');
-  if (mainContent) mainContent.style.display = '';
+  var demoScreens = ['web-login-screen','home-screen-screen'];
+  demoScreens.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  startApp();
   renderDemoBanner();
-  // Загружаем данные без авторизации
-  Promise.all([
-    loadLibrary && loadLibrary(),
-    loadSchedule && loadSchedule(),
-    loadStreams && loadStreams(),
-  ].filter(Boolean)).catch(()=>{});
 }
 
 function closePaywall(){
@@ -4129,6 +4123,8 @@ function startApp(){
   document.getElementById('tabbar').style.display = 'flex';
   const urgentBanner = document.getElementById('web-urgent-news-banner');
   if (urgentBanner) urgentBanner.style.display = 'none';
+  var wb3 = document.getElementById('web-requisites-bar');
+  if (wb3) wb3.style.display = 'none';
   applyDebugMode();
   loadAppSettings();
   loadProfile();
