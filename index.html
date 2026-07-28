@@ -1607,9 +1607,12 @@ async function loadProfile() {
     nextLevelPoints = u.next_level_points ?? null;
     pointsToNext = u.points_to_next ?? null;
     progressFraction = u.progress_fraction ?? 0;
-    // Детект нового уровня — показываем попап только если апп уже инициализирован
-    // (prevRewardLevel > 0 исключает первый запуск)
-    if (prevRewardLevel > 0 && rewardLevel > prevRewardLevel) {
+    // Детект нового уровня — показываем попап только если этот уровень ещё не показывали
+    // Храним в localStorage по ключу с telegramId чтобы не спутать пользователей
+    const shownLevelKey = 'level_up_shown_' + telegramId;
+    let shownLevel = 0;
+    try { shownLevel = parseInt(localStorage.getItem(shownLevelKey) || '0', 10); } catch(e){}
+    if (rewardLevel > shownLevel) {
       try {
         const levels = await apiRequest(`${API_URL}/levels`, {}, 8000);
         const cfg = levels.find(l => l.level === rewardLevel) || null;
@@ -1617,8 +1620,9 @@ async function loadProfile() {
       } catch(e) {
         showLevelUpPopup(rewardLevel, null);
       }
+      try { localStorage.setItem(shownLevelKey, String(rewardLevel)); } catch(e){}
     }
-    // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
+        // Клэмп до MAX_LEVEL: если сервер вдруг вернёт уровень выше последнего описанного
     // (например, старое тестовое значение) — не пытаемся рендерить несуществующий контент,
     // просто остаёмся на последнем реальном уровне.
     serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
@@ -2720,12 +2724,14 @@ function showLevelUpPopup(newLevel, levelConfig){
   title.textContent = `Уровень ${newLevel}!`;
   sub.textContent   = `Поздравляем — ты перешёл на новый уровень клуба`;
 
-  // Формируем список открытий
-  const rewards  = (levelConfig && levelConfig.reward_keys) || [];
-  const unlocks  = (levelConfig && levelConfig.unlock_keys) || [];
-  const items    = [...rewards.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--warm)">★</span> ${r}</div>`),
-                    ...unlocks.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="color:var(--warm)">★</span> ${u}</div>`)];
-  unl.innerHTML  = items.length ? items.join('') : '<div style="font-size:13px;color:var(--text-dim);text-align:center">Продолжай зарабатывать баллы — впереди ещё много наград</div>';
+  // Формируем список открытий с читаемыми названиями
+  const rewardTitles = (levelConfig && levelConfig.rewards) || [];
+  const unlockKeys   = (levelConfig && levelConfig.unlock_keys) || [];
+  const UNLOCK_NAMES = { insights: 'Главные идеи в карточке лекции', pdf: 'Скачивание PDF-выжимок' };
+  const allItems = [...rewardTitles, ...unlockKeys.map(k => UNLOCK_NAMES[k] || k)];
+  const items = allItems.map(t =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px"><span style="color:var(--warm);font-size:16px">★</span><span>${t}</span></div>`);
+  unl.innerHTML = items.length ? items.join('') : '<div style="font-size:13px;color:var(--text-dim);text-align:center">Продолжай зарабатывать баллы — впереди ещё много наград</div>';
 
   document.getElementById('level-up-overlay').classList.add('open');
   launchConfetti();
