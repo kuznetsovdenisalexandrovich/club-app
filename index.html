@@ -3360,7 +3360,7 @@ async function downloadPdf(slug, btn){
   btn.disabled = true;
   try {
     // Используем fetch напрямую чтобы поймать статус-код
-    const url = `${API_URL}/lectures/${slug}/pdf?telegram_id=${userProfile.telegram_id}`;
+    const url = `${API_URL}/lectures/${slug}/pdf?telegram_id=${telegramId}`;
     const r = await fetch(url);
     const data = await r.json().catch(() => ({}));
     if (r.status === 403) {
