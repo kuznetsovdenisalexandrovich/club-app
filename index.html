@@ -1771,7 +1771,7 @@ function renderNotifChannel(){
 
   row.innerHTML = NOTIF_CHANNELS.map(function(c){
     const active = (notifyChannel || 'both') === c.key;
-    return '<button class="notif-ch-btn' + (active ? ' active' : '') + '" onclick="setNotifyChannel(' + JSON.stringify(c.key) + ')">'
+    return '<button class="notif-ch-btn' + (active ? ' active' : '') + '" onclick="setNotifyChannel(' + jsArg(c.key) + ')">'
       + c.label + '</button>';
   }).join('');
 
@@ -4975,7 +4975,7 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed){
   let media = '';
   if (card.media_url){
     media = '<div style="margin-top:12px"><button class="lec-link-btn access-btn" style="width:100%" '
-          + 'onclick="openUrl(' + JSON.stringify(card.media_url) + ')">Посмотреть</button></div>';
+          + 'onclick="openUrl(' + jsArg(card.media_url) + ')">Посмотреть</button></div>';
   }
 
   // Карточки, награда которых требует действия вне карточки, при перевороте
@@ -5072,7 +5072,7 @@ function renderCardsAlbum(){
         // Название видно всегда — охотиться хочется за конкретным, а не за «???»
         const mark = (n && newKeys.indexOf(c.key) !== -1)
           ? '<div class="album-new">новая</div>' : '';
-        return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + JSON.stringify(c.key) + ')">'
+        return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
           + '<div class="album-art">' + art + '</div>'
           + (n > 1 ? '<div class="album-count">×' + n + '</div>' : '')
           + mark
@@ -5250,11 +5250,23 @@ function renderCollectionStrip(){
       : '<div style="font-size:17px;color:var(--warm);opacity:' + (n ? '.6' : '.22') + '">◆</div>';
     const mark = (n && newKeys.indexOf(c.key) !== -1)
       ? '<div class="album-new" style="bottom:4px">новая</div>' : '';
-    return '<div class="coll-card' + (n ? '' : ' locked') + '" onclick="openAlbumCard(' + JSON.stringify(c.key) + ')">'
+    return '<div class="coll-card' + (n ? '' : ' locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
       + '<div class="coll-art">' + art + '</div>' + mark + '</div>';
   }).join('')
   + '<div class="coll-more" onclick="switchView(\'cards\')">'
     + '<div style="font-size:15px">→</div><div>вся<br>колода</div></div>';
+}
+
+/* Аргумент для inline-обработчика. JSON.stringify тут НЕЛЬЗЯ: он даёт строку в
+   двойных кавычках, а атрибут onclick="..." тоже ограничен двойными — первая же
+   кавычка закрывает атрибут, и обработчик молча перестаёт работать.
+   Оборачиваем в одинарные и экранируем на двух уровнях: сначала для JS, потом
+   для HTML. */
+function jsArg(v){
+  var s = String(v == null ? '' : v);
+  s = s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  s = s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  return "'" + s + "'";
 }
 </script>
 </body>
