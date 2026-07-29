@@ -475,13 +475,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Лента коллекции на главном экране */
 .coll-strip{display:flex;gap:9px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .coll-strip::-webkit-scrollbar{display:none}
-.coll-card{flex:0 0 68px;border-radius:9px;overflow:hidden;border:1.5px solid var(--warm);
+.coll-card{flex:0 0 84px;border-radius:9px;overflow:hidden;border:1.5px solid var(--warm);
   background:var(--card-bg);position:relative;cursor:pointer}
 .coll-card.locked{border-color:var(--line)}
 .coll-card.locked .coll-art{filter:grayscale(1) brightness(.45)}
 .coll-art{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.03)}
 .coll-art img{width:100%;height:100%;object-fit:cover;display:block}
-.coll-more{flex:0 0 68px;aspect-ratio:3/4.2;border:1.5px dashed var(--line);border-radius:9px;
+.coll-more{flex:0 0 84px;aspect-ratio:3/4.2;border:1.5px dashed var(--line);border-radius:9px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   color:var(--text-dim);font-size:10px;cursor:pointer;text-align:center;padding:4px}
 
@@ -567,14 +567,6 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       </div>
     </div>
 
-    <div id="coll-strip-block" style="display:none;margin-bottom:14px">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;margin-top:0">
-        <span>Коллекция</span>
-        <span id="coll-strip-count" style="font-size:12px;color:var(--text-dim);font-weight:400"></span>
-      </div>
-      <div class="coll-strip" id="coll-strip"></div>
-    </div>
-
     <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
       <div class="demo-banner-icon">👀</div>
       <div>
@@ -607,6 +599,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <div class="continue-progress" id="continue-progress-wrap" style="display:none">
         <div class="continue-progress-bar" id="continue-progress-bar"></div>
       </div>
+    </div>
+
+    <div id="coll-strip-block" style="display:none">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Коллекция</span>
+        <span id="coll-strip-count" style="font-size:12px;color:var(--text-dim);font-weight:400"></span>
+      </div>
+      <div class="coll-strip" id="coll-strip"></div>
     </div>
 
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -5287,7 +5287,7 @@ function renderCollectionStrip(){
     const n = owned[c.key] || 0;
     const art = (n && c.image_url)
       ? '<img src="' + c.image_url + '" alt="">'
-      : '<div style="font-size:17px;color:var(--warm);opacity:' + (n ? '.6' : '.22') + '">◆</div>';
+      : '<div style="font-size:21px;color:var(--warm);opacity:' + (n ? '.6' : '.22') + '">◆</div>';
     const mark = (n && newKeys.indexOf(c.key) !== -1)
       ? '<div class="album-new" style="bottom:4px">новая</div>' : '';
     return '<div class="coll-card' + (n ? '' : ' locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
