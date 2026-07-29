@@ -497,6 +497,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 }
 @keyframes cardNudge{0%,72%,100%{transform:rotate(0deg)}80%{transform:rotate(-1.6deg)}90%{transform:rotate(1.2deg)}}
 @keyframes cardShine{0%,30%{transform:translateX(-115%)}70%,100%{transform:translateX(115%)}}
+
+/* Крупный вид карточки. В витрине (клик по карточке) — 80% ширины экрана,
+   при вскрытии пака поменьше: там над ним ещё три рубашки, и всё должно
+   уместиться без прокрутки */
+.reveal-big{display:none;margin-top:4px}
+.reveal-big.on{display:block}
+.reveal-big-card{width:min(80vw,340px);aspect-ratio:3/4;margin:0 auto;border-radius:16px;overflow:hidden;
+  border:2px solid var(--warm);background:rgba(255,255,255,.04);
+  display:flex;align-items:center;justify-content:center;position:relative}
+.reveal-big-card img{width:100%;height:100%;object-fit:cover;display:block}
+.reveal-big-card .reveal-big-ph{font-size:52px;color:var(--warm);opacity:.5}
+.reveal-overlay.compact .reveal-big-card{width:min(46vw,190px)}
+.reveal-overlay.showcase .reveal-row{display:none}
+.reveal-big-count{position:absolute;top:8px;right:8px;background:var(--warm);color:#fff;
+  font-size:12px;font-weight:700;border-radius:20px;padding:2px 9px}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -1271,6 +1286,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="reveal-title" id="reveal-title">Твой пак</div>
   <div class="reveal-sub" id="reveal-sub">Нажми на карточку, чтобы открыть</div>
   <div class="reveal-row" id="reveal-row"></div>
+  <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
   <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px" onclick="closePackReveal()">Готово</button>
 </div>
@@ -4910,6 +4926,8 @@ function openPackReveal(){
   document.getElementById('reveal-title').textContent = 'Твой пак';
   document.getElementById('reveal-sub').textContent = 'Нажми на карточку, чтобы открыть';
   document.getElementById('reveal-detail').innerHTML = '';
+  const bigEl = document.getElementById('reveal-big');
+  if (bigEl){ bigEl.innerHTML = ''; bigEl.classList.remove('on'); }
   document.getElementById('reveal-done').style.display = 'none';
 
   document.getElementById('reveal-row').innerHTML = revealQueue.map(function(id, i){
@@ -4919,7 +4937,10 @@ function openPackReveal(){
       + '</div>';
   }).join('');
 
-  document.getElementById('reveal-overlay').classList.add('open');
+  const ov = document.getElementById('reveal-overlay');
+  ov.classList.remove('showcase');
+  ov.classList.add('compact');   // над артом ещё три рубашки — арт поменьше
+  ov.classList.add('open');
 }
 
 function closePackReveal(){
@@ -4964,10 +4985,26 @@ async function revealCard(cardId){
   }
 }
 
-function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed){
+function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   const el = document.getElementById('reveal-detail');
+  const big = document.getElementById('reveal-big');
   if (!el) return;
-  if (!card){ el.innerHTML = ''; return; }
+  if (!card){
+    el.innerHTML = '';
+    if (big){ big.innerHTML = ''; big.classList.remove('on'); }
+    return;
+  }
+
+  // Сама карточка крупно — это то, на что человек и хотел посмотреть
+  if (big){
+    const art = card.image_url
+      ? '<img src="' + card.image_url + '" alt="">'
+      : '<div class="reveal-big-ph">◆</div>';
+    big.innerHTML = '<div class="reveal-big-card">' + art
+      + ((copies && copies > 1) ? '<div class="reveal-big-count">×' + copies + '</div>' : '')
+      + '</div>';
+    big.classList.add('on');
+  }
 
   let gain = '';
   if (pointsAwarded) gain = '+' + pointsAwarded + ' баллов';
@@ -5098,8 +5135,11 @@ function openAlbumCard(key){
   document.getElementById('reveal-done').style.display = '';
   // Если у этой карточки есть незабранная копия — из витрины тоже можно забрать
   const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === key; });
-  showCardDetail(c, 0, pending ? pending.id : null, false);
-  document.getElementById('reveal-overlay').classList.add('open');
+  const ov = document.getElementById('reveal-overlay');
+  ov.classList.remove('compact');
+  ov.classList.add('showcase');   // рубашек нет, карточка на 80% экрана
+  showCardDetail(c, 0, pending ? pending.id : null, false, owned[key]);
+  ov.classList.add('open');
 }
 
 function renderDeckRulesChances(){
