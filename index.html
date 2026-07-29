@@ -463,6 +463,40 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .album-count{position:absolute;top:4px;right:4px;background:var(--warm);color:#fff;font-size:9px;font-weight:700;
   border-radius:20px;padding:1px 6px}
 .album-god-title{font-size:12px;font-weight:700;color:var(--text-dim);margin:16px 0 8px;letter-spacing:.04em}
+
+/* Выбор канала уведомлений — сегментированный переключатель */
+.notif-ch-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
+  background:transparent;color:var(--text-dim);font-size:12.5px;cursor:pointer;font-family:inherit}
+.notif-ch-btn.active{border-color:var(--warm);color:var(--warm);background:rgba(232,97,74,.10);font-weight:600}
+
+.album-new{position:absolute;bottom:26px;left:4px;background:var(--warm);color:#fff;font-size:8.5px;
+  font-weight:700;border-radius:20px;padding:1px 5px;letter-spacing:.02em}
+
+/* Лента коллекции на главном экране */
+.coll-strip{display:flex;gap:9px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.coll-strip::-webkit-scrollbar{display:none}
+.coll-card{flex:0 0 68px;border-radius:9px;overflow:hidden;border:1.5px solid var(--warm);
+  background:var(--card-bg);position:relative;cursor:pointer}
+.coll-card.locked{border-color:var(--line)}
+.coll-card.locked .coll-art{filter:grayscale(1) brightness(.45)}
+.coll-art{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.03)}
+.coll-art img{width:100%;height:100%;object-fit:cover;display:block}
+.coll-more{flex:0 0 68px;aspect-ratio:3/4.2;border:1.5px dashed var(--line);border-radius:9px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  color:var(--text-dim);font-size:10px;cursor:pointer;text-align:center;padding:4px}
+
+/* Подсказка «переверни меня»: рубашка чуть покачивается, по ней идёт блик.
+   Только у рубашек текущего пака (максимум три элемента) — если пустить по
+   всему альбому, на старых телефонах сядет батарея */
+@media (prefers-reduced-motion: no-preference){
+  .reveal-card:not(.flipped) .reveal-back{animation:cardNudge 2.6s ease-in-out infinite}
+  .reveal-card:not(.flipped) .reveal-back::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.20) 50%,transparent 62%);
+    animation:cardShine 2.6s ease-in-out infinite}
+}
+@keyframes cardNudge{0%,72%,100%{transform:rotate(0deg)}80%{transform:rotate(-1.6deg)}90%{transform:rotate(1.2deg)}}
+@keyframes cardShine{0%,30%{transform:translateX(-115%)}70%,100%{transform:translateX(115%)}}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -516,6 +550,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div class="pack-banner-title" id="pack-banner-title">Тебя ждёт закрытый пак</div>
         <div class="pack-banner-sub">Три карточки пантеона. Открой →</div>
       </div>
+    </div>
+
+    <div id="coll-strip-block" style="display:none;margin-bottom:14px">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;margin-top:0">
+        <span>Коллекция</span>
+        <span id="coll-strip-count" style="font-size:12px;color:var(--text-dim);font-weight:400"></span>
+      </div>
+      <div class="coll-strip" id="coll-strip"></div>
     </div>
 
     <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
@@ -874,6 +916,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     </div>
 
     <div class="section-label" id="notif-section">Уведомления</div>
+    <div class="card" id="notif-channel-card" style="margin-bottom:10px">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:10px">Где присылать</div>
+      <div id="notif-channel-row" style="display:flex;gap:6px"></div>
+      <div id="notif-channel-hint" style="font-size:12px;color:var(--text-dim);line-height:1.45;margin-top:9px"></div>
+    </div>
     <div class="card" id="notif-list">
       <div class="loading">Загрузка...</div>
     </div>
@@ -1436,7 +1483,12 @@ function switchView(name) {
   const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
-  if (name === 'cards') { renderCardsAlbum(); }
+  if (name === 'cards') {
+    renderCardsAlbum();
+    // Отмечаем увиденное только после отрисовки, иначе метки погаснут
+    // раньше, чем человек их заметит
+    markCardsSeen();
+  }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
@@ -1681,7 +1733,93 @@ async function loadNotifications() {
           <div class="toggle-thumb"></div>
         </div>
       </div>`;
+  }).join('')
+  // Шестой тип — не список Salebot, а наша настройка: он про механику аппа
+  + `<div class="notif-row">
+        <span class="notif-label">Подарочные карточки</span>
+        <div class="toggle ${notifyCards ? 'on' : 'off'}" onclick="toggleNotifyCards()">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>`;
+
+  renderNotifChannel();
+}
+
+/* ── Слой 1: где приходят уведомления ───────────────────────────────────────
+   Кнопка «в приложении» показывается только когда апп открыт с экрана «Домой»:
+   в Telegram Mini App push невозможен, и предлагать его там — вводить в заблуждение. */
+
+const NOTIF_CHANNELS = [
+  { key:'bot',  label:'В боте' },
+  { key:'push', label:'В приложении' },
+  { key:'both', label:'И там, и там' },
+];
+
+function renderNotifChannel(){
+  const row  = document.getElementById('notif-channel-row');
+  const hint = document.getElementById('notif-channel-hint');
+  const card = document.getElementById('notif-channel-card');
+  if (!row) return;
+
+  const canPush = isStandaloneWebApp();
+  if (!canPush){
+    // Вне standalone выбирать нечего — уведомления идут в бота
+    if (card) card.style.display = 'none';
+    return;
+  }
+  if (card) card.style.display = '';
+
+  row.innerHTML = NOTIF_CHANNELS.map(function(c){
+    const active = (notifyChannel || 'both') === c.key;
+    return '<button class="notif-ch-btn' + (active ? ' active' : '') + '" onclick="setNotifyChannel(' + JSON.stringify(c.key) + ')">'
+      + c.label + '</button>';
   }).join('');
+
+  const texts = {
+    bot:  'Сообщения приходят только в бота. Push на устройство не отправляем.',
+    push: 'Push приходят на устройство. В боте сообщений не будет.',
+    both: 'Приходят и в бота, и push на устройство.',
+  };
+  if (hint) hint.textContent = texts[notifyChannel || 'both'] || '';
+}
+
+async function setNotifyChannel(ch){
+  const prev = notifyChannel;
+  notifyChannel = ch;              // рисуем сразу, не ждём сервер
+  renderNotifChannel();
+  try {
+    await apiRequest(`${API_URL}/users/notify-settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, notify_channel: ch })
+    }, 12000);
+    // Выбрал push, а подписки нет — спрашиваем разрешение сразу, не отдельным шагом
+    if ((ch === 'push' || ch === 'both') && !hasPushSubscription){
+      if (typeof enablePushNotifications === 'function') enablePushNotifications();
+      else showToast('Осталось разрешить уведомления в настройках приложения');
+    }
+  } catch(e){
+    notifyChannel = prev;          // не сохранилось — откатываем вид
+    renderNotifChannel();
+    showToast(e.message || 'Не получилось сохранить');
+  }
+}
+
+async function toggleNotifyCards(){
+  const prev = notifyCards;
+  notifyCards = !notifyCards;
+  loadNotifications();
+  try {
+    await apiRequest(`${API_URL}/users/notify-settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, notify_cards: notifyCards })
+    }, 12000);
+  } catch(e){
+    notifyCards = prev;
+    loadNotifications();
+    showToast(e.message || 'Не получилось сохранить');
+  }
 }
 
 async function toggleNotif(key) {
@@ -1779,6 +1917,8 @@ async function loadProfile() {
     builtPath = !!u.built_path;
     points = u.points || 0;
     hasPushSubscription = !!u.has_push_subscription;
+    notifyChannel = u.notify_channel || 'both';
+    notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
     const prevRewardLevel = rewardLevel;
     rewardLevel = u.reward_level || 3;
@@ -2701,6 +2841,8 @@ let chatJoined = false;
 let homeScreenAdded = false;
 let points = 0;
 let hasPushSubscription = false;
+let notifyChannel = 'both';   // слой 1: bot | push | both
+let notifyCards   = true;     // слой 2: тип «подарочные карточки»
 let rewardLevel = 3;
 let levelUpShownThisSession = false;  // поздравление с уровнем — один раз за сессию
 let lifetimePoints = 0;
@@ -3019,6 +3161,8 @@ async function refreshOnboardStatus(){
       builtPath = !!u.built_path;
       points = u.points || 0;
       hasPushSubscription = !!u.has_push_subscription;
+    notifyChannel = u.notify_channel || 'both';
+    notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
       rewardLevel = u.reward_level || 3;
       lifetimePoints = u.lifetime_points || 0;
@@ -4685,7 +4829,12 @@ function cardByKey(key){
 async function loadCards(){
   // Каталог публичный, мои карточки требуют telegram_id — в демо второго запроса нет
   try {
-    cardCatalog = await apiRequest(`${API_URL}/cards/catalog`, {}, 10000);
+    // telegram_id нужен, чтобы сервер отдал секретные карточки — но только те,
+    // что уже есть у этого человека. Об остальных он знать не должен
+    const catUrl = telegramId
+      ? `${API_URL}/cards/catalog?telegram_id=${telegramId}`
+      : `${API_URL}/cards/catalog`;
+    cardCatalog = await apiRequest(catUrl, {}, 10000);
     if (!Array.isArray(cardCatalog)) cardCatalog = [];
   } catch(e){ cardCatalog = []; }
 
@@ -4697,6 +4846,8 @@ async function loadCards(){
   }
   renderPackBanner();
   renderCardsBadge();
+  renderCollectionStrip();
+  updateAppBadge();
 }
 
 function ownedMap(){
@@ -4716,12 +4867,34 @@ function renderPackBanner(){
   const el = document.getElementById('pack-banner');
   if (!el) return;
   const packs = (myCards && myCards.unopened_packs) || [];
-  if (!packs.length){ el.style.display = 'none'; return; }
+  const unclaimed = (myCards && myCards.unclaimed) || [];
+
   const t = document.getElementById('pack-banner-title');
-  if (t) t.textContent = packs.length === 1
-    ? 'Тебя ждёт закрытый пак'
-    : ('Тебя ждут закрытые паки: ' + packs.length);
-  el.style.display = 'flex';
+  const sub = el.querySelector('.pack-banner-sub');
+
+  if (packs.length){
+    if (t) t.textContent = packs.length === 1
+      ? 'Тебя ждёт закрытый пак'
+      : ('Тебя ждут закрытые паки: ' + packs.length);
+    if (sub) sub.textContent = 'Три карточки пантеона. Открой →';
+    el.onclick = openPackReveal;
+    el.style.display = 'flex';
+    return;
+  }
+
+  // Паков нет, но есть незабранная награда — про неё тоже надо сказать,
+  // иначе она тихо потеряется (особенно у паков, вскрытых автоматически)
+  if (unclaimed.length){
+    if (t) t.textContent = unclaimed.length === 1
+      ? 'Награда ждёт, чтобы её забрали'
+      : ('Незабранных награды: ' + unclaimed.length);
+    if (sub) sub.textContent = (unclaimed[0].title || '') + ' →';
+    el.onclick = function(){ switchView('cards'); };
+    el.style.display = 'flex';
+    return;
+  }
+
+  el.style.display = 'none';
 }
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
@@ -4783,7 +4956,7 @@ async function revealCard(cardId){
   el.classList.add('flipped');
   revealOpened++;
 
-  showCardDetail(card, data ? data.points_awarded : 0);
+  showCardDetail(card, data ? data.points_awarded : 0, cardId, data ? data.claimed : false);
 
   if (revealOpened >= revealQueue.length){
     document.getElementById('reveal-sub').textContent = 'Пак открыт';
@@ -4791,14 +4964,13 @@ async function revealCard(cardId){
   }
 }
 
-function showCardDetail(card, pointsAwarded){
+function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed){
   const el = document.getElementById('reveal-detail');
   if (!el) return;
   if (!card){ el.innerHTML = ''; return; }
 
   let gain = '';
   if (pointsAwarded) gain = '+' + pointsAwarded + ' баллов';
-  else if (card.effect_type === 'unlock_reward') gain = 'Открыта награда';
 
   let media = '';
   if (card.media_url){
@@ -4806,12 +4978,47 @@ function showCardDetail(card, pointsAwarded){
           + 'onclick="openUrl(' + JSON.stringify(card.media_url) + ')">Посмотреть</button></div>';
   }
 
+  // Карточки, награда которых требует действия вне карточки, при перевороте
+  // ничего не применяют — человек должен сам нажать «Забрать»
+  let claim = '';
+  if (card.needs_claim && cardId){
+    claim = alreadyClaimed
+      ? '<div class="reveal-detail-gain">Забрано — Денис свяжется</div>'
+      : '<div style="margin-top:14px"><button class="lec-link-btn access-btn" style="width:100%" '
+        + 'id="claim-btn-' + cardId + '" onclick="claimCard(' + cardId + ')">Забрать</button>'
+        + '<div style="font-size:12px;color:rgba(241,234,224,.55);margin-top:7px;line-height:1.4">'
+        + (card.effect_type === 'unlock_reward'
+            ? 'Награда появится в списке заявок, Денис её выдаст'
+            : 'Денис увидит, что ты этого хочешь, и свяжется') + '</div></div>';
+  }
+
   el.innerHTML =
       '<div class="reveal-detail-god">' + (card.god || '') + ' · ' + (CARD_RARITY_LABELS[card.rarity] || card.rarity) + '</div>'
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
     + (gain ? '<div class="reveal-detail-gain">' + gain + '</div>' : '')
-    + media;
+    + media + claim;
+}
+
+async function claimCard(cardId){
+  const btn = document.getElementById('claim-btn-' + cardId);
+  if (btn){ btn.disabled = true; btn.textContent = 'Забираю…'; }
+  try {
+    await apiRequest(`${API_URL}/cards/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, card_id: cardId })
+    }, 15000);
+    if (btn){
+      btn.textContent = 'Забрано';
+      btn.style.opacity = '.6';
+    }
+    showToast('Готово — Денис увидит');
+    loadCards();
+  } catch(e){
+    if (btn){ btn.disabled = false; btn.textContent = 'Забрать'; }
+    showToast(e.message || 'Не получилось забрать');
+  }
 }
 
 /* ── Альбом ─────────────────────────────────────────────────────────────── */
@@ -4828,12 +5035,25 @@ function renderCardsAlbum(){
   }
 
   const owned = ownedMap();
-  const ownedCount = Object.keys(owned).length;
-  if (prog) prog.textContent = 'Собрано ' + ownedCount + ' из ' + cardCatalog.length;
+
+  // Плейсхолдер показываем ТОЛЬКО под карточки, которые реально в колоде.
+  // Секретные и выведенные из оборота попадают в альбом лишь тогда, когда они
+  // у человека уже есть — иначе он охотился бы за недостижимым
+  const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret; });
+  const extras = cardCatalog.filter(function(c){
+    return owned[c.key] && !(c.active && !c.secret);
+  });
+  const shownCards = inDeck.concat(extras);
+
+  const ownedInDeck = inDeck.filter(function(c){ return owned[c.key]; }).length;
+  if (prog) prog.textContent = 'Собрано ' + ownedInDeck + ' из ' + inDeck.length
+    + (extras.length ? ' · и ещё ' + extras.length + ' особых' : '');
+
+  const newKeys = newCardKeys();
 
   // Группируем по богам, внутри — от редких к частым
   const byGod = {};
-  cardCatalog.forEach(function(c){
+  shownCards.forEach(function(c){
     (byGod[c.god || 'Пантеон'] = byGod[c.god || 'Пантеон'] || []).push(c);
   });
 
@@ -4849,10 +5069,14 @@ function renderCardsAlbum(){
         const art = (n && c.image_url)
           ? '<img src="' + c.image_url + '" alt="">'
           : '<div style="font-size:20px;color:var(--warm);opacity:' + (n ? '.6' : '.25') + '">◆</div>';
+        // Название видно всегда — охотиться хочется за конкретным, а не за «???»
+        const mark = (n && newKeys.indexOf(c.key) !== -1)
+          ? '<div class="album-new">новая</div>' : '';
         return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + JSON.stringify(c.key) + ')">'
           + '<div class="album-art">' + art + '</div>'
           + (n > 1 ? '<div class="album-count">×' + n + '</div>' : '')
-          + '<div class="album-name">' + (n ? (c.title || c.key) : '???') + '</div>'
+          + mark
+          + '<div class="album-name">' + (c.title || c.key) + '</div>'
           + '</div>';
       }).join('') + '</div>';
   }).join('');
@@ -4872,7 +5096,9 @@ function openAlbumCard(key){
   document.getElementById('reveal-sub').textContent = owned[key] > 1 ? ('У тебя таких: ' + owned[key]) : '';
   document.getElementById('reveal-row').innerHTML = '';
   document.getElementById('reveal-done').style.display = '';
-  showCardDetail(c, 0);
+  // Если у этой карточки есть незабранная копия — из витрины тоже можно забрать
+  const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === key; });
+  showCardDetail(c, 0, pending ? pending.id : null, false);
   document.getElementById('reveal-overlay').classList.add('open');
 }
 
@@ -4941,6 +5167,94 @@ function openLegalDoc(kind){
   if (!doc) return;
   if (doc.url) { openUrl(doc.url); return; }
   showToast(doc.title + ' — документ готовится');
+}
+
+/* ── Значок с числом на иконке приложения ───────────────────────────────────
+   Badging API. Работает только для аппа, добавленного на экран «Домой»
+   (в Telegram Mini App иконки нет — там неприменимо), на iOS с 16.4 и только
+   если человек разрешил уведомления. На Android Chromium API не поддерживается,
+   зато система сама рисует точку при непрочитанном push — звать ничего не надо.
+   Значение считаем от нераскрытых паков: это ровно то, что ждёт действия. */
+
+function updateAppBadge(){
+  if (!isStandaloneWebApp()) return;
+  const packs = (myCards && myCards.unopened_packs) ? myCards.unopened_packs.length : 0;
+  try {
+    if (packs > 0 && navigator.setAppBadge) navigator.setAppBadge(packs);
+    else if (navigator.clearAppBadge)        navigator.clearAppBadge();
+  } catch(e){ /* браузер не умеет — молча живём дальше */ }
+}
+
+/* ── Новые карточки ─────────────────────────────────────────────────────────
+   Помечаем то, что появилось со времени последнего захода в коллекцию.
+   Храним локально: метка косметическая, синхронизировать её между устройствами
+   смысла нет. */
+
+function seenCardsKey(){ return 'cards_seen_' + telegramId; }
+
+function seenCardKeys(){
+  try { return JSON.parse(localStorage.getItem(seenCardsKey()) || '[]') || []; }
+  catch(e){ return []; }
+}
+
+function newCardKeys(){
+  const seen = seenCardKeys();
+  return Object.keys(ownedMap()).filter(function(k){ return seen.indexOf(k) === -1; });
+}
+
+function markCardsSeen(){
+  try { localStorage.setItem(seenCardsKey(), JSON.stringify(Object.keys(ownedMap()))); }
+  catch(e){}
+}
+
+/* ── Лента коллекции на главном ─────────────────────────────────────────────
+   Раньше это была плитка, которая ничего не обещала. Лента показывает и то, что
+   собрано, и дыры — именно дыры и заставляют возвращаться. */
+
+const COLL_STRIP_LIMIT = 10;
+
+function renderCollectionStrip(){
+  const block = document.getElementById('coll-strip-block');
+  const strip = document.getElementById('coll-strip');
+  const cnt   = document.getElementById('coll-strip-count');
+  if (!block || !strip) return;
+
+  const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret; });
+  const owned = ownedMap();
+  const extras = cardCatalog.filter(function(c){
+    return owned[c.key] && !(c.active && !c.secret);
+  });
+  if (!inDeck.length && !extras.length){ block.style.display = 'none'; return; }
+  block.style.display = '';
+
+  const newKeys = newCardKeys();
+  const ownedInDeck = inDeck.filter(function(c){ return owned[c.key]; }).length;
+  if (cnt) cnt.textContent = ownedInDeck + ' из ' + inDeck.length;
+
+  // Сначала полученные (свежие впереди), потом несобранные силуэтами —
+  // так лента сразу читается как «вот моё, а вот чего не хватает»
+  const mine = inDeck.concat(extras).filter(function(c){ return owned[c.key]; })
+    .sort(function(a,b){
+      const an = newKeys.indexOf(a.key) !== -1 ? 0 : 1;
+      const bn = newKeys.indexOf(b.key) !== -1 ? 0 : 1;
+      if (an !== bn) return an - bn;
+      return (CARD_RARITY_ORDER[a.rarity] ?? 9) - (CARD_RARITY_ORDER[b.rarity] ?? 9);
+    });
+  const missing = inDeck.filter(function(c){ return !owned[c.key]; });
+  const shown = mine.concat(missing).slice(0, COLL_STRIP_LIMIT);
+
+  strip.innerHTML = shown.map(function(c){
+    const n = owned[c.key] || 0;
+    const art = (n && c.image_url)
+      ? '<img src="' + c.image_url + '" alt="">'
+      : '<div style="font-size:17px;color:var(--warm);opacity:' + (n ? '.6' : '.22') + '">◆</div>';
+    const mark = (n && newKeys.indexOf(c.key) !== -1)
+      ? '<div class="album-new" style="bottom:4px">новая</div>' : '';
+    return '<div class="coll-card' + (n ? '' : ' locked') + '" onclick="openAlbumCard(' + JSON.stringify(c.key) + ')">'
+      + '<div class="coll-art">' + art + '</div>' + mark + '</div>';
+  }).join('')
+  + '<div class="coll-more" onclick="switchView(\'cards\')">'
+    + '<div style="font-size:15px">→</div><div>вся<br>колода</div></div>';
 }
 </script>
 </body>
