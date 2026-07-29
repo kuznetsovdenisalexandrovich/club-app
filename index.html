@@ -416,6 +416,53 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* ── Конфетти при достижении уровня ── */
 .confetti-piece{position:fixed;top:-10px;border-radius:2px;opacity:0;pointer-events:none;z-index:9999;animation:confettiFall linear forwards}
 @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+/* ── Карточки пантеона ── */
+.pack-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(232,97,74,.18),rgba(232,97,74,.05));
+  border:1px solid var(--warm);border-radius:16px;padding:16px;margin-bottom:14px;cursor:pointer;position:relative}
+.pack-banner-dot{position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%;background:var(--warm);
+  box-shadow:0 0 0 0 rgba(232,97,74,.6);animation:packPulse 2s infinite}
+@keyframes packPulse{0%{box-shadow:0 0 0 0 rgba(232,97,74,.55)}70%{box-shadow:0 0 0 11px rgba(232,97,74,0)}100%{box-shadow:0 0 0 0 rgba(232,97,74,0)}}
+.pack-banner-icon{font-size:26px;flex:none}
+.pack-banner-title{font-weight:700;font-size:14px}
+.pack-banner-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
+
+/* Экран вскрытия */
+.reveal-overlay{position:fixed;inset:0;z-index:800;background:rgba(12,10,21,.94);backdrop-filter:blur(8px);
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.reveal-overlay.open{display:flex}
+.reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
+.reveal-sub{font-size:12px;color:rgba(241,234,224,.6);margin-bottom:22px;text-align:center}
+.reveal-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.reveal-card{width:96px;aspect-ratio:3/4.35;border-radius:12px;cursor:pointer;position:relative;
+  transition:transform .35s ease;transform-style:preserve-3d}
+.reveal-card.flipped{transform:rotateY(180deg)}
+.reveal-face{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;overflow:hidden}
+.reveal-back{background:linear-gradient(150deg,#2A2433,#4A3A52);border:1.5px solid rgba(241,234,224,.25);
+  display:flex;align-items:center;justify-content:center;font-size:26px;color:rgba(241,234,224,.45)}
+.reveal-front{transform:rotateY(180deg);background:var(--card-bg);border:1.5px solid var(--warm);
+  display:flex;flex-direction:column}
+.reveal-front img{width:100%;flex:1;object-fit:cover;display:block;min-height:0}
+.reveal-front-name{font-size:9.5px;font-weight:700;padding:4px 5px;text-align:center;line-height:1.2}
+.reveal-detail{margin-top:20px;max-width:330px;text-align:center;color:#F1EAE0}
+.reveal-detail-god{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--warm)}
+.reveal-detail-title{font-size:19px;font-weight:700;margin:4px 0 8px}
+.reveal-detail-text{font-size:13.5px;line-height:1.5;color:rgba(241,234,224,.8)}
+.reveal-detail-gain{font-size:14px;font-weight:700;color:var(--warm);margin-top:10px}
+
+/* Альбом */
+.album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
+.album-card{border-radius:11px;overflow:hidden;border:1.5px solid var(--line);background:var(--card-bg);position:relative;cursor:pointer}
+.album-card.owned{border-color:var(--warm)}
+.album-art{aspect-ratio:3/4;background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center}
+.album-art img{width:100%;height:100%;object-fit:cover;display:block}
+.album-card.locked .album-art{filter:grayscale(1) brightness(.42)}
+.album-card.locked .album-name{color:var(--text-dim)}
+.album-name{font-size:10px;font-weight:600;padding:5px 6px;line-height:1.25;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.album-count{position:absolute;top:4px;right:4px;background:var(--warm);color:#fff;font-size:9px;font-weight:700;
+  border-radius:20px;padding:1px 6px}
+.album-god-title{font-size:12px;font-weight:700;color:var(--text-dim);margin:16px 0 8px;letter-spacing:.04em}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -462,6 +509,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
   <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
+    <div class="pack-banner" id="pack-banner" style="display:none" onclick="openPackReveal()">
+      <div class="pack-banner-dot"></div>
+      <div class="pack-banner-icon">🎴</div>
+      <div>
+        <div class="pack-banner-title" id="pack-banner-title">Тебя ждёт закрытый пак</div>
+        <div class="pack-banner-sub">Три карточки пантеона. Открой →</div>
+      </div>
+    </div>
+
     <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
       <div class="demo-banner-icon">👀</div>
       <div>
@@ -548,6 +604,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div class="tile-icon tile-icon-number" id="menu-points-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Баллы</div>
       </div>
+      <div class="tile" onclick="switchView('cards')">
+        <div class="tile-icon tile-icon-number" id="menu-cards-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
+        <div class="tile-label">Коллекция</div>
+      </div>
       <div class="tile" onclick="openUrl('https://vk.ru/im/channels/-237934122')">
         <div class="tile-icon" style="background:rgba(0,119,255,0.16);color:#0077ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Резервный канал ВК</div>
@@ -557,6 +617,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         <div class="tile-label">Резервный чат ВК</div>
       </div>
     </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:center;margin-top:22px">
+      <div class="payment-help-link" style="margin:0;font-size:12px" onclick="openLegalDoc('privacy')">Согласие на обработку персональных данных</div>
+      <div class="payment-help-link" style="margin:0;font-size:12px" onclick="openLegalDoc('terms')">Пользовательское соглашение</div>
+    </div>
+
     <div class="scroll-spacer"></div>
   </div>
 
@@ -632,6 +698,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div class="section-label">Помощь</div>
     <div class="card">
       <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="openSupportPopup()">Написать в поддержку</button>
+      <button class="lec-card" style="width:100%;text-align:center;border:none;margin-top:8px" onclick="openBugPopup()">Сообщить о баге</button>
     </div>
 
     <div id="debug-blocks" style="display:none">
@@ -691,7 +758,48 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       </div>
     </div>
 
+    <div class="section-label" id="profile-legal-label">Документы</div>
+    <div class="card" id="profile-legal-card">
+      <div class="payment-help-link" style="margin:0 0 8px" onclick="openLegalDoc('offer')">Оферта клуба</div>
+      <div class="payment-help-link" style="margin:0" onclick="openLegalDoc('rules')">Правила пользования</div>
+    </div>
+
     <div id="requisites-line" style="text-align:center;font-size:13px;color:#fff;margin-top:28px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Коллекция карточек ── -->
+  <div class="view" id="view-cards">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Коллекция</span>
+      <span onclick="switchView('deck-rules')" style="cursor:pointer;font-size:12px;color:var(--text-dim);text-decoration:underline">Правила</span>
+    </div>
+    <div class="card" id="cards-collection-head" style="margin-bottom:12px">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5">Карточки приходят паками за продление участия. Собери весь пантеон.</div>
+      <div id="cards-collection-progress" style="font-size:14px;font-weight:700;margin-top:8px"></div>
+    </div>
+    <div id="cards-album"><div class="sm-hint" style="padding:20px 0;text-align:center">Загружаю коллекцию…</div></div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Правила колоды ── -->
+  <div class="view" id="view-deck-rules">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span class="stream-back" onclick="switchView('cards')">←</span>
+      <span>Правила колоды</span>
+    </div>
+    <div class="card">
+      <div style="font-size:13.5px;line-height:1.6;color:var(--text)">
+        <p style="margin-bottom:12px">Пак из трёх карточек приходит за каждое продление участия в клубе. Карточки нельзя купить — ни за деньги, ни за баллы.</p>
+        <p style="margin-bottom:12px">Продление со скидкой за баллы пак не даёт: паки идут только за полную оплату месяца.</p>
+        <div class="section-label" style="margin:14px 0 8px">Насколько часто что выпадает</div>
+        <div id="deck-rules-chances" style="font-size:13px;line-height:1.7"></div>
+        <div class="section-label" style="margin:16px 0 8px">Чтобы никого не обделить</div>
+        <p style="margin-bottom:12px">Чем дольше тебе не выпадает редкая карточка, тем выше её шанс в следующем паке. Самые редкие карточки ограничены по количеству — их физически не может выпасть больше определённого числа за период.</p>
+        <div class="section-label" style="margin:16px 0 8px">Если пак не открыть</div>
+        <p>Закрытые паки не сгорают и ждут тебя. Если их накопится больше трёх, самый старый откроется сам — чтобы баллы из него не лежали без дела.</p>
+      </div>
+    </div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -1112,6 +1220,26 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   </div>
 </div>
 
+<div class="reveal-overlay" id="reveal-overlay">
+  <div class="reveal-title" id="reveal-title">Твой пак</div>
+  <div class="reveal-sub" id="reveal-sub">Нажми на карточку, чтобы открыть</div>
+  <div class="reveal-row" id="reveal-row"></div>
+  <div class="reveal-detail" id="reveal-detail"></div>
+  <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px" onclick="closePackReveal()">Готово</button>
+</div>
+
+<div class="center-modal-overlay" id="bug-popup-overlay" onclick="if(event.target===this) closeBugPopup()">
+  <div class="center-modal" id="bug-popup">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Сообщить о баге</div>
+      <button class="icon-btn" onclick="closeBugPopup()">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px">Что не так работает? Напиши, на каком экране и что произошло — так починить получится быстрее.</div>
+    <textarea class="ai-question-input" id="bug-input" rows="4" maxlength="2000" placeholder="Например: на экране расписания не открывается занятие 12 августа"></textarea>
+    <button class="lec-link-btn access-btn" id="bug-send-btn" style="width:100%;margin-top:10px" onclick="submitBugReport()">Отправить</button>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="support-popup-overlay" onclick="if(event.target===this) closeSupportPopup()">
   <div class="center-modal" id="support-popup">
     <div class="center-modal-header">
@@ -1308,6 +1436,8 @@ function switchView(name) {
   const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
+  if (name === 'cards') { renderCardsAlbum(); }
+  if (name === 'deck-rules') { renderDeckRulesChances(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
     const el = document.getElementById('pi-points');
@@ -1727,6 +1857,11 @@ function renderDemoBanner(){
   // Telegram — внутри ТГ человек уже опознан, входить ему некуда.
   const demoCard = document.getElementById('demo-profile-card');
   if (demoCard) demoCard.style.display = isMember ? 'none' : 'block';
+  // Оферта и правила пользования — документы про участие, демо-гостю не нужны
+  const legalCard = document.getElementById('profile-legal-card');
+  if (legalCard) legalCard.style.display = isMember ? '' : 'none';
+  const legalLabel = document.getElementById('profile-legal-label');
+  if (legalLabel) legalLabel.style.display = isMember ? '' : 'none';
   const demoLoginBtn = document.getElementById('demo-profile-login-btn');
   if (demoLoginBtn) {
     const inTelegram = !!(window.Telegram && window.Telegram.WebApp
@@ -4214,6 +4349,7 @@ function startApp(){
   loadNews();
   loadWidgetMonth();
   loadSavedSlugs();
+  loadCards();
 }
 
 function loadUrgentNewsForWebEntry(){
@@ -4531,6 +4667,281 @@ function startWebSession(){
     startWebSession();
   }
 })();
+
+/* ── Карточки пантеона: пак, вскрытие, альбом ────────────────────────────── */
+
+const CARD_RARITY_ORDER  = { legendary:0, rare:1, uncommon:2, common:3 };
+const CARD_RARITY_LABELS = { common:'частая', uncommon:'нечастая', rare:'редкая', legendary:'легендарная' };
+
+let cardCatalog   = [];    // вся колода из /cards/catalog
+let myCards       = null;  // { unopened_packs, owned, total_cards }
+let revealQueue   = [];    // карточки текущего вскрываемого пака
+let revealOpened  = 0;
+
+function cardByKey(key){
+  return cardCatalog.find(function(c){ return c.key === key; }) || null;
+}
+
+async function loadCards(){
+  // Каталог публичный, мои карточки требуют telegram_id — в демо второго запроса нет
+  try {
+    cardCatalog = await apiRequest(`${API_URL}/cards/catalog`, {}, 10000);
+    if (!Array.isArray(cardCatalog)) cardCatalog = [];
+  } catch(e){ cardCatalog = []; }
+
+  myCards = null;
+  if (telegramId) {
+    try {
+      myCards = await apiRequest(`${API_URL}/cards/my?telegram_id=${telegramId}`, {}, 10000);
+    } catch(e){ myCards = null; }
+  }
+  renderPackBanner();
+  renderCardsBadge();
+}
+
+function ownedMap(){
+  const map = {};
+  ((myCards && myCards.owned) || []).forEach(function(o){ map[o.card_key] = o.count; });
+  return map;
+}
+
+function renderCardsBadge(){
+  const el = document.getElementById('menu-cards-badge');
+  if (!el) return;
+  const owned = Object.keys(ownedMap()).length;
+  el.textContent = owned;
+}
+
+function renderPackBanner(){
+  const el = document.getElementById('pack-banner');
+  if (!el) return;
+  const packs = (myCards && myCards.unopened_packs) || [];
+  if (!packs.length){ el.style.display = 'none'; return; }
+  const t = document.getElementById('pack-banner-title');
+  if (t) t.textContent = packs.length === 1
+    ? 'Тебя ждёт закрытый пак'
+    : ('Тебя ждут закрытые паки: ' + packs.length);
+  el.style.display = 'flex';
+}
+
+/* ── Вскрытие ───────────────────────────────────────────────────────────── */
+
+function openPackReveal(){
+  const packs = (myCards && myCards.unopened_packs) || [];
+  if (!packs.length) return;
+  // Самый старый пак — он же первым и уйдёт на автовскрытие, если накопится
+  const pack = packs[packs.length - 1];
+  revealQueue  = pack.card_ids.slice();
+  revealOpened = 0;
+
+  document.getElementById('reveal-title').textContent = 'Твой пак';
+  document.getElementById('reveal-sub').textContent = 'Нажми на карточку, чтобы открыть';
+  document.getElementById('reveal-detail').innerHTML = '';
+  document.getElementById('reveal-done').style.display = 'none';
+
+  document.getElementById('reveal-row').innerHTML = revealQueue.map(function(id, i){
+    return '<div class="reveal-card" id="reveal-card-' + id + '" onclick="revealCard(' + id + ')">'
+      + '<div class="reveal-face reveal-back">◆</div>'
+      + '<div class="reveal-face reveal-front" id="reveal-front-' + id + '"></div>'
+      + '</div>';
+  }).join('');
+
+  document.getElementById('reveal-overlay').classList.add('open');
+}
+
+function closePackReveal(){
+  document.getElementById('reveal-overlay').classList.remove('open');
+  // Перечитываем: пак ушёл из закрытых, баллы могли начислиться
+  loadCards();
+  loadProfile();
+}
+
+async function revealCard(cardId){
+  const el = document.getElementById('reveal-card-' + cardId);
+  if (!el || el.classList.contains('flipped')) return;
+
+  let data = null;
+  try {
+    data = await apiRequest(`${API_URL}/cards/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, card_id: cardId })
+    }, 15000);
+  } catch(e){
+    showToast(e.message || 'Не получилось открыть карточку');
+    return;
+  }
+
+  const card = data && data.card;
+  const front = document.getElementById('reveal-front-' + cardId);
+  if (front && card){
+    front.innerHTML = (card.image_url
+        ? '<img src="' + card.image_url + '" alt="">'
+        : '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--warm);opacity:.6">◆</div>')
+      + '<div class="reveal-front-name">' + (card.title || '') + '</div>';
+  }
+  el.classList.add('flipped');
+  revealOpened++;
+
+  showCardDetail(card, data ? data.points_awarded : 0);
+
+  if (revealOpened >= revealQueue.length){
+    document.getElementById('reveal-sub').textContent = 'Пак открыт';
+    document.getElementById('reveal-done').style.display = '';
+  }
+}
+
+function showCardDetail(card, pointsAwarded){
+  const el = document.getElementById('reveal-detail');
+  if (!el) return;
+  if (!card){ el.innerHTML = ''; return; }
+
+  let gain = '';
+  if (pointsAwarded) gain = '+' + pointsAwarded + ' баллов';
+  else if (card.effect_type === 'unlock_reward') gain = 'Открыта награда';
+
+  let media = '';
+  if (card.media_url){
+    media = '<div style="margin-top:12px"><button class="lec-link-btn access-btn" style="width:100%" '
+          + 'onclick="openUrl(' + JSON.stringify(card.media_url) + ')">Посмотреть</button></div>';
+  }
+
+  el.innerHTML =
+      '<div class="reveal-detail-god">' + (card.god || '') + ' · ' + (CARD_RARITY_LABELS[card.rarity] || card.rarity) + '</div>'
+    + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
+    + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
+    + (gain ? '<div class="reveal-detail-gain">' + gain + '</div>' : '')
+    + media;
+}
+
+/* ── Альбом ─────────────────────────────────────────────────────────────── */
+
+function renderCardsAlbum(){
+  const el = document.getElementById('cards-album');
+  const prog = document.getElementById('cards-collection-progress');
+  if (!el) return;
+
+  if (!cardCatalog.length){
+    el.innerHTML = '<div class="sm-hint" style="padding:20px 0;text-align:center">Колода ещё наполняется</div>';
+    if (prog) prog.textContent = '';
+    return;
+  }
+
+  const owned = ownedMap();
+  const ownedCount = Object.keys(owned).length;
+  if (prog) prog.textContent = 'Собрано ' + ownedCount + ' из ' + cardCatalog.length;
+
+  // Группируем по богам, внутри — от редких к частым
+  const byGod = {};
+  cardCatalog.forEach(function(c){
+    (byGod[c.god || 'Пантеон'] = byGod[c.god || 'Пантеон'] || []).push(c);
+  });
+
+  el.innerHTML = Object.keys(byGod).sort(function(a,b){ return a.localeCompare(b,'ru'); }).map(function(god){
+    const list = byGod[god].slice().sort(function(a,b){
+      const ra = CARD_RARITY_ORDER[a.rarity], rb = CARD_RARITY_ORDER[b.rarity];
+      return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
+    });
+    const gotHere = list.filter(function(c){ return owned[c.key]; }).length;
+    return '<div class="album-god-title">' + god + ' · ' + gotHere + '/' + list.length + '</div>'
+      + '<div class="album-grid">' + list.map(function(c){
+        const n = owned[c.key] || 0;
+        const art = (n && c.image_url)
+          ? '<img src="' + c.image_url + '" alt="">'
+          : '<div style="font-size:20px;color:var(--warm);opacity:' + (n ? '.6' : '.25') + '">◆</div>';
+        return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + JSON.stringify(c.key) + ')">'
+          + '<div class="album-art">' + art + '</div>'
+          + (n > 1 ? '<div class="album-count">×' + n + '</div>' : '')
+          + '<div class="album-name">' + (n ? (c.title || c.key) : '???') + '</div>'
+          + '</div>';
+      }).join('') + '</div>';
+  }).join('');
+}
+
+function openAlbumCard(key){
+  const c = cardByKey(key);
+  if (!c) return;
+  const owned = ownedMap();
+  if (!owned[key]){
+    showToast('Эта карточка тебе ещё не попадалась');
+    return;
+  }
+  // Переиспользуем экран вскрытия как «витрину»: карточка сразу открытой
+  revealQueue = []; revealOpened = 0;
+  document.getElementById('reveal-title').textContent = 'Из твоей коллекции';
+  document.getElementById('reveal-sub').textContent = owned[key] > 1 ? ('У тебя таких: ' + owned[key]) : '';
+  document.getElementById('reveal-row').innerHTML = '';
+  document.getElementById('reveal-done').style.display = '';
+  showCardDetail(c, 0);
+  document.getElementById('reveal-overlay').classList.add('open');
+}
+
+function renderDeckRulesChances(){
+  const el = document.getElementById('deck-rules-chances');
+  if (!el) return;
+  const active = cardCatalog.filter(function(c){ return c.active; });
+  if (!active.length){ el.textContent = 'Колода ещё наполняется.'; return; }
+  // Каталог не отдаёт веса наружу — считаем доли по числу карточек каждой редкости
+  const groups = {};
+  active.forEach(function(c){ groups[c.rarity] = (groups[c.rarity] || 0) + 1; });
+  el.innerHTML = ['common','uncommon','rare','legendary'].filter(function(r){ return groups[r]; }).map(function(r){
+    return '<div>' + (CARD_RARITY_LABELS[r] || r).replace(/^./, function(m){ return m.toUpperCase(); })
+      + ' — ' + groups[r] + ' ' + (groups[r] === 1 ? 'карточка' : 'карточек') + ' в колоде</div>';
+  }).join('');
+}
+
+/* ── Сообщить о баге ─────────────────────────────────────────────────────── */
+
+function openBugPopup(){
+  document.getElementById('bug-input').value = '';
+  document.getElementById('bug-popup-overlay').classList.add('open');
+}
+function closeBugPopup(){
+  document.getElementById('bug-popup-overlay').classList.remove('open');
+}
+
+async function submitBugReport(){
+  const input = document.getElementById('bug-input');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  const btn = document.getElementById('bug-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Отправляю…';
+  try {
+    // Идёт тем же каналом, что и поддержка (запись в базу + сообщение в админ-чат),
+    // но с пометкой — чтобы баги было видно среди обращений
+    await apiRequest(`${API_URL}/support`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, text: 'БАГ: ' + text })
+    }, 15000);
+    closeBugPopup();
+    showToast('Спасибо — Денис увидит и починит');
+  } catch (e) {
+    showToast(e.message || 'Не получилось отправить');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Отправить';
+  }
+}
+
+/* ── Юридические документы ──────────────────────────────────────────────────
+   Пока заглушки: тексты Denis готовит отдельно. Как только появятся ссылки —
+   заменить URL здесь, разметку менять не придётся. */
+
+const LEGAL_DOCS = {
+  privacy: { title: 'Согласие на обработку персональных данных', url: '' },
+  terms:   { title: 'Пользовательское соглашение',               url: '' },
+  offer:   { title: 'Оферта клуба',                              url: '' },
+  rules:   { title: 'Правила пользования',                       url: '' },
+};
+
+function openLegalDoc(kind){
+  const doc = LEGAL_DOCS[kind];
+  if (!doc) return;
+  if (doc.url) { openUrl(doc.url); return; }
+  showToast(doc.title + ' — документ готовится');
+}
 </script>
 </body>
 
