@@ -508,10 +508,66 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   display:flex;align-items:center;justify-content:center;position:relative}
 .reveal-big-card img{width:100%;height:100%;object-fit:cover;display:block}
 .reveal-big-card .reveal-big-ph{font-size:52px;color:var(--warm);opacity:.5}
-.reveal-overlay.compact .reveal-big-card{width:min(46vw,190px)}
 .reveal-overlay.showcase .reveal-row{display:none}
 .reveal-big-count{position:absolute;top:8px;right:8px;background:var(--warm);color:#fff;
   font-size:12px;font-weight:700;border-radius:20px;padding:2px 9px}
+
+/* Вскрытая рубашка сворачивается в точку: карточка уже показана крупно ниже,
+   и две одинаковые картинки друг над другом выглядели дублем. Точки остаются
+   как счётчик прогресса, а когда открыты все — ряд убирается совсем */
+.reveal-card.collapsed{width:11px;min-width:11px;aspect-ratio:1;border-radius:50%;
+  background:var(--warm);box-shadow:none;
+  transition:width .32s ease,min-width .32s ease,aspect-ratio .32s ease,opacity .32s ease}
+.reveal-card.collapsed .reveal-face{display:none}
+.reveal-row.all-done{display:none}
+
+/* Пока есть неоткрытые рубашки — арт поменьше, чтобы всё влезло без прокрутки.
+   Открыли всё, ряд убрался — арт разворачивается на всю ширину */
+.reveal-overlay.compact .reveal-big-card{width:min(56vw,220px)}
+.reveal-overlay.compact.all-open .reveal-big-card{width:min(80vw,340px)}
+
+/* Светлая тема вешает на кнопки тень для светлого фона — на тёмном оверлее
+   она читается как белый ореол вокруг «Готово» */
+.reveal-overlay .lec-link-btn{box-shadow:none!important}
+
+/* Срочная новость на веб-экране входа лежит отдельным блоком в самом верху
+   страницы, вне контейнеров с отступами. Без явного отступа сверху она в
+   приложении с экрана «Домой» налезает на часы и индикаторы.
+   --safe-top уже есть в файле: это env(safe-area-inset-top), а в Telegram JS
+   переопределяет её на реальную безопасную зону */
+#web-urgent-news-banner{
+  display:none;
+  max-width:360px;
+  width:calc(100% - 32px);
+  margin:calc(var(--safe-top, 0px) + 18px) auto 16px;
+  box-sizing:border-box;
+}
+
+/* Увеличение карточки. Родной пинч-зум браузера у нас выключен (user-scalable=no
+   в viewport — иначе в мини-аппе страница разъезжается от случайных касаний),
+   поэтому жесты считаем сами. touch-action:none обязателен, иначе браузер
+   перехватит движение до наших обработчиков */
+.zoom-overlay{position:fixed;inset:0;z-index:900;background:rgba(8,7,14,.97);
+  display:none;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+.zoom-overlay.open{display:flex}
+.zoom-stage{transform-origin:center center;will-change:transform}
+.zoom-stage img{max-width:100vw;max-height:100vh;display:block;
+  user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none}
+.zoom-close{position:absolute;top:calc(var(--safe-top, 0px) + 12px);right:14px;
+  width:38px;height:38px;border-radius:50%;border:1px solid rgba(241,234,224,.28);
+  background:rgba(20,18,30,.6);color:#F1EAE0;font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;z-index:2}
+.zoom-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom, 0px) + 22px);
+  left:50%;transform:translateX(-50%);font-size:12px;color:rgba(241,234,224,.55);
+  text-align:center;padding:0 20px;transition:opacity .4s ease;pointer-events:none}
+.zoom-hint.hidden{opacity:0}
+
+/* Лупа в углу крупной карточки — иначе неочевидно, что её можно приблизить */
+.reveal-big-card{cursor:zoom-in}
+.reveal-big-zoom{position:absolute;bottom:8px;right:8px;width:26px;height:26px;
+  border-radius:50%;background:rgba(20,18,30,.55);border:1px solid rgba(241,234,224,.3);
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:#F1EAE0;
+  pointer-events:none}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -1032,7 +1088,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 </div>
 
 <!-- Срочная новость для ВСЕХ — видна и до логина (тут), и в ленте новостей после логина -->
-<div id="web-urgent-news-banner" class="news-block news-block--urgent" style="display:none;max-width:360px;margin:0 auto 16px"></div>
+<div id="web-urgent-news-banner" class="news-block news-block--urgent"></div>
 
 <!-- Не в Telegram — веб-вход по номеру. Один и тот же экран работает в двух режимах:
      с SMS-кодом и без него (зависит от глобального тумблера sms_login_enabled) -->
@@ -1280,6 +1336,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     </div>
     <div id="sub-cancel-body"></div>
   </div>
+</div>
+
+<div class="zoom-overlay" id="zoom-overlay">
+  <div class="zoom-stage" id="zoom-stage"><img id="zoom-img" alt=""></div>
+  <button class="zoom-close" id="zoom-close" onclick="closeCardZoom()">✕</button>
+  <div class="zoom-hint" id="zoom-hint">Двумя пальцами приблизить · двойной тап — быстро</div>
 </div>
 
 <div class="reveal-overlay" id="reveal-overlay">
@@ -4939,7 +5001,10 @@ function openPackReveal(){
 
   const ov = document.getElementById('reveal-overlay');
   ov.classList.remove('showcase');
-  ov.classList.add('compact');   // над артом ещё три рубашки — арт поменьше
+  ov.classList.remove('all-open');
+  const row = document.getElementById('reveal-row');
+  if (row) row.classList.remove('all-done');
+  ov.classList.add('compact');   // пока есть рубашки — арт поменьше
   ov.classList.add('open');
 }
 
@@ -4979,10 +5044,23 @@ async function revealCard(cardId){
 
   showCardDetail(card, data ? data.points_awarded : 0, cardId, data ? data.claimed : false);
 
-  if (revealOpened >= revealQueue.length){
+  const allOpen = revealOpened >= revealQueue.length;
+  if (allOpen){
     document.getElementById('reveal-sub').textContent = 'Пак открыт';
     document.getElementById('reveal-done').style.display = '';
   }
+
+  // Даём перевороту доиграть, потом сворачиваем рубашку в точку — иначе одна и
+  // та же картинка висит и в ряду, и крупно ниже
+  setTimeout(function(){
+    el.classList.add('collapsed');
+    if (allOpen){
+      const row = document.getElementById('reveal-row');
+      if (row) row.classList.add('all-done');
+      const ov = document.getElementById('reveal-overlay');
+      if (ov) ov.classList.add('all-open');   // ряда нет — арт на всю ширину
+    }
+  }, 480);
 }
 
 function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
@@ -5000,8 +5078,11 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
     const art = card.image_url
       ? '<img src="' + card.image_url + '" alt="">'
       : '<div class="reveal-big-ph">◆</div>';
-    big.innerHTML = '<div class="reveal-big-card">' + art
+    big.innerHTML = '<div class="reveal-big-card"' 
+      + (card.image_url ? ' onclick="openCardZoom(' + jsArg(card.image_url) + ')"' : '')
+      + '>' + art
       + ((copies && copies > 1) ? '<div class="reveal-big-count">×' + copies + '</div>' : '')
+      + (card.image_url ? '<div class="reveal-big-zoom">⌕</div>' : '')
       + '</div>';
     big.classList.add('on');
   }
@@ -5137,6 +5218,7 @@ function openAlbumCard(key){
   const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === key; });
   const ov = document.getElementById('reveal-overlay');
   ov.classList.remove('compact');
+  ov.classList.remove('all-open');
   ov.classList.add('showcase');   // рубашек нет, карточка на 80% экрана
   showCardDetail(c, 0, pending ? pending.id : null, false, owned[key]);
   ov.classList.add('open');
@@ -5307,6 +5389,156 @@ function jsArg(v){
   s = s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   s = s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   return "'" + s + "'";
+}
+
+/* ── Увеличение карточки ─────────────────────────────────────────────────────
+   Свой зум, потому что родной выключен через user-scalable=no. Три жеста:
+   щипок двумя пальцами, перетаскивание одним (только когда уже приближено —
+   иначе конфликтует с закрытием), двойной тап как быстрый переключатель.
+   Математика вынесена в чистые функции, чтобы её можно было проверить. */
+
+const ZOOM_MIN = 1, ZOOM_MAX = 5, ZOOM_DOUBLETAP = 3;
+
+let zoomScale = 1, zoomTx = 0, zoomTy = 0;
+let zoomBaseW = 0, zoomBaseH = 0;
+let zoomStart = null;        // состояние на начало жеста
+let zoomLastTap = 0;
+let zoomWired = false;
+
+/* Ограничение сдвига: за края уводить нельзя. Если картинка по оси меньше
+   экрана — держим её по центру */
+function zoomClamp(tx, ty, scale, baseW, baseH, viewW, viewH){
+  const maxX = Math.max(0, (baseW * scale - viewW) / 2);
+  const maxY = Math.max(0, (baseH * scale - viewH) / 2);
+  return {
+    tx: Math.max(-maxX, Math.min(maxX, tx)),
+    ty: Math.max(-maxY, Math.min(maxY, ty)),
+  };
+}
+
+function zoomDistance(t1, t2){
+  const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function zoomApply(){
+  const stage = document.getElementById('zoom-stage');
+  if (!stage) return;
+  const c = zoomClamp(zoomTx, zoomTy, zoomScale, zoomBaseW, zoomBaseH,
+                      window.innerWidth, window.innerHeight);
+  zoomTx = c.tx; zoomTy = c.ty;
+  stage.style.transform = 'translate(' + zoomTx + 'px,' + zoomTy + 'px) scale(' + zoomScale + ')';
+}
+
+function zoomReset(){
+  zoomScale = 1; zoomTx = 0; zoomTy = 0;
+  zoomApply();
+}
+
+function openCardZoom(url){
+  if (!url) return;
+  const ov  = document.getElementById('zoom-overlay');
+  const img = document.getElementById('zoom-img');
+  if (!ov || !img) return;
+
+  img.src = url;
+  zoomReset();
+  ov.classList.add('open');
+
+  const hint = document.getElementById('zoom-hint');
+  if (hint){
+    hint.classList.remove('hidden');
+    setTimeout(function(){ hint.classList.add('hidden'); }, 2600);
+  }
+
+  // Размер вписанной картинки нужен для ограничения сдвига. Берём после
+  // загрузки: до неё offsetWidth равен нулю и рамки посчитались бы неверно
+  const measure = function(){
+    zoomBaseW = img.offsetWidth || img.naturalWidth || 0;
+    zoomBaseH = img.offsetHeight || img.naturalHeight || 0;
+  };
+  if (img.complete) measure(); else img.onload = measure;
+
+  wireZoomGestures();
+}
+
+function closeCardZoom(){
+  const ov = document.getElementById('zoom-overlay');
+  if (ov) ov.classList.remove('open');
+  zoomReset();
+}
+
+function wireZoomGestures(){
+  if (zoomWired) return;
+  const ov = document.getElementById('zoom-overlay');
+  if (!ov) return;
+  zoomWired = true;
+
+  ov.addEventListener('touchstart', function(e){
+    if (e.touches.length === 2){
+      zoomStart = {
+        dist: zoomDistance(e.touches[0], e.touches[1]),
+        scale: zoomScale, tx: zoomTx, ty: zoomTy,
+        cx: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        cy: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+    } else if (e.touches.length === 1){
+      zoomStart = { pan: true, x: e.touches[0].clientX, y: e.touches[0].clientY,
+                    tx: zoomTx, ty: zoomTy };
+      // Двойной тап — быстрый переключатель между «вписано» и тройным
+      const now = Date.now();
+      if (now - zoomLastTap < 300){
+        zoomScale = (zoomScale > 1.05) ? 1 : ZOOM_DOUBLETAP;
+        if (zoomScale === 1){ zoomTx = 0; zoomTy = 0; }
+        zoomApply();
+        zoomLastTap = 0;
+        zoomStart = null;
+        return;
+      }
+      zoomLastTap = now;
+    }
+  }, { passive: true });
+
+  ov.addEventListener('touchmove', function(e){
+    if (!zoomStart) return;
+    if (e.touches.length === 2 && zoomStart.dist){
+      e.preventDefault();
+      const d = zoomDistance(e.touches[0], e.touches[1]);
+      zoomScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomStart.scale * (d / zoomStart.dist)));
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      zoomTx = zoomStart.tx + (cx - zoomStart.cx);
+      zoomTy = zoomStart.ty + (cy - zoomStart.cy);
+      zoomApply();
+    } else if (e.touches.length === 1 && zoomStart.pan && zoomScale > 1.02){
+      e.preventDefault();
+      zoomTx = zoomStart.tx + (e.touches[0].clientX - zoomStart.x);
+      zoomTy = zoomStart.ty + (e.touches[0].clientY - zoomStart.y);
+      zoomApply();
+    }
+  }, { passive: false });
+
+  ov.addEventListener('touchend', function(e){
+    if (e.touches.length === 0){
+      // Отпустили почти в исходном масштабе — возвращаем ровно единицу,
+      // иначе картинка застревает в 1.01 и перетаскивание ведёт себя странно
+      if (zoomScale < 1.05) zoomReset();
+      else zoomApply();
+      zoomStart = null;
+    }
+  }, { passive: true });
+
+  // Колесо и клик мимо — для десктопа и для проверки
+  ov.addEventListener('wheel', function(e){
+    e.preventDefault();
+    zoomScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomScale * (e.deltaY < 0 ? 1.12 : 0.89)));
+    if (zoomScale === 1){ zoomTx = 0; zoomTy = 0; }
+    zoomApply();
+  }, { passive: false });
+
+  ov.addEventListener('click', function(e){
+    if (e.target === ov && zoomScale < 1.05) closeCardZoom();
+  });
 }
 </script>
 </body>
