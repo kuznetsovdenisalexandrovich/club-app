@@ -463,6 +463,29 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .album-count{position:absolute;top:4px;right:4px;background:var(--warm);color:#fff;font-size:9px;font-weight:700;
   border-radius:20px;padding:1px 6px}
 .album-god-title{font-size:12px;font-weight:700;color:var(--text-dim);margin:16px 0 8px;letter-spacing:.04em}
+/* Имя бога как ссылка. Пунктир, а не сплошное подчёркивание: сплошное в списке
+   читается как «уже посещённая ссылка» и спорит с названиями карточек */
+.god-link{color:var(--warm);border-bottom:1px dotted var(--warm);cursor:pointer}
+.reveal-detail-god .god-link{border-bottom-color:rgba(232,97,74,.6)}
+
+/* Описание бога. z-index между витриной карточки (800) и увеличением (900):
+   слой открывается ПОВЕРХ витрины и не мешает увеличить арт после закрытия */
+.god-overlay{position:fixed;inset:0;z-index:850;background:rgba(12,10,21,.96);backdrop-filter:blur(10px);
+  display:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.god-overlay.open{display:block}
+.god-sheet{max-width:520px;margin:0 auto;color:#F1EAE0;
+  padding:calc(var(--safe-top, 0px) + 54px) 22px calc(env(safe-area-inset-bottom) + 40px)}
+.god-close{position:fixed;top:calc(var(--safe-top, 0px) + 12px);right:14px;z-index:2;
+  width:36px;height:36px;border-radius:50%;border:1px solid rgba(241,234,224,.25);
+  background:rgba(241,234,224,.08);color:#F1EAE0;font-size:15px;cursor:pointer}
+.god-portrait{width:100%;max-width:220px;border-radius:14px;display:block;margin:0 auto 20px}
+.god-name{font-size:26px;font-weight:700;line-height:1.15;letter-spacing:-.01em}
+.god-subtitle{font-size:13px;color:var(--warm);margin-top:6px;line-height:1.4}
+.god-text{font-size:14.5px;line-height:1.65;color:rgba(241,234,224,.85);margin-top:20px}
+.god-text p{margin-bottom:14px}
+.god-text p:last-child{margin-bottom:0}
+.god-cards-note{font-size:12.5px;color:rgba(241,234,224,.5);margin-top:24px;
+  padding-top:16px;border-top:1px solid rgba(241,234,224,.14)}
 
 /* Выбор канала уведомлений — сегментированный переключатель */
 .notif-ch-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
@@ -1346,6 +1369,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="zoom-loading" id="zoom-loading">Загружаю…</div>
   <button class="zoom-close" id="zoom-close" onclick="closeCardZoom()">✕</button>
   <div class="zoom-hint" id="zoom-hint">Двумя пальцами приблизить · двойной тап — быстро</div>
+</div>
+
+<div class="god-overlay" id="god-overlay" onclick="if(event.target===this) closeGodInfo()">
+  <button class="god-close" onclick="closeGodInfo()" aria-label="Закрыть">✕</button>
+  <div class="god-sheet" id="god-sheet"></div>
 </div>
 
 <div class="reveal-overlay" id="reveal-overlay">
@@ -4908,6 +4936,91 @@ function cardByKey(key){
   return cardCatalog.find(function(c){ return c.key === key; }) || null;
 }
 
+/* ── Описания богов ─────────────────────────────────────────────────────── */
+
+// Бэкенд отдаёт только опубликованные — если бога здесь нет, имя остаётся
+// обычным текстом. Так черновик описания никому не виден
+let godMap = {};
+
+/* Текст описаний Denis пишет руками в дашборде, и туда легко попадёт символ,
+   который иначе уедет в разметку. Экранируем и в текст, и в атрибуты */
+function escapeHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function loadGods(){
+  try {
+    const rows = await apiRequest(`${API_URL}/gods`, {}, 10000);
+    godMap = {};
+    (Array.isArray(rows) ? rows : []).forEach(function(g){ if (g && g.name) godMap[g.name] = g; });
+  } catch(e){ godMap = {}; }
+}
+
+function godHasInfo(name){
+  const g = godMap[name];
+  return !!(g && ((g.description || '').trim() || (g.subtitle || '').trim()));
+}
+
+/* Имя бога: ссылка, если описание есть, иначе просто текст. Возвращает готовый
+   HTML — вызывается и из альбома, и из витрины карточки */
+function godNameHtml(name){
+  const safe = escapeHtml(name || '');
+  if (!name || !godHasInfo(name)) return safe;
+  return '<span class="god-link" onclick="openGodInfo(' + jsArg(name) + ')">' + safe + '</span>';
+}
+
+function openGodInfo(name){
+  const g = godMap[name];
+  if (!g) return;
+  const el = document.getElementById('god-sheet');
+  if (!el) return;
+
+  // Абзацы разделены пустой строкой. Одиночный перенос оставляем внутри абзаца:
+  // текст пишется в дашборде вручную, и случайный перенос не должен рвать мысль
+  const paras = String(g.description || '').split(/\n\s*\n/)
+    .map(function(p){ return p.trim(); })
+    .filter(Boolean)
+    .map(function(p){ return '<p>' + escapeHtml(p).replace(/\n/g, ' ') + '</p>'; })
+    .join('');
+
+  // Сколько карточек этого бога уже собрано — описание заодно работает
+  // напоминанием, что коллекция не полна
+  const owned = ownedMap();
+  const mine = cardCatalog.filter(function(c){ return (c.god || '') === name; });
+  const inDeck = mine.filter(function(c){ return c.active && !c.secret; });
+  const got = inDeck.filter(function(c){ return owned[c.key]; }).length;
+  const note = inDeck.length
+    ? '<div class="god-cards-note">В колоде ' + inDeck.length + ' ' + cardWordApp(inDeck.length)
+      + ' этого бога' + (telegramId ? ' · у тебя ' + got : '') + '</div>'
+    : '';
+
+  el.innerHTML =
+      (g.image_url ? '<img class="god-portrait" src="' + escapeHtml(g.image_url) + '" alt="" '
+        + 'onerror="this.style.display=\'none\'">' : '')
+    + '<div class="god-name">' + escapeHtml(g.name) + '</div>'
+    + (g.subtitle ? '<div class="god-subtitle">' + escapeHtml(g.subtitle) + '</div>' : '')
+    + (paras ? '<div class="god-text">' + paras + '</div>' : '')
+    + note;
+
+  const ov = document.getElementById('god-overlay');
+  ov.classList.add('open');
+  ov.scrollTop = 0;
+}
+
+function closeGodInfo(){
+  const ov = document.getElementById('god-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+function cardWordApp(n){
+  const t = n % 10, h = n % 100;
+  if (t === 1 && h !== 11) return 'карточка';
+  if (t >= 2 && t <= 4 && (h < 12 || h > 14)) return 'карточки';
+  return 'карточек';
+}
+
 async function loadCards(){
   // Каталог публичный, мои карточки требуют telegram_id — в демо второго запроса нет
   try {
@@ -4919,6 +5032,9 @@ async function loadCards(){
     cardCatalog = await apiRequest(catUrl, {}, 10000);
     if (!Array.isArray(cardCatalog)) cardCatalog = [];
   } catch(e){ cardCatalog = []; }
+
+  // Описания публичные — грузим и в демо, там колода тоже видна силуэтами
+  await loadGods();
 
   myCards = null;
   if (telegramId) {
@@ -5119,7 +5235,7 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   }
 
   el.innerHTML =
-      '<div class="reveal-detail-god">' + (card.god || '') + ' · ' + (CARD_RARITY_LABELS[card.rarity] || card.rarity) + '</div>'
+      '<div class="reveal-detail-god">' + godNameHtml(card.god || '') + ' · ' + (CARD_RARITY_LABELS[card.rarity] || card.rarity) + '</div>'
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
     + (gain ? '<div class="reveal-detail-gain">' + gain + '</div>' : '')
@@ -5189,7 +5305,7 @@ function renderCardsAlbum(){
       return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
     });
     const gotHere = list.filter(function(c){ return owned[c.key]; }).length;
-    return '<div class="album-god-title">' + god + ' · ' + gotHere + '/' + list.length + '</div>'
+    return '<div class="album-god-title">' + godNameHtml(god) + ' · ' + gotHere + '/' + list.length + '</div>'
       + '<div class="album-grid">' + list.map(function(c){
         const n = owned[c.key] || 0;
         const art = (n && c.image_url)
