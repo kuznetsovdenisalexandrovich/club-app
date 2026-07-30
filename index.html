@@ -568,6 +568,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border-radius:50%;background:rgba(20,18,30,.55);border:1px solid rgba(241,234,224,.3);
   display:flex;align-items:center;justify-content:center;font-size:12px;color:#F1EAE0;
   pointer-events:none}
+
+.zoom-loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:13px;color:rgba(241,234,224,.6);pointer-events:none}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -1340,6 +1343,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 <div class="zoom-overlay" id="zoom-overlay">
   <div class="zoom-stage" id="zoom-stage"><img id="zoom-img" alt=""></div>
+  <div class="zoom-loading" id="zoom-loading">Загружаю…</div>
   <button class="zoom-close" id="zoom-close" onclick="closeCardZoom()">✕</button>
   <div class="zoom-hint" id="zoom-hint">Двумя пальцами приблизить · двойной тап — быстро</div>
 </div>
@@ -5073,16 +5077,20 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
     return;
   }
 
-  // Сама карточка крупно — это то, на что человек и хотел посмотреть
+  // Сама карточка крупно — это то, на что человек и хотел посмотреть.
+  // Показываем ПРЕВЬЮ: оно уже в кэше после сетки, поэтому появляется мгновенно.
+  // Полную версию открывает только увеличение — грузить её здесь значило бы
+  // ждать полмегабайта ради картинки размером в треть экрана
   if (big){
+    const zoomSrc = card.image_full_url || card.image_url;
     const art = card.image_url
       ? '<img src="' + card.image_url + '" alt="">'
       : '<div class="reveal-big-ph">◆</div>';
-    big.innerHTML = '<div class="reveal-big-card"' 
-      + (card.image_url ? ' onclick="openCardZoom(' + jsArg(card.image_url) + ')"' : '')
+    big.innerHTML = '<div class="reveal-big-card"'
+      + (zoomSrc ? ' onclick="openCardZoom(' + jsArg(zoomSrc) + ')"' : '')
       + '>' + art
       + ((copies && copies > 1) ? '<div class="reveal-big-count">×' + copies + '</div>' : '')
-      + (card.image_url ? '<div class="reveal-big-zoom">⌕</div>' : '')
+      + (zoomSrc ? '<div class="reveal-big-zoom">⌕</div>' : '')
       + '</div>';
     big.classList.add('on');
   }
@@ -5430,6 +5438,15 @@ function zoomApply(){
   stage.style.transform = 'translate(' + zoomTx + 'px,' + zoomTy + 'px) scale(' + zoomScale + ')';
 }
 
+/* Размер вписанной картинки нужен для ограничения сдвига. Берём ПОСЛЕ загрузки:
+   до неё offsetWidth равен нулю и границы посчитались бы неверно */
+function measureZoom(){
+  const img = document.getElementById('zoom-img');
+  if (!img) return;
+  zoomBaseW = img.offsetWidth || img.naturalWidth || 0;
+  zoomBaseH = img.offsetHeight || img.naturalHeight || 0;
+}
+
 function zoomReset(){
   zoomScale = 1; zoomTx = 0; zoomTy = 0;
   zoomApply();
@@ -5441,9 +5458,16 @@ function openCardZoom(url){
   const img = document.getElementById('zoom-img');
   if (!ov || !img) return;
 
-  img.src = url;
   zoomReset();
   ov.classList.add('open');
+
+  // Полная версия весит около полумегабайта — без индикатора выглядело бы
+  // так, будто увеличение не сработало
+  const load = document.getElementById('zoom-loading');
+  if (load) load.style.display = (img.src === url && img.complete) ? 'none' : '';
+  img.onload = function(){ if (load) load.style.display = 'none'; measureZoom(); };
+  img.onerror = function(){ if (load) load.textContent = 'Не удалось загрузить'; };
+  img.src = url;
 
   const hint = document.getElementById('zoom-hint');
   if (hint){
@@ -5451,14 +5475,7 @@ function openCardZoom(url){
     setTimeout(function(){ hint.classList.add('hidden'); }, 2600);
   }
 
-  // Размер вписанной картинки нужен для ограничения сдвига. Берём после
-  // загрузки: до неё offsetWidth равен нулю и рамки посчитались бы неверно
-  const measure = function(){
-    zoomBaseW = img.offsetWidth || img.naturalWidth || 0;
-    zoomBaseH = img.offsetHeight || img.naturalHeight || 0;
-  };
-  if (img.complete) measure(); else img.onload = measure;
-
+  if (img.complete) measureZoom();
   wireZoomGestures();
 }
 
