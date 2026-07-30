@@ -158,7 +158,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .save-btn.saved{color:var(--warm)}
 .saved-banner{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:12.5px;font-weight:600}
 .clear-saved{color:var(--warm);cursor:pointer;font-weight:600}
-.watch-later-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--card2);border:1px solid var(--border);height:118px;text-align:center;padding:0 8px}
+.watch-later-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--card2);border:1px solid var(--border);min-height:118px;text-align:center;padding:0 8px}
 .watch-later-icon{font-size:20px}
 .lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
 .lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -200,11 +200,13 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .news-block--urgent{background:rgba(232,97,74,0.1);border:1px solid rgba(232,97,74,0.3);border-radius:12px;padding:10px 12px;font-weight:600}
 .news-block:last-child{margin-bottom:0}
 .news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.streams-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;-webkit-overflow-scrolling:touch}
-.streams-row::-webkit-scrollbar{display:none}
-.stream-tile{flex:0 0 auto;width:130px;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative}
+/* Сетка, а не горизонтальная прокрутка: потоков уже столько, что за краем
+   экрана оставалась половина, и их просто не замечали */
+.streams-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.stream-tile{border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative;display:flex;flex-direction:column}
 .stream-tile:active{transform:scale(0.97)}
-.stream-tile-img{width:100%;height:80px;object-fit:cover;display:block;background:var(--card2)}
+/* Пропорция вместо фикс. высоты — плитка в сетке шире, чем была в ряду */
+.stream-tile-img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--card2)}
 .stream-tile-title{font-size:11.5px;font-weight:700;padding:8px 10px;line-height:1.3}
 
 .tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
@@ -3679,9 +3681,10 @@ async function loadStreams() {
   try {
     const streams = await fetch(`${API_URL}/streams`).then(r => r.json());
     el.innerHTML = watchLaterTile + streams.map(s => `
-      <div class="stream-tile" onclick="openStream('${s.stream_key}')">
-        <img class="stream-tile-img" src="${s.image_url || ''}" alt="">
-        <div class="stream-tile-title">${s.title || s.stream_key}</div>
+      <div class="stream-tile" onclick="openStream(${jsArg(s.stream_key)})">
+        <img class="stream-tile-img" src="${escapeHtml(s.image_url || '')}" alt=""
+             onerror="this.style.visibility='hidden'">
+        <div class="stream-tile-title">${escapeHtml(s.title || s.stream_key)}</div>
       </div>
     `).join('');
   } catch (e) {
