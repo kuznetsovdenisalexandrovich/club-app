@@ -596,6 +596,51 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 .zoom-loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   font-size:13px;color:rgba(241,234,224,.6);pointer-events:none}
+
+/* ── Тест «Кто ты из боженек продаж» ─────────────────────────────────────
+   Бесплатная механика для холодного трафика: работает без входа, результат
+   можно показать друзьям. Отдельный полноэкранный слой, а не вкладка —
+   человек может прийти по прямой ссылке, не видя остального приложения */
+.quiz-overlay{position:fixed;inset:0;z-index:870;background:var(--bg);
+  display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.quiz-overlay.open{display:flex}
+.quiz-inner{width:100%;max-width:440px;margin:0 auto;padding:calc(var(--safe-top, 0px) + 18px) 20px
+  calc(env(safe-area-inset-bottom, 0px) + 28px);flex:1;display:flex;flex-direction:column}
+.quiz-close{position:absolute;top:calc(var(--safe-top, 0px) + 12px);right:14px;width:34px;height:34px;
+  border-radius:50%;border:1px solid var(--line);background:var(--card-bg);color:var(--text);
+  font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2}
+
+.quiz-progress{height:3px;border-radius:2px;background:var(--line);overflow:hidden;margin-bottom:22px}
+.quiz-progress-bar{height:100%;background:var(--warm);width:0;transition:width .3s ease}
+.quiz-step{font-size:12px;color:var(--text-dim);margin-bottom:10px}
+.quiz-question{font-size:19px;font-weight:700;line-height:1.35;margin-bottom:20px}
+.quiz-answer{width:100%;text-align:left;padding:15px 16px;border-radius:14px;border:1px solid var(--line);
+  background:var(--card-bg);color:var(--text);font-size:14.5px;line-height:1.4;font-family:inherit;
+  cursor:pointer;margin-bottom:10px;transition:border-color .15s ease,transform .1s ease}
+.quiz-answer:active{transform:scale(.985)}
+.quiz-answer.picked{border-color:var(--warm)}
+
+.quiz-hero{text-align:center;margin-bottom:6px}
+.quiz-hero-art{width:min(64vw,240px);aspect-ratio:3/4;margin:0 auto 16px;border-radius:18px;overflow:hidden;
+  border:2px solid var(--warm);background:rgba(232,97,74,.06);
+  display:flex;align-items:center;justify-content:center}
+.quiz-hero-art img{width:100%;height:100%;object-fit:cover;display:block}
+.quiz-hero-ph{font-size:52px;color:var(--warm);opacity:.5}
+.quiz-kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--warm)}
+.quiz-name{font-size:30px;font-weight:800;margin:4px 0 2px;line-height:1.1}
+.quiz-role{font-size:14px;color:var(--text-dim);margin-bottom:16px}
+.quiz-text{font-size:14.5px;line-height:1.55;text-align:left;margin-bottom:14px}
+.quiz-quote{font-size:14px;line-height:1.5;font-style:italic;color:var(--text-dim);
+  border-left:2px solid var(--warm);padding-left:12px;margin:16px 0;text-align:left}
+.quiz-second{font-size:13.5px;line-height:1.5;background:var(--card-bg);border:1px solid var(--line);
+  border-radius:14px;padding:13px 15px;margin-bottom:16px;text-align:left}
+.quiz-axes{display:flex;flex-direction:column;gap:7px;margin:16px 0 20px}
+.quiz-axis{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text-dim)}
+.quiz-axis-bar{flex:1;height:5px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.quiz-axis-fill{position:absolute;top:0;bottom:0;background:var(--warm);border-radius:3px}
+.quiz-axis-side{width:74px;flex:none}
+.quiz-axis-side.right{text-align:right}
+.quiz-axis-side.on{color:var(--warm);font-weight:700}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -744,6 +789,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <div class="tile" onclick="switchView('points-info')">
         <div class="tile-icon tile-icon-number" id="menu-points-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Баллы</div>
+      </div>
+      <div class="tile" onclick="openQuiz()">
+        <div class="tile-icon" style="background:rgba(232,97,74,.14);color:var(--warm)">⚡</div>
+        <div class="tile-label">Кто ты из богов</div>
       </div>
       <div class="tile" onclick="switchView('cards')">
         <div class="tile-icon tile-icon-number" id="menu-cards-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
@@ -1131,6 +1180,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">Посмотреть демо</button>
       <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openAccessPage()">Оплатить доступ</button>
+      <div class="payment-help-link" style="margin:12px 0 0" onclick="closeDemoEntryPopup();openQuiz()">Узнать, кто я из боженек продаж</div>
     </div>
   </div>
 </div>
@@ -1153,6 +1203,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" id="web-login-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
+  <div style="margin-top:14px;font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openQuiz()">Узнай, кто ты из боженек продаж</div>
   <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff;display:none">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
@@ -1376,6 +1427,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 <div class="god-overlay" id="god-overlay" onclick="if(event.target===this) closeGodInfo()">
   <button class="god-close" onclick="closeGodInfo()" aria-label="Закрыть">✕</button>
   <div class="god-sheet" id="god-sheet"></div>
+</div>
+
+<div class="quiz-overlay" id="quiz-overlay">
+  <button class="quiz-close" onclick="closeQuiz()">✕</button>
+  <div class="quiz-inner" id="quiz-inner"></div>
 </div>
 
 <div class="reveal-overlay" id="reveal-overlay">
@@ -4905,6 +4961,17 @@ function startWebSession(){
 }
 
 (function init(){
+  // Тест открывается по прямой ссылке РАНЬШЕ всего остального: человек может
+  // прийти из соцсетей, не будучи участником, и не должен упереться в логин.
+  // Каталог карточек подтягиваем отдельно — из него берётся арт бога
+  try {
+    if (new URLSearchParams(location.search).get('quiz') !== null){
+      if (typeof loadCards === 'function') loadCards();
+      if (typeof loadGods === 'function') loadGods();
+      setTimeout(function(){ if (typeof quizFromUrl === 'function') quizFromUrl(); }, 60);
+    }
+  } catch(e){}
+
   const tg = window.Telegram?.WebApp;
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.ready();
@@ -5675,6 +5742,344 @@ function wireZoomGestures(){
   ov.addEventListener('click', function(e){
     if (e.target === ov && zoomScale < 1.05) closeCardZoom();
   });
+}
+
+/* ── Тест «Кто ты из боженек продаж» ─────────────────────────────────────────
+   Четыре оси по три вопроса. Четыре оси дают ровно 16 комбинаций — столько же,
+   сколько богов, и каждый исход ОБЪЯСНИМ: человек видит, из каких ответов он
+   получился, а не воспринимает результат как жребий.
+
+   Вторичная черта — бог, получающийся при перевороте САМОЙ СЛАБОЙ оси (той,
+   где ответы разделились). Именно пересечение двух архетипов и вызывает
+   «ой, это про меня»: один тип узнаётся, два — уже льстят. */
+
+const QUIZ_AXES = [
+  { key:'mind',  left:'Л', right:'Э', leftName:'Логика',    rightName:'Эмоция'      },
+  { key:'tempo', left:'Н', right:'Т', leftName:'Натиск',    rightName:'Терпение'    },
+  { key:'scope', left:'М', right:'Ф', leftName:'Масштаб',   rightName:'Фокус'       },
+  { key:'way',   left:'С', right:'И', leftName:'Система',   rightName:'Импровизация'},
+];
+
+const QUIZ_QUESTIONS = [
+  { axis:'mind',  q:'Клиент говорит «дорого». Что делаешь первым?',
+    a:'Раскладываю, во что ему обойдётся НЕ купить', b:'Выясняю, чего он на самом деле опасается' },
+  { axis:'tempo', q:'Клиент тянет с ответом вторую неделю.',
+    a:'Ставлю срок и говорю прямо', b:'Остаюсь рядом и жду его момента' },
+  { axis:'scope', q:'У тебя есть месяц. Что выберешь?',
+    a:'Выйти на сотню новых', b:'Довести до сделки троих, но крупных' },
+  { axis:'way',   q:'Скрипт продаж для тебя — это…',
+    a:'Опора, без которой начинается хаос', b:'Рамка, которую хочется сломать' },
+
+  { axis:'mind',  q:'Готовишь важную презентацию. Что важнее?',
+    a:'Цифры, которые невозможно оспорить', b:'История, после которой захочется' },
+  { axis:'tempo', q:'Что тебе ближе?',
+    a:'Закрыть сегодня, пусть и на меньшую сумму', b:'Закрыть через квартал, но как надо' },
+  { axis:'scope', q:'Что для тебя выглядит как успех?',
+    a:'О тебе знает весь рынок', b:'Тебя рекомендуют те, кто важен' },
+  { axis:'way',   q:'Что чаще срабатывает именно у тебя?',
+    a:'То, что проверено и повторяется', b:'То, что придумал прямо на встрече' },
+
+  { axis:'mind',  q:'Сделка сорвалась. Первое, что делаешь?',
+    a:'Разбираю, на каком шаге потерял', b:'Вспоминаю, в какой момент человек охладел' },
+  { axis:'tempo', q:'На встрече повисла пауза.',
+    a:'Беру инициативу и веду дальше', b:'Даю паузе поработать за меня' },
+  { axis:'scope', q:'Новый продукт. Первая мысль?',
+    a:'Кому его вообще можно продать', b:'Кому он подойдёт идеально' },
+  { axis:'way',   q:'Сильный отдел продаж — это…',
+    a:'Отлаженный процесс', b:'Сильные люди со свободой' },
+];
+
+/* Код из четырёх букв → бог. Каждая комбинация занята ровно одним */
+const QUIZ_RESULTS = {
+  'ЛНМС': { god:'Посейдон', role:'Повелитель ресурсных потоков',
+    text:'Ты мыслишь не сделками, а потоками. Там, где другие ведут список из десяти контактов, ты разворачиваешь весь сектор. Чувствуешь приливы спроса и умеешь направить их в своё русло — а рыночный шторм для тебя не беда, а повод занять территорию, пока остальные пережидают.',
+    quote:'Маленькие продажи — для слабых. Я пришёл захватить весь океан.' },
+  'ЛНМИ': { god:'Прометей', role:'Архитектор инноваций',
+    text:'Ты не выносишь, когда живой человек делает работу, которую можно поручить машине. Первым тащишь новые инструменты, переписываешь то, что скрипит, и искренне не понимаешь, зачем страдать вручную. Продавать смыслы — да, заполнять таблицы — увольте.',
+    quote:'Тот, кто продаёт по старинке, обречён греться у костра, пока другие управляют молниями.' },
+  'ЛНФС': { god:'Аид', role:'Безжалостный зеркальщик реальности',
+    text:'Ты вскрываешь сделку без анестезии. Не «клиент подумает», а «клиент боится, потому что не готов к росту». Тебе всё равно, нравишься ли ты — ты ценишь точность. И именно поэтому те, кто выдерживает твою прямоту, потом благодарят.',
+    quote:'То, что вы называете тактичностью, я называю ложью, которая стоит вам денег.' },
+  'ЛНФИ': { god:'Мом', role:'Мастер стресс-тестирования',
+    text:'Твой дар — находить дыру в том, что все уже считали идеальным. Ты первым спрашиваешь «ну и кто в это поверит», и от этого вопроса презентация становится вдвое лучше. Тебя не всегда любят в моменте, но без тебя команда быстро заболевает собой.',
+    quote:'Если над твоей стратегией нельзя посмеяться, значит, она слишком слаба, чтобы выдержать рынок.' },
+  'ЛТМС': { god:'Плутос', role:'Хранитель рентабельности',
+    text:'Тебя не впечатляет оборот — тебя интересует, что осталось. Ты видишь клиентов, которые съедают больше, чем приносят, и умеешь спокойно с ними расстаться. Пока другие празднуют объём, ты считаешь маржу и оказываешься прав.',
+    quote:'Оборот — это тщеславие, прибыль — это реальность, капитал — твоё будущее.' },
+  'ЛТМИ': { god:'Аполлон', role:'Мастер экспертности',
+    text:'Ты не продаёшь — ты просвещаешь, и клиенты приходят сами. Там, где у людей путаница, ты вносишь ясность, и за эту ясность готовы платить дороже, чем за сам продукт. Твоя репутация работает вперёд тебя.',
+    quote:'Будь настолько хорош в своём деле, чтобы клиенты стояли в очереди за твоей мудростью.' },
+  'ЛТФС': { god:'Афина', role:'Стратег воронки',
+    text:'Для тебя хаос — это просто ошибка в коде. Ты видишь, на каком шаге сыпется конверсия, и правишь причину, а не симптом. Не тратишь время на нецелевых и умеешь задать один вопрос, после которого клиент сам приходит к нужному выводу.',
+    quote:'Не полагайся на удачу, полагайся на расчёт.' },
+  'ЛТФИ': { god:'Гефест', role:'Мастер созидания и качества',
+    text:'Ты не выносишь сырых решений. Если у клиента нестандартная задача, ты не говоришь «невозможно» — ты уходишь и выковываешь то, что сядет точно по размеру. Обещания без исполнения для тебя пустой звук.',
+    quote:'Сделай продукт настолько совершенным, чтобы клиенту не пришлось спрашивать о цене.' },
+  'ЭНМС': { god:'Зевс', role:'Вершитель сделок',
+    text:'Ты не ведёшь переговоры — ты подводишь под ними черту. Там, где остальные взвешивают, ты бьёшь один раз и точно. Тебя невозможно игнорировать, и именно ты появляешься тогда, когда сделка зависла и нужен волевой импульс.',
+    quote:'Хватит обсуждать вероятности — будь тем, кто определяет реальность.' },
+  'ЭНМИ': { god:'Дионис', role:'Мастер вовлечённости и хайпа',
+    text:'Ты умеешь увести за собой толпу и превратить обычную покупку в событие. Когда скрипты не работают, приходишь ты и ломаешь шаблон — шуткой, дерзостью, неожиданным форматом. Люди забудут твои скидки, но не забудут состояние, в которое ты их привёл.',
+    quote:'Зачем убеждать логикой, когда можно опьянить идеей?' },
+  'ЭНФС': { god:'Гермес', role:'Мастер скорости и связей',
+    text:'Ты дозваниваешься первым и говоришь ровно то, что нужно услышать в эту секунду. Находишь ходы там, где остальные видят закрытую дверь, и подстраиваешься под любого собеседника, не теряя себя. Пока другие готовят идеальное предложение, ты уже говоришь с тем, кто решает.',
+    quote:'Мир принадлежит тем, кто дозванивается первым.' },
+  'ЭНФИ': { god:'Арес', role:'Мастер жёстких переговоров',
+    text:'Ты не бегаешь от сложных разговоров. Когда клиент давит ценой или прикрывается конкурентом, ты не испаряешься — ты идёшь в открытую и умеешь сказать «нет». Ты защищаешь не свою правоту, а ценность того, что продаёшь.',
+    quote:'Не извиняйся за цену — защищай качество.' },
+  'ЭТМС': { god:'Деметра', role:'Мать клиентской базы',
+    text:'Для тебя подписанный договор — не финиш, а посев. Ты не впариваешь лишнего даже ради быстрой выгоды, потому что знаешь: доверие — это почва, на которой потом растёт всё остальное. Твои клиенты остаются годами и приводят других.',
+    quote:'Сделка — это не финишная черта, а семечко.' },
+  'ЭТМИ': { god:'Афродита', role:'Мастер имиджа и магнит лояльности',
+    text:'Ты делаешь продукт не нужным, а желанным. Работаешь не с потребностями, а с мечтами: понимаешь, что человек на самом деле хочет получить — превосходство, уверенность, одобрение. За то, во что влюблены, не торгуются.',
+    quote:'Люди забудут, что ты продал, но не забудут, как ты заставил их себя чувствовать.' },
+  'ЭТФС': { god:'Гера', role:'Архитектор статуса и контроля',
+    text:'Ты работаешь только с теми, кто решает, и не размениваешься на шум. Держишь планку так высоко, что работать с тобой становится честью. Прощаешь многое, но не прощаешь нарушенных договорённостей.',
+    quote:'Требуй уважения к своим правилам — и рынок склонится перед твоим брендом.' },
+  'ЭТФИ': { god:'Артемида', role:'Мастер фокуса и снайперских продаж',
+    text:'Ты не стреляешь очередями. Долго изучаешь одну цель, ждёшь верного момента и делаешь единственный выстрел, который попадает. Спокойно отпускаешь тех, кто тебе не подходит, — и потому почти не промахиваешься.',
+    quote:'Десять выстрелов в пустоту не стоят одного попадания в яблочко.' },
+};
+
+let quizAnswers = [];      // 0 — левый вариант, 1 — правый
+let quizIndex   = 0;
+let quizResult  = null;
+
+function quizStorageKey(){ return 'quiz_result_v1'; }
+
+function savedQuizResult(){
+  try { return JSON.parse(localStorage.getItem(quizStorageKey()) || 'null'); }
+  catch(e){ return null; }
+}
+
+/* Считаем каждую ось отдельно: 3 вопроса, победившая сторона даёт букву.
+   Возвращаем ещё и «уверенность» по каждой оси — по ней находим самую
+   спорную, из неё получается вторичная черта */
+function quizScore(answers){
+  const axes = {};
+  QUIZ_AXES.forEach(function(ax){ axes[ax.key] = { left:0, right:0 }; });
+  QUIZ_QUESTIONS.forEach(function(q, i){
+    const pick = answers[i];
+    if (pick !== 0 && pick !== 1) return;
+    if (pick === 0) axes[q.axis].left++; else axes[q.axis].right++;
+  });
+
+  let code = '', weakest = null, weakestGap = 99;
+  const detail = QUIZ_AXES.map(function(ax){
+    const a = axes[ax.key];
+    const total = a.left + a.right || 1;
+    const leftWins = a.left >= a.right;   // ничья невозможна при 3 вопросах, но пусть
+    code += leftWins ? ax.left : ax.right;
+    const gap = Math.abs(a.left - a.right);
+    if (gap < weakestGap){ weakestGap = gap; weakest = ax.key; }
+    return { key:ax.key, leftName:ax.leftName, rightName:ax.rightName,
+             leftWins:leftWins, share:(leftWins ? a.left : a.right) / total };
+  });
+
+  // Вторичная черта: переворачиваем самую спорную ось
+  let secondCode = '';
+  QUIZ_AXES.forEach(function(ax, idx){
+    const c = code[idx];
+    secondCode += (ax.key === weakest) ? (c === ax.left ? ax.right : ax.left) : c;
+  });
+
+  return { code: code, secondCode: secondCode, axes: detail, weakest: weakest };
+}
+
+/* ── Экраны ──────────────────────────────────────────────────────────────── */
+
+function openQuiz(restart){
+  const ov = document.getElementById('quiz-overlay');
+  if (!ov) return;
+  const saved = restart ? null : savedQuizResult();
+  if (saved && saved.code && QUIZ_RESULTS[saved.code]){
+    quizResult = saved;
+    renderQuizResult();
+  } else {
+    quizAnswers = [];
+    quizIndex = 0;
+    quizResult = null;
+    renderQuizIntro();
+  }
+  ov.classList.add('open');
+}
+
+function closeQuiz(){
+  const ov = document.getElementById('quiz-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+function renderQuizIntro(){
+  document.getElementById('quiz-inner').innerHTML =
+      '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">'
+    + '<div class="quiz-kicker">Пантеон продаж</div>'
+    + '<div class="quiz-name" style="font-size:27px;margin-top:8px">Кто ты из боженек продаж?</div>'
+    + '<div class="quiz-text" style="text-align:center;color:var(--text-dim);margin-top:12px">'
+    + 'Двенадцать вопросов про то, как ты продаёшь на самом деле. В конце — твой бог из пантеона, '
+    + 'его сила, слабость и вторая натура.</div>'
+    + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:22px" onclick="startQuiz()">Начать</button>'
+    + '<div style="font-size:12px;color:var(--text-dim);margin-top:12px">Займёт минуту. Регистрация не нужна.</div>'
+    + '</div>';
+}
+
+function startQuiz(){
+  quizAnswers = [];
+  quizIndex = 0;
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion(){
+  const q = QUIZ_QUESTIONS[quizIndex];
+  const pct = Math.round(quizIndex / QUIZ_QUESTIONS.length * 100);
+  document.getElementById('quiz-inner').innerHTML =
+      '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:' + pct + '%"></div></div>'
+    + '<div class="quiz-step">Вопрос ' + (quizIndex + 1) + ' из ' + QUIZ_QUESTIONS.length + '</div>'
+    + '<div class="quiz-question">' + escapeHtml(q.q) + '</div>'
+    + '<button class="quiz-answer" onclick="answerQuiz(0)">' + escapeHtml(q.a) + '</button>'
+    + '<button class="quiz-answer" onclick="answerQuiz(1)">' + escapeHtml(q.b) + '</button>'
+    + (quizIndex > 0
+        ? '<div class="payment-help-link" style="margin-top:14px" onclick="backQuiz()">← Назад</div>'
+        : '');
+}
+
+function answerQuiz(pick){
+  quizAnswers[quizIndex] = pick;
+  if (quizIndex + 1 < QUIZ_QUESTIONS.length){
+    quizIndex++;
+    renderQuizQuestion();
+  } else {
+    finishQuiz();
+  }
+}
+
+function backQuiz(){
+  if (quizIndex > 0){ quizIndex--; renderQuizQuestion(); }
+}
+
+function finishQuiz(){
+  const score = quizScore(quizAnswers);
+  quizResult = { code: score.code, secondCode: score.secondCode,
+                 axes: score.axes, at: Date.now() };
+  try { localStorage.setItem(quizStorageKey(), JSON.stringify(quizResult)); } catch(e){}
+  renderQuizResult();
+}
+
+/* Арт для результата берём из колоды: у бога уже могут быть карточки с
+   картинками. Ищем сначала полную версию, потом превью — на экране результата
+   карточка крупная, превью в 400px растянется */
+function quizGodArt(godName){
+  const mine = (cardCatalog || []).filter(function(c){ return (c.god || '') === godName; });
+  const withFull = mine.find(function(c){ return c.image_full_url; });
+  if (withFull) return withFull.image_full_url;
+  const withThumb = mine.find(function(c){ return c.image_url; });
+  return withThumb ? withThumb.image_url : '';
+}
+
+function renderQuizResult(){
+  const r = quizResult;
+  if (!r || !QUIZ_RESULTS[r.code]){ renderQuizIntro(); return; }
+  const me = QUIZ_RESULTS[r.code];
+  const second = QUIZ_RESULTS[r.secondCode];
+  const art = quizGodArt(me.god);
+
+  // Полосы по осям: человек видит, ИЗ ЧЕГО получился его результат.
+  // Именно это отличает объяснимый тест от жребия
+  const axesHtml = (r.axes || []).map(function(a){
+    const pct = Math.round((a.share || 0) * 100);
+    const fill = a.leftWins
+      ? '<div class="quiz-axis-fill" style="left:0;width:' + pct + '%"></div>'
+      : '<div class="quiz-axis-fill" style="right:0;width:' + pct + '%"></div>';
+    return '<div class="quiz-axis">'
+      + '<span class="quiz-axis-side' + (a.leftWins ? ' on' : '') + '">' + a.leftName + '</span>'
+      + '<span class="quiz-axis-bar">' + fill + '</span>'
+      + '<span class="quiz-axis-side right' + (a.leftWins ? '' : ' on') + '">' + a.rightName + '</span>'
+      + '</div>';
+  }).join('');
+
+  const godLink = (typeof godHasInfo === 'function' && godHasInfo(me.god))
+    ? '<div class="payment-help-link" style="margin:0 0 16px" onclick="openGodInfo(' + jsArg(me.god) + ')">Читать про ' + escapeHtml(me.god) + ' целиком</div>'
+    : '';
+
+  document.getElementById('quiz-inner').innerHTML =
+      '<div class="quiz-hero">'
+      + '<div class="quiz-hero-art">'
+        + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '<div class="quiz-hero-ph">◆</div>')
+      + '</div>'
+      + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
+      + '<div class="quiz-name">' + escapeHtml(me.god) + '</div>'
+      + '<div class="quiz-role">' + escapeHtml(me.role) + '</div>'
+      + '</div>'
+    + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
+    + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
+    + axesHtml
+    + (second
+        ? '<div class="quiz-second"><b>Вторая натура — ' + escapeHtml(second.god) + '.</b> '
+          + 'Здесь ты почти разделился пополам, и в тебе живёт ещё и это: '
+          + escapeHtml(second.role.toLowerCase()) + '.</div>'
+        : '')
+    + godLink
+    + '<button class="lec-link-btn access-btn" style="width:100%" onclick="shareQuizResult()">Поделиться результатом</button>'
+    + '<button class="lec-link-btn" style="width:100%;margin-top:9px" onclick="openQuizAfterCta()">Что за клуб?</button>'
+    + '<div class="payment-help-link" style="margin-top:14px" onclick="openQuiz(true)">Пройти заново</div>';
+}
+
+/* Ссылка с кодом результата: открывший её сразу видит, кто выпал другу,
+   и может пройти сам. Без этого поделиться нечем — скриншот тупик */
+function quizShareUrl(){
+  const base = location.origin + location.pathname;
+  return base + '?quiz=' + encodeURIComponent(quizResult ? quizResult.code : '');
+}
+
+async function shareQuizResult(){
+  const me = quizResult && QUIZ_RESULTS[quizResult.code];
+  if (!me) return;
+  const text = 'Я — ' + me.god + ', ' + me.role.toLowerCase() + '. А ты кто из боженек продаж?';
+  const url = quizShareUrl();
+  try {
+    if (navigator.share){
+      await navigator.share({ title: 'Кто ты из боженек продаж', text: text, url: url });
+      return;
+    }
+  } catch(e){ /* человек отменил — это не ошибка */ return; }
+  try {
+    await navigator.clipboard.writeText(text + ' ' + url);
+    showToast('Ссылка скопирована');
+  } catch(e){
+    showToast('Скопируй ссылку: ' + url);
+  }
+}
+
+function openQuizAfterCta(){
+  closeQuiz();
+  if (typeof isMember !== 'undefined' && isMember) { switchView('cards'); return; }
+  if (typeof openPaywall === 'function') openPaywall();
+}
+
+/* Пришёл по ссылке с чужим результатом — показываем его и зовём пройти свой */
+function quizFromUrl(){
+  let code = '';
+  try { code = new URLSearchParams(location.search).get('quiz') || ''; } catch(e){}
+  if (!code) return false;
+  if (!QUIZ_RESULTS[code]){ openQuiz(true); return true; }
+
+  const me = QUIZ_RESULTS[code];
+  const art = quizGodArt(me.god);
+  const ov = document.getElementById('quiz-overlay');
+  if (!ov) return false;
+  document.getElementById('quiz-inner').innerHTML =
+      '<div class="quiz-hero">'
+      + '<div class="quiz-hero-art">'
+        + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '<div class="quiz-hero-ph">◆</div>')
+      + '</div>'
+      + '<div class="quiz-kicker">Тебе показали</div>'
+      + '<div class="quiz-name">' + escapeHtml(me.god) + '</div>'
+      + '<div class="quiz-role">' + escapeHtml(me.role) + '</div>'
+      + '</div>'
+    + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
+    + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
+    + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:6px" onclick="openQuiz(true)">А кто я?</button>';
+  ov.classList.add('open');
+  return true;
 }
 </script>
 </body>
