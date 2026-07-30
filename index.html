@@ -350,7 +350,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
 .club-info-text b{color:var(--text)}
 .club-info-video-link{color:var(--warm);text-decoration:underline;cursor:pointer}
-.club-info-fade-wrap{position:relative;max-height:150px;overflow:hidden;cursor:pointer;transition:max-height .3s ease}
+/* Свёрнутая высота: 150px оставляли треть экрана текстом и две трети пустотой.
+   Отдаём тексту больше, но НЕ весь экран — кнопка «Получить доступ» должна
+   оставаться видимой без прокрутки: те, кто пришёл готовым купить, не должны
+   её искать. 62vh текста плюс заголовок, кнопка и отступы укладываются в экран */
+.club-info-fade-wrap{position:relative;max-height:min(62vh,560px);overflow:hidden;cursor:pointer;transition:max-height .35s ease}
 .club-info-fade-wrap.expanded{max-height:2000px;cursor:default}
 .club-info-gradient{position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(to bottom, transparent, var(--card) 78%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
 .club-info-fade-wrap.expanded .club-info-gradient{display:none}
@@ -641,6 +645,19 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .quiz-axis-side{width:74px;flex:none}
 .quiz-axis-side.right{text-align:right}
 .quiz-axis-side.on{color:var(--warm);font-weight:700}
+
+/* Вторая натура как ТЕНЕВАЯ КАРТОЧКА за основной (идея жены Denis'а).
+   Текстом «вторая натура — Гефест» это читалось как сноска; карточка,
+   выглядывающая из-за плеча, делает вторую сторону видимой */
+.quiz-hero-stack{position:relative;width:min(64vw,240px);aspect-ratio:3/4;margin:0 auto 16px}
+.quiz-hero-stack .quiz-hero-art{width:100%;margin:0;position:relative;z-index:2}
+.quiz-shadow-card{position:absolute;inset:0;z-index:1;border-radius:18px;overflow:hidden;
+  border:2px solid var(--line);background:var(--card-bg);
+  transform:translateX(-17%) rotate(-9deg);transform-origin:bottom right;
+  filter:grayscale(1) brightness(.62);opacity:.75;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:8px}
+.quiz-shadow-card img{width:100%;height:100%;object-fit:cover;display:block}
+.quiz-shadow-name{font-size:13px;font-weight:700;color:var(--text-dim);line-height:1.2}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -6003,14 +6020,28 @@ function renderQuizResult(){
       + '</div>';
   }).join('');
 
+  // Теневая карточка второй натуры. Если арта нет — показываем имя, иначе
+  // два одинаковых ромба-заглушки читались бы как ошибка вёрстки
+  const secondArt = second ? quizGodArt(second.god) : '';
+  const shadowHtml = second
+    ? '<div class="quiz-shadow-card">'
+      + (secondArt
+          ? '<img src="' + escapeHtml(secondArt) + '" alt="">'
+          : '<div class="quiz-shadow-name">' + escapeHtml(second.god) + '</div>')
+      + '</div>'
+    : '';
+
   const godLink = (typeof godHasInfo === 'function' && godHasInfo(me.god))
     ? '<div class="payment-help-link" style="margin:0 0 16px" onclick="openGodInfo(' + jsArg(me.god) + ')">Читать про ' + escapeHtml(me.god) + ' целиком</div>'
     : '';
 
   document.getElementById('quiz-inner').innerHTML =
       '<div class="quiz-hero">'
-      + '<div class="quiz-hero-art">'
-        + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '<div class="quiz-hero-ph">◆</div>')
+      + '<div class="quiz-hero-stack">'
+        + shadowHtml
+        + '<div class="quiz-hero-art">'
+          + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '<div class="quiz-hero-ph">◆</div>')
+        + '</div>'
       + '</div>'
       + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
       + '<div class="quiz-name">' + escapeHtml(me.god) + '</div>'
@@ -6020,13 +6051,20 @@ function renderQuizResult(){
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
     + axesHtml
     + (second
-        ? '<div class="quiz-second"><b>Вторая натура — ' + escapeHtml(second.god) + '.</b> '
-          + 'Здесь ты почти разделился пополам, и в тебе живёт ещё и это: '
-          + escapeHtml(second.role.toLowerCase()) + '.</div>'
+        ? '<div class="quiz-second"><b>За плечом — ' + escapeHtml(second.god) + '.</b> '
+          + 'На одной из осей ты разделился почти пополам, и вторая твоя сторона — '
+          + escapeHtml(second.role.toLowerCase()) + '. '
+          + (godHasInfo(second.god)
+              ? '<span class="god-link" onclick="openGodInfo(' + jsArg(second.god) + ')">Прочитать про него</span>'
+              : '')
+          + '</div>'
         : '')
     + godLink
     + '<button class="lec-link-btn access-btn" style="width:100%" onclick="shareQuizResult()">Поделиться результатом</button>'
-    + '<button class="lec-link-btn" style="width:100%;margin-top:9px" onclick="openQuizAfterCta()">Что за клуб?</button>'
+    // Действующему участнику рассказывать, что за клуб, незачем — он внутри
+    + ((typeof isMember !== 'undefined' && isMember)
+        ? ''
+        : '<button class="lec-link-btn" style="width:100%;margin-top:9px" onclick="openQuizAfterCta()">Что за клуб?</button>')
     + '<div class="payment-help-link" style="margin-top:14px" onclick="openQuiz(true)">Пройти заново</div>';
 }
 
@@ -6082,10 +6120,16 @@ async function shareQuizResult(){
   }
 }
 
+/* «Что за клуб?» должна вести на страницу описания, а не в пейволл.
+   Три случая, и третий легко упустить: холодный посетитель приходит по ссылке
+   на тест поверх ЭКРАНА ВХОДА — оболочка приложения ещё не запущена, и один
+   switchView не покажет ему ничего */
 function openQuizAfterCta(){
   closeQuiz();
-  if (typeof isMember !== 'undefined' && isMember) { switchView('cards'); return; }
-  if (typeof openPaywall === 'function') openPaywall();
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  switchView('club-info');
 }
 
 /* Пришёл по ссылке с чужим результатом — показываем его и зовём пройти свой */
