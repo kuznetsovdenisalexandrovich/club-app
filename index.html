@@ -11,10 +11,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<!-- Иконку добавит Denis отдельно (images/icon-192.png, images/icon-512.png) — до тех пор
-     эти строки просто не найдут файл и браузер покажет иконку по умолчанию, без ошибок -->
-<link rel="apple-touch-icon" href="images/icon-192.png">
-<link rel="icon" href="images/icon-192.png">
+<!-- iOS берёт ИМЕННО apple-touch-icon: манифест для «Добавить на экран Домой»
+     он не читает. Нативный размер 180×180 — другой система отмасштабирует сама,
+     но с потерей резкости -->
+<link rel="apple-touch-icon" sizes="180x180" href="images/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
 <!-- Google Fonts не блокирует рендер: preload сразу, подмена на настоящий stylesheet
      после загрузки (если fonts.googleapis.com недоступен без VPN — страница просто
      останется на системном шрифте, а не зависнет в ожидании) -->
