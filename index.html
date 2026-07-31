@@ -681,6 +681,19 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 </head>
 <body>
 
+<!-- Экран загрузки. Лежит ПЕРВЫМ в body и стилизован инлайново: браузер рисует
+     его до того, как дойдёт до внешних стилей и скриптов, поэтому вместо белой
+     вспышки человек сразу видит фирменный экран. Градиент — мгновенный, он из
+     CSS; картинка проявляется поверх него, когда догрузится -->
+<div id="splash" style="position:fixed;inset:0;z-index:9999;
+     background:linear-gradient(180deg,#e0ddd7 0%,#baafbc 52%,#6887c2 100%);
+     display:flex;align-items:center;justify-content:center;
+     transition:opacity .45s ease;will-change:opacity">
+  <div id="splash-art" style="position:absolute;inset:0;
+       background-image:url('images/splash.jpg');background-size:cover;
+       background-position:center;opacity:0;transition:opacity .4s ease"></div>
+</div>
+
 <div class="blob blob-1"></div>
 <div class="blob blob-2"></div>
 <div class="blob blob-3"></div>
@@ -1623,6 +1636,44 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 </div>
 
 <script>
+/* ── Экран загрузки ──────────────────────────────────────────────────────────
+   Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
+   пока грузится страница, а дальше — то, что нарисуем мы. Раньше это был пустой
+   экран, потому что и оболочка, и экраны входа стартуют скрытыми.
+
+   Прячем не по таймеру, а когда реально решено, ЧТО показывать. Плюс страховка:
+   если что-то в загрузке подвиснет, заставка не должна остаться навсегда. */
+
+// ИМЕННО var, а не let: hideSplash() вызывается из init(), который отрабатывает
+// РАНЬШЕ, чем исполнение дойдёт до конца скрипта, где лежит это объявление.
+// С let переменная была бы во временной мёртвой зоне, и запуск падал бы
+// с ReferenceError. var поднимается и на момент вызова уже существует
+var splashHidden = false;
+
+function hideSplash(){
+  if (splashHidden) return;
+  splashHidden = true;
+  const el = document.getElementById('splash');
+  if (!el) return;
+  el.style.opacity = '0';
+  el.style.pointerEvents = 'none';
+  setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+}
+
+/* Картинка тяжелее градиента — проявляем её отдельно, когда догрузится.
+   Если сеть медленная и она не успела, человек всё равно видел фирменный фон */
+(function preloadSplashArt(){
+  const art = document.getElementById('splash-art');
+  if (!art) return;
+  const img = new Image();
+  img.onload = function(){ art.style.opacity = '1'; };
+  img.src = 'images/splash.jpg';
+})();
+
+// Страховка: что бы ни случилось с загрузкой, экран не заперт навсегда
+setTimeout(hideSplash, 6000);
+
+
 // Быстрый контур для разработки (GitHub Pages → Railway напрямую, минуя кастомный
 // api.-домен, который сейчас периодически "плавает" из-за DPI-блокировок в РФ) —
 // и "чистовой" контур (Beget → api.youselllikeagod-magazine.ru) — на одном и том же
@@ -4353,6 +4404,7 @@ function enterDemoMode(){
   // Показываем оболочку приложения
   document.getElementById('app-shell').style.display = 'block';
   document.getElementById('tabbar').style.display = 'flex';
+  hideSplash();
   applyDebugMode();
   // Загружаем только то что НЕ требует telegram_id
   loadAppSettings();
@@ -4684,6 +4736,7 @@ function applyTelegramSafeArea(){
 function startApp(){
   document.getElementById('app-shell').style.display = 'block';
   document.getElementById('tabbar').style.display = 'flex';
+  hideSplash();   // оболочка на экране — заставка своё отработала
   const urgentBanner = document.getElementById('web-urgent-news-banner');
   if (urgentBanner) urgentBanner.style.display = 'none';
   var wb3 = document.getElementById('web-requisites-bar');
@@ -4974,6 +5027,7 @@ function startWebSession(){
   loadUrgentNewsForWebEntry();
   if (isStandaloneWebApp()) {
     proceedToWebLogin();
+    hideSplash();
     return;
   }
   // Ещё не добавлено на главный экран — сначала показываем инструкцию (с подсказкой
@@ -4991,6 +5045,7 @@ function startWebSession(){
     textEl.textContent = 'Открой эту страницу с телефона и добавь на главный экран через меню браузера — тогда апп будет работать как обычное приложение.';
   }
   document.getElementById('web-add-home-screen-screen').style.display = 'flex';
+  hideSplash();
 }
 
 (function init(){
@@ -5947,6 +6002,7 @@ function quizScore(answers){
 function openQuiz(restart){
   const ov = document.getElementById('quiz-overlay');
   if (!ov) return;
+  hideSplash();   // человек пришёл по ссылке на тест — оболочка может и не запускаться
   const saved = restart ? null : savedQuizResult();
   if (saved && saved.code && QUIZ_RESULTS[saved.code]){
     quizResult = saved;
@@ -6336,6 +6392,7 @@ async function sendQuizCardToBot(){
     if (btn){ btn.disabled = false; btn.textContent = restore; }
   }
 }
+
 </script>
 </body>
 
