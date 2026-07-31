@@ -1013,6 +1013,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div class="card" id="cards-collection-head" style="margin-bottom:12px">
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5">Карточки приходят паками за продление участия. Собери весь пантеон.</div>
       <div id="cards-collection-progress" style="font-size:14px;font-weight:700;margin-top:8px"></div>
+      <div id="cards-secret-toggle"></div>
     </div>
     <div id="cards-album"><div class="sm-hint" style="padding:20px 0;text-align:center">Загружаю коллекцию…</div></div>
     <div class="scroll-spacer"></div>
@@ -5455,8 +5456,27 @@ function renderCardsAlbum(){
   // Секретные и выведенные из оборота попадают в альбом лишь тогда, когда они
   // у человека уже есть — иначе он охотился бы за недостижимым
   const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret; });
+
+  // Секретные карточки, которые уже есть у человека, показываем в альбоме только
+  // по его собственному выбору — тумблер "Показать секретные". По умолчанию
+  // выключен и прячет их даже от самого владельца (кто-то может смотреть в экран
+  // через плечо), но выбор запоминается локально на этом устройстве. Тумблер
+  // вообще не появляется, если секретных карточек ещё нет ни одной
+  const ownedSecrets = cardCatalog.filter(function(c){ return owned[c.key] && c.secret; });
+  const toggleEl = document.getElementById('cards-secret-toggle');
+  if (toggleEl){
+    toggleEl.innerHTML = ownedSecrets.length
+      ? '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);cursor:pointer">'
+        + '<input type="checkbox" id="cards-secret-checkbox" onchange="toggleSecretCards()" '
+        + (getShowSecretPref() ? 'checked' : '') + '> Показать секретные</label>'
+      : '';
+  }
+  const showSecret = ownedSecrets.length > 0 && getShowSecretPref();
+
   const extras = cardCatalog.filter(function(c){
-    return owned[c.key] && !(c.active && !c.secret);
+    if (!owned[c.key] || (c.active && !c.secret)) return false;
+    if (c.secret && !showSecret) return false;
+    return true;
   });
   const shownCards = inDeck.concat(extras);
 
@@ -5611,6 +5631,25 @@ function updateAppBadge(){
 
 function seenCardsKey(){ return 'cards_seen_' + telegramId; }
 
+/* ── Тумблер "Показать секретные" в альбоме ──────────────────────────────────
+   Локально на устройстве, как и метка "новая" выше — синхронизировать между
+   устройствами смысла нет, это просто временное решение "показать/спрятать"
+   для того, кто сейчас смотрит на экран */
+
+function showSecretKey(){ return 'cards_show_secret_' + telegramId; }
+
+function getShowSecretPref(){
+  try { return localStorage.getItem(showSecretKey()) === '1'; }
+  catch(e){ return false; }
+}
+
+function toggleSecretCards(){
+  const cb = document.getElementById('cards-secret-checkbox');
+  try { localStorage.setItem(showSecretKey(), (cb && cb.checked) ? '1' : '0'); } catch(e){}
+  renderCardsAlbum();
+  if (typeof renderCollectionStrip === 'function') renderCollectionStrip();
+}
+
 function seenCardKeys(){
   try { return JSON.parse(localStorage.getItem(seenCardsKey()) || '[]') || []; }
   catch(e){ return []; }
@@ -5640,8 +5679,13 @@ function renderCollectionStrip(){
 
   const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret; });
   const owned = ownedMap();
+  // Тот же тумблер, что и в альбоме коллекции (renderCardsAlbum) — секретная
+  // карточка не должна светиться на главном экране, если владелец её спрятал
+  const showSecret = getShowSecretPref();
   const extras = cardCatalog.filter(function(c){
-    return owned[c.key] && !(c.active && !c.secret);
+    if (!owned[c.key] || (c.active && !c.secret)) return false;
+    if (c.secret && !showSecret) return false;
+    return true;
   });
   if (!inDeck.length && !extras.length){ block.style.display = 'none'; return; }
   block.style.display = '';
