@@ -674,6 +674,33 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .quiz-offer{border:1px solid var(--warm);background:rgba(232,97,74,.07);border-radius:14px;
   padding:15px 16px;margin:6px 0 14px;text-align:left}
 .quiz-offer-text{font-size:14px;line-height:1.5;margin-bottom:12px}
+
+/* Тумблер (не браузерный чекбокс) — тёплый оранжевый стиль, с мягким свечением
+   вокруг дорожки во включённом состоянии. Общий для "Показать секретные" и
+   любых будущих переключателей в аппе */
+.toggle-switch{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+.toggle-switch input{position:absolute;opacity:0;width:0;height:0}
+.toggle-switch .toggle-track{
+  position:relative;width:42px;height:24px;border-radius:999px;flex-shrink:0;
+  background:var(--input-bg);
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.14);
+  transition:background .25s ease, box-shadow .25s ease;
+}
+.toggle-switch .toggle-thumb{
+  position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.28);
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1), background .25s ease;
+}
+.toggle-switch input:checked ~ .toggle-track{
+  background:linear-gradient(180deg,#ff9d40,#f97a16);
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.1), 0 0 13px 3px rgba(249,122,22,.55);
+}
+.toggle-switch input:checked ~ .toggle-track .toggle-thumb{
+  transform:translateX(18px);
+  background:#fffaf3;
+}
+.toggle-switch .toggle-label-text{font-size:12px;color:var(--text-dim)}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -5466,9 +5493,11 @@ function renderCardsAlbum(){
   const toggleEl = document.getElementById('cards-secret-toggle');
   if (toggleEl){
     toggleEl.innerHTML = ownedSecrets.length
-      ? '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);cursor:pointer">'
+      ? '<label class="toggle-switch" style="margin-top:2px">'
         + '<input type="checkbox" id="cards-secret-checkbox" onchange="toggleSecretCards()" '
-        + (getShowSecretPref() ? 'checked' : '') + '> Показать секретные</label>'
+        + (getShowSecretPref() ? 'checked' : '') + '>'
+        + '<span class="toggle-track"><span class="toggle-thumb"></span></span>'
+        + '<span class="toggle-label-text">Показать секретные</span></label>'
       : '';
   }
   const showSecret = ownedSecrets.length > 0 && getShowSecretPref();
@@ -5517,28 +5546,95 @@ function renderCardsAlbum(){
   }).join('');
 }
 
+let cardBrowseList = [];    // список своих карточек для пролистывания в витрине
+let cardBrowseIndex = -1;
+
 function openAlbumCard(key){
-  const c = cardByKey(key);
-  if (!c) return;
   const owned = ownedMap();
   if (!owned[key]){
     showToast('Эта карточка тебе ещё не попадалась');
     return;
   }
+  // Свайп в витрине листает СВОИ карточки — порядок как везде в аппе: сначала
+  // редкие. Список строим один раз при открытии, а не на каждый свайп
+  cardBrowseList = cardCatalog.filter(function(c){ return owned[c.key]; })
+    .sort(function(a,b){
+      const ra = CARD_RARITY_ORDER[a.rarity], rb = CARD_RARITY_ORDER[b.rarity];
+      return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
+    });
+  cardBrowseIndex = cardBrowseList.findIndex(function(c){ return c.key === key; });
+  if (cardBrowseIndex === -1) return;   // ключ есть среди владений, но не в каталоге — не должно случаться, но не открываем пустую витрину
   // Переиспользуем экран вскрытия как «витрину»: карточка сразу открытой
   revealQueue = []; revealOpened = 0;
-  document.getElementById('reveal-title').textContent = 'Из твоей коллекции';
-  document.getElementById('reveal-sub').textContent = owned[key] > 1 ? ('У тебя таких: ' + owned[key]) : '';
   document.getElementById('reveal-row').innerHTML = '';
   document.getElementById('reveal-done').style.display = '';
-  // Если у этой карточки есть незабранная копия — из витрины тоже можно забрать
-  const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === key; });
   const ov = document.getElementById('reveal-overlay');
   ov.classList.remove('compact');
   ov.classList.remove('all-open');
   ov.classList.add('showcase');   // рубашек нет, карточка на 80% экрана
-  showCardDetail(c, 0, pending ? pending.id : null, false, owned[key]);
+  renderBrowseCard();
   ov.classList.add('open');
+  wireBrowseSwipe();
+}
+
+// Отрисовывает карточку по текущему cardBrowseIndex — вызывается и при открытии,
+// и при каждом свайпе, поэтому детали карточки вынесены сюда отдельно от openAlbumCard
+function renderBrowseCard(){
+  if (cardBrowseIndex < 0 || cardBrowseIndex >= cardBrowseList.length) return;
+  const c = cardBrowseList[cardBrowseIndex];
+  const owned = ownedMap();
+  const n = owned[c.key] || 0;
+  document.getElementById('reveal-title').textContent = 'Из твоей коллекции';
+  document.getElementById('reveal-sub').textContent =
+    (cardBrowseList.length > 1 ? (cardBrowseIndex + 1) + ' из ' + cardBrowseList.length : '')
+    + (n > 1 ? (cardBrowseList.length > 1 ? ' · таких: ' : 'У тебя таких: ') + n : '');
+  // Если у этой карточки есть незабранная копия — из витрины тоже можно забрать
+  const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === c.key; });
+  showCardDetail(c, 0, pending ? pending.id : null, false, n);
+}
+
+function browseCard(delta){
+  const next = cardBrowseIndex + delta;
+  if (next < 0 || next >= cardBrowseList.length) return;   // на краях просто не листаем дальше
+  cardBrowseIndex = next;
+  renderBrowseCard();
+}
+
+// Свайп влево/вправо между своими карточками — только в режиме витрины
+// (showcase), не во время вскрытия нового пака. Тот же принцип, что и на
+// полке карточек в дашборде: сравниваем |dx| и |dy|, действуем только после
+// порога в 40px, обработчики вешаются один раз через флаг
+let browseSwipeWired = false;
+function wireBrowseSwipe(){
+  if (browseSwipeWired) return;
+  browseSwipeWired = true;
+  const ov = document.getElementById('reveal-overlay');
+  if (!ov) return;
+  let sx = 0, sy = 0, tracking = false, axis = null;
+
+  ov.addEventListener('touchstart', function(e){
+    if (!ov.classList.contains('showcase') || e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    tracking = true; axis = null;
+  }, { passive: true });
+
+  ov.addEventListener('touchmove', function(e){
+    if (!tracking || !ov.classList.contains('showcase')) return;
+    const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+    if (axis === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)){
+      axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    }
+    if (axis === 'h') e.preventDefault();   // листаем сами, не отдаём жест прокрутке
+  }, { passive: false });
+
+  ov.addEventListener('touchend', function(e){
+    if (!tracking) return;
+    tracking = false;
+    if (!ov.classList.contains('showcase') || axis !== 'h') return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) < 40) return;
+    browseCard(dx < 0 ? 1 : -1);   // свайп влево — следующая карточка
+  }, { passive: true });
 }
 
 function renderDeckRulesChances(){
