@@ -2172,6 +2172,17 @@ async function loadProfile() {
     notifyChannel = u.notify_channel || 'both';
     notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
+    // Результат теста архетипов пришёл с другого устройства/браузера, а тут его
+    // ещё нет локально — подтягиваем, чтобы "Кто ты из боженек продаж" открывался
+    // сразу с результатом, а не заново с первого вопроса
+    if (u.quiz_code && QUIZ_RESULTS[u.quiz_code] && !savedQuizResult()){
+      try {
+        localStorage.setItem(quizStorageKey(), JSON.stringify({
+          code: u.quiz_code, secondCode: u.quiz_second_code || '',
+          axes: [], at: u.quiz_completed_at ? Date.parse(u.quiz_completed_at) : Date.now(),
+        }));
+      } catch(e){}
+    }
     const prevRewardLevel = rewardLevel;
     rewardLevel = u.reward_level || 3;
     lifetimePoints = u.lifetime_points || 0;
@@ -6073,6 +6084,16 @@ function finishQuiz(){
   quizResult = { code: score.code, secondCode: score.secondCode,
                  axes: score.axes, at: Date.now() };
   try { localStorage.setItem(quizStorageKey(), JSON.stringify(quizResult)); } catch(e){}
+  // В профиль — чтобы результат не терялся при смене устройства/браузера и
+  // чтобы со временем из него можно было собрать личный план. Без телеграм-id
+  // (веб-версия вне Telegram, ещё не вошёл) сохраняем только локально.
+  if (telegramId){
+    fetch(`${API_URL}/users/quiz-result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, code: score.code, second_code: score.secondCode })
+    }).catch(()=>{});
+  }
   renderQuizResult();
 }
 
