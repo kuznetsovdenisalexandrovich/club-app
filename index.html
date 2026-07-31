@@ -5572,6 +5572,7 @@ function openAlbumCard(key){
   ov.classList.remove('compact');
   ov.classList.remove('all-open');
   ov.classList.add('showcase');   // рубашек нет, карточка на 80% экрана
+  browseResetShift();             // на случай, если прошлую анимацию прервали закрытием
   renderBrowseCard();
   ov.classList.add('open');
   wireBrowseSwipe();
@@ -5600,31 +5601,88 @@ function browseCard(delta){
   renderBrowseCard();
 }
 
+/* Сдвиг витрины за пальцем. Двигаем и арт, и текст под ним — иначе карточка
+   уезжает, а описание остаётся, и видно, что это разные куски.
+   animate=false во время самого жеста (иначе появляется задержка за пальцем),
+   animate=true — на доводке после отпускания */
+function browseSetShift(dx, animate){
+  const big = document.getElementById('reveal-big');
+  const det = document.getElementById('reveal-detail');
+  const w = (big && big.offsetWidth) || 300;
+  const fade = Math.max(0.25, 1 - Math.abs(dx) / (w * 0.85));
+  [big, det].forEach(function(el){
+    if (!el) return;
+    el.style.transition = animate
+      ? 'transform .22s cubic-bezier(.25,.8,.35,1), opacity .22s ease'
+      : 'none';
+    el.style.transform = 'translateX(' + dx + 'px)';
+    el.style.opacity = String(fade);
+  });
+}
+
+function browseResetShift(){
+  const big = document.getElementById('reveal-big');
+  const det = document.getElementById('reveal-detail');
+  [big, det].forEach(function(el){
+    if (!el) return;
+    el.style.transition = '';
+    el.style.transform = '';
+    el.style.opacity = '';
+  });
+}
+
+/* Доводим карточку в ту же сторону, куда её вели, меняем содержимое пока она
+   за краем, и впускаем следующую с противоположной стороны */
+function browseCommit(dir){
+  const big = document.getElementById('reveal-big');
+  const w = (big && big.offsetWidth) || 300;
+  const out = (w + 80) * dir;
+  browseSetShift(out, true);
+  setTimeout(function(){
+    browseCard(dir);
+    browseSetShift(-out, false);
+    // Заставляем браузер применить позицию "за краем" ДО включения анимации,
+    // иначе он схлопнет оба состояния в одно и въезда не будет видно
+    if (big) void big.offsetWidth;
+    browseSetShift(0, true);
+    setTimeout(browseResetShift, 240);
+  }, 200);
+}
+
 // Свайп влево/вправо между своими карточками — только в режиме витрины
-// (showcase), не во время вскрытия нового пака. Тот же принцип, что и на
-// полке карточек в дашборде: сравниваем |dx| и |dy|, действуем только после
-// порога в 40px, обработчики вешаются один раз через флаг
+// (showcase), не во время вскрытия нового пака. Ось определяем по тому, что
+// преобладает: |dx| или |dy| — вертикаль отдаём прокрутке страницы
 let browseSwipeWired = false;
+let browseSwipeMoved = false;   // гасит клик по карточке (зум) после жеста
 function wireBrowseSwipe(){
   if (browseSwipeWired) return;
   browseSwipeWired = true;
   const ov = document.getElementById('reveal-overlay');
   if (!ov) return;
-  let sx = 0, sy = 0, tracking = false, axis = null;
+  let sx = 0, sy = 0, tracking = false, axis = null, busy = false;
 
   ov.addEventListener('touchstart', function(e){
-    if (!ov.classList.contains('showcase') || e.touches.length !== 1) return;
+    if (busy || !ov.classList.contains('showcase') || e.touches.length !== 1) return;
     sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-    tracking = true; axis = null;
+    tracking = true; axis = null; browseSwipeMoved = false;
   }, { passive: true });
 
   ov.addEventListener('touchmove', function(e){
     if (!tracking || !ov.classList.contains('showcase')) return;
-    const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+    let dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
     if (axis === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)){
       axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
     }
-    if (axis === 'h') e.preventDefault();   // листаем сами, не отдаём жест прокрутке
+    if (axis !== 'h') return;
+    e.preventDefault();   // ведём сами, не отдаём жест прокрутке
+    browseSwipeMoved = true;
+    // На краях списка идти некуда — упругое сопротивление вместо пустого хода,
+    // чтобы палец сразу чувствовал, что дальше карточек нет
+    const atEdge = (dx > 0 && cardBrowseIndex === 0)
+                || (dx < 0 && cardBrowseIndex >= cardBrowseList.length - 1);
+    if (atEdge) dx = dx / 3.5;
+    browseSetShift(dx, false);
   }, { passive: false });
 
   ov.addEventListener('touchend', function(e){
@@ -5632,8 +5690,18 @@ function wireBrowseSwipe(){
     tracking = false;
     if (!ov.classList.contains('showcase') || axis !== 'h') return;
     const dx = e.changedTouches[0].clientX - sx;
-    if (Math.abs(dx) < 40) return;
-    browseCard(dx < 0 ? 1 : -1);   // свайп влево — следующая карточка
+    const dir = dx < 0 ? 1 : -1;                       // влево — следующая
+    const canGo = (dir === 1)
+      ? cardBrowseIndex < cardBrowseList.length - 1
+      : cardBrowseIndex > 0;
+    if (Math.abs(dx) >= 40 && canGo){
+      busy = true;
+      browseCommit(dir);
+      setTimeout(function(){ busy = false; }, 460);
+    } else {
+      browseSetShift(0, true);                          // не дотянул — возвращаем
+      setTimeout(browseResetShift, 240);
+    }
   }, { passive: true });
 }
 
@@ -5883,6 +5951,9 @@ function zoomReset(){
 
 function openCardZoom(url){
   if (!url) return;
+  // Палец вёл карточку в сторону — это был свайп, а не тап. Без этой проверки
+  // каждое пролистывание заканчивалось бы открытием увеличения
+  if (browseSwipeMoved){ browseSwipeMoved = false; return; }
   const ov  = document.getElementById('zoom-overlay');
   const img = document.getElementById('zoom-img');
   if (!ov || !img) return;
