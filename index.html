@@ -6088,7 +6088,12 @@ function renderQuizResult(){
           + '</div>'
         : '')
     + godLink
-    + '<button class="lec-link-btn access-btn" style="width:100%" onclick="shareQuizResult()">Поделиться результатом</button>'
+    + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">Поделиться карточкой</button>'
+    // Отправка в бот только для тех, кто вошёл — анониму слать некуда
+    + (telegramId
+        ? '<button class="lec-link-btn" style="width:100%;margin-top:9px" id="quiz-bot-btn" onclick="sendQuizCardToBot()">Прислать картинку в бот</button>'
+        : '')
+    + '<button class="lec-link-btn" style="width:100%;margin-top:9px" onclick="shareQuizResult()">Поделиться ссылкой</button>'
     // Действующему участнику рассказывать, что за клуб, незачем — он внутри
     + ((typeof isMember !== 'undefined' && isMember)
         ? ''
@@ -6250,6 +6255,83 @@ function quizWantPlan(){
   }
   if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
   switchView('club-info');
+}
+
+/* ── Картинка-карточка результата ────────────────────────────────────────────
+   Рисует сервер (app/share_card.py) — один и тот же PNG для обоих путей:
+   апп скачивает его и отдаёт в системное меню «Поделиться», а бот присылает
+   ту же картинку в чат. Клиенту свой рисовальщик не нужен */
+
+function quizCardUrl(){
+  if (!quizResult) return '';
+  const q = 'code=' + encodeURIComponent(quizResult.code)
+          + (quizResult.secondCode ? '&second=' + encodeURIComponent(quizResult.secondCode) : '');
+  return `${API_URL}/quiz/card?` + q;
+}
+
+async function shareQuizImage(){
+  const me = quizResult && QUIZ_RESULTS[quizResult.code];
+  if (!me) return;
+  const btn = document.getElementById('quiz-img-btn');
+  const restore = btn ? btn.textContent : '';
+  if (btn){ btn.disabled = true; btn.textContent = 'Готовлю картинку…'; }
+
+  try {
+    const resp = await fetch(quizCardUrl());
+    if (!resp.ok) throw new Error('сервер ответил ' + resp.status);
+    const blob = await resp.blob();
+    const file = new File([blob], 'bozhenka-' + quizResult.code + '.png', { type: 'image/png' });
+    const text = 'Я — ' + me.god + ', ' + me.role.toLowerCase() + '. А ты кто из боженек продаж?';
+
+    // Системное меню с ФАЙЛОМ — то, что нужно для сторис. Поддержка есть не
+    // везде, поэтому сначала спрашиваем canShare именно про файлы
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share){
+      try {
+        await navigator.share({ files: [file], text: text, title: 'Кто ты из боженек продаж' });
+      } catch(e){ /* человек передумал — это не ошибка */ }
+      return;
+    }
+
+    // Иначе просто скачиваем: человек опубликует сам
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(href); }, 4000);
+    showToast('Картинка сохранена');
+  } catch(e){
+    showToast('Не получилось собрать картинку: ' + (e.message || e));
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = restore; }
+  }
+}
+
+/* Второй путь: бот присылает картинку в чат. Так удобнее тем, кто уже в
+   Telegram — переслать фото оттуда проще, чем скачивать и заливать заново */
+async function sendQuizCardToBot(){
+  if (!telegramId || !quizResult) return;
+  const btn = document.getElementById('quiz-bot-btn');
+  const restore = btn ? btn.textContent : '';
+  if (btn){ btn.disabled = true; btn.textContent = 'Отправляю…'; }
+  try {
+    await apiRequest(`${API_URL}/quiz/card/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId,
+        code: quizResult.code,
+        second: quizResult.secondCode || '',
+      })
+    }, 30000);
+    showToast('Отправил в бот — оттуда пересылай');
+  } catch(e){
+    showToast(e.message || 'Не получилось отправить');
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = restore; }
+  }
 }
 </script>
 </body>
