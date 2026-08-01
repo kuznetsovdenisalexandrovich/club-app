@@ -627,6 +627,20 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .quiz-answer:active{transform:scale(.985)}
 .quiz-answer.picked{border-color:var(--warm)}
 
+/* Заголовок направления в анкете плана. НЕ похож на .quiz-answer сознательно:
+   когда они выглядели одинаково, экран превращался в кашу — было не понять,
+   где категория, а где сам выбор */
+.plan-group{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  background:none;border:none;padding:16px 4px 8px;margin:0;cursor:pointer;
+  font-family:inherit;color:var(--text-faint);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em}
+.plan-group .plan-group-name{flex:1}
+.plan-group .plan-group-count{color:var(--warm);text-transform:none;letter-spacing:0;font-size:11px}
+.plan-group .plan-group-chevron{font-size:14px;opacity:.5;transition:transform .2s ease}
+.plan-group.open .plan-group-chevron{transform:rotate(90deg)}
+.plan-group-items{border-left:2px solid var(--line);padding-left:12px;margin-bottom:6px}
+.plan-sub{margin-left:14px}
+
 .quiz-hero{text-align:center;margin-bottom:6px}
 .quiz-hero-art{width:min(64vw,240px);aspect-ratio:3/4;margin:0 auto 16px;border-radius:18px;overflow:hidden;
   border:2px solid var(--warm);background:rgba(232,97,74,.06);
@@ -4067,13 +4081,16 @@ const PLAN_DEPTHS = [
   { key:'light', name:'только самое важное' },
   { key:'deep',  name:'как следует' },
 ];
+/* Названия направлений — КОРОТКИЕ СУЩЕСТВИТЕЛЬНЫЕ, а пункты внутри — вопросы
+   «Как ...». Пока направления назывались задачами («Понять, кто передо мной»),
+   они читались как пункты, и экран превращался в мешанину */
 const PLAN_PHASES = [
-  { key:'start',   name:'Первые шаги' },
-  { key:'search',  name:'Где брать клиентов' },
-  { key:'qualify', name:'Понять, кто передо мной' },
-  { key:'deal',    name:'Довести до оплаты' },
-  { key:'retain',  name:'Удержать и вырастить' },
-  { key:'scale',   name:'Масштаб и система' },
+  { key:'start',   name:'Старт' },
+  { key:'search',  name:'Клиенты' },
+  { key:'qualify', name:'Отбор' },
+  { key:'deal',    name:'Сделка' },
+  { key:'retain',  name:'Повторные продажи' },
+  { key:'scale',   name:'Масштаб' },
   { key:'self',    name:'Про себя' },
 ];
 let planOpenPhases = {};   // какие направления развёрнуты на экране выбора
@@ -4296,15 +4313,16 @@ function renderPlanQuestion(){
       // Направление с уже отмеченным пунктом открываем само — иначе при возврате
       // человек не видит, что где-то внутри у него что-то выбрано
       const open = planOpenPhases[b.ph.key] || (planOpenPhases[b.ph.key] === undefined && picked > 0);
-      list += '<button class="quiz-answer" style="display:flex;align-items:center;gap:8px"'
+      list += '<button class="plan-group' + (open ? ' open' : '') + '"'
         + ' onclick="planToggleGroup(' + jsArg(b.ph.key) + ')">'
-        + '<span style="flex:1">' + escapeHtml(b.ph.name) + '</span>'
-        + (picked ? '<span style="color:var(--warm);font-weight:700">' + picked + '</span>' : '')
-        + '<span style="opacity:.45;font-size:12px">' + b.items.length + '</span>'
-        + '<span style="opacity:.45;transform:rotate(' + (open ? '90' : '0') + 'deg);transition:transform .2s">›</span>'
+        + '<span class="plan-group-name">' + escapeHtml(b.ph.name) + '</span>'
+        // Показываем только выбранное. Общее число пунктов рядом с ним читалось
+        // как вторая непонятная цифра и ничего не подсказывало
+        + (picked ? '<span class="plan-group-count">выбрано ' + picked + '</span>' : '')
+        + '<span class="plan-group-chevron">›</span>'
         + '</button>';
       if (open){
-        list += '<div style="margin:-4px 0 10px">'
+        list += '<div class="plan-group-items">'
           + b.items.map(function(it){ return planOptionHtml(it.p, it.child); }).join('')
           + '</div>';
       }
@@ -4355,10 +4373,9 @@ function planToggleGroup(key){
 
 function planOptionHtml(p, isChild){
   const on = planDraft.problems.indexOf(p.key) !== -1;
-  return '<button class="quiz-answer' + (on ? ' picked' : '') + '" style="margin-left:'
-    + (isChild ? '16px' : '0') + ';width:' + (isChild ? 'calc(100% - 16px)' : '100%') + '"'
+  return '<button class="quiz-answer' + (on ? ' picked' : '') + (isChild ? ' plan-sub' : '') + '"'
     + ' onclick="planToggleProblem(' + jsArg(p.key) + ')">'
-    + (isChild ? '<span style="opacity:.5">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
+    + (isChild ? '<span style="opacity:.45">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
 }
 
 function planToggleProblem(key){
@@ -5399,7 +5416,7 @@ async function verifyLoginCode(){
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
-    finishWebLogin(data.telegram_id);
+    finishWebLogin(data.telegram_id, data.session_token);
   } catch (e) {
     setLoginError(e.message);
   } finally {
@@ -5424,7 +5441,7 @@ async function quickPhoneLogin(phone){
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
-    finishWebLogin(data.telegram_id);
+    finishWebLogin(data.telegram_id, data.session_token);
   } catch (e) {
     // Текст ошибки от бэкенда показываем внутри блока — иначе получаются два
     // сообщения об одном и том же
@@ -5433,7 +5450,29 @@ async function quickPhoneLogin(phone){
   }
 }
 
-function finishWebLogin(id){
+/* Токен веб-сессии. Раньше он жил только в куке, но апп и бэкенд на разных
+   доменах — для браузера это СТОРОННЯЯ кука, а Safari блокирует такие по
+   умолчанию, из-за чего человека выбрасывало при каждом заходе. Дублируем
+   токен здесь и шлём заголовком: на заголовки блокировка не действует. */
+const SESSION_KEY = 'club_session_token';
+function savedSessionToken(){
+  try { return localStorage.getItem(SESSION_KEY) || ''; } catch(e){ return ''; }
+}
+function rememberSessionToken(token){
+  if (!token) return;
+  try { localStorage.setItem(SESSION_KEY, token); } catch(e){}
+}
+function forgetSessionToken(){
+  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
+}
+// Заголовок добавляем ТОЛЬКО если токен есть — пустой сбивал бы проверку на сервере
+function sessionHeaders(){
+  const t = savedSessionToken();
+  return t ? { 'X-Session-Token': t } : {};
+}
+
+function finishWebLogin(id, token){
+  rememberSessionToken(token);
   telegramId = id;
   document.getElementById('web-login-screen').style.display = 'none';
   if (isStandaloneWebApp()) reportHomeScreenAdded();
@@ -5446,14 +5485,21 @@ async function proceedToWebLogin(){
   // Telegram Login Widget: закон 406-ФЗ запрещает иностранные сервисы авторизации на
   // российских сайтах, штрафы действуют с июля 2026.
   try {
-    const r = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
+    const r = await fetch(`${API_URL}/auth/me`, {
+      credentials: 'include', headers: sessionHeaders(),
+    });
     if (r.ok) {
       const data = await r.json();
       telegramId = data.telegram_id;
+      // Сервер мог выдать новый токен — запоминаем, если пришёл
+      rememberSessionToken(data.session_token);
       if (isStandaloneWebApp()) reportHomeScreenAdded();
       startApp();
       return;
     }
+    // Сессия больше не действует (истекла или вытеснена входом с другого
+    // устройства) — убираем мёртвый токен, иначе он поедет и в следующий раз
+    if (r.status === 401) forgetSessionToken();
   } catch (e) {}
   // Настройки нужны ДО показа экрана: от них зависит, спрашивать код или пускать по номеру
   await loadAppSettings();
