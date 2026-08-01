@@ -4068,12 +4068,15 @@ const PLAN_DEPTHS = [
   { key:'deep',  name:'как следует' },
 ];
 const PLAN_PHASES = [
-  { key:'search',  name:'Где брать людей' },
+  { key:'start',   name:'Первые шаги' },
+  { key:'search',  name:'Где брать клиентов' },
   { key:'qualify', name:'Понять, кто передо мной' },
   { key:'deal',    name:'Довести до оплаты' },
   { key:'retain',  name:'Удержать и вырастить' },
+  { key:'scale',   name:'Масштаб и система' },
   { key:'self',    name:'Про себя' },
 ];
+let planOpenPhases = {};   // какие направления развёрнуты на экране выбора
 
 let planProblems = [];      // справочник проблем с бэкенда
 let planAnswers  = null;    // { problems, level, depth, note } либо null
@@ -4264,30 +4267,51 @@ function renderPlanQuestion(){
         + '<div class="reward-hint">Лекции ещё размечаются. Загляни чуть позже.</div>';
       return;
     }
-    let list = '';
-    PLAN_PHASES.forEach(function(ph){
-      const inPhase = avail.filter(function(p){ return (p.phase || 'deal') === ph.key && !p.parent_key; });
-      if (!inPhase.length) return;
-      list += '<div class="section-label" style="margin:14px 0 6px">' + ph.name + '</div>';
-      inPhase.forEach(function(p){
-        list += planOptionHtml(p);
-        // Частные случаи сразу под общей темой
+    // Направления свёрнуты: раскрытыми они давали экран, который невозможно
+    // окинуть взглядом. Считаем пункты внутри, чтобы было понятно, куда идти
+    const buckets = PLAN_PHASES.map(function(ph){
+      const tops = avail.filter(function(p){ return (p.phase || 'deal') === ph.key && !p.parent_key; });
+      const items = [];
+      tops.forEach(function(p){
+        items.push({ p: p, child: false });
+        // Частный случай идёт сразу под своей общей темой
         avail.filter(function(c){ return c.parent_key === p.key; })
-             .forEach(function(c){ list += planOptionHtml(c, true); });
+             .forEach(function(c){ items.push({ p: c, child: true }); });
       });
-    });
-    // Проблемы, чья общая тема сейчас без лекций, иначе потерялись бы
+      return { ph: ph, items: items };
+    }).filter(function(b){ return b.items.length; });
+
+    // Проблемы, чья общая тема сейчас без лекций, иначе потерялись бы совсем
     const placed = {};
-    avail.forEach(function(p){ if (!p.parent_key) placed[p.key] = true; });
-    avail.forEach(function(p){ if (p.parent_key && placed[p.parent_key]) placed[p.key] = true; });
+    buckets.forEach(function(b){ b.items.forEach(function(it){ placed[it.p.key] = true; }); });
     const rest = avail.filter(function(p){ return !placed[p.key]; });
     if (rest.length){
-      list += '<div class="section-label" style="margin:14px 0 6px">Ещё</div>';
-      rest.forEach(function(p){ list += planOptionHtml(p); });
+      buckets.push({ ph: { key:'_rest', name:'Ещё' },
+                     items: rest.map(function(p){ return { p: p, child: false }; }) });
     }
+
+    let list = '';
+    buckets.forEach(function(b){
+      const picked = b.items.filter(function(it){ return planDraft.problems.indexOf(it.p.key) !== -1; }).length;
+      // Направление с уже отмеченным пунктом открываем само — иначе при возврате
+      // человек не видит, что где-то внутри у него что-то выбрано
+      const open = planOpenPhases[b.ph.key] || (planOpenPhases[b.ph.key] === undefined && picked > 0);
+      list += '<button class="quiz-answer" style="display:flex;align-items:center;gap:8px"'
+        + ' onclick="planToggleGroup(' + jsArg(b.ph.key) + ')">'
+        + '<span style="flex:1">' + escapeHtml(b.ph.name) + '</span>'
+        + (picked ? '<span style="color:var(--warm);font-weight:700">' + picked + '</span>' : '')
+        + '<span style="opacity:.45;font-size:12px">' + b.items.length + '</span>'
+        + '<span style="opacity:.45;transform:rotate(' + (open ? '90' : '0') + 'deg);transition:transform .2s">›</span>'
+        + '</button>';
+      if (open){
+        list += '<div style="margin:-4px 0 10px">'
+          + b.items.map(function(it){ return planOptionHtml(it.p, it.child); }).join('')
+          + '</div>';
+      }
+    });
     el.innerHTML = bar
       + '<div class="quiz-question">Что по ощущениям хочется решить в первую очередь?</div>'
-      + '<div class="reward-hint" style="margin-bottom:10px">Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов</div>'
+      + '<div class="reward-hint" style="margin-bottom:10px">Открой направление и отметь, что ближе. Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов, в том числе из разных направлений.</div>'
       + list
       + '<button class="quiz-answer picked" id="plan-next" style="margin-top:14px" onclick="planNext()">Дальше</button>';
     updatePlanNextState();
@@ -4320,6 +4344,15 @@ function renderPlanQuestion(){
     + back;
 }
 
+function planToggleGroup(key){
+  const cur = document.querySelector('#plan-inner');
+  const scrollY = window.scrollY;
+  planOpenPhases[key] = !planOpenPhases[key];
+  renderPlanQuestion();
+  // Не прыгаем наверх: человек раскрывает направление в середине списка
+  window.scrollTo(0, scrollY);
+}
+
 function planOptionHtml(p, isChild){
   const on = planDraft.problems.indexOf(p.key) !== -1;
   return '<button class="quiz-answer' + (on ? ' picked' : '') + '" style="margin-left:'
@@ -4338,8 +4371,11 @@ function planToggleProblem(key){
     }
     planDraft.problems.push(key);
   }
+  const scrollY = window.scrollY;
   renderPlanQuestion();
-  window.scrollTo(0, 0);
+  // Список перерисовывается целиком — без этого экран отскакивал бы наверх
+  // после каждой галочки
+  window.scrollTo(0, scrollY);
 }
 
 function updatePlanNextState(){
