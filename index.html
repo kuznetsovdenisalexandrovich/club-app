@@ -4377,12 +4377,24 @@ async function startPlanQuiz(){
     ? { problems: (planAnswers.problems || []).slice(), expanded: [],
         level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note }
     : { problems: [], expanded: [], level: '', depth: '', note: '' };
-  // Уже выбранные темы раскрываем, чтобы человек видел, где стоят его галочки
-  planDraft.problems.forEach(function(k){
-    if (pfChildren(k).length || pfRelated(k).length) planDraft.expanded.push(k);
-  });
   switchView('plan');
   await loadPlanProblems();
+  // Уже выбранные темы раскрываем, чтобы человек видел, где стоят его галочки —
+  // это касается и родителя (частный случай), и самого НАПРАВЛЕНИЯ: без него
+  // прежний выбор был бы спрятан за закрытой дверью. Считаем ПОСЛЕ загрузки
+  // справочника — до нее planProblems мог быть ещё пуст
+  planDraft.problems.forEach(function(k){
+    if (pfChildren(k).length || pfRelated(k).length) planDraft.expanded.push(k);
+    const prob = planProblems.find(function(x){ return x.key === k; });
+    if (!prob) return;
+    if (prob.parent_key && planDraft.expanded.indexOf(prob.parent_key) === -1)
+      planDraft.expanded.push(prob.parent_key);
+    const top = prob.parent_key ? planProblems.find(function(x){ return x.key === prob.parent_key; }) : prob;
+    if (top){
+      const phaseRoot = 'phase:' + top.phase;
+      if (planDraft.expanded.indexOf(phaseRoot) === -1) planDraft.expanded.push(phaseRoot);
+    }
+  });
   renderPlanQuestion();
 }
 
@@ -4404,30 +4416,50 @@ let pfWired = false;
 
 // Родительская тема (частный случай) — из справочника, а не из локальной копии
 function pfParentOf(key){
+  if (pfIsPhaseKey(key)) return null;
   const p = planProblems.find(function(x){ return x.key === key; });
   return p && p.parent_key ? p.parent_key : null;
 }
+
+/* Ключи корней — направления, с префиксом 'phase:', чтобы не путать с ключами
+   проблем: у направления и проблемы могут случайно совпасть буквы */
+function pfIsPhaseKey(key){ return typeof key === 'string' && key.indexOf('phase:') === 0; }
+function pfPhaseKeyOf(key){ return key.slice(6); }
+
 function pfChildren(key){
-  return planProblemsWithContent().filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+  const avail = planProblemsWithContent();
+  if (pfIsPhaseKey(key)){
+    // Второе поколение направления — темы верхнего уровня этой фазы.
+    // Темы с родителем сюда не попадают: они уже вложены под СВОИМ родителем,
+    // а не должны висеть на направлении отдельной веткой
+    const phaseKey = pfPhaseKeyOf(key);
+    return avail.filter(function(p){ return p.phase === phaseKey && !p.parent_key; }).map(function(p){ return p.key; });
+  }
+  return avail.filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
 }
 function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
   const p = planProblems.find(function(x){ return x.key === key; });
   const withContent = planProblemsWithContent().map(function(x){ return x.key; });
   return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
 }
 
-/* Корневые задаёт Denis флагом. Пока он их не расставил, поле не должно быть
-   пустым — берём темы верхнего уровня, у которых есть лекции */
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
 function pfRoots(){
   const avail = planProblemsWithContent();
-  const marked = avail.filter(function(p){ return p.is_root; });
-  const list = marked.length ? marked : avail.filter(function(p){ return !p.parent_key; }).slice(0, 8);
-  return list.slice().sort(function(a,b){
-    return (a.root_order||100) - (b.root_order||100) || (a.sort_order||100) - (b.sort_order||100);
-  }).map(function(p){ return p.key; });
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
 }
 
 function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
   const p = planProblems.find(function(x){ return x.key === key; });
   return p ? p.label : key;
 }
@@ -4470,7 +4502,7 @@ function pfHome(key, roots){
 }
 
 function pfRelax(list, roots){
-  const PAD = 12, ITER = 110;
+  const PAD = 16, ITER = 150;
 
   /* Кто чей родитель и каким по счёту — считаем ОДИН РАЗ на прогон.
      Раньше это перебиралось внутри каждой из 110 итераций для каждой темы,
@@ -4501,8 +4533,8 @@ function pfRelax(list, roots){
     const p = pfPos[r.par];
     if (!p) return { x: PF_CX, y: PF_CY };
     return r.kind === 'child'
-      ? { x: p.x + 20, y: p.y + 60 + r.i*52 }
-      : { x: p.x + (pfSizes[r.par] ? pfSizes[r.par].w : 150) + 48, y: p.y + 4 + r.i*46 };
+      ? { x: p.x + 20, y: p.y + 68 + r.i*58 }
+      : { x: p.x + (pfSizes[r.par] ? pfSizes[r.par].w : 150) + 48, y: p.y + 4 + r.i*50 };
   };
 
   for (let it = 0; it < ITER; it++){
@@ -4653,6 +4685,15 @@ function pfDrawLinks(list, color){
 }
 
 function pfTap(key){
+  if (pfIsPhaseKey(key)){
+    // Направление — просто дверь: раскрывает второе поколение, само
+    // не становится ответом (лекций у направления нет, выбирать нечего)
+    const e = planDraft.expanded.indexOf(key);
+    if (e !== -1) planDraft.expanded.splice(e, 1);
+    else planDraft.expanded.push(key);
+    pfRender();
+    return;
+  }
   const i = planDraft.problems.indexOf(key);
   const kids = pfChildren(key).concat(pfRelated(key));
   if (i !== -1){
@@ -6783,7 +6824,12 @@ function markCardsSeen(){
    Раньше это была плитка, которая ничего не обещала. Лента показывает и то, что
    собрано, и дыры — именно дыры и заставляют возвращаться. */
 
-const COLL_STRIP_LIMIT = 10;
+// Тизер на главном экране, не полная коллекция — та живёт на вкладке
+// «Коллекция» (renderCardsAlbum), там плейсхолдеры для ВСЕХ неоткрытых уместны.
+// Здесь лимит короткий: при разрастании каталога до сотен карточек лента не
+// должна ощущаться бесконечной. У нового участника это даёт ровно то, что
+// нужно — его первая карта + несколько плейсхолдеров, дальше кнопка «вся колода»
+const COLL_STRIP_LIMIT = 4;
 
 function renderCollectionStrip(){
   const block = document.getElementById('coll-strip-block');
