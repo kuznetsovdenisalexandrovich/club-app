@@ -123,7 +123,7 @@ body{
 }
 .shell{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:0 16px}
 
-header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:14px;padding:2px 0}
 .theme-switch{width:52px;height:30px;border-radius:20px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;padding:3px;cursor:pointer;flex-shrink:0}
 [data-theme="dark"] .theme-switch{justify-content:flex-end}
@@ -247,7 +247,7 @@ header{padding:calc(var(--safe-top) + 14px) 0 20px;display:flex;align-items:cent
 .view{display:none}
 .view.active{display:block}
 
-.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:0 24px;gap:14px}
+.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:calc(var(--safe-top, 0px) + 28px) 24px 0;gap:14px}
 .center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
 .hs-step{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--border)}
 .hs-step:last-child{border-bottom:none}
@@ -5200,6 +5200,36 @@ function updateLevelBarScrollPosition(){
 }
 window.addEventListener('scroll', updateLevelBarScrollPosition, { passive: true });
 
+/* Безопасная зона в ВЕБ-версии (вне Telegram).
+
+   Симптом был такой: после входа шапка лезла под часы и батарею, а стоило
+   разок прокрутить — всё вставало на место. Это известное поведение iOS:
+   в приложении, добавленном на домашний экран, env(safe-area-inset-top)
+   какое-то время отдаёт ноль и обновляется только после первого пересчёта
+   раскладки. Поэтому не полагаемся на env() вслепую: измеряем его реальное
+   значение и, если в полноэкранном режиме там ноль, ставим разумный минимум. */
+function applyWebSafeArea(){
+  if (window.Telegram?.WebApp?.initData) return;   // внутри Telegram своя функция
+
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;width:0;'
+    + 'height:env(safe-area-inset-top);visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  const measured = probe.offsetHeight;
+  probe.remove();
+
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+
+  if (measured > 0){
+    document.documentElement.style.setProperty('--safe-top', measured + 'px');
+  } else if (standalone){
+    // Полноэкранный режим, а зона не измерилась — статусная строка всё равно
+    // есть, и под неё нельзя залезать
+    document.documentElement.style.setProperty('--safe-top', '47px');
+  }
+}
+
 function applyTelegramSafeArea(){
   const tg = window.Telegram?.WebApp;
   if (!tg) return;
@@ -5586,6 +5616,12 @@ function startWebSession(){
     startApp();
     openFromStartParam();
   } else {
+    // Замеряем сразу и ещё раз чуть позже: в первый момент после запуска iOS
+    // нередко отдаёт нули, и именно это лечила ручная прокрутка
+    applyWebSafeArea();
+    setTimeout(applyWebSafeArea, 300);
+    window.addEventListener('resize', applyWebSafeArea);
+    window.addEventListener('orientationchange', function(){ setTimeout(applyWebSafeArea, 200); });
     startWebSession();
     openFromStartParam();
   }
@@ -6104,10 +6140,14 @@ function browseResetShift(){
 function browseCommit(dir){
   const big = document.getElementById('reveal-big');
   const w = (big && big.offsetWidth) || 300;
-  const out = (w + 80) * dir;
+  // dir=1 это «следующая», а жест для неё — ВЛЕВО, значит и уезжать карточка
+  // должна влево, то есть в минус. Без минуса она улетала в сторону, обратную
+  // движению пальца, а следующая въезжала не с той стороны
+  const out = -(w + 80) * dir;
   browseSetShift(out, true);
   setTimeout(function(){
     browseCard(dir);
+    // Следующая заходит с противоположного края — оттуда, куда ушла предыдущая
     browseSetShift(-out, false);
     // Заставляем браузер применить позицию "за краем" ДО включения анимации,
     // иначе он схлопнет оба состояния в одно и въезда не будет видно
