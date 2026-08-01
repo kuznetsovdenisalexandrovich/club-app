@@ -894,7 +894,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <div class="view" id="view-library">
     <div class="section-label">Твой личный план</div>
     <div class="card" id="personal-plan-card">
-      <div class="reward-hint" style="margin-bottom:10px">Скоро здесь появится маршрут, который ИИ-помощник составит специально под тебя — какие лекции смотреть и в каком порядке.</div>
+      <div id="personal-plan-body"></div>
       <div id="personal-plan-saved"></div>
     </div>
 
@@ -1043,6 +1043,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <div id="cards-secret-toggle"></div>
     </div>
     <div id="cards-album"><div class="sm-hint" style="padding:20px 0;text-align:center">Загружаю коллекцию…</div></div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Личный план: анкета ── -->
+  <div class="view" id="view-plan">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span class="stream-back" onclick="switchView('library')">←</span>
+      <span>Личный план</span>
+    </div>
+    <div class="card">
+      <div id="plan-inner"></div>
+    </div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -1770,6 +1782,7 @@ function switchView(name) {
     markCardsSeen();
   }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
+  if (name === 'plan') { renderPlanScreen(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
     const el = document.getElementById('pi-points');
@@ -3872,11 +3885,23 @@ async function loadStreams() {
 }
 
 let renderedItems = [];
+// Карточки лекций живут на экране в НЕСКОЛЬКИХ списках сразу: библиотека,
+// "Сохранено на потом", личный план, ответ ИИ-помощника. Индекс внутри карточки
+// относится к СВОЕМУ списку — без этого кнопка "Смотреть" открывала лекцию,
+// стоящую на том же месте в библиотеке, то есть чужую (живой баг в "Сохранено")
+let savedCardItems = [];
+let planCardItems  = [];
+function cardList(src){
+  if (src === 'saved') return savedCardItems;
+  if (src === 'plan')  return planCardItems;
+  return renderedItems;
+}
 let savedSlugs = new Set();
 
 const SAVE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-function lecCardHtml(l, i){
+function lecCardHtml(l, i, src){
+  src = src || 'lib';
   const isSaved = savedSlugs.has(l.slug);
   const tourLocked = isMember && tourActive;
   const locked = !isMember || tourLocked;
@@ -3884,10 +3909,10 @@ function lecCardHtml(l, i){
   const lockIcon = locked ? '🔒 ' : '';
   const linkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
-    : `openLectureLink(${i},'tg')`;
+    : `openLectureLink(${i},'tg',${jsArg(src)})`;
   const vkClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
-    : `openLectureLink(${i},'vk')`;
+    : `openLectureLink(${i},'vk',${jsArg(src)})`;
   // Уровень копится только у участников, поэтому демо им не ограничиваем
   const insightsLevelLocked = isMember && rewardLevel < (appSettings.insights_unlock_level || 2);
   // Для кнопки "Главные идеи" замок только по уровню, не по членству
@@ -3896,7 +3921,7 @@ function lecCardHtml(l, i){
   const insightsLockIcon = insightsLocked ? '🔒 ' : '';
   const insightsClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
-    : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i})`);
+    : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i},${jsArg(src)})`);
   return `
     <div class="lec-card">
       <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
@@ -4002,6 +4027,9 @@ async function loadLibrary() {
     renderTagFilter();
     applyTagFilter();
     renderPersonalPlanSection();
+    // Личный план собирается из этой же библиотеки — справочник проблем и
+    // ответы участника тянем следом, чтобы блок не мигал пустотой
+    Promise.all([loadPlanProblems(), loadPlanAnswers()]).then(renderPersonalPlanBody);
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
@@ -4015,8 +4043,352 @@ function renderPersonalPlanSection(){
     el.innerHTML = '<div class="reward-hint">Пока пусто — сохраняй лекции звёздочкой, и они появятся здесь</div>';
     return;
   }
+  savedCardItems = saved;
   el.innerHTML = `<div class="section-label" style="margin-top:14px">Сохранено на потом</div>` +
-    saved.map((l, i) => lecCardHtml(l, i)).join('');
+    saved.map((l, i) => lecCardHtml(l, i, 'saved')).join('');
+}
+
+/* ══ Личный план ═══════════════════════════════════════════════════════════
+   Человек отмечает, что у него болит; лекции размечены теми же проблемами
+   (см. анализатор, вкладка «Проблемы»). Совпадение двух сторон и собирает план.
+
+   Подбор идёт НА КЛИЕНТЕ: библиотека и так вся загружена, ходить на сервер
+   незачем — план пересобирается мгновенно и одинаково при каждом открытии. */
+
+const PLAN_MAX_PROBLEMS = 3;      // больше трёх размывает подбор до бесполезного
+const PLAN_PER_PROBLEM  = 3;      // лекций под одну боль
+
+const PLAN_LEVELS = [
+  { key:'beginner', name:'только начинаю' },
+  { key:'mid',      name:'чему-то учили, не уверен чему' },
+  { key:'advanced', name:'уже в теме и кайф двигаться сильно выше' },
+];
+const PLAN_DEPTHS = [
+  { key:'light', name:'только самое важное' },
+  { key:'deep',  name:'как следует' },
+];
+const PLAN_PHASES = [
+  { key:'search',  name:'Где брать людей' },
+  { key:'qualify', name:'Понять, кто передо мной' },
+  { key:'deal',    name:'Довести до оплаты' },
+  { key:'retain',  name:'Удержать и вырастить' },
+  { key:'self',    name:'Про себя' },
+];
+
+let planProblems = [];      // справочник проблем с бэкенда
+let planAnswers  = null;    // { problems, level, depth, note } либо null
+let planStep     = 0;
+let planDraft    = { problems: [], level: '', depth: '', note: '' };
+
+async function loadPlanProblems(){
+  if (planProblems.length) return;
+  try {
+    const r = await fetch(`${API_URL}/problems`);
+    if (r.ok) planProblems = await r.json();
+  } catch(e){}
+}
+
+async function loadPlanAnswers(){
+  if (!telegramId) return;
+  try {
+    const r = await fetch(`${API_URL}/plan-answers/${telegramId}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    planAnswers = d.exists ? { problems: d.problems || [], level: d.level || '',
+                               depth: d.depth || '', note: d.note || '' } : null;
+  } catch(e){}
+}
+
+// Проблема, под которой нет ни одной лекции, участнику НЕ показывается: он бы
+// её выбрал, а плана не получил. Пустые остаются в справочнике у Дениса как
+// подсказка, что стоит снять
+function planProblemsWithContent(){
+  const has = {};
+  allLectures.forEach(function(l){
+    (l.problems || []).forEach(function(p){ if (p && p.key) has[p.key] = true; });
+  });
+  return planProblems.filter(function(p){ return has[p.key]; });
+}
+
+function planProblemLabel(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+/* ── Сборка плана ────────────────────────────────────────────────────────── */
+
+// Насколько лекция подходит под ответы. Уровень и глубина СОРТИРУЮТ, а не
+// отсекают: если единственная лекция по нужной боли размечена для начинающих,
+// человек всё равно должен её получить — просто ниже совпавших
+function planScore(lec, entry, answers){
+  let score = entry.weight === 'touch' ? 0 : 100;
+  const lvl = lec.level || '';
+  if (lvl && answers.level){
+    if (lvl === answers.level) score += 30;
+    else if (lvl === 'any') score += 15;
+  } else if (lvl === 'any') score += 15;
+  if (lec.depth && answers.depth && lec.depth === answers.depth) score += 12;
+  return score;
+}
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers),
+                  viaParent: k !== key });
+    });
+    rows.sort(function(a, b){ return b.score - a.score; });
+    rows.slice(0, PLAN_PER_PROBLEM - out.length).forEach(function(r){
+      used[r.lec.slug] = true;
+      out.push(r);
+    });
+  });
+  return out;
+}
+
+function buildPlan(answers){
+  const used = {};
+  return (answers.problems || []).map(function(key){
+    return { key: key, label: planProblemLabel(key), rows: planLecturesFor(key, answers, used) };
+  }).filter(function(g){ return g.rows.length; });   // пустая группа молча исчезает, а не зияет
+}
+
+/* ── Отрисовка плана ─────────────────────────────────────────────────────── */
+
+function planHtml(answers, compact){
+  const groups = buildPlan(answers);
+  if (!groups.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось. Попробуй отметить что-то ещё — или спроси ИИ-помощника своими словами.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+  // В библиотеке показываем только первую боль — карточка не должна разрастаться
+  // в простыню; всё остальное открывается на своём экране
+  const shown = compact ? groups.slice(0, 1) : groups;
+  let html = '';
+  planCardItems = [];
+  shown.forEach(function(g){
+    html += '<div class="section-label" style="margin:14px 0 8px">' + escapeHtml(g.label) + '</div>';
+    g.rows.forEach(function(r){
+      const i = planCardItems.length;
+      planCardItems.push(r.lec);
+      html += lecCardHtml(r.lec, i, 'plan');
+      const notes = [];
+      // Таймкод — главное, ради чего он собирался: человеку с одной болью
+      // трёхчасовой эфир без указателя бесполезен
+      if (r.entry.timecode) notes.push('про это на ' + escapeHtml(r.entry.timecode));
+      if (r.entry.weight === 'touch') notes.push('затронуто вскользь');
+      if (r.viaParent) notes.push('разбор темы шире');
+      if (notes.length) html += '<div class="reward-hint" style="margin:-6px 0 12px">' + notes.join(' · ') + '</div>';
+    });
+  });
+  if (compact && groups.length > 1){
+    html += '<button class="quiz-answer" style="margin-top:6px" onclick="switchView(\'plan\');renderPlanScreen()">Показать весь план</button>';
+  }
+  return html;
+}
+
+// Блок в библиотеке: либо приглашение пройти анкету, либо начало плана
+function renderPersonalPlanBody(){
+  const el = document.getElementById('personal-plan-body');
+  if (!el) return;
+  if (!planAnswers || !(planAnswers.problems || []).length){
+    el.innerHTML = '<div class="reward-hint" style="margin-bottom:10px">Отметь, что сейчас мешает больше всего — и здесь появятся лекции, которые отвечают именно на это.</div>'
+      + '<button class="quiz-answer" onclick="startPlanQuiz()">Собрать личный план</button>';
+    return;
+  }
+  el.innerHTML = planHtml(planAnswers, true)
+    + '<div class="payment-help-link" style="margin-top:10px" onclick="startPlanQuiz()">Пересобрать план →</div>';
+}
+
+function renderPlanScreen(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  if (!planAnswers || !(planAnswers.problems || []).length){
+    // Справочник ещё едет — иначе мелькнёт «пока нечего выбрать»
+    if (!planProblems.length){
+      el.innerHTML = '<div class="loading">Загрузка...</div>';
+      loadPlanProblems().then(renderPlanQuestion);
+      return;
+    }
+    renderPlanQuestion();
+    return;
+  }
+  el.innerHTML = planHtml(planAnswers, false)
+    + '<div class="payment-help-link" style="margin-top:16px" onclick="startPlanQuiz()">Пересобрать план →</div>';
+}
+
+/* ── Анкета ──────────────────────────────────────────────────────────────── */
+
+async function startPlanQuiz(){
+  planStep = 0;
+  planDraft = planAnswers
+    ? { problems: (planAnswers.problems || []).slice(), level: planAnswers.level,
+        depth: planAnswers.depth, note: planAnswers.note }
+    : { problems: [], level: '', depth: '', note: '' };
+  switchView('plan');
+  await loadPlanProblems();
+  renderPlanQuestion();
+}
+
+function renderPlanQuestion(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  const total = 4;
+  const bar = '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:'
+    + Math.round(planStep / total * 100) + '%"></div></div>'
+    + '<div class="quiz-step">Шаг ' + (planStep + 1) + ' из ' + total + '</div>';
+  const back = planStep > 0
+    ? '<div class="payment-help-link" style="margin-top:14px" onclick="planBack()">← Назад</div>' : '';
+
+  if (planStep === 0){
+    const avail = planProblemsWithContent();
+    if (!avail.length){
+      el.innerHTML = bar + '<div class="quiz-question">Пока нечего выбрать</div>'
+        + '<div class="reward-hint">Лекции ещё размечаются. Загляни чуть позже.</div>';
+      return;
+    }
+    let list = '';
+    PLAN_PHASES.forEach(function(ph){
+      const inPhase = avail.filter(function(p){ return (p.phase || 'deal') === ph.key && !p.parent_key; });
+      if (!inPhase.length) return;
+      list += '<div class="section-label" style="margin:14px 0 6px">' + ph.name + '</div>';
+      inPhase.forEach(function(p){
+        list += planOptionHtml(p);
+        // Частные случаи сразу под общей темой
+        avail.filter(function(c){ return c.parent_key === p.key; })
+             .forEach(function(c){ list += planOptionHtml(c, true); });
+      });
+    });
+    // Проблемы, чья общая тема сейчас без лекций, иначе потерялись бы
+    const placed = {};
+    avail.forEach(function(p){ if (!p.parent_key) placed[p.key] = true; });
+    avail.forEach(function(p){ if (p.parent_key && placed[p.parent_key]) placed[p.key] = true; });
+    const rest = avail.filter(function(p){ return !placed[p.key]; });
+    if (rest.length){
+      list += '<div class="section-label" style="margin:14px 0 6px">Ещё</div>';
+      rest.forEach(function(p){ list += planOptionHtml(p); });
+    }
+    el.innerHTML = bar
+      + '<div class="quiz-question">Что по ощущениям хочется решить в первую очередь?</div>'
+      + '<div class="reward-hint" style="margin-bottom:10px">Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов</div>'
+      + list
+      + '<button class="quiz-answer picked" id="plan-next" style="margin-top:14px" onclick="planNext()">Дальше</button>';
+    updatePlanNextState();
+    return;
+  }
+
+  if (planStep === 1){
+    el.innerHTML = bar
+      + '<div class="quiz-question">На каком уровне сейчас твоё понимание продаж и маркетинга?</div>'
+      + PLAN_LEVELS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.level === o.key ? ' picked' : '') + '" onclick="planPickLevel(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  if (planStep === 2){
+    el.innerHTML = bar
+      + '<div class="quiz-question">Насколько глубоко тебе нравится заходить в материал?</div>'
+      + PLAN_DEPTHS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.depth === o.key ? ' picked' : '') + '" onclick="planPickDepth(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  el.innerHTML = bar
+    + '<div class="quiz-question">Хочешь добавить что-то своими словами?</div>'
+    + '<div class="reward-hint" style="margin-bottom:10px">Необязательно. Это читает Денис — так он понимает, чего не хватает в клубе.</div>'
+    + '<textarea id="plan-note" rows="4" style="width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);font-size:14px;font-family:inherit;resize:vertical" placeholder="Например: клиенты пропадают после того, как узнают цену">' + escapeHtml(planDraft.note || '') + '</textarea>'
+    + '<button class="quiz-answer picked" style="margin-top:12px" onclick="finishPlanQuiz()">Показать план</button>'
+    + back;
+}
+
+function planOptionHtml(p, isChild){
+  const on = planDraft.problems.indexOf(p.key) !== -1;
+  return '<button class="quiz-answer' + (on ? ' picked' : '') + '" style="margin-left:'
+    + (isChild ? '16px' : '0') + ';width:' + (isChild ? 'calc(100% - 16px)' : '100%') + '"'
+    + ' onclick="planToggleProblem(' + jsArg(p.key) + ')">'
+    + (isChild ? '<span style="opacity:.5">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
+}
+
+function planToggleProblem(key){
+  const i = planDraft.problems.indexOf(key);
+  if (i !== -1) planDraft.problems.splice(i, 1);
+  else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов');
+      return;
+    }
+    planDraft.problems.push(key);
+  }
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function updatePlanNextState(){
+  const btn = document.getElementById('plan-next');
+  if (!btn) return;
+  const ok = planDraft.problems.length > 0;
+  btn.style.opacity = ok ? '1' : '.45';
+  btn.textContent = ok ? 'Дальше' : 'Отметь хотя бы один пункт';
+}
+
+function planNext(){
+  if (!planDraft.problems.length) return;
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function planBack(){
+  if (planStep > 0) planStep--;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
 }
 
 function openPersonalPlan(){
@@ -4067,10 +4439,10 @@ function closeInsightsLevelLockNotice(){
   document.getElementById('insights-lock-overlay').classList.remove('open');
 }
 
-function openInsightsModal(index){
+function openInsightsModal(index, src){
   // Демо-пользователя пускаем: выжимка — это как раз то, чем он прогревается.
   // Видео и PDF внутри попапа для него закрыты.
-  const l = renderedItems[index];
+  const l = cardList(src)[index];
   if (!l || !(l.key_insights||[]).length) return;
 
   document.getElementById('insights-modal-title').textContent = l.title;
@@ -4160,9 +4532,11 @@ async function downloadPdf(slug, btn){
 }
 
 let pendingVkOpenIndex = null;
+let pendingVkOpenSrc = 'lib';
 
-function openVkAccessGate(index){
+function openVkAccessGate(index, src){
   pendingVkOpenIndex = index;
+  pendingVkOpenSrc = src || 'lib';
   document.getElementById('vk-access-overlay').classList.add('open');
 }
 
@@ -4191,13 +4565,13 @@ function proceedAfterVkAccess(){
   document.getElementById('vk-access-overlay').classList.remove('open');
   const idx = pendingVkOpenIndex;
   pendingVkOpenIndex = null;
-  if (idx !== null) openLectureLink(idx, 'vk'); // vkAccessGranted уже true — на этот раз пройдёт
+  if (idx !== null) openLectureLink(idx, 'vk', pendingVkOpenSrc); // vkAccessGranted уже true — на этот раз пройдёт
 }
 
-function openLectureLink(index, platform) {
+function openLectureLink(index, platform, src) {
   if (!isMember) { openPaywall(); return; }
-  if (platform === 'vk' && !vkAccessGranted) { openVkAccessGate(index); return; }
-  const l = renderedItems[index];
+  if (platform === 'vk' && !vkAccessGranted) { openVkAccessGate(index, src); return; }
+  const l = cardList(src)[index];
   if (!l) return;
   rememberLastLecture(l);
   openUrl(platform === 'vk' ? l.link_vk : l.link);
