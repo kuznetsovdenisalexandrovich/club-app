@@ -627,6 +627,93 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .quiz-answer:active{transform:scale(.985)}
 .quiz-answer.picked{border-color:var(--warm)}
 
+/* ══ Поле выбора тем (шаг 1 личного плана) ═══════════════════════════════
+   Единственный экран в аппе, который выглядит иначе — как первая настройка,
+   а не как рабочий интерфейс. Тёмная сцена, светящиеся капсулы, поле, по
+   которому можно ездить. Всё остальное приложение таким не становится. */
+
+#plan-field{
+  position:fixed;inset:0;z-index:60;display:none;
+  background:#0b080c;color:#f6efe6;
+  overflow:hidden;touch-action:none;
+  opacity:0;transition:opacity .38s ease;
+}
+#plan-field.show{display:block}
+#plan-field.in{opacity:1}
+
+#plan-world{position:absolute;left:0;top:0;will-change:transform}
+
+#plan-grain{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.4;mix-blend-mode:overlay}
+
+.pf-hud{position:absolute;left:0;right:0;top:0;z-index:3;pointer-events:none;
+  padding:calc(max(var(--safe-top,0px), 8px) + 20px) 20px 30px;
+  background:linear-gradient(180deg, rgba(11,8,12,.94) 34%, transparent)}
+.pf-eyebrow{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#98908a;margin-bottom:7px}
+.pf-title{font-family:var(--disp),sans-serif;font-weight:700;font-size:20px;line-height:1.25;color:#f6efe6}
+.pf-lead{font-size:12.5px;color:#98908a;margin-top:5px}
+.pf-back{position:absolute;right:16px;top:calc(max(var(--safe-top,0px), 8px) + 18px);z-index:4;
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(246,239,230,.22);
+  background:rgba(246,239,230,.08);color:#f6efe6;font-size:15px;cursor:pointer;pointer-events:auto}
+
+.pf-node{
+  position:absolute;left:0;top:0;
+  padding:12px 17px;border-radius:999px;
+  font-size:13px;font-weight:500;line-height:1.3;white-space:nowrap;color:#f6efe6;
+  cursor:pointer;user-select:none;
+  background:
+    linear-gradient(175deg, rgba(255,255,255,.10), rgba(255,255,255,0) 55%),
+    radial-gradient(120% 160% at 50% 115%, var(--c) 0%, transparent 72%),
+    rgba(255,255,255,.03);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.22),
+    inset 0 -10px 20px rgba(0,0,0,.45),
+    0 10px 26px -12px rgba(0,0,0,.85);
+  transition:transform .55s cubic-bezier(.22,.9,.28,1.08), box-shadow .45s, color .3s;
+}
+.pf-node.root{padding:15px 20px;font-family:var(--disp),sans-serif;font-size:13.5px;font-weight:700}
+.pf-node.on{
+  color:#fff;
+  box-shadow:
+    inset 0 1.5px 1.5px rgba(255,255,255,.5),
+    inset 0 0 24px 2px var(--c),
+    0 0 0 1.5px var(--c),
+    0 0 34px -2px var(--c),
+    0 12px 30px -12px rgba(0,0,0,.85);
+}
+.pf-node.bud{animation:pfPop .5s cubic-bezier(.2,.9,.3,1.25) backwards}
+@keyframes pfPop{
+  from{opacity:0;transform:translate(var(--bx),var(--by)) scale(.4);filter:blur(9px)}
+}
+
+#plan-links{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.pf-link{stroke-width:2;fill:none;opacity:.42}
+.pf-link.fresh{stroke-dasharray:300;stroke-dashoffset:300;animation:pfDraw .55s ease-out forwards}
+@keyframes pfDraw{to{stroke-dashoffset:0}}
+
+.pf-dock{
+  position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 16px);
+  max-width:488px;margin:0 auto;z-index:4;
+  border-radius:999px;padding:13px 15px 13px 21px;
+  display:flex;align-items:center;gap:12px;
+  background:rgba(18,13,20,.82);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.2), 0 18px 44px -12px rgba(0,0,0,.8);
+}
+.pf-picked{flex:1;font-size:12.5px;color:#98908a}
+.pf-picked b{color:#ffb37c;font-weight:600}
+.pf-go{padding:12px 24px;border-radius:999px;border:none;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:600;color:#2c0e02;
+  background:radial-gradient(130% 160% at 25% 20%, #ffd9a0, #ff9a4d 50%, #e33d14);
+  box-shadow:inset 0 1.5px 1.5px rgba(255,246,230,.8);
+  opacity:.35;transition:opacity .3s}
+.pf-go.ready{opacity:1}
+
+@media (prefers-reduced-motion: reduce){
+  .pf-node{transition:box-shadow .45s,color .3s}
+  .pf-node.bud,.pf-link.fresh{animation:none}
+  #plan-field{transition:none}
+}
+
 /* Заголовок направления в анкете плана. НЕ похож на .quiz-answer сознательно:
    когда они выглядели одинаково, экран превращался в кашу — было не понять,
    где категория, а где сам выбор */
@@ -1070,6 +1157,22 @@ body.onboarding-bar-visible header{margin-bottom:106px}
       <div id="plan-inner"></div>
     </div>
     <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- Поле выбора тем — шаг 1 личного плана, особенный экран -->
+  <div id="plan-field">
+    <div id="plan-world"><svg id="plan-links"></svg></div>
+    <svg id="plan-grain" width="100%" height="100%"><filter id="pfn"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#pfn)" opacity=".5"/></svg>
+    <div class="pf-hud">
+      <div class="pf-eyebrow">Твой путь · шаг 1</div>
+      <div class="pf-title">Осмотрись и собери своё</div>
+      <div class="pf-lead">Поле двигается пальцем. Тапай темы — они распускаются.</div>
+    </div>
+    <button class="pf-back" onclick="closePlanField()">✕</button>
+    <div class="pf-dock">
+      <div class="pf-picked" id="pf-picked">Пока ничего не выбрано</div>
+      <button class="pf-go" id="pf-go" onclick="planFieldDone()">Дальше</button>
+    </div>
   </div>
 
   <!-- ── Правила колоды ── -->
@@ -1796,7 +1899,7 @@ function switchView(name) {
     markCardsSeen();
   }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
-  if (name === 'plan') { renderPlanScreen(); }
+  if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
     const el = document.getElementById('pi-points');
@@ -4069,7 +4172,7 @@ function renderPersonalPlanSection(){
    Подбор идёт НА КЛИЕНТЕ: библиотека и так вся загружена, ходить на сервер
    незачем — план пересобирается мгновенно и одинаково при каждом открытии. */
 
-const PLAN_MAX_PROBLEMS = 3;      // больше трёх размывает подбор до бесполезного
+const PLAN_MAX_PROBLEMS = 10;     // потолок: план секциями по каждой теме, дальше это простыня
 const PLAN_PER_PROBLEM  = 3;      // лекций под одну боль
 
 const PLAN_LEVELS = [
@@ -4109,7 +4212,7 @@ let planOpenPhases = {};   // какие направления развёрну
 let planProblems = [];      // справочник проблем с бэкенда
 let planAnswers  = null;    // { problems, level, depth, note } либо null
 let planStep     = 0;
-let planDraft    = { problems: [], level: '', depth: '', note: '' };
+let planDraft    = { problems: [], expanded: [], level: '', depth: '', note: '' };
 
 async function loadPlanProblems(){
   await loadPlanPhases();
@@ -4271,12 +4374,398 @@ function renderPlanScreen(){
 async function startPlanQuiz(){
   planStep = 0;
   planDraft = planAnswers
-    ? { problems: (planAnswers.problems || []).slice(), level: planAnswers.level,
-        depth: planAnswers.depth, note: planAnswers.note }
-    : { problems: [], level: '', depth: '', note: '' };
+    ? { problems: (planAnswers.problems || []).slice(), expanded: [],
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note }
+    : { problems: [], expanded: [], level: '', depth: '', note: '' };
+  // Уже выбранные темы раскрываем, чтобы человек видел, где стоят его галочки
+  planDraft.problems.forEach(function(k){
+    if (pfChildren(k).length || pfRelated(k).length) planDraft.expanded.push(k);
+  });
   switchView('plan');
   await loadPlanProblems();
   renderPlanQuestion();
+}
+
+/* ══ Поле выбора тем ═══════════════════════════════════════════════════════
+   Корневые темы («двери») стоят кучно в центре и видны сразу. Тап раскрывает:
+   частные случаи уходят ВНИЗ, соседние темы — ВБОК. По направлению связи
+   человек читает её тип, без единой подписи.
+
+   Раскладка — пружины к «родному» месту плюс расталкивание пересечений:
+   распустившаяся тема физически раздвигает соседей, и это видно глазами. */
+
+const PF_W = 2200, PF_H = 2200, PF_CX = 1100, PF_CY = 1080;
+const PF_COLORS = ['#4f8fca','#c9a23a','#e2712f','#cd4a2e','#b0355e','#8b3fd1','#3f9c8b','#5b7fd4'];
+
+let pfPos = {}, pfSizes = {}, pfLinks = {};   // позиции, размеры, живые линии
+let pfOx = 0, pfOy = 0, pfVx = 0, pfVy = 0, pfRaf = null;
+let pfDragging = false, pfMoved = false, pfTrail = [];
+let pfWired = false;
+
+// Родительская тема (частный случай) — из справочника, а не из локальной копии
+function pfParentOf(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p && p.parent_key ? p.parent_key : null;
+}
+function pfChildren(key){
+  return planProblemsWithContent().filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+}
+function pfRelated(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корневые задаёт Denis флагом. Пока он их не расставил, поле не должно быть
+   пустым — берём темы верхнего уровня, у которых есть лекции */
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  const marked = avail.filter(function(p){ return p.is_root; });
+  const list = marked.length ? marked : avail.filter(function(p){ return !p.parent_key; }).slice(0, 8);
+  return list.slice().sort(function(a,b){
+    return (a.root_order||100) - (b.root_order||100) || (a.sort_order||100) - (b.sort_order||100);
+  }).map(function(p){ return p.key; });
+}
+
+function pfLabel(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(function(k){
+      if (!color[k]) color[k] = color[key];
+      walk(k);
+    });
+  };
+  roots.forEach(walk);
+  return { list: seen, color: color };
+}
+
+// «Родное» место: корни — своё гнездо в кучке, дети — под родителем,
+// соседи — сбоку. Пружина тянет сюда, коллизии отталкивают
+function pfHome(key, roots){
+  const ri = roots.indexOf(key);
+  if (ri !== -1){
+    const a = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
+    return { x: PF_CX + Math.cos(a) * 195 + (ri%2 ? 22 : -16),
+             y: PF_CY + Math.sin(a) * 155 + (ri%3 ? 14 : -18) };
+  }
+  for (const p of Object.keys(pfPos)){
+    if (planDraft.expanded.indexOf(p) === -1) continue;
+    const ci = pfChildren(p).indexOf(key);
+    if (ci !== -1) return { x: pfPos[p].x + 20, y: pfPos[p].y + 60 + ci*52 };
+    const si = pfRelated(p).indexOf(key);
+    if (si !== -1) return { x: pfPos[p].x + (pfSizes[p] ? pfSizes[p].w : 150) + 48,
+                            y: pfPos[p].y + 4 + si*46 };
+  }
+  return { x: PF_CX, y: PF_CY };
+}
+
+function pfRelax(list, roots){
+  const PAD = 12, ITER = 110;
+
+  /* Кто чей родитель и каким по счёту — считаем ОДИН РАЗ на прогон.
+     Раньше это перебиралось внутри каждой из 110 итераций для каждой темы,
+     и на трёх десятках тем расчёт занимал ~170 мс: тап заметно подтормаживал */
+  const ref = {};
+  list.forEach(function(k){
+    const ri = roots.indexOf(k);
+    if (ri !== -1){
+      const a = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
+      ref[k] = { fixed: { x: PF_CX + Math.cos(a)*195 + (ri%2 ? 22 : -16),
+                          y: PF_CY + Math.sin(a)*155 + (ri%3 ? 14 : -18) } };
+      return;
+    }
+    for (let i = 0; i < list.length; i++){
+      const p = list[i];
+      if (planDraft.expanded.indexOf(p) === -1) continue;
+      const ci = pfChildren(p).indexOf(k);
+      if (ci !== -1){ ref[k] = { par: p, kind: 'child', i: ci }; return; }
+      const si = pfRelated(p).indexOf(k);
+      if (si !== -1){ ref[k] = { par: p, kind: 'side', i: si }; return; }
+    }
+    ref[k] = { fixed: { x: PF_CX, y: PF_CY } };
+  });
+
+  const homeOf = function(k){
+    const r = ref[k];
+    if (r.fixed) return r.fixed;
+    const p = pfPos[r.par];
+    if (!p) return { x: PF_CX, y: PF_CY };
+    return r.kind === 'child'
+      ? { x: p.x + 20, y: p.y + 60 + r.i*52 }
+      : { x: p.x + (pfSizes[r.par] ? pfSizes[r.par].w : 150) + 48, y: p.y + 4 + r.i*46 };
+  };
+
+  for (let it = 0; it < ITER; it++){
+    // Пружина слабеет к концу: иначе она и расталкивание воюют вничью
+    // и на плотном поле остаются наложения
+    const spring = it < ITER*.6 ? 1 : (1 - (it - ITER*.6) / (ITER*.4));
+    list.forEach(function(k){
+      const h = homeOf(k);
+      const w = (roots.indexOf(k) !== -1 ? .06 : .12) * spring;
+      pfPos[k].x += (h.x - pfPos[k].x) * w;
+      pfPos[k].y += (h.y - pfPos[k].y) * w;
+    });
+    for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
+      const a = list[i], b = list[j];
+      const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
+      const ox = Math.min(pfPos[a].x+sa.w+PAD, pfPos[b].x+sb.w+PAD) - Math.max(pfPos[a].x-PAD, pfPos[b].x-PAD);
+      const oy = Math.min(pfPos[a].y+sa.h+PAD, pfPos[b].y+sb.h+PAD) - Math.max(pfPos[a].y-PAD, pfPos[b].y-PAD);
+      if (ox <= 0 || oy <= 0) continue;
+      const wa = roots.indexOf(a) !== -1 ? .25 : 1, wb = roots.indexOf(b) !== -1 ? .25 : 1;
+      const s = wa + wb;
+      if (ox < oy){
+        const d = (pfPos[a].x + sa.w/2) < (pfPos[b].x + sb.w/2) ? -1 : 1;
+        pfPos[a].x += d * ox * (wa/s); pfPos[b].x -= d * ox * (wb/s);
+      } else {
+        const d = (pfPos[a].y + sa.h/2) < (pfPos[b].y + sb.h/2) ? -1 : 1;
+        pfPos[a].y += d * oy * (wa/s); pfPos[b].y -= d * oy * (wb/s);
+      }
+    }
+    list.forEach(function(k){
+      const s = pfSizes[k] || {w:150,h:42};
+      pfPos[k].x = Math.max(30, Math.min(PF_W - s.w - 30, pfPos[k].x));
+      pfPos[k].y = Math.max(140, Math.min(PF_H - s.h - 40, pfPos[k].y));
+    });
+  }
+}
+
+function pfRender(){
+  const v = pfVisible(), list = v.list, roots = pfRoots();
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+
+  // Новая тема рождается у родителя — оттуда и распускается
+  list.forEach(function(k){
+    if (pfPos[k]) return;
+    if (roots.indexOf(k) !== -1){ pfPos[k] = pfHome(k, roots); return; }
+    const par = Object.keys(pfPos).find(function(p){
+      return pfChildren(p).concat(pfRelated(p)).indexOf(k) !== -1; });
+    pfPos[k] = par ? { x: pfPos[par].x + 12, y: pfPos[par].y + 18 } : { x: PF_CX, y: PF_CY };
+  });
+  Object.keys(pfPos).forEach(function(k){ if (list.indexOf(k) === -1) delete pfPos[k]; });
+
+  world.querySelectorAll('.pf-node').forEach(function(e){ e.remove(); });
+  const els = {};
+  list.forEach(function(k){
+    const el = document.createElement('div');
+    const fresh = !pfSizes[k];
+    el.className = 'pf-node' + (roots.indexOf(k) !== -1 ? ' root' : '') + (fresh && roots.indexOf(k) === -1 ? ' bud' : '');
+    el.style.setProperty('--c', v.color[k] || PF_COLORS[0]);
+    el.textContent = pfLabel(k);
+    if (planDraft.problems.indexOf(k) !== -1) el.classList.add('on');
+    el.onclick = function(){ if (!pfMoved) pfTap(k); };
+    el.style.transform = 'translate(' + pfPos[k].x + 'px,' + pfPos[k].y + 'px)';
+    el.style.setProperty('--bx', pfPos[k].x + 'px');
+    el.style.setProperty('--by', pfPos[k].y + 'px');
+    world.appendChild(el);
+    els[k] = el;
+  });
+
+  requestAnimationFrame(function(){
+    list.forEach(function(k){ pfSizes[k] = { w: els[k].offsetWidth, h: els[k].offsetHeight }; });
+    pfRelax(list, roots);
+    list.forEach(function(k){
+      els[k].style.transform = 'translate(' + pfPos[k].x + 'px,' + pfPos[k].y + 'px)';
+    });
+    // Линии обновляем ПОСЛЕ того, как ноды доехали до новых мест
+    setTimeout(function(){ pfDrawLinks(list, v.color); }, 340);
+  });
+
+  const n = planDraft.problems.length;
+  const pk = document.getElementById('pf-picked');
+  if (pk) pk.innerHTML = n ? 'Выбрано <b>' + n + '</b> из ' + PLAN_MAX_PROBLEMS
+                           : 'Пока ничего не выбрано';
+  const go = document.getElementById('pf-go');
+  if (go) go.classList.toggle('ready', n > 0);
+}
+
+/* Связи. Раньше вся пачка стиралась и рисовалась заново на каждый тап — и все
+   линии мигали. Теперь у каждой линии свой ключ: существующие просто
+   переезжают, анимация прорисовки достаётся только новым. */
+function pfDrawLinks(list, color){
+  const svg = document.getElementById('plan-links');
+  if (!svg) return;
+  const need = {};
+
+  list.forEach(function(k){
+    const par = list.find(function(p){
+      return planDraft.expanded.indexOf(p) !== -1 &&
+        (pfChildren(p).indexOf(k) !== -1 || pfRelated(p).indexOf(k) !== -1);
+    });
+    if (!par) return;
+    const isChild = pfChildren(par).indexOf(k) !== -1;
+    need[par + '>' + k] = { par: par, k: k, isChild: isChild };
+  });
+
+  // Убираем те, которых больше нет
+  Object.keys(pfLinks).forEach(function(id){
+    if (!need[id]){ pfLinks[id].remove(); delete pfLinks[id]; }
+  });
+
+  Object.keys(need).forEach(function(id){
+    const it = need[id];
+    const a = pfPos[it.par], b = pfPos[it.k];
+    if (!a || !b) return;
+    const sa = pfSizes[it.par] || {w:150,h:42}, sb = pfSizes[it.k] || {w:150,h:42};
+
+    /* Маршрут «уголком», а не размашистой дугой: дуги пересекали чужие
+       капсулы и путались между собой. Вертикаль от родителя вниз, потом
+       поворот и горизонталь в левый край ребёнка — линии идут по сетке
+       и почти не пересекаются */
+    let d;
+    if (it.isChild){
+      const x = a.x + 20, y0 = a.y + sa.h - 2, y1 = b.y + sb.h/2, r = Math.min(14, Math.abs(y1-y0)/2);
+      d = 'M ' + x + ' ' + y0 + ' V ' + (y1 - r)
+        + ' Q ' + x + ' ' + y1 + ' ' + (x + r) + ' ' + y1
+        + ' H ' + (b.x - 2);
+    } else {
+      const y = a.y + sa.h/2, x0 = a.x + sa.w + 2, y1 = b.y + sb.h/2;
+      const mx = (x0 + b.x) / 2, r = Math.min(14, Math.abs(y1-y)/2 || 0);
+      d = Math.abs(y1 - y) < 4
+        ? 'M ' + x0 + ' ' + y + ' H ' + (b.x - 2)
+        : 'M ' + x0 + ' ' + y + ' H ' + (mx - r)
+          + ' Q ' + mx + ' ' + y + ' ' + mx + ' ' + (y + (y1 > y ? r : -r))
+          + ' V ' + (y1 - (y1 > y ? r : -r))
+          + ' Q ' + mx + ' ' + y1 + ' ' + (mx + r) + ' ' + y1
+          + ' H ' + (b.x - 2);
+    }
+
+    let path = pfLinks[id];
+    if (!path){
+      path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('class','pf-link fresh');
+      svg.appendChild(path);
+      pfLinks[id] = path;
+    }
+    path.setAttribute('d', d);
+    path.setAttribute('stroke', color[it.k] || PF_COLORS[0]);
+  });
+}
+
+function pfTap(key){
+  const i = planDraft.problems.indexOf(key);
+  const kids = pfChildren(key).concat(pfRelated(key));
+  if (i !== -1){
+    planDraft.problems.splice(i, 1);
+    // Свернуть можно только если внутри ничего не выбрано — иначе выбор
+    // исчез бы с экрана вместе с ветками
+    const inside = kids.some(function(k){ return planDraft.problems.indexOf(k) !== -1; });
+    if (!inside){
+      const e = planDraft.expanded.indexOf(key);
+      if (e !== -1) planDraft.expanded.splice(e, 1);
+    }
+  } else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' тем');
+      return;
+    }
+    planDraft.problems.push(key);
+    if (kids.length && planDraft.expanded.indexOf(key) === -1) planDraft.expanded.push(key);
+  }
+  pfRender();
+}
+
+/* Перемещение по полю. Скорость меряем по окну последних 90 мс, а не по
+   последнему кадру: кадр перед отрывом пальца почти всегда медленный, и
+   из-за него бросок не чувствовался вовсе */
+function pfApply(){
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
+  pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
+  world.style.transform = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+}
+function pfMomentum(){
+  pfVx *= .955; pfVy *= .955;
+  if (Math.abs(pfVx) < .4 && Math.abs(pfVy) < .4) return;
+  pfOx += pfVx; pfOy += pfVy; pfApply();
+  pfRaf = requestAnimationFrame(pfMomentum);
+}
+function pfWire(){
+  if (pfWired) return;
+  pfWired = true;
+  const f = document.getElementById('plan-field');
+  const start = function(x, y){
+    cancelAnimationFrame(pfRaf);
+    pfDragging = true; pfMoved = false;
+    pfTrail = [{ t: performance.now(), x: x, y: y }];
+  };
+  const move = function(x, y){
+    if (!pfDragging) return;
+    const last = pfTrail[pfTrail.length-1];
+    pfOx += x - last.x; pfOy += y - last.y;
+    if (Math.abs(x - pfTrail[0].x) + Math.abs(y - pfTrail[0].y) > 7) pfMoved = true;
+    pfTrail.push({ t: performance.now(), x: x, y: y });
+    while (pfTrail.length > 2 && performance.now() - pfTrail[0].t > 90) pfTrail.shift();
+    pfApply();
+  };
+  const end = function(){
+    if (!pfDragging) return;
+    pfDragging = false;
+    if (pfMoved && pfTrail.length >= 2){
+      const a = pfTrail[0], b = pfTrail[pfTrail.length-1];
+      const dt = Math.max(1, b.t - a.t);
+      pfVx = (b.x - a.x) / dt * 16;
+      pfVy = (b.y - a.y) / dt * 16;
+      pfMomentum();
+    }
+    setTimeout(function(){ pfMoved = false; }, 50);
+  };
+  f.addEventListener('touchstart', function(e){ start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  f.addEventListener('touchmove',  function(e){ move(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  f.addEventListener('touchend', end, {passive:true});
+  f.addEventListener('mousedown', function(e){ start(e.clientX, e.clientY); });
+  f.addEventListener('mousemove', function(e){ move(e.clientX, e.clientY); });
+  f.addEventListener('mouseup', end);
+}
+
+async function openPlanField(){
+  await loadPlanProblems();
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  pfPos = {}; pfSizes = {}; pfLinks = {};
+  const world = document.getElementById('plan-world');
+  world.style.width = PF_W + 'px';
+  world.style.height = PF_H + 'px';
+  const svg = document.getElementById('plan-links');
+  if (svg){ svg.setAttribute('width', PF_W); svg.setAttribute('height', PF_H); svg.innerHTML = ''; }
+  pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
+  pfApply();
+  pfWire();
+  pfRender();
+  f.classList.add('show');
+  requestAnimationFrame(function(){ f.classList.add('in'); });   // проявление
+}
+
+function hidePlanField(){
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  f.classList.remove('in');
+  // Ждём, пока погаснет, и только потом убираем — иначе экран щёлкал бы
+  setTimeout(function(){ f.classList.remove('show'); }, 380);
+}
+
+function closePlanField(){
+  hidePlanField();
+  switchView('library');
+}
+
+function planFieldDone(){
+  if (!planDraft.problems.length) return;
+  hidePlanField();
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
 }
 
 function renderPlanQuestion(){
@@ -4290,61 +4779,9 @@ function renderPlanQuestion(){
     ? '<div class="payment-help-link" style="margin-top:14px" onclick="planBack()">← Назад</div>' : '';
 
   if (planStep === 0){
-    const avail = planProblemsWithContent();
-    if (!avail.length){
-      el.innerHTML = bar + '<div class="quiz-question">Пока нечего выбрать</div>'
-        + '<div class="reward-hint">Лекции ещё размечаются. Загляни чуть позже.</div>';
-      return;
-    }
-    // Направления свёрнуты: раскрытыми они давали экран, который невозможно
-    // окинуть взглядом. Считаем пункты внутри, чтобы было понятно, куда идти
-    const buckets = PLAN_PHASES.map(function(ph){
-      const tops = avail.filter(function(p){ return (p.phase || 'deal') === ph.key && !p.parent_key; });
-      const items = [];
-      tops.forEach(function(p){
-        items.push({ p: p, child: false });
-        // Частный случай идёт сразу под своей общей темой
-        avail.filter(function(c){ return c.parent_key === p.key; })
-             .forEach(function(c){ items.push({ p: c, child: true }); });
-      });
-      return { ph: ph, items: items };
-    }).filter(function(b){ return b.items.length; });
-
-    // Проблемы, чья общая тема сейчас без лекций, иначе потерялись бы совсем
-    const placed = {};
-    buckets.forEach(function(b){ b.items.forEach(function(it){ placed[it.p.key] = true; }); });
-    const rest = avail.filter(function(p){ return !placed[p.key]; });
-    if (rest.length){
-      buckets.push({ ph: { key:'_rest', name:'Ещё' },
-                     items: rest.map(function(p){ return { p: p, child: false }; }) });
-    }
-
-    let list = '';
-    buckets.forEach(function(b){
-      const picked = b.items.filter(function(it){ return planDraft.problems.indexOf(it.p.key) !== -1; }).length;
-      // Направление с уже отмеченным пунктом открываем само — иначе при возврате
-      // человек не видит, что где-то внутри у него что-то выбрано
-      const open = planOpenPhases[b.ph.key] || (planOpenPhases[b.ph.key] === undefined && picked > 0);
-      list += '<button class="plan-group' + (open ? ' open' : '') + '"'
-        + ' onclick="planToggleGroup(' + jsArg(b.ph.key) + ')">'
-        + '<span class="plan-group-name">' + escapeHtml(b.ph.name) + '</span>'
-        // Показываем только выбранное. Общее число пунктов рядом с ним читалось
-        // как вторая непонятная цифра и ничего не подсказывало
-        + (picked ? '<span class="plan-group-count">выбрано ' + picked + '</span>' : '')
-        + '<span class="plan-group-chevron">›</span>'
-        + '</button>';
-      if (open){
-        list += '<div class="plan-group-items">'
-          + b.items.map(function(it){ return planOptionHtml(it.p, it.child); }).join('')
-          + '</div>';
-      }
-    });
-    el.innerHTML = bar
-      + '<div class="quiz-question">Что по ощущениям хочется решить в первую очередь?</div>'
-      + '<div class="reward-hint" style="margin-bottom:10px">Открой направление и отметь, что ближе. Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов, в том числе из разных направлений.</div>'
-      + list
-      + '<button class="quiz-answer picked" id="plan-next" style="margin-top:14px" onclick="planNext()">Дальше</button>';
-    updatePlanNextState();
+    // Первый шаг живёт на отдельном полноэкранном поле, не в карточке
+    openPlanField();
+    el.innerHTML = '';
     return;
   }
 
@@ -4426,6 +4863,11 @@ function planBack(){
   if (planStep > 0) planStep--;
   renderPlanQuestion();
   window.scrollTo(0, 0);
+}
+
+// Экран плана уходит — поле не должно остаться висеть поверх приложения
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
 }
 
 function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
