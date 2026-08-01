@@ -4081,18 +4081,29 @@ const PLAN_DEPTHS = [
   { key:'light', name:'только самое важное' },
   { key:'deep',  name:'как следует' },
 ];
-/* Названия направлений — КОРОТКИЕ СУЩЕСТВИТЕЛЬНЫЕ, а пункты внутри — вопросы
-   «Как ...». Пока направления назывались задачами («Понять, кто передо мной»),
-   они читались как пункты, и экран превращался в мешанину */
-const PLAN_PHASES = [
-  { key:'start',   name:'Старт' },
-  { key:'search',  name:'Клиенты' },
-  { key:'qualify', name:'Отбор' },
-  { key:'deal',    name:'Сделка' },
-  { key:'retain',  name:'Повторные продажи' },
-  { key:'scale',   name:'Масштаб' },
-  { key:'self',    name:'Про себя' },
+/* Направления живут в БАЗЕ — Denis правит названия и порядок сам, в анализаторе.
+   Захардкоженный список расходился бы с его правками при первом переименовании.
+   Запасной набор нужен на случай, если запрос не прошёл: без него экран выбора
+   остался бы пустым, хотя проблемы уже загружены */
+let PLAN_PHASES = [
+  { key:'start', name:'Старт' }, { key:'search', name:'Клиенты' },
+  { key:'qualify', name:'Отбор' }, { key:'deal', name:'Сделка' },
+  { key:'retain', name:'Повторные продажи' }, { key:'scale', name:'Масштаб' },
+  { key:'self', name:'Про себя' },
 ];
+let planPhasesLoaded = false;
+
+async function loadPlanPhases(){
+  if (planPhasesLoaded) return;
+  try {
+    const r = await fetch(`${API_URL}/phases`);
+    if (r.ok){
+      const rows = await r.json();
+      if (rows.length) PLAN_PHASES = rows.map(function(p){ return { key:p.key, name:p.label }; });
+      planPhasesLoaded = true;
+    }
+  } catch(e){}
+}
 let planOpenPhases = {};   // какие направления развёрнуты на экране выбора
 
 let planProblems = [];      // справочник проблем с бэкенда
@@ -4101,6 +4112,7 @@ let planStep     = 0;
 let planDraft    = { problems: [], level: '', depth: '', note: '' };
 
 async function loadPlanProblems(){
+  await loadPlanPhases();
   if (planProblems.length) return;
   try {
     const r = await fetch(`${API_URL}/problems`);
