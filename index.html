@@ -763,6 +763,30 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .pmap-mark{position:absolute;right:-1px;bottom:-1px;z-index:2;width:20px;height:20px;border-radius:50%;
   background:var(--bg2);color:var(--text);font-size:11px;display:flex;align-items:center;justify-content:center}
 
+/* Компактная карта в библиотеке — та же тропинка, положенная на бок.
+   Отрицательные поля вытаскивают ленту под края карточки: обрезанная
+   на полпути остановка сама говорит «здесь ещё есть, листай» */
+.prail{position:relative;margin:12px -16px 0;padding:0;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.prail::-webkit-scrollbar{display:none}
+.prail-inner{position:relative;height:116px}
+.prail-line{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.prail-line path{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:6 8}
+.prail .pmap-stop{width:78px;animation:none}
+.prail .pmap-blob{width:52px;height:52px;font-size:15px}
+.prail .pmap-cap{font-size:10px}
+.prail .pmap-mark{width:17px;height:17px;font-size:9px}
+/* Следующая остановка дышит кольцом — единственная подсказка, куда жать */
+.pmap-stop.next .pmap-blob{box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45),
+  0 0 0 2px var(--card), 0 0 0 4px var(--pc), 0 8px 18px -8px rgba(0,0,0,.5);
+  animation:pmapPulse 2.6s ease-in-out infinite}
+@keyframes pmapPulse{50%{opacity:.62}}
+.prail-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+
+@media (prefers-reduced-motion:reduce){
+  .pmap-stop,.pmap-stop.next .pmap-blob{animation:none}
+}
+
 /* Попап лекции в карте — намеренно беднее карточки в библиотеке: там человек
    выбирает сам и описание помогает, здесь выбор уже сделан за него, и лишний
    текст только тормозит и подсовывает повод усомниться */
@@ -4526,6 +4550,64 @@ function planMapHtml(answers){
   return html;
 }
 
+/* Компактная карта для карточки в библиотеке — та же последовательность
+   остановок, что и на полном экране, поэтому индексы совпадают и попап
+   открывается тем же openPlanStop. Показываем ВСЕ остановки: лента
+   прокручивается, обрезать нечего */
+function planRailHtml(answers){
+  planLoadMarks();
+  planStops = planStopList(answers);
+  planCardItems = planStops.map(function(s){ return s.lec; });
+  if (!planStops.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+
+  const STEP = 86, X0 = 43, TOP = 6, WAVE = [0, 14];
+  const n = planStops.length;
+  const w = X0 * 2 + (n - 1) * STEP;
+  const yOf = function(i){ return TOP + 26 + WAVE[i % WAVE.length]; };
+
+  let d = 'M ' + X0 + ' ' + yOf(0);
+  for (let i = 1; i < n; i++){
+    const px = X0 + (i-1) * STEP, x = X0 + i * STEP;
+    d += ' C ' + (px + STEP/2) + ' ' + yOf(i-1) + ', ' + (x - STEP/2) + ' ' + yOf(i)
+       + ', ' + x + ' ' + yOf(i);
+  }
+
+  // Первая непройденная — та, к которой стоит вернуться
+  let nextIdx = planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+
+  let html = '<div class="prail"><div class="prail-inner" style="width:' + w + 'px">'
+    + '<svg class="prail-line" width="' + w + '" height="116"><path d="' + d + '"></path></svg>';
+
+  planStops.forEach(function(s, i){
+    const done = planVisited.has(s.lec.slug);
+    const skip = planSkipped.has(s.lec.slug);
+    const color = PMAP_COLORS[i % PMAP_COLORS.length];
+    html += '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+        + (i === nextIdx ? ' next' : '') + '"'
+      + ' style="left:' + (X0 + i * STEP) + 'px;top:' + (TOP + WAVE[i % WAVE.length]) + 'px;--pc:' + color + '"'
+      + ' onclick="openPlanStop(' + i + ')">'
+      + '<span class="pmap-blob">'
+        + '<img src="images/lectures/' + s.lec.slug + '.jpg" alt="" loading="lazy" onerror="this.remove()">'
+        + '<b>' + (i + 1) + '</b>'
+        + (done ? '<span class="pmap-mark">✓</span>' : '')
+      + '</span>'
+      + '<span class="pmap-cap">' + escapeHtml(s.lec.title || '') + '</span>'
+      + '</button>';
+  });
+  html += '</div></div>';
+
+  const done = planStops.filter(function(s){ return planVisited.has(s.lec.slug); }).length;
+  return '<div class="prail-head">'
+      + '<div class="section-label" style="margin:0">Твой путь</div>'
+      + '<div class="reward-hint" style="margin:0">' + done + ' из ' + n + '</div>'
+    + '</div>' + html;
+}
+
 function planUnskipAll(){
   planSkipped = new Set();
   planSaveMarks();
@@ -4631,8 +4713,9 @@ function renderPersonalPlanBody(){
       + '<button class="quiz-answer" onclick="startPlanQuiz()">Собрать личный план</button>';
     return;
   }
-  el.innerHTML = planHtml(planAnswers, true)
-    + '<div class="payment-help-link" style="margin-top:10px" onclick="startPlanQuiz()">Пересобрать план →</div>';
+  el.innerHTML = planRailHtml(planAnswers)
+    + '<div class="payment-help-link" style="margin-top:10px" onclick="switchView(\'plan\');renderPlanScreen()">Открыть всю карту →</div>'
+    + '<div class="payment-help-link" style="margin-top:6px" onclick="startPlanQuiz()">Пересобрать план →</div>';
 }
 
 function renderPlanScreen(){
