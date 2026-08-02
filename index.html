@@ -4937,19 +4937,28 @@ function pfLabel(key){
 
 function pfVisible(){
   const roots = pfRoots();
-  const seen = [], color = {};
-  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; });
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
   const walk = function(key){
     if (seen.indexOf(key) !== -1) return;
     seen.push(key);
     if (planDraft.expanded.indexOf(key) === -1) return;
     pfChildren(key).concat(pfRelated(key)).forEach(function(k){
       if (!color[k]) color[k] = color[key];
+      /* ОБЛАЧКО НАСЛЕДУЕТСЯ ОТ ТОГО, КТО РАСКРЫЛ, а не берётся из собственного
+         направления темы. Соседние темы (`related`) СПЕЦИАЛЬНО пересекают
+         границу фазы — и раньше такая тема попадала в облачко СВОЕГО
+         направления: физика тянула её к чужому центру масс и разводила с
+         родителем по большому «межоблачному» зазору. Именно поэтому второе
+         поколение разлеталось по полю вместо того, чтобы собраться вокруг
+         нажатой темы */
+      if (!cluster[k]) cluster[k] = cluster[key] || key;
+      if (!from[k]) from[k] = key;   // кто раскрыл — он же родитель веера
       walk(k);
     });
   };
   roots.forEach(walk);
-  return { list: seen, color: color };
+  return { list: seen, color: color, cluster: cluster, from: from };
 }
 
 /* ══ Поле выбора: физика облачков ═════════════════════════════════════════
@@ -5008,28 +5017,33 @@ function pfSeed(key){
   };
 }
 
-function pfRelax(list, roots){
+function pfRelax(list, roots, meta){
+  // meta — результат pfVisible(): в нём облачко и «кто раскрыл» посчитаны по
+  // дереву раскрытия, а не по собственному направлению темы
+  if (!meta) meta = pfVisible();
   const cl = {}, home = {};
-  list.forEach(function(k){ cl[k] = pfCluster(k); });
+  list.forEach(function(k){ cl[k] = (meta.cluster && meta.cluster[k]) || pfCluster(k); });
   const cx = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].x + s.w/2; };
   const cy = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].y + s.h/2; };
 
-  // Родство считаем ОДИН раз на прогон — перебор внутри итераций стоил ~170мс
+  /* Родитель веера — ТОТ, КТО РАСКРЫЛ капсулу (`meta.from`), а не первый
+     попавшийся раскрытый узел, который её упоминает. Соседство взаимно
+     (`push.related` содержит `remind`, и наоборот), поэтому перебор списка мог
+     назначить родителем не ту капсулу — и веер строился вокруг чужой темы.
+     Считаем ОДИН раз на прогон: перебор внутри итераций стоил ~170мс */
   const ref = {};
   list.forEach(function(k){
     if (roots.indexOf(k) !== -1) return;
-    for (let i = 0; i < list.length; i++){
-      const p = list[i];
-      if (planDraft.expanded.indexOf(p) === -1) continue;
-      const kids = pfChildren(p), sides = pfRelated(p);
-      const all = kids.concat(sides);
-      const idx = all.indexOf(k);
-      if (idx !== -1){ ref[k] = { par: p, i: idx, n: all.length, child: kids.indexOf(k) !== -1 }; return; }
-    }
+    const par = meta.from && meta.from[k];
+    if (!par) return;
+    const kids = pfChildren(par), sides = pfRelated(par);
+    const all = kids.concat(sides);
+    const idx = all.indexOf(k);
+    if (idx !== -1) ref[k] = { par: par, i: idx, n: all.length, child: kids.indexOf(k) !== -1 };
   });
 
   // Какая ветка сейчас в работе: та, к которой относится последняя нажатая тема
-  const focusCl = pfFocus ? pfCluster(pfFocus) : null;
+  const focusCl = pfFocus ? (cl[pfFocus] || pfCluster(pfFocus)) : null;
   const anyOpen = roots.some(function(k){ return planDraft.expanded.indexOf(k) !== -1; });
 
   /* Корни: компактное кольцо. Раскрытое направление отъезжает от центра,
@@ -5038,6 +5052,16 @@ function pfRelax(list, roots){
   // Поворот всего кольца — на каждую соль своё начало, узкий разброс радиуса
   // (не угла: соседние корни не должны меняться местами) — иначе изредка
   // выпадала бы неудачная раскладка, а не просто «другая»
+  /* Потолок не может быть меньше, чем физически нужно самим корням: сумма их
+     ширин с зазорами — это длина окружности, ниже неё кольцо просто не
+     существует, и жёсткий зажим начал бы вдавливать капсулы друг в друга */
+  let ringNeed = 0;
+  roots.forEach(function(k){
+    const s2 = pfSizes[k] || {w:150,h:42};
+    ringNeed += s2.w + PF_GAP_START;
+  });
+  const rootCap = Math.max(PF_ROOT_MAX_R, ringNeed / (2 * Math.PI) * 1.08);
+
   const ringSpin = pfLayoutSalt * Math.PI * 2;
   roots.forEach(function(k, i){
     const a = (i / roots.length) * Math.PI * 2 - Math.PI/2 + ringSpin;
@@ -5045,11 +5069,13 @@ function pfRelax(list, roots){
     let r = open ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
     if (anyOpen && !open && focusCl) r += PF_PUSH_AWAY;
     r += (pfSaltedRand(k, 1) - 0.5) * 40;   // ±20px
-    // Потолок — Denis заметил, что в паре случаев корень улетал почти к краю
-    // экрана. Это только ограничивает «дом», к которому тянется пружина;
-    // расталкивание всё равно может вытолкнуть корень дальше — настоящую
-    // гарантию даёт жёсткий зажим ПОСЛЕ решателя, см. в конце pfRelax
-    r = Math.min(r, PF_ROOT_MAX_R);
+    /* Потолок радиуса ДЕЙСТВУЕТ ТОЛЬКО НА СТАРТЕ. Как только ветка раскрыта,
+       её букету нужно место, а другим направлениям — уйти с дороги: если
+       держать все корни в кольце 260px, дети раскрытой ветки оказываются в том
+       же кольце и раскладка становится геометрически невозможной — капсулы
+       ОБЯЗАНЫ наехать, сколько проходов решателя ни давай. Denis и просил
+       именно так: тесно на старте, «а после нажатия пускай улетают» */
+    if (!anyOpen) r = Math.min(r, rootCap);
     const s = pfSizes[k] || {w:150,h:42};
     home[k] = { x: PF_CX + Math.cos(a)*r - s.w/2, y: PF_CY + Math.sin(a)*r - s.h/2 };
   });
@@ -5088,24 +5114,26 @@ function pfRelax(list, roots){
       pfPos[k].y += (home[k].y - pfPos[k].y) * kSpring;
     });
 
-    /* Зажим радиуса корня — ВНУТРИ цикла, ДО расталкивания. Если делать это
-       после всех проходов (как было в v19), зажим затягивает корень обратно
-       в уже разведённых соседей и капсулы наезжают друг на друга: расталкивать
-       после него уже некому. Здесь же следующий проход расталкивания видит
-       новое положение и разводит всё заново */
-    roots.forEach(function(k){
+    /* Зажим радиуса — ВНУТРИ цикла, ДО расталкивания (после всех проходов он
+       затягивал бы корень обратно в уже разведённых соседей, и разводить было
+       бы уже некому). И только на старте — см. пояснение выше */
+    if (!anyOpen) roots.forEach(function(k){
       const s = pfSizes[k] || {w:150,h:42};
       const dx = cx(k) - PF_CX, dy = cy(k) - PF_CY;
       const d = Math.hypot(dx, dy);
-      if (d > PF_ROOT_MAX_R){
-        const f = PF_ROOT_MAX_R / d;
+      if (d > rootCap){
+        const f = rootCap / d;
         pfPos[k].x = PF_CX + dx * f - s.w/2;
         pfPos[k].y = PF_CY + dy * f - s.h/2;
       }
     });
 
-    // Сплочение: члены облачка тянутся к своему центру, иначе ветка расползается
-    const cen = {};
+    /* Сплочение: члены облачка тянутся к своему центру, иначе ветка расползается.
+       НО в финальных проходах его быть не должно: оно подтягивает капсулы на
+       пару пикселей после каждого разведения, и зазор навсегда застревает чуть
+       ниже заданного — ровно как пружина, которую мы отключаем там же */
+    const cen = it < PF_ITER ? {} : null;
+    if (cen){
     list.forEach(function(k){
       const c = cl[k];
       if (!cen[c]) cen[c] = { x:0, y:0, n:0 };
@@ -5117,6 +5145,7 @@ function pfRelax(list, roots){
       pfPos[k].x += (c.x - cx(k)) * 0.012;
       pfPos[k].y += (c.y - cy(k)) * 0.012;
     });
+    }
 
     for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
       const a = list[i], b = list[j];
@@ -5307,7 +5336,7 @@ function pfRender(){
 
   requestAnimationFrame(function(){
     list.forEach(function(k){ pfSizes[k] = { w: els[k].offsetWidth, h: els[k].offsetHeight }; });
-    pfRelax(list, roots);
+    pfRelax(list, roots, v);
 
     // Дальние капсулы трогаются позже ближних: волна расходится от места тапа,
     // и раскидывание читается как следствие нажатия, а не как общий рывок
