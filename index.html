@@ -668,8 +668,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     inset 0 1px 1px rgba(255,255,255,.22),
     inset 0 -10px 20px rgba(0,0,0,.45),
     0 10px 26px -12px rgba(0,0,0,.85);
-  transition:transform .55s cubic-bezier(.22,.9,.28,1.08), box-shadow .45s, color .3s;
+  /* ВАЖНО: transform и filter капсулы целиком принадлежат JS (pfAnimFrame).
+     Пока парение жило CSS-анимацией на transform, она перехватывала переезд —
+     капсула не подъезжала к новому месту, а прыгала */
+  transition:box-shadow .45s, color .3s;
 }
+.pf-node.open{box-shadow:
+  inset 0 1px 1px rgba(255,255,255,.28),
+  inset 0 -10px 20px rgba(0,0,0,.4),
+  0 0 0 1px rgba(255,255,255,.16),
+  0 10px 26px -12px rgba(0,0,0,.85)}
 .pf-node.root{padding:15px 20px;font-family:var(--disp),sans-serif;font-size:13.5px;font-weight:700}
 .pf-node.on{
   color:#fff;
@@ -680,30 +688,39 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     0 0 34px -2px var(--c),
     0 12px 30px -12px rgba(0,0,0,.85);
 }
-.pf-node.bud{animation:pfPop .5s cubic-bezier(.2,.9,.3,1.25) backwards}
-@keyframes pfPop{
-  from{opacity:0;transform:translate(var(--bx),var(--by)) scale(.4);filter:blur(9px)}
-}
+.pf-node.bud{animation:pfPop .68s ease backwards}
+@keyframes pfPop{from{opacity:0}}
 
-#plan-links{position:absolute;inset:0;pointer-events:none;overflow:visible}
-.pf-link{stroke-width:2;fill:none;opacity:.42}
-.pf-link.fresh{stroke-dasharray:300;stroke-dashoffset:300;animation:pfDraw .55s ease-out forwards}
-@keyframes pfDraw{to{stroke-dashoffset:0}}
+/* Ореол облачка — очень слабое размытое пятно позади капсул ветки */
+#plan-glow{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
+.pf-glow{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;
+  filter:blur(46px);opacity:.2;
+  background:radial-gradient(closest-side, var(--c), transparent 72%)}
 
+/* Материал — тот же, что у таббара приложения: матовое полупрозрачное
+   стекло, а не собственная тёмная плашка. Значения скопированы из .tabbar
+   (var(--card), var(--border), blur 20, та же тень и радиус), изменены
+   только размеры — пилюля ниже и по ширине контента */
 .pf-dock{
   position:absolute;left:50%;transform:translateX(-50%);
-  bottom:calc(env(safe-area-inset-bottom) + 20px);
+  bottom:calc(env(safe-area-inset-bottom) + 16px);
   max-width:calc(100% - 32px);z-index:4;
-  border-radius:999px;padding:9px 9px 9px 20px;
-  display:flex;align-items:center;gap:14px;white-space:nowrap;
-  background:rgba(18,13,20,.82);
+  border-radius:24px;padding:7px 7px 7px 16px;
+  display:flex;align-items:center;gap:10px;white-space:nowrap;
+  /* Значения --card/--border тёмной темы вписаны числами СОЗНАТЕЛЬНО: поле
+     выбора всегда тёмное независимо от темы приложения, а в светлой теме
+     var(--card) — непрозрачный бежевый, и стекло превратилось бы в плашку */
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.2), 0 18px 44px -12px rgba(0,0,0,.8);
+  box-shadow:0 10px 30px -8px rgba(0,0,0,0.35);
 }
-.pf-picked{font-size:12.5px;color:#98908a}
+.pf-picked{font-size:11.5px;color:#98908a}
 .pf-picked b{color:#ffb37c;font-weight:600}
-.pf-go{padding:12px 24px;border-radius:999px;border:none;cursor:pointer;
-  font-family:inherit;font-size:14px;font-weight:600;color:#2c0e02;
+.pf-reset{padding:9px 14px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(246,239,230,.18);background:rgba(246,239,230,.06);color:#e8e0d6;
+  font-family:inherit;font-size:12px;font-weight:600}
+.pf-go{padding:9px 18px;border-radius:999px;border:none;cursor:pointer;
+  font-family:inherit;font-size:12.5px;font-weight:600;color:#2c0e02;
   background:radial-gradient(130% 160% at 25% 20%, #ffd9a0, #ff9a4d 50%, #e33d14);
   box-shadow:inset 0 1.5px 1.5px rgba(255,246,230,.8);
   opacity:.35;transition:opacity .3s}
@@ -727,7 +744,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 @media (prefers-reduced-motion: reduce){
   .pf-node{transition:box-shadow .45s,color .3s}
-  .pf-node.bud,.pf-node.born,.pf-link.fresh{animation:none}
+  .pf-node.bud,.pf-node.born{animation:none}
   .pf-hud > *,.pf-dock.born{animation:none}
   #plan-field{transition:none}
 }
@@ -1267,7 +1284,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
   <!-- Поле выбора тем — шаг 1 личного плана, особенный экран -->
   <div id="plan-field">
-    <div id="plan-world"><svg id="plan-links"></svg></div>
+    <div id="plan-glow"></div>
+    <div id="plan-world"></div>
     <svg id="plan-grain" width="100%" height="100%"><filter id="pfn"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#pfn)" opacity=".5"/></svg>
     <div class="pf-hud">
       <div class="pf-eyebrow">Твой путь · шаг 1</div>
@@ -1277,6 +1295,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <button class="pf-back" onclick="closePlanField()">✕</button>
     <div class="pf-dock">
       <div class="pf-picked" id="pf-picked">Пока ничего не выбрано</div>
+      <button class="pf-reset" onclick="planFieldReset()">Начать сначала</button>
       <button class="pf-go" id="pf-go" onclick="planFieldDone()">Готово</button>
     </div>
   </div>
@@ -4802,10 +4821,15 @@ async function startPlanQuiz(){
 const PF_W = 2200, PF_H = 2200, PF_CX = 1100, PF_CY = 1080;
 const PF_COLORS = ['#4f8fca','#c9a23a','#e2712f','#cd4a2e','#b0355e','#8b3fd1','#3f9c8b','#5b7fd4'];
 
-let pfPos = {}, pfSizes = {}, pfLinks = {};   // позиции, размеры, живые линии
+let pfPos = {}, pfSizes = {};        // ЦЕЛЕВЫЕ позиции (левый верхний угол) и размеры
+/* Отрисованная позиция живёт отдельно от целевой: pfPos — куда сказал встать
+   решатель, pfDraw — где капсула сейчас на самом деле. Между ними пружина, она
+   и даёт мягкий подъезд с упругим перелётом */
+let pfDraw = {}, pfVel = {}, pfStart = {}, pfEls = {}, pfSeeds = {};
+let pfCamX = null, pfCamY = null, pfCamVX = 0, pfCamVY = 0, pfCamOn = false;
+let pfAnimRaf = null, pfFocus = null;
 let pfOx = 0, pfOy = 0, pfVx = 0, pfVy = 0, pfRaf = null;
 let pfDragging = false, pfMoved = false, pfTrail = [];
-let pfIntroRun = false;   // первый кадр после открытия поля — рождаем корни из центра
 let pfWired = false;
 
 // Родительская тема (частный случай) — из справочника, а не из локальной копии
@@ -4875,88 +4899,148 @@ function pfVisible(){
   return { list: seen, color: color };
 }
 
-// «Родное» место: корни — своё гнездо в кучке, дети — под родителем,
-// соседи — сбоку. Пружина тянет сюда, коллизии отталкивают
-function pfHome(key, roots){
-  const ri = roots.indexOf(key);
-  if (ri !== -1){
-    const a = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
-    return { x: PF_CX + Math.cos(a) * 195 + (ri%2 ? 22 : -16),
-             y: PF_CY + Math.sin(a) * 155 + (ri%3 ? 14 : -18) };
-  }
-  for (const p of Object.keys(pfPos)){
-    if (planDraft.expanded.indexOf(p) === -1) continue;
-    const ci = pfChildren(p).indexOf(key);
-    if (ci !== -1) return { x: pfPos[p].x + 20, y: pfPos[p].y + 60 + ci*52 };
-    const si = pfRelated(p).indexOf(key);
-    if (si !== -1) return { x: pfPos[p].x + (pfSizes[p] ? pfSizes[p].w : 150) + 48,
-                            y: pfPos[p].y + 4 + si*46 };
-  }
-  return { x: PF_CX, y: PF_CY };
+/* ══ Поле выбора: физика облачков ═════════════════════════════════════════
+   Расталкивание ЗНАЕТ О РОДСТВЕ: капсулы одной ветки жмутся на маленький
+   зазор, из разных веток — на большой. Отсюда ощущение «я сейчас в этом
+   облачке», и поэтому связи-линии больше не нужны — их убрали совсем.
+
+   Позиции здесь — ЛЕВЫЙ ВЕРХНИЙ УГОЛ капсулы (так исторически считает
+   расталкивание), а раскладка цветком оперирует центрами; переводим на
+   границе, не смешивая. */
+
+const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
+const PF_ROOT_R = 150, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+const PF_K = 0.077, PF_DAMP = 0.793;
+const PF_CAM_K = 0.070, PF_CAM_DAMP = 0.720;
+const PF_STAGGER = 0.18;
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
+  return pfSeeds[key] = {
+    driftDur: (6 + rnd() * 5) * 1.35,
+    driftPh:  rnd() * Math.PI * 2,
+    hueDur:   (9 + rnd() * 6) * 1.35,
+    huePh:    rnd() * Math.PI * 2,
+    dx: 2.5 + rnd() * 3.5,
+    dy: 2.5 + rnd() * 4,
+  };
 }
 
 function pfRelax(list, roots){
-  const PAD = 16, ITER = 150;
+  const cl = {}, home = {};
+  list.forEach(function(k){ cl[k] = pfCluster(k); });
+  const cx = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].x + s.w/2; };
+  const cy = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].y + s.h/2; };
 
-  /* Кто чей родитель и каким по счёту — считаем ОДИН РАЗ на прогон.
-     Раньше это перебиралось внутри каждой из 110 итераций для каждой темы,
-     и на трёх десятках тем расчёт занимал ~170 мс: тап заметно подтормаживал */
+  // Родство считаем ОДИН раз на прогон — перебор внутри итераций стоил ~170мс
   const ref = {};
   list.forEach(function(k){
-    const ri = roots.indexOf(k);
-    if (ri !== -1){
-      const a = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
-      ref[k] = { fixed: { x: PF_CX + Math.cos(a)*195 + (ri%2 ? 22 : -16),
-                          y: PF_CY + Math.sin(a)*155 + (ri%3 ? 14 : -18) } };
-      return;
-    }
+    if (roots.indexOf(k) !== -1) return;
     for (let i = 0; i < list.length; i++){
       const p = list[i];
       if (planDraft.expanded.indexOf(p) === -1) continue;
-      const ci = pfChildren(p).indexOf(k);
-      if (ci !== -1){ ref[k] = { par: p, kind: 'child', i: ci }; return; }
-      const si = pfRelated(p).indexOf(k);
-      if (si !== -1){ ref[k] = { par: p, kind: 'side', i: si }; return; }
+      const kids = pfChildren(p), sides = pfRelated(p);
+      const all = kids.concat(sides);
+      const idx = all.indexOf(k);
+      if (idx !== -1){ ref[k] = { par: p, i: idx, n: all.length, child: kids.indexOf(k) !== -1 }; return; }
     }
-    ref[k] = { fixed: { x: PF_CX, y: PF_CY } };
   });
 
-  const homeOf = function(k){
-    const r = ref[k];
-    if (r.fixed) return r.fixed;
-    const p = pfPos[r.par];
-    if (!p) return { x: PF_CX, y: PF_CY };
-    return r.kind === 'child'
-      ? { x: p.x + 20, y: p.y + 68 + r.i*58 }
-      : { x: p.x + (pfSizes[r.par] ? pfSizes[r.par].w : 150) + 48, y: p.y + 4 + r.i*50 };
-  };
+  // Корни: компактное кольцо; раскрытое направление отъезжает, расчищая место
+  roots.forEach(function(k, i){
+    const a = (i / roots.length) * Math.PI * 2 - Math.PI/2;
+    const r = planDraft.expanded.indexOf(k) !== -1 ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
+    const s = pfSizes[k] || {w:150,h:42};
+    home[k] = { x: PF_CX + Math.cos(a)*r - s.w/2, y: PF_CY + Math.sin(a)*r - s.h/2 };
+  });
 
-  for (let it = 0; it < ITER; it++){
-    // Пружина слабеет к концу: иначе она и расталкивание воюют вничью
-    // и на плотном поле остаются наложения
-    const spring = it < ITER*.6 ? 1 : (1 - (it - ITER*.6) / (ITER*.4));
+  // Дети и соседи — ЦВЕТКОМ: веер вокруг родителя, раскрытый наружу от центра
+  // поля, а не жёстко вниз. Так букет растёт туда, где есть место
+  list.forEach(function(k){
+    if (home[k]) return;
+    const r = ref[k];
+    const s = pfSizes[k] || {w:150,h:42};
+    if (!r || !home[r.par] && !pfPos[r.par]){ home[k] = { x: PF_CX, y: PF_CY }; return; }
+    const ps = pfSizes[r.par] || {w:150,h:42};
+    const ph = home[r.par] || pfPos[r.par];
+    const pcx = ph.x + ps.w/2, pcy = ph.y + ps.h/2;
+    const outward = Math.atan2(pcy - PF_CY, pcx - PF_CX) || 0;
+    const spread = Math.min(200, 46 * r.n) * Math.PI / 180;
+    const t = r.n <= 1 ? 0 : (r.i / (r.n - 1)) - 0.5;
+    const ang = outward + t * spread;
+    const dist = 128 + (r.child ? 0 : 16);
+    home[k] = { x: pcx + Math.cos(ang)*dist - s.w/2, y: pcy + Math.sin(ang)*dist - s.h/2 };
+  });
+
+  list.forEach(function(k){ if (!pfPos[k]) pfPos[k] = { x: home[k].x, y: home[k].y }; });
+
+  for (let it = 0; it < PF_ITER + PF_PURE; it++){
+    // Последние проходы — без пружины: иначе тяга к родному месту подтягивает
+    // соседей обратно уже после разведения, и зазор выходит меньше заданного
+    const t = Math.min(1, it / PF_ITER);
+    const kSpring = it < PF_ITER ? (0.13 * (1 - t) + 0.012) : 0;
+
     list.forEach(function(k){
-      const h = homeOf(k);
-      const w = (roots.indexOf(k) !== -1 ? .06 : .12) * spring;
-      pfPos[k].x += (h.x - pfPos[k].x) * w;
-      pfPos[k].y += (h.y - pfPos[k].y) * w;
+      pfPos[k].x += (home[k].x - pfPos[k].x) * kSpring;
+      pfPos[k].y += (home[k].y - pfPos[k].y) * kSpring;
     });
+
+    // Сплочение: члены облачка тянутся к своему центру, иначе ветка расползается
+    const cen = {};
+    list.forEach(function(k){
+      const c = cl[k];
+      if (!cen[c]) cen[c] = { x:0, y:0, n:0 };
+      cen[c].x += cx(k); cen[c].y += cy(k); cen[c].n++;
+    });
+    Object.keys(cen).forEach(function(c){ cen[c].x /= cen[c].n; cen[c].y /= cen[c].n; });
+    list.forEach(function(k){
+      const c = cen[cl[k]];
+      pfPos[k].x += (c.x - cx(k)) * 0.012;
+      pfPos[k].y += (c.y - cy(k)) * 0.012;
+    });
+
     for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
       const a = list[i], b = list[j];
       const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
-      const ox = Math.min(pfPos[a].x+sa.w+PAD, pfPos[b].x+sb.w+PAD) - Math.max(pfPos[a].x-PAD, pfPos[b].x-PAD);
-      const oy = Math.min(pfPos[a].y+sa.h+PAD, pfPos[b].y+sb.h+PAD) - Math.max(pfPos[a].y-PAD, pfPos[b].y-PAD);
+      const pad = cl[a] === cl[b] ? PF_GAP_IN : PF_GAP_OUT;
+      let dx = cx(b) - cx(a), dy = cy(b) - cy(a);
+      // Совпали точь-в-точь — направление разведения выбираем по индексам,
+      // иначе знак берётся из нуля и обе уезжают в одну сторону
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5){
+        const ang = i * 2.399 + j * 0.7;
+        dx = Math.cos(ang); dy = Math.sin(ang);
+        pfPos[a].x -= dx * 3; pfPos[a].y -= dy * 3;
+        pfPos[b].x += dx * 3; pfPos[b].y += dy * 3;
+        continue;
+      }
+      const ox = (sa.w + sb.w)/2 + pad - Math.abs(dx);
+      const oy = (sa.h + sb.h)/2 + pad - Math.abs(dy);
       if (ox <= 0 || oy <= 0) continue;
-      const wa = roots.indexOf(a) !== -1 ? .25 : 1, wb = roots.indexOf(b) !== -1 ? .25 : 1;
-      const s = wa + wb;
       if (ox < oy){
-        const d = (pfPos[a].x + sa.w/2) < (pfPos[b].x + sb.w/2) ? -1 : 1;
-        pfPos[a].x += d * ox * (wa/s); pfPos[b].x -= d * ox * (wb/s);
+        const s = (dx >= 0 ? 1 : -1) * ox / 2;
+        pfPos[a].x -= s; pfPos[b].x += s;
       } else {
-        const d = (pfPos[a].y + sa.h/2) < (pfPos[b].y + sb.h/2) ? -1 : 1;
-        pfPos[a].y += d * oy * (wa/s); pfPos[b].y -= d * oy * (wb/s);
+        const s = (dy >= 0 ? 1 : -1) * oy / 2;
+        pfPos[a].y -= s; pfPos[b].y += s;
       }
     }
+
     list.forEach(function(k){
       const s = pfSizes[k] || {w:150,h:42};
       pfPos[k].x = Math.max(30, Math.min(PF_W - s.w - 30, pfPos[k].x));
@@ -4965,60 +5049,112 @@ function pfRelax(list, roots){
   }
 }
 
+/* Ореол облачка — очень слабое размытое пятно позади его капсул. Рисуется
+   только когда в ветке больше одной капсулы: одинокий корень размывать незачем */
+function pfGlows(v){
+  const layer = document.getElementById('plan-glow');
+  if (!layer) return;
+  layer.querySelectorAll('.pf-glow').forEach(function(e){ e.remove(); });
+  pfRoots().forEach(function(r){
+    if (planDraft.expanded.indexOf(r) === -1) return;
+    const members = v.list.filter(function(k){ return pfCluster(k) === r; });
+    if (members.length < 2) return;
+    let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
+    members.forEach(function(k){
+      const p = pfPos[k], s = pfSizes[k] || {w:150,h:42};
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x + s.w);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y + s.h);
+    });
+    const rad = Math.max(maxX-minX, maxY-minY)/2 + 70;
+    const el = document.createElement('div');
+    el.className = 'pf-glow';
+    el.style.setProperty('--c', v.color[r] || PF_COLORS[0]);
+    el.style.width = el.style.height = rad*2 + 'px';
+    el.style.transform = 'translate(' + ((minX+maxX)/2 - rad) + 'px,' + ((minY+maxY)/2 - rad) + 'px)';
+    layer.appendChild(el);
+  });
+}
+
 function pfRender(){
   const v = pfVisible(), list = v.list, roots = pfRoots();
   const world = document.getElementById('plan-world');
   if (!world) return;
 
-  // Новая тема рождается у родителя — оттуда и распускается
+  /* Стартовые позиции не должны совпадать: расталкивание нулевого вектора
+     не знает, в какую сторону разводить, и уводит всех в одну — одно
+     направление тогда уезжает к центру и остаётся там */
   list.forEach(function(k){
     if (pfPos[k]) return;
-    if (roots.indexOf(k) !== -1){ pfPos[k] = pfHome(k, roots); return; }
+    const ri = roots.indexOf(k);
+    if (ri !== -1){
+      const a2 = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
+      pfPos[k] = { x: PF_CX + Math.cos(a2)*PF_ROOT_R - 75, y: PF_CY + Math.sin(a2)*PF_ROOT_R - 21 };
+      return;
+    }
     const par = Object.keys(pfPos).find(function(p){
       return pfChildren(p).concat(pfRelated(p)).indexOf(k) !== -1; });
-    pfPos[k] = par ? { x: pfPos[par].x + 12, y: pfPos[par].y + 18 } : { x: PF_CX, y: PF_CY };
+    // Дети одного родителя тоже расходятся по кругу, а не ложатся друг на друга
+    const idx = par ? Math.max(0, pfChildren(par).concat(pfRelated(par)).indexOf(k)) : 0;
+    const a3 = idx * 1.9;
+    pfPos[k] = par
+      ? { x: pfPos[par].x + Math.cos(a3)*14, y: pfPos[par].y + Math.sin(a3)*14 }
+      : { x: PF_CX, y: PF_CY };
   });
   Object.keys(pfPos).forEach(function(k){ if (list.indexOf(k) === -1) delete pfPos[k]; });
+  Object.keys(pfDraw).forEach(function(k){
+    if (list.indexOf(k) === -1){ delete pfDraw[k]; delete pfVel[k]; }
+  });
 
   world.querySelectorAll('.pf-node').forEach(function(e){ e.remove(); });
   const els = {};
   list.forEach(function(k){
     const el = document.createElement('div');
     const fresh = !pfSizes[k];
-    el.className = 'pf-node' + (roots.indexOf(k) !== -1 ? ' root' : '') + (fresh && roots.indexOf(k) === -1 ? ' bud' : '');
+    el.className = 'pf-node' + (roots.indexOf(k) !== -1 ? ' root' : '')
+      + (fresh && roots.indexOf(k) === -1 ? ' bud' : '')
+      + (planDraft.expanded.indexOf(k) !== -1 ? ' open' : '');
     el.style.setProperty('--c', v.color[k] || PF_COLORS[0]);
     el.textContent = pfLabel(k);
     if (planDraft.problems.indexOf(k) !== -1) el.classList.add('on');
     el.onclick = function(){ if (!pfMoved) pfTap(k); };
-    el.style.transform = 'translate(' + pfPos[k].x + 'px,' + pfPos[k].y + 'px)';
-    el.style.setProperty('--bx', pfPos[k].x + 'px');
-    el.style.setProperty('--by', pfPos[k].y + 'px');
-    if (pfIntroRun){
-      // Все корни стартуют из одной точки в центре сцены и разлетаются
-      // по очереди — экран собирается на глазах, а не появляется готовым
-      const ri = roots.indexOf(k);
-      if (ri !== -1){
-        el.classList.add('born');
-        el.style.setProperty('--cx', (PF_CX - 60) + 'px');
-        el.style.setProperty('--cy', (PF_CY - 20) + 'px');
-        el.style.animationDelay = (140 + ri * 95) + 'ms';
-      }
+    // Новая капсула стартует в родителе — наружу её вынесет пружина
+    if (!pfDraw[k]){
+      const par = list.find(function(p){
+        return pfChildren(p).concat(pfRelated(p)).indexOf(k) !== -1; });
+      const from = (par && pfDraw[par]) ? pfDraw[par] : pfPos[k];
+      pfDraw[k] = { x: from.x, y: from.y };
+      pfVel[k] = { x: 0, y: 0 };
     }
+    el.style.transform = 'translate(' + pfDraw[k].x + 'px,' + pfDraw[k].y + 'px)';
     world.appendChild(el);
     els[k] = el;
   });
+  pfEls = els;
 
   requestAnimationFrame(function(){
     list.forEach(function(k){ pfSizes[k] = { w: els[k].offsetWidth, h: els[k].offsetHeight }; });
     pfRelax(list, roots);
-    list.forEach(function(k){
-      els[k].style.transform = 'translate(' + pfPos[k].x + 'px,' + pfPos[k].y + 'px)';
-    });
-    // Линии обновляем ПОСЛЕ того, как ноды доехали до новых мест
-    setTimeout(function(){ pfDrawLinks(list, v.color); }, 340);
-  });
 
-  pfIntroRun = false;   // рождение — только на первом кадре, дальше обычная раскладка
+    // Дальние капсулы трогаются позже ближних: волна расходится от места тапа,
+    // и раскидывание читается как следствие нажатия, а не как общий рывок
+    const t0 = performance.now() / 1000;
+    const src = (pfFocus && pfPos[pfFocus]) ? pfPos[pfFocus] : { x: PF_CX, y: PF_CY };
+    list.forEach(function(k){
+      const d = Math.hypot(pfPos[k].x - src.x, pfPos[k].y - src.y);
+      pfStart[k] = t0 + Math.min(PF_STAGGER, d / 3200);
+    });
+
+    // Камера подводит нажатую тему к центру. Без этого она не «расталкивает
+    // остальных», а просто улетает с экрана вместе со своим букетом
+    if (pfFocus && pfPos[pfFocus]){
+      const s = pfSizes[pfFocus] || {w:150,h:42};
+      pfCamX = innerWidth/2 - (pfPos[pfFocus].x + s.w/2);
+      pfCamY = innerHeight*0.44 - (pfPos[pfFocus].y + s.h/2);
+      pfCamOn = true;
+    }
+    pfGlows(v);
+    pfStartAnim();
+  });
 
   const n = planDraft.problems.length;
   const pk = document.getElementById('pf-picked');
@@ -5028,70 +5164,53 @@ function pfRender(){
   if (go) go.classList.toggle('ready', n > 0);
 }
 
-/* Связи. Раньше вся пачка стиралась и рисовалась заново на каждый тап — и все
-   линии мигали. Теперь у каждой линии свой ключ: существующие просто
-   переезжают, анимация прорисовки достаётся только новым. */
-function pfDrawLinks(list, color){
-  const svg = document.getElementById('plan-links');
-  if (!svg) return;
-  const need = {};
+/* Один кадр анимации на всё поле: пружина к цели, парение, переливание и
+   камера. Держим в одном месте — иначе CSS-анимация парения перехватывает
+   transform, и переезд из плавного превращается в мгновенный прыжок */
+const PF_CALM = typeof matchMedia === 'function'
+  && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  list.forEach(function(k){
-    const par = list.find(function(p){
-      return planDraft.expanded.indexOf(p) !== -1 &&
-        (pfChildren(p).indexOf(k) !== -1 || pfRelated(p).indexOf(k) !== -1);
-    });
-    if (!par) return;
-    const isChild = pfChildren(par).indexOf(k) !== -1;
-    need[par + '>' + k] = { par: par, k: k, isChild: isChild };
-  });
-
-  // Убираем те, которых больше нет
-  Object.keys(pfLinks).forEach(function(id){
-    if (!need[id]){ pfLinks[id].remove(); delete pfLinks[id]; }
-  });
-
-  Object.keys(need).forEach(function(id){
-    const it = need[id];
-    const a = pfPos[it.par], b = pfPos[it.k];
-    if (!a || !b) return;
-    const sa = pfSizes[it.par] || {w:150,h:42}, sb = pfSizes[it.k] || {w:150,h:42};
-
-    /* Маршрут «уголком», а не размашистой дугой: дуги пересекали чужие
-       капсулы и путались между собой. Вертикаль от родителя вниз, потом
-       поворот и горизонталь в левый край ребёнка — линии идут по сетке
-       и почти не пересекаются */
-    let d;
-    if (it.isChild){
-      const x = a.x + 20, y0 = a.y + sa.h - 2, y1 = b.y + sb.h/2, r = Math.min(14, Math.abs(y1-y0)/2);
-      d = 'M ' + x + ' ' + y0 + ' V ' + (y1 - r)
-        + ' Q ' + x + ' ' + y1 + ' ' + (x + r) + ' ' + y1
-        + ' H ' + (b.x - 2);
+function pfAnimFrame(){
+  const now = performance.now() / 1000;
+  Object.keys(pfEls).forEach(function(k){
+    const tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k], el = pfEls[k];
+    if (!tgt || !r || !vel || !el) return;
+    if (now >= (pfStart[k] || 0)){
+      vel.x += (tgt.x - r.x) * PF_K;
+      vel.y += (tgt.y - r.y) * PF_K;
+      vel.x *= PF_DAMP; vel.y *= PF_DAMP;
+      r.x += vel.x; r.y += vel.y;
+    }
+    if (PF_CALM){
+      el.style.transform = 'translate(' + r.x + 'px,' + r.y + 'px)';
     } else {
-      const y = a.y + sa.h/2, x0 = a.x + sa.w + 2, y1 = b.y + sb.h/2;
-      const mx = (x0 + b.x) / 2, r = Math.min(14, Math.abs(y1-y)/2 || 0);
-      d = Math.abs(y1 - y) < 4
-        ? 'M ' + x0 + ' ' + y + ' H ' + (b.x - 2)
-        : 'M ' + x0 + ' ' + y + ' H ' + (mx - r)
-          + ' Q ' + mx + ' ' + y + ' ' + mx + ' ' + (y + (y1 > y ? r : -r))
-          + ' V ' + (y1 - (y1 > y ? r : -r))
-          + ' Q ' + mx + ' ' + y1 + ' ' + (mx + r) + ' ' + y1
-          + ' H ' + (b.x - 2);
+      const sd = pfSeed(k);
+      const fx = Math.sin(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dx;
+      const fy = Math.cos(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dy;
+      el.style.transform = 'translate(' + (r.x + fx) + 'px,' + (r.y + fy) + 'px)';
+      const h = Math.sin(now / sd.hueDur * Math.PI * 2 + sd.huePh) * 0.5 + 0.5;
+      el.style.filter = 'hue-rotate(' + (h*9).toFixed(1) + 'deg) saturate(' + (1 + h*0.12).toFixed(2) + ')';
     }
-
-    let path = pfLinks[id];
-    if (!path){
-      path = document.createElementNS('http://www.w3.org/2000/svg','path');
-      path.setAttribute('class','pf-link fresh');
-      svg.appendChild(path);
-      pfLinks[id] = path;
-    }
-    path.setAttribute('d', d);
-    path.setAttribute('stroke', color[it.k] || PF_COLORS[0]);
   });
+
+  if (pfCamOn && !pfDragging && pfCamX !== null){
+    pfCamVX += (pfCamX - pfOx) * PF_CAM_K;
+    pfCamVY += (pfCamY - pfOy) * PF_CAM_K;
+    pfCamVX *= PF_CAM_DAMP; pfCamVY *= PF_CAM_DAMP;
+    pfOx += pfCamVX; pfOy += pfCamVY;
+    pfApply();
+    if (Math.abs(pfCamX - pfOx) < 0.4 && Math.abs(pfCamVX) < 0.4 &&
+        Math.abs(pfCamY - pfOy) < 0.4 && Math.abs(pfCamVY) < 0.4) pfCamOn = false;
+  }
+
+  pfAnimRaf = requestAnimationFrame(pfAnimFrame);   // парение идёт всегда
 }
 
+function pfStartAnim(){ if (!pfAnimRaf) pfAnimFrame(); }
+function pfStopAnim(){ if (pfAnimRaf){ cancelAnimationFrame(pfAnimRaf); pfAnimRaf = null; } }
+
 function pfTap(key){
+  pfFocus = key;          // за этой темой поедет камера
   if (pfIsPhaseKey(key)){
     // Направление — просто дверь: раскрывает второе поколение, само
     // не становится ответом (лекций у направления нет, выбирать нечего)
@@ -5145,6 +5264,7 @@ function pfWire(){
   const f = document.getElementById('plan-field');
   const start = function(x, y){
     cancelAnimationFrame(pfRaf);
+    pfCamOn = false; pfCamVX = 0; pfCamVY = 0;   // палец главнее наводки камеры
     pfDragging = true; pfMoved = false;
     pfTrail = [{ t: performance.now(), x: x, y: y }];
   };
@@ -5181,17 +5301,16 @@ async function openPlanField(){
   await loadPlanProblems();
   const f = document.getElementById('plan-field');
   if (!f) return;
-  pfPos = {}; pfSizes = {}; pfLinks = {};
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
   const world = document.getElementById('plan-world');
   world.style.width = PF_W + 'px';
   world.style.height = PF_H + 'px';
-  const svg = document.getElementById('plan-links');
-  if (svg){ svg.setAttribute('width', PF_W); svg.setAttribute('height', PF_H); svg.innerHTML = ''; }
+  const glow = document.getElementById('plan-glow');
+  if (glow){ glow.style.width = PF_W + 'px'; glow.style.height = PF_H + 'px'; glow.innerHTML = ''; }
   pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
   pfApply();
   pfWire();
-  // Флаг ставим ДО отрисовки: pfRender сам раздаст корням рождение из центра
-  pfIntroRun = true;
   pfRender();
   const dock = f.querySelector('.pf-dock');
   if (dock){
@@ -5226,10 +5345,22 @@ function planFieldChrome(hide){
   });
 }
 
+// «Начать сначала»: снимаем выбор и раскрытия, поле собирается заново
+function planFieldReset(){
+  planDraft.problems = [];
+  planDraft.expanded = [];
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
+  pfApply();
+  pfRender();
+}
+
 function hidePlanField(){
   const f = document.getElementById('plan-field');
   if (!f) return;
   planFieldChrome(false);
+  pfStopAnim();
   f.classList.remove('in');
   // Ждём, пока погаснет, и только потом убираем — иначе экран щёлкал бы
   setTimeout(function(){ f.classList.remove('show'); }, 380);
