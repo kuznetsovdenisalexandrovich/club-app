@@ -302,7 +302,7 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .level-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .level-card-title{font-weight:700;font-size:13px}
 .level-card.level-card--warning .level-card-title{color:#e05252}
-.reward-level-badge{position:fixed;top:calc(var(--safe-top) + 74px);right:20px;z-index:501;width:34px;height:34px;border-radius:50%;background:var(--warm);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:14px;box-shadow:0 6px 16px -4px rgba(0,0,0,0.4);cursor:pointer}
+.reward-level-badge{position:fixed;top:calc(var(--safe-top) + 74px);right:max(20px, calc(50% - 224px));z-index:501;width:34px;height:34px;border-radius:50%;background:var(--warm);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:14px;box-shadow:0 6px 16px -4px rgba(0,0,0,0.4);cursor:pointer}
 .level-card-frac{font-size:12px;color:var(--text-faint)}
 .level-bar-track{width:100%;height:8px;border-radius:6px;background:var(--card2);overflow:hidden}
 .level-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--warm),var(--lav));width:0%;transition:width .5s ease}
@@ -691,15 +691,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 @keyframes pfDraw{to{stroke-dashoffset:0}}
 
 .pf-dock{
-  position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 16px);
-  max-width:488px;margin:0 auto;z-index:4;
-  border-radius:999px;padding:13px 15px 13px 21px;
-  display:flex;align-items:center;gap:12px;
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 20px);
+  max-width:calc(100% - 32px);z-index:4;
+  border-radius:999px;padding:9px 9px 9px 20px;
+  display:flex;align-items:center;gap:14px;white-space:nowrap;
   background:rgba(18,13,20,.82);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   box-shadow:inset 0 1.5px 1px rgba(255,255,255,.2), 0 18px 44px -12px rgba(0,0,0,.8);
 }
-.pf-picked{flex:1;font-size:12.5px;color:#98908a}
+.pf-picked{font-size:12.5px;color:#98908a}
 .pf-picked b{color:#ffb37c;font-weight:600}
 .pf-go{padding:12px 24px;border-radius:999px;border:none;cursor:pointer;
   font-family:inherit;font-size:14px;font-weight:600;color:#2c0e02;
@@ -708,11 +709,70 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   opacity:.35;transition:opacity .3s}
 .pf-go.ready{opacity:1}
 
+/* Появление поля: капсулы рождаются в центре сцены и разлетаются по местам.
+   Конечная точка в кадре 100% не указана СПЕЦИАЛЬНО — тогда анимация едет
+   к инлайновому transform самой ноды, и раскладка остаётся хозяином позиции */
+.pf-node.born{animation:pfBirth .8s cubic-bezier(.2,.85,.28,1.06) backwards}
+@keyframes pfBirth{
+  0%{opacity:0;transform:translate(var(--cx),var(--cy)) scale(.3);filter:blur(12px)}
+  40%{opacity:1;filter:blur(0)}
+}
+.pf-hud > *{animation:pfHudIn .7s ease backwards}
+.pf-hud .pf-eyebrow{animation-delay:.1s}
+.pf-hud .pf-title{animation-delay:.2s}
+.pf-hud .pf-lead{animation-delay:.32s}
+@keyframes pfHudIn{from{opacity:0;transform:translateY(-8px)}}
+.pf-dock.born{animation:pfDockIn .6s cubic-bezier(.2,.9,.3,1.1) backwards;animation-delay:.5s}
+@keyframes pfDockIn{from{opacity:0;transform:translate(-50%,26px)}}
+
 @media (prefers-reduced-motion: reduce){
   .pf-node{transition:box-shadow .45s,color .3s}
-  .pf-node.bud,.pf-link.fresh{animation:none}
+  .pf-node.bud,.pf-node.born,.pf-link.fresh{animation:none}
+  .pf-hud > *,.pf-dock.born{animation:none}
   #plan-field{transition:none}
 }
+
+/* ══ Карта пути ══════════════════════════════════════════════════════════
+   Список говорит «выбирай», путь говорит «иди». Тропинка рисуется в SVG,
+   у которого по горизонтали проценты, а по вертикали пиксели
+   (preserveAspectRatio=none), поэтому линия тянется под любую ширину, а
+   толщина не плывёт — за это отвечает vector-effect. */
+.pmap{position:relative;margin:4px 0 6px}
+.pmap-path{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.pmap-line{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:7 9;
+  vector-effect:non-scaling-stroke}
+.pmap-stop{position:absolute;transform:translate(-50%,-50%);width:104px;padding:0;border:none;
+  background:none;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:7px;animation:pmapIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
+@keyframes pmapIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}}
+.pmap-blob{width:60px;height:60px;border-radius:50%;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-family:var(--disp);font-weight:700;font-size:17px;color:#fff;
+  background:radial-gradient(125% 145% at 30% 18%, rgba(255,255,255,.4), transparent 62%), var(--pc);
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45), 0 10px 22px -9px rgba(0,0,0,.55);
+  transition:transform .16s ease}
+.pmap-stop:active .pmap-blob{transform:scale(.92)}
+.pmap-blob img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62}
+.pmap-blob b{position:relative;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,.55)}
+.pmap-stop.done .pmap-blob{box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45),
+  0 0 0 2.5px var(--bg2), 0 0 0 5px var(--pc), 0 10px 22px -9px rgba(0,0,0,.55)}
+.pmap-stop.skipped{opacity:.42}
+.pmap-stop.skipped .pmap-blob{filter:grayscale(.85)}
+.pmap-cap{font-size:11px;line-height:1.3;color:var(--text-dim);text-align:center;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pmap-mark{position:absolute;right:-1px;bottom:-1px;z-index:2;width:20px;height:20px;border-radius:50%;
+  background:var(--bg2);color:var(--text);font-size:11px;display:flex;align-items:center;justify-content:center}
+
+/* Попап лекции в карте — намеренно беднее карточки в библиотеке: там человек
+   выбирает сам и описание помогает, здесь выбор уже сделан за него, и лишний
+   текст только тормозит и подсовывает повод усомниться */
+.pstop-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin-bottom:14px;display:block}
+.pstop-img-fallback{width:100%;aspect-ratio:16/9;border-radius:14px;margin-bottom:14px;
+  background:radial-gradient(130% 150% at 28% 18%, rgba(255,255,255,.28), transparent 62%), var(--pc)}
+.pstop-title{font-family:var(--disp);font-weight:700;font-size:16px;line-height:1.3;margin-bottom:6px}
+.pstop-note{font-size:12px;color:var(--text-dim);margin-bottom:14px}
+.pstop-skip{display:block;width:100%;margin-top:14px;background:none;border:none;font-family:inherit;
+  font-size:12px;color:var(--text-faint);text-decoration:underline;cursor:pointer;opacity:.75}
 
 /* Заголовок направления в анкете плана. НЕ похож на .quiz-answer сознательно:
    когда они выглядели одинаково, экран превращался в кашу — было не понять,
@@ -1111,6 +1171,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('launchConfetti()')">Конфетти</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPdfLockNotice(3)')">Замок PDF</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPaywall()')">Пейволл</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetPlan()">Сбросить план</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugShowLevelFlag()">Флаг поздравления</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetLevelFlag()">Сбросить флаг</button>
         </div>
@@ -1171,7 +1232,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <button class="pf-back" onclick="closePlanField()">✕</button>
     <div class="pf-dock">
       <div class="pf-picked" id="pf-picked">Пока ничего не выбрано</div>
-      <button class="pf-go" id="pf-go" onclick="planFieldDone()">Дальше</button>
+      <button class="pf-go" id="pf-go" onclick="planFieldDone()">Готово</button>
     </div>
   </div>
 
@@ -1701,6 +1762,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px">Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.</div>
     <button class="lec-link-btn access-btn" onclick="grantVkAccessAndJoin()">Получить доступ к ВК</button>
     <div class="payment-help-link" style="margin-top:10px" onclick="alreadyHaveVkAccess()">У меня уже есть доступ</div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="plan-stop-overlay" style="z-index:660" onclick="if(event.target===this) closePlanStop()">
+  <div class="center-modal" id="plan-stop-modal">
+    <div class="center-modal-header" style="margin-bottom:10px">
+      <div class="center-modal-title" id="plan-stop-step">Шаг</div>
+      <button class="icon-btn" onclick="closePlanStop()">✕</button>
+    </div>
+    <div id="plan-stop-body"></div>
   </div>
 </div>
 
@@ -4339,6 +4410,218 @@ function planHtml(answers, compact){
   return html;
 }
 
+/* ══ Карта пути ══════════════════════════════════════════════════════════
+   Вместо списка карточек — тропинка с остановками. Порядок берётся из уже
+   расставленного Denis'ом порядка НАПРАВЛЕНИЙ: между болями идём по воронке,
+   внутри боли сначала основные лекции, потом задетые вскользь. Никакой
+   отдельной редакторской работы для этого не нужно. */
+
+const PMAP_X = [26, 50, 74, 50];      // змейка: влево — центр — вправо — центр
+const PMAP_STEP = 116;                // расстояние между остановками, px
+const PMAP_TOP = 46;
+const PMAP_COLORS = ['#e2712f','#4f8fca','#b0355e','#3f9c8b','#8b3fd1','#c9a23a'];
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+function planStopList(answers){
+  const groups = buildPlan(answers);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  ordered.forEach(function(w){
+    // Внутри боли основные лекции идут раньше задетых вскользь
+    const rows = w.g.rows.slice().sort(function(a, b){
+      return (a.entry.weight === 'touch' ? 1 : 0) - (b.entry.weight === 'touch' ? 1 : 0);
+    });
+    rows.forEach(function(r){
+      if (!r.lec || seen[r.lec.slug]) return;   // одна лекция может закрывать две боли
+      seen[r.lec.slug] = true;
+      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent, group: w.g.label });
+    });
+  });
+  return stops;
+}
+
+function planMapHtml(answers){
+  planLoadMarks();
+  planStops = planStopList(answers);
+  planCardItems = planStops.map(function(s){ return s.lec; });
+  if (!planStops.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось. Попробуй отметить что-то ещё — или спроси ИИ-помощника своими словами.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+
+  const n = planStops.length;
+  const h = PMAP_TOP + (n - 1) * PMAP_STEP + 78;
+  const pt = planStops.map(function(s, i){
+    return { x: PMAP_X[i % PMAP_X.length], y: PMAP_TOP + i * PMAP_STEP };
+  });
+
+  // Тропинка: плавные S-образные переходы между остановками
+  let d = 'M ' + pt[0].x + ' ' + pt[0].y;
+  for (let i = 1; i < pt.length; i++){
+    const a = pt[i-1], b = pt[i], m = (b.y - a.y) / 2;
+    d += ' C ' + a.x + ' ' + (a.y + m) + ', ' + b.x + ' ' + (b.y - m) + ', ' + b.x + ' ' + b.y;
+  }
+
+  let html = '<div class="pmap" style="height:' + h + 'px">'
+    + '<svg class="pmap-path" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none">'
+    + '<path class="pmap-line" d="' + d + '"></path></svg>';
+
+  planStops.forEach(function(s, i){
+    const done = planVisited.has(s.lec.slug);
+    const skip = planSkipped.has(s.lec.slug);
+    const color = PMAP_COLORS[i % PMAP_COLORS.length];
+    html += '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '') + '"'
+      + ' style="left:' + pt[i].x + '%;top:' + pt[i].y + 'px;--pc:' + color
+      + ';animation-delay:' + (i * 70) + 'ms"'
+      + ' onclick="openPlanStop(' + i + ')">'
+      + '<span class="pmap-blob">'
+        + '<img src="images/lectures/' + s.lec.slug + '.jpg" alt="" loading="lazy" onerror="this.remove()">'
+        + '<b>' + (i + 1) + '</b>'
+        + (done ? '<span class="pmap-mark">✓</span>' : '')
+      + '</span>'
+      + '<span class="pmap-cap">' + escapeHtml(s.lec.title || '') + '</span>'
+      + '</button>';
+  });
+  html += '</div>';
+
+  const skipped = planStops.filter(function(s){ return planSkipped.has(s.lec.slug); }).length;
+  if (skipped){
+    html += '<div class="payment-help-link" style="margin-top:6px" onclick="planUnskipAll()">'
+      + 'Вернуть пропущенные (' + skipped + ') →</div>';
+  }
+  return html;
+}
+
+function planUnskipAll(){
+  planSkipped = new Set();
+  planSaveMarks();
+  renderPlanScreen();
+}
+
+/* Попап остановки. Сознательно бедный: обложка, название, кнопки. Описание
+   и теги остаются в библиотеке, где человек выбирает сам */
+function openPlanStop(i){
+  const s = planStops[i];
+  if (!s) return;
+  const el = document.getElementById('plan-stop-body');
+  const stepEl = document.getElementById('plan-stop-step');
+  if (!el) return;
+  if (stepEl) stepEl.textContent = 'Шаг ' + (i + 1) + ' из ' + planStops.length;
+
+  const color = PMAP_COLORS[i % PMAP_COLORS.length];
+  const notes = [];
+  if (s.entry && s.entry.timecode) notes.push('про это на ' + escapeHtml(s.entry.timecode));
+  if (s.entry && s.entry.weight === 'touch') notes.push('затронуто вскользь');
+  if (s.viaParent) notes.push('разбор темы шире');
+
+  const l = s.lec;
+  const locked = !isMember || (isMember && tourActive);
+  const lockIcon = locked ? '🔒 ' : '';
+  const hasNext = i + 1 < planStops.length;
+
+  el.innerHTML =
+      '<img class="pstop-img" src="images/lectures/' + l.slug + '.jpg" alt="" '
+    + 'onerror="this.outerHTML=\'<div class=&quot;pstop-img-fallback&quot; style=&quot;--pc:' + color + '&quot;></div>\'">'
+    + '<div class="pstop-title">' + escapeHtml(l.title || '') + '</div>'
+    + '<div class="pstop-note">' + escapeHtml(s.group || '')
+      + (notes.length ? ' · ' + notes.join(' · ') : '') + '</div>'
+    + '<div class="lec-links">'
+      + (l.link ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'tg\')">' + lockIcon + 'Смотреть в ТГ</button>' : '')
+      + (l.link_vk ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'vk\')">' + lockIcon + 'Смотреть в VK</button>' : '')
+    + '</div>'
+    + (hasNext ? '<button class="lec-link-btn access-btn" style="margin-top:12px" onclick="planStopNext(' + i + ')">Открыть следующую</button>' : '')
+    + '<button class="pstop-skip" onclick="planStopSkip(' + i + ')">Это не хочу смотреть</button>';
+
+  document.getElementById('plan-stop-overlay').classList.add('open');
+}
+
+function closePlanStop(){
+  document.getElementById('plan-stop-overlay').classList.remove('open');
+}
+
+function planStopWatch(i, platform){
+  const s = planStops[i];
+  if (!s) return;
+  // Отмечаем пройденным сразу: ссылка уходит наружу, и возврата может не быть
+  planVisited.add(s.lec.slug);
+  planSkipped.delete(s.lec.slug);
+  planSaveMarks();
+  openLectureLink(i, platform, 'plan');
+}
+
+function planStopNext(i){
+  if (i + 1 < planStops.length) openPlanStop(i + 1);
+  else closePlanStop();
+}
+
+/* Пропуск — сигнал о ПОДБОРЕ, а не о лекции. Пока он живёт только на телефоне;
+   отправка на сервер и вопрос «почему не то» — следующий шаг */
+function planStopSkip(i){
+  const s = planStops[i];
+  if (!s) return;
+  planSkipped.add(s.lec.slug);
+  planSaveMarks();
+  const hasNext = i + 1 < planStops.length;
+  if (hasNext) openPlanStop(i + 1);
+  else closePlanStop();
+  renderPlanScreen();
+  showToast('Убрал из пути');
+}
+
+// Сброс личного плана — для тестирования сборки карты с нуля
+async function debugResetPlan(){
+  planAnswers = null;
+  planStops = [];
+  planSkipped = new Set();
+  planVisited = new Set();
+  planSaveMarks();
+  const out = document.getElementById('debug-level-result');
+  if (telegramId){
+    try {
+      await fetch(`${API_URL}/plan-answers/${telegramId}`, { method: 'DELETE' });
+      if (out) out.textContent = 'План сброшен — можно собирать заново';
+    } catch(e){
+      if (out) out.textContent = 'Локально сброшен, сервер не ответил: ' + e.message;
+    }
+  } else if (out) out.textContent = 'План сброшен локально (нет telegram_id)';
+  renderPersonalPlanBody();
+  renderPlanScreen();
+}
+
 // Блок в библиотеке: либо приглашение пройти анкету, либо начало плана
 function renderPersonalPlanBody(){
   const el = document.getElementById('personal-plan-body');
@@ -4365,7 +4648,7 @@ function renderPlanScreen(){
     renderPlanQuestion();
     return;
   }
-  el.innerHTML = planHtml(planAnswers, false)
+  el.innerHTML = planMapHtml(planAnswers)
     + '<div class="payment-help-link" style="margin-top:16px" onclick="startPlanQuiz()">Пересобрать план →</div>';
 }
 
@@ -4412,6 +4695,7 @@ const PF_COLORS = ['#4f8fca','#c9a23a','#e2712f','#cd4a2e','#b0355e','#8b3fd1','
 let pfPos = {}, pfSizes = {}, pfLinks = {};   // позиции, размеры, живые линии
 let pfOx = 0, pfOy = 0, pfVx = 0, pfVy = 0, pfRaf = null;
 let pfDragging = false, pfMoved = false, pfTrail = [];
+let pfIntroRun = false;   // первый кадр после открытия поля — рождаем корни из центра
 let pfWired = false;
 
 // Родительская тема (частный случай) — из справочника, а не из локальной копии
@@ -4599,6 +4883,17 @@ function pfRender(){
     el.style.transform = 'translate(' + pfPos[k].x + 'px,' + pfPos[k].y + 'px)';
     el.style.setProperty('--bx', pfPos[k].x + 'px');
     el.style.setProperty('--by', pfPos[k].y + 'px');
+    if (pfIntroRun){
+      // Все корни стартуют из одной точки в центре сцены и разлетаются
+      // по очереди — экран собирается на глазах, а не появляется готовым
+      const ri = roots.indexOf(k);
+      if (ri !== -1){
+        el.classList.add('born');
+        el.style.setProperty('--cx', (PF_CX - 60) + 'px');
+        el.style.setProperty('--cy', (PF_CY - 20) + 'px');
+        el.style.animationDelay = (140 + ri * 95) + 'ms';
+      }
+    }
     world.appendChild(el);
     els[k] = el;
   });
@@ -4612,6 +4907,8 @@ function pfRender(){
     // Линии обновляем ПОСЛЕ того, как ноды доехали до новых мест
     setTimeout(function(){ pfDrawLinks(list, v.color); }, 340);
   });
+
+  pfIntroRun = false;   // рождение — только на первом кадре, дальше обычная раскладка
 
   const n = planDraft.problems.length;
   const pk = document.getElementById('pf-picked');
@@ -4783,14 +5080,46 @@ async function openPlanField(){
   pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
   pfApply();
   pfWire();
+  // Флаг ставим ДО отрисовки: pfRender сам раздаст корням рождение из центра
+  pfIntroRun = true;
   pfRender();
+  const dock = f.querySelector('.pf-dock');
+  if (dock){
+    // Перезапуск анимации: класс мог остаться с прошлого открытия, и тогда
+    // браузер посчитал бы её уже отыгранной
+    dock.classList.remove('born');
+    void dock.offsetWidth;
+    dock.classList.add('born');
+  }
   f.classList.add('show');
+  planFieldChrome(true);
   requestAnimationFrame(function(){ f.classList.add('in'); });   // проявление
+
+}
+
+/* Поле — самостоятельная сцена: бар уровня (z-index 500), значок уровня (501)
+   и таббар не должны висеть поверх неё. У самого поля z-index 60, поэтому
+   спрятать их можно только явно */
+function planFieldChrome(hide){
+  ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (hide){
+      // Запоминаем, что было: у бара и значка display зависит от уровня,
+      // и вернуть их «как было» иначе не получится
+      if (el.dataset.pfPrev === undefined) el.dataset.pfPrev = el.style.display || '';
+      el.style.display = 'none';
+    } else if (el.dataset.pfPrev !== undefined){
+      el.style.display = el.dataset.pfPrev;
+      delete el.dataset.pfPrev;
+    }
+  });
 }
 
 function hidePlanField(){
   const f = document.getElementById('plan-field');
   if (!f) return;
+  planFieldChrome(false);
   f.classList.remove('in');
   // Ждём, пока погаснет, и только потом убираем — иначе экран щёлкал бы
   setTimeout(function(){ f.classList.remove('show'); }, 380);
