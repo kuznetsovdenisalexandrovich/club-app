@@ -741,21 +741,36 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .pmap-path{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .pmap-line{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:7 9;
   vector-effect:non-scaling-stroke}
-.pmap-stop{position:absolute;transform:translate(-50%,-50%);width:104px;padding:0;border:none;
+.pmap-stop{position:absolute;transform:translate(-50%,0);width:104px;padding:0;border:none;
   background:none;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;
   align-items:center;gap:7px;animation:pmapIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
-@keyframes pmapIn{from{opacity:0;transform:translate(-50%,-50%) scale(.5)}}
+@keyframes pmapIn{from{opacity:0;transform:translate(-50%,0) scale(.5)}}
+/* Матовое стекло: цвет лежит снизу, поверх него белая вуаль и блик
+   в левом верхнем углу, а ::after размывает всё, что под ним (в том числе
+   обложку лекции) — оттого камешек и читается как стекло, а не как заливка */
 .pmap-blob{width:60px;height:60px;border-radius:50%;position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   font-family:var(--disp);font-weight:700;font-size:17px;color:#fff;
-  background:radial-gradient(125% 145% at 30% 18%, rgba(255,255,255,.4), transparent 62%), var(--pc);
-  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45), 0 10px 22px -9px rgba(0,0,0,.55);
+  background:
+    radial-gradient(72% 62% at 30% 18%, rgba(255,255,255,.8), rgba(255,255,255,0) 64%),
+    linear-gradient(156deg, rgba(255,255,255,.34), rgba(255,255,255,.04) 56%),
+    var(--pc);
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,.72),
+    inset 0 -9px 18px rgba(0,0,0,.16),
+    0 0 0 1px rgba(255,255,255,.3),
+    0 14px 26px -12px var(--pc),
+    0 8px 16px -10px rgba(0,0,0,.45);
   transition:transform .16s ease}
+.pmap-blob::after{content:'';position:absolute;inset:0;border-radius:50%;z-index:1;
+  background:linear-gradient(158deg, rgba(255,255,255,.42) 0%, rgba(255,255,255,.1) 40%, rgba(255,255,255,0) 66%);
+  backdrop-filter:blur(7px) saturate(1.15);-webkit-backdrop-filter:blur(7px) saturate(1.15)}
 .pmap-stop:active .pmap-blob{transform:scale(.92)}
-.pmap-blob img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62}
-.pmap-blob b{position:relative;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,.55)}
-.pmap-stop.done .pmap-blob{box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45),
-  0 0 0 2.5px var(--bg2), 0 0 0 5px var(--pc), 0 10px 22px -9px rgba(0,0,0,.55)}
+.pmap-blob img{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:.42}
+.pmap-blob b{position:relative;z-index:2;text-shadow:0 1px 5px rgba(0,0,0,.4), 0 0 12px rgba(255,255,255,.35)}
+.pmap-stop.done .pmap-blob{box-shadow:
+  inset 0 2px 2px rgba(255,255,255,.72), inset 0 -9px 18px rgba(0,0,0,.16),
+  0 0 0 2.5px var(--bg2), 0 0 0 5px var(--pc), 0 14px 26px -12px var(--pc)}
 .pmap-stop.skipped{opacity:.42}
 .pmap-stop.skipped .pmap-blob{filter:grayscale(.85)}
 .pmap-cap{font-size:11px;line-height:1.3;color:var(--text-dim);text-align:center;
@@ -776,9 +791,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .prail .pmap-blob{width:52px;height:52px;font-size:15px}
 .prail .pmap-cap{font-size:10px}
 .prail .pmap-mark{width:17px;height:17px;font-size:9px}
+.pmap-mark{z-index:3}
 /* Следующая остановка дышит кольцом — единственная подсказка, куда жать */
-.pmap-stop.next .pmap-blob{box-shadow:inset 0 1.5px 1px rgba(255,255,255,.45),
-  0 0 0 2px var(--card), 0 0 0 4px var(--pc), 0 8px 18px -8px rgba(0,0,0,.5);
+.pmap-stop.next .pmap-blob{box-shadow:
+  inset 0 2px 2px rgba(255,255,255,.72), inset 0 -9px 18px rgba(0,0,0,.16),
+  0 0 0 2px var(--bg2), 0 0 0 4px var(--pc), 0 14px 26px -12px var(--pc);
   animation:pmapPulse 2.6s ease-in-out infinite}
 @keyframes pmapPulse{50%{opacity:.62}}
 .prail-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -792,7 +809,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    текст только тормозит и подсовывает повод усомниться */
 .pstop-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin-bottom:14px;display:block}
 .pstop-img-fallback{width:100%;aspect-ratio:16/9;border-radius:14px;margin-bottom:14px;
-  background:radial-gradient(130% 150% at 28% 18%, rgba(255,255,255,.28), transparent 62%), var(--pc)}
+  background:
+    radial-gradient(62% 78% at 26% 16%, rgba(255,255,255,.66), rgba(255,255,255,0) 66%),
+    linear-gradient(156deg, rgba(255,255,255,.3), rgba(255,255,255,.04) 58%),
+    var(--pc);
+  box-shadow:inset 0 2px 2px rgba(255,255,255,.6), inset 0 -14px 26px rgba(0,0,0,.14)}
 .pstop-title{font-family:var(--disp);font-weight:700;font-size:16px;line-height:1.3;margin-bottom:6px}
 .pstop-note{font-size:12px;color:var(--text-dim);margin-bottom:14px}
 .pstop-skip{display:block;width:100%;margin-top:14px;background:none;border:none;font-family:inherit;
@@ -4443,7 +4464,9 @@ function planHtml(answers, compact){
 const PMAP_X = [26, 50, 74, 50];      // змейка: влево — центр — вправо — центр
 const PMAP_STEP = 116;                // расстояние между остановками, px
 const PMAP_TOP = 46;
-const PMAP_COLORS = ['#e2712f','#4f8fca','#b0355e','#3f9c8b','#8b3fd1','#c9a23a'];
+// Пастельные, а не плотные: под белой вуалью насыщенный цвет выглядит краской,
+// а не стеклом — референс Denis'а (иконка Figma) держится именно на пастели
+const PMAP_COLORS = ['#f0885a','#68b0e8','#e07a95','#5fc8ab','#a98cf0','#e8c25f'];
 
 let planStops = [];
 let planSkipped = new Set();
@@ -4508,16 +4531,20 @@ function planMapHtml(answers){
   }
 
   const n = planStops.length;
-  const h = PMAP_TOP + (n - 1) * PMAP_STEP + 78;
+  // Блоб 60px, подпись в две строки под ним — остановка целиком около 100px
+  const PMAP_R = 30;
+  const h = PMAP_TOP + (n - 1) * PMAP_STEP + 104;
   const pt = planStops.map(function(s, i){
+    // y — верхний край остановки; тропинка идёт через ЦЕНТРЫ блобов, то есть ниже на радиус
     return { x: PMAP_X[i % PMAP_X.length], y: PMAP_TOP + i * PMAP_STEP };
   });
 
   // Тропинка: плавные S-образные переходы между остановками
-  let d = 'M ' + pt[0].x + ' ' + pt[0].y;
+  let d = 'M ' + pt[0].x + ' ' + (pt[0].y + PMAP_R);
   for (let i = 1; i < pt.length; i++){
     const a = pt[i-1], b = pt[i], m = (b.y - a.y) / 2;
-    d += ' C ' + a.x + ' ' + (a.y + m) + ', ' + b.x + ' ' + (b.y - m) + ', ' + b.x + ' ' + b.y;
+    d += ' C ' + a.x + ' ' + (a.y + PMAP_R + m) + ', ' + b.x + ' ' + (b.y + PMAP_R - m)
+       + ', ' + b.x + ' ' + (b.y + PMAP_R);
   }
 
   let html = '<div class="pmap" style="height:' + h + 'px">'
