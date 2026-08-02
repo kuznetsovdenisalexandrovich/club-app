@@ -5282,7 +5282,13 @@ function pfRender(){
   if (!world) return;
   // Ветка, с которой человек работает прямо сейчас. Всё остальное приглушаем
   // и отодвигаем — но не убираем, иначе пропадает ощущение большого поля
-  const focusCl = (pfFocus && planDraft.expanded.length) ? pfCluster(pfFocus) : null;
+  /* Облачко берём ИЗ ДЕРЕВА РАСКРЫТИЯ (`v.cluster`), а не из справочника.
+     В pfRelax это уже было исправлено, а здесь оставалась старая версия — и
+     соседняя тема, подтянутая из другого направления, получала класс `.far`
+     и приглушалась до трети яркости. Нажать её было можно, но выглядела она
+     неактивной: физика уже считала её своей, а внешний вид — ещё чужой */
+  const clOf = function(k){ return (v.cluster && v.cluster[k]) || pfCluster(k); };
+  const focusCl = (pfFocus && planDraft.expanded.length) ? clOf(pfFocus) : null;
 
   /* Стартовые позиции не должны совпадать: расталкивание нулевого вектора
      не знает, в какую сторону разводить, и уводит всех в одну — одно
@@ -5314,7 +5320,7 @@ function pfRender(){
   list.forEach(function(k){
     const el = document.createElement('div');
     const fresh = !pfSizes[k];
-    const far = focusCl && pfCluster(k) !== focusCl;
+    const far = focusCl && clOf(k) !== focusCl;
     el.className = 'pf-node' + (roots.indexOf(k) !== -1 ? ' root' : '')
       + (fresh && roots.indexOf(k) === -1 ? ' bud' : '')
       + (planDraft.expanded.indexOf(k) !== -1 ? ' open' : '')
