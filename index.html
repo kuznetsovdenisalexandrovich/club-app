@@ -2071,6 +2071,21 @@ function comingSoon() {
   showToast('Скоро появится здесь!');
 }
 
+/* Кнопка «назад» самого Telegram. Апп ей никогда не управлял, поэтому в
+   Telegram Desktop она висела поверх контента и налезала на логотип в шапке.
+   Теперь на корневых вкладках её нет вовсе, а на внутренних экранах она
+   показывается и делает осмысленное — возвращает на портал. Заодно перехватываем
+   аппаратную кнопку «назад» на Android */
+const TG_ROOT_VIEWS = ['portal', 'library', 'profile'];
+function syncTgBackButton(name){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg || !tg.BackButton) return;
+  try {
+    if (TG_ROOT_VIEWS.indexOf(name) !== -1) tg.BackButton.hide();
+    else tg.BackButton.show();
+  } catch(e){}
+}
+
 function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -2095,6 +2110,7 @@ function switchView(name) {
       if (listEl) listEl.innerHTML = lastRewardsData ? rewardsListHtml() : '<div class="empty">Не удалось загрузить</div>';
     });
   }
+  syncTgBackButton(name);
   window.scrollTo(0, 0);
   updateLevelBarScrollPosition();
 }
@@ -5332,10 +5348,14 @@ function pfRender(){
     el.textContent = pfLabel(k);
     if (planDraft.problems.indexOf(k) !== -1) el.classList.add('on');
     el.onclick = function(){ if (!pfMoved) pfTap(k); };
-    // Новая капсула стартует в родителе — наружу её вынесет пружина
+    /* Новая капсула стартует В ТОМ, КТО ЕЁ РАСКРЫЛ (`v.from[k]`) — наружу её
+       вынесет пружина. Раньше родитель искался перебором списка: первый узел,
+       упоминающий k. Соседство ВЗАИМНО, поэтому у темы из другого направления
+       находился не тот родитель, и она «прилетала откуда-то сбоку» вместо того,
+       чтобы выплыть из нажатой темы. Та же ошибка уже чинилась в физике (v22)
+       и в приглушении (v24) — это её третье и последнее место */
     if (!pfDraw[k]){
-      const par = list.find(function(p){
-        return pfChildren(p).concat(pfRelated(p)).indexOf(k) !== -1; });
+      const par = (v.from && v.from[k]) || null;
       const from = (par && pfDraw[par]) ? pfDraw[par] : pfPos[k];
       pfDraw[k] = { x: from.x, y: from.y };
       pfVel[k] = { x: 0, y: 0 };
@@ -5588,6 +5608,11 @@ function planFieldChrome(hide){
       delete el.dataset.pfPrev;
     }
   });
+  /* Снимок display, снятый при ОТКРЫТИИ поля, мог быть уже неверным: например,
+     поле открыли из состояния, где бар был спрятан ИИ-попапом — тогда при
+     закрытии мы честно вернули бы «спрятан», и он пропал бы с обычного экрана
+     до следующей перерисовки. Пересчитываем от истины, а не от снимка */
+  if (!hide) try { renderLevelCard(); } catch(e){}
 }
 
 // «Начать сначала»: снимаем выбор и раскрытия, поле собирается заново
@@ -6910,7 +6935,17 @@ function startWebSession(){
       tg.onEvent('safeAreaChanged', applyTelegramSafeArea);
       tg.onEvent('contentSafeAreaChanged', applyTelegramSafeArea);
       tg.onEvent('fullscreenChanged', applyTelegramSafeArea);
+      /* Кнопка «назад» Telegram: спрятана на корневых вкладках (иначе висит
+         поверх шапки и налезает на логотип), а на внутренних экранах возвращает
+         на портал. Поле выбора тем закрываем его же обработчиком — иначе
+         кнопка увела бы на портал, оставив поле открытым под ним */
+      tg.onEvent('backButtonClicked', function(){
+        const field = document.getElementById('plan-field');
+        if (field && field.classList.contains('show')){ closePlanField(); return; }
+        switchView('portal');
+      });
     }
+    syncTgBackButton('portal');   // стартовый экран — кнопки быть не должно
     telegramId = tg.initDataUnsafe.user.id;
     startApp();
     openFromStartParam();
