@@ -162,7 +162,7 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .saved-banner{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:12.5px;font-weight:600}
 .clear-saved{color:var(--warm);cursor:pointer;font-weight:600}
 .watch-later-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--card2);border:1px solid var(--border);min-height:118px;text-align:center;padding:0 8px}
-.watch-later-icon{font-size:20px}
+.watch-later-icon{width:22px;height:22px;color:var(--text-dim)}
 .lec-title{font-weight:700;font-size:14px;line-height:1.4;margin-bottom:6px}
 .lec-desc{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lec-tags{display:flex;flex-wrap:wrap;gap:6px}
@@ -708,30 +708,48 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    стекло, а не собственная тёмная плашка. Значения скопированы из .tabbar
    (var(--card), var(--border), blur 20, та же тень и радиус), изменены
    только размеры — пилюля ниже и по ширине контента */
+/* Пилюля стала крупнее и выше — прежний размер "терялся" на фоне поля.
+   Заполнение до трёх тем: три — это уже достаточно для хорошего пути,
+   не обязательный максимум, поэтому шкала не тянет добирать до десяти */
 .pf-dock{
-  position:absolute;left:50%;transform:translateX(-50%);
-  bottom:calc(env(safe-area-inset-bottom) + 16px);
+  position:relative;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 18px);
   max-width:calc(100% - 32px);z-index:4;
-  border-radius:24px;padding:7px 7px 7px 16px;
-  display:flex;align-items:center;gap:10px;white-space:nowrap;
+  border-radius:28px;padding:10px 10px 10px 20px;
+  display:flex;align-items:center;gap:12px;white-space:nowrap;
+  overflow:hidden;
   /* Значения --card/--border тёмной темы вписаны числами СОЗНАТЕЛЬНО: поле
      выбора всегда тёмное независимо от темы приложения, а в светлой теме
      var(--card) — непрозрачный бежевый, и стекло превратилось бы в плашку */
-  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  box-shadow:0 10px 30px -8px rgba(0,0,0,0.35);
+  box-shadow:0 12px 34px -8px rgba(0,0,0,0.4);
 }
-.pf-picked{font-size:11.5px;color:#98908a}
+/* Свечение растёт слева направо ПОД содержимым (z-index:0), а не поверх —
+   иначе заливка съедала бы читаемость текста и особенно тонкую обводку
+   «Начать сначала». Ширина зависит от доли выбранного, слой сам следит */
+.pf-fill{position:absolute;inset:0;z-index:0;width:0%;
+  background:linear-gradient(90deg, rgba(90,200,140,.32), rgba(90,200,140,.08) 70%, transparent);
+  box-shadow:inset -1px 0 24px 2px rgba(120,230,170,.22);
+  transition:width .5s cubic-bezier(.22,.8,.3,1)}
+.pf-dock > *:not(.pf-fill){position:relative;z-index:1}
+.pf-picked{font-size:12.5px;color:#98908a}
 .pf-picked b{color:#ffb37c;font-weight:600}
-.pf-reset{padding:9px 14px;border-radius:999px;cursor:pointer;
+.pf-reset{padding:11px 16px;border-radius:999px;cursor:pointer;
   border:1px solid rgba(246,239,230,.18);background:rgba(246,239,230,.06);color:#e8e0d6;
-  font-family:inherit;font-size:12px;font-weight:600}
-.pf-go{padding:9px 18px;border-radius:999px;border:none;cursor:pointer;
-  font-family:inherit;font-size:12.5px;font-weight:600;color:#2c0e02;
-  background:radial-gradient(130% 160% at 25% 20%, #ffd9a0, #ff9a4d 50%, #e33d14);
-  box-shadow:inset 0 1.5px 1.5px rgba(255,246,230,.8);
-  opacity:.35;transition:opacity .3s}
-.pf-go.ready{opacity:1}
+  font-family:inherit;font-size:13px;font-weight:600}
+/* «Готово» — стекло, а не пластиковый градиент: полупрозрачная зелёная
+   заливка поверх того же материала, что у самой пилюли, плюс мягкий блик */
+.pf-go{padding:11px 22px;border-radius:999px;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:#eafff2;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.22), rgba(255,255,255,0) 55%),
+    rgba(70,190,130,.28);
+  border:1px solid rgba(120,230,170,.4);
+  box-shadow:inset 0 1.5px 1.5px rgba(255,255,255,.35);
+  opacity:.5;transition:opacity .3s, box-shadow .3s}
+.pf-go.ready{opacity:1;
+  box-shadow:inset 0 1.5px 1.5px rgba(255,255,255,.4), 0 0 22px -4px rgba(90,220,150,.55)}
 
 /* Появление поля: капсулы рождаются в центре сцены и разлетаются по местам.
    Конечная точка в кадре 100% не указана СПЕЦИАЛЬНО — тогда анимация едет
@@ -1301,6 +1319,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     </div>
     <button class="pf-back" onclick="closePlanField()">✕</button>
     <div class="pf-dock">
+      <div class="pf-fill" id="pf-fill"></div>
       <div class="pf-picked" id="pf-picked">Пока ничего не выбрано</div>
       <button class="pf-reset" onclick="planFieldReset()">Начать сначала</button>
       <button class="pf-go" id="pf-go" onclick="planFieldDone()">Готово</button>
@@ -3592,6 +3611,10 @@ function renderLevelCard(){
   updateMenuPointsBadge();
   const card = document.getElementById('level-card');
   if (!card) return;
+  // Поле выбора тем прячет бар на время: visibilitychange, опрос вступления
+  // в канал и закрытие ИИ-попапа — все дёргают эту функцию, и без явной
+  // проверки любой из них возвращал бы бар поверх поля
+  if (pfFieldOpen){ card.style.display = 'none'; return; }
   if (!isMember) {
     card.style.display = 'none';
     document.body.classList.remove('onboarding-bar-visible');
@@ -4126,7 +4149,7 @@ async function loadStreams() {
   const el = document.getElementById('streams-row');
   const watchLaterTile = `
     <div class="stream-tile watch-later-tile" onclick="switchView('library');openSavedList()">
-      <div class="watch-later-icon">🔖</div>
+      <svg class="watch-later-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2"></path><path d="M9 2h6"></path></svg>
       <div class="stream-tile-title">Смотреть позже</div>
     </div>`;
   try {
@@ -4315,6 +4338,7 @@ function renderPersonalPlanSection(){
    незачем — план пересобирается мгновенно и одинаково при каждом открытии. */
 
 const PLAN_MAX_PROBLEMS = 10;     // потолок: план секциями по каждой теме, дальше это простыня
+const PLAN_GOOD_ENOUGH = 3;       // столько уже достаточно для хорошего пути — шкала и «Готово» ориентируются на это число, не на потолок
 const PLAN_PER_PROBLEM  = 3;      // лекций под одну боль
 
 const PLAN_LEVELS = [
@@ -4834,6 +4858,7 @@ let pfPos = {}, pfSizes = {};        // ЦЕЛЕВЫЕ позиции (левы�
    и даёт мягкий подъезд с упругим перелётом */
 let pfDraw = {}, pfVel = {}, pfStart = {}, pfEls = {}, pfSeeds = {};
 let pfCamX = null, pfCamY = null, pfCamVX = 0, pfCamVY = 0, pfCamOn = false;
+let pfFieldOpen = false;   // renderLevelCard() уважает этот флаг — см. ниже
 let pfAnimRaf = null, pfFocus = null;
 let pfOx = 0, pfOy = 0, pfVx = 0, pfVy = 0, pfRaf = null;
 let pfDragging = false, pfMoved = false, pfTrail = [];
@@ -4921,6 +4946,9 @@ const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
    рябит. Совсем убирать их нельзя — пропадёт ощущение, что поле большое */
 const PF_GAP_FOCUS = 100;   // зазор между раскрытой веткой и всеми остальными
 const PF_PUSH_AWAY = 95;   // насколько чужие направления отъезжают от раскрытого
+/* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
+   воздух: без запаса оно при парении наползает на соседние темы */
+const PF_ROOT_PAD = 30;
 const PF_ROOT_R = 150, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
 // Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
 // относительно первой настройки по просьбе Denis'а
@@ -5038,8 +5066,16 @@ function pfRelax(list, roots){
     for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
       const a = list[i], b = list[j];
       const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
-      const pad = cl[a] === cl[b] ? PF_GAP_IN
+      let pad = cl[a] === cl[b] ? PF_GAP_IN
         : (focusCl && (cl[a] === focusCl || cl[b] === focusCl) ? PF_GAP_FOCUS : PF_GAP_OUT);
+      /* Капсулы не стоят на месте — каждая парит на несколько пикселей в
+         стороны. Решатель об этом не знал и разводил впритык, а парение
+         потом съедало весь зазор и капсулы наползали. Закладываем ход обеих */
+      const sa2 = pfSeed(a), sb2 = pfSeed(b);
+      pad += Math.max(sa2.dx, sa2.dy) + Math.max(sb2.dx, sb2.dy);
+      // Направлению — дополнительный воздух с обеих сторон
+      if (roots.indexOf(a) !== -1) pad += PF_ROOT_PAD;
+      if (roots.indexOf(b) !== -1) pad += PF_ROOT_PAD;
       let dx = cx(b) - cx(a), dy = cy(b) - cy(a);
       // Совпали точь-в-точь — направление разведения выбираем по индексам,
       // иначе знак берётся из нуля и обе уезжают в одну сторону
@@ -5187,10 +5223,14 @@ function pfRender(){
 
   const n = planDraft.problems.length;
   const pk = document.getElementById('pf-picked');
-  if (pk) pk.innerHTML = n ? 'Выбрано <b>' + n + '</b> из ' + PLAN_MAX_PROBLEMS
-                           : 'Пока ничего не выбрано';
+  if (pk) pk.innerHTML = n ? 'Выбрано <b>' + n + '</b>' : 'Пока ничего не выбрано';
   const go = document.getElementById('pf-go');
-  if (go) go.classList.toggle('ready', n > 0);
+  // Готовность и шкала ориентируются на PLAN_GOOD_ENOUGH (3), а не на потолок
+  // выбора (10): десять — это предел, а не цель, и заполнять бар до предела
+  // подталкивало бы добирать лишние темы, которые на самом деле не болят
+  if (go) go.classList.toggle('ready', n >= PLAN_GOOD_ENOUGH);
+  const fill = document.getElementById('pf-fill');
+  if (fill) fill.style.width = Math.min(100, n / PLAN_GOOD_ENOUGH * 100) + '%';
 }
 
 /* Один кадр анимации на всё поле: пружина к цели, парение, переливание и
@@ -5361,6 +5401,7 @@ async function openPlanField(){
    и таббар не должны висеть поверх неё. У самого поля z-index 60, поэтому
    спрятать их можно только явно */
 function planFieldChrome(hide){
+  pfFieldOpen = !hide;
   // .scroll-fade — затемнение низа списка, оно живёт СНАРУЖИ .shell, а у той
   // z-index:1 создаёт контекст наложения: z-index:60 поля считается внутри неё
   // и наружу не выигрывает. Отсюда светлая полоса поверх тёмного поля
