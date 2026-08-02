@@ -704,6 +704,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   filter:blur(46px);opacity:.2;
   background:radial-gradient(closest-side, var(--c), transparent 72%)}
 
+/* Фоновый блоб направления — в отличие от .pf-glow (загорается только при
+   раскрытии), этот виден ВСЕГДА, еле заметно, ещё до первого тапа, и просто
+   РАСТЁТ вместе с раскрытием ветки: territory-маркер направления на фоне */
+#plan-dir-blobs{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
+.pf-dir-blob{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;
+  filter:blur(70px);opacity:.09;
+  background:radial-gradient(closest-side, var(--c), transparent 70%);
+  transition:transform 1.4s cubic-bezier(.22,.8,.3,1), opacity .8s ease}
+
 /* Материал — тот же, что у таббара приложения: матовое полупрозрачное
    стекло, а не собственная тёмная плашка. Значения скопированы из .tabbar
    (var(--card), var(--border), blur 20, та же тень и радиус), изменены
@@ -1313,6 +1322,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
   <!-- Поле выбора тем — шаг 1 личного плана, особенный экран -->
   <div id="plan-field">
+    <div id="plan-dir-blobs"></div>
     <div id="plan-glow"></div>
     <div id="plan-world"></div>
     <svg id="plan-grain" width="100%" height="100%"><filter id="pfn"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#pfn)" opacity=".5"/></svg>
@@ -4818,30 +4828,15 @@ function renderPlanScreen(){
 
 /* ── Анкета ──────────────────────────────────────────────────────────────── */
 
+// Все кнопки, ведущие сюда, называются «Пройти заново», «Собрать личный
+// план», «Пересобрать план →» — ни одна не обещает «продолжить с того же
+// места». Denis попросил вести себя буквально: полный сброс к пустым корням,
+// а не восстановление прежних галочек с заранее раскрытыми ветками
 async function startPlanQuiz(){
   planStep = 0;
-  planDraft = planAnswers
-    ? { problems: (planAnswers.problems || []).slice(), expanded: [],
-        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note }
-    : { problems: [], expanded: [], level: '', depth: '', note: '' };
+  planDraft = { problems: [], expanded: [], level: '', depth: '', note: '' };
   switchView('plan');
   await loadPlanProblems();
-  // Уже выбранные темы раскрываем, чтобы человек видел, где стоят его галочки —
-  // это касается и родителя (частный случай), и самого НАПРАВЛЕНИЯ: без него
-  // прежний выбор был бы спрятан за закрытой дверью. Считаем ПОСЛЕ загрузки
-  // справочника — до нее planProblems мог быть ещё пуст
-  planDraft.problems.forEach(function(k){
-    if (pfChildren(k).length || pfRelated(k).length) planDraft.expanded.push(k);
-    const prob = planProblems.find(function(x){ return x.key === k; });
-    if (!prob) return;
-    if (prob.parent_key && planDraft.expanded.indexOf(prob.parent_key) === -1)
-      planDraft.expanded.push(prob.parent_key);
-    const top = prob.parent_key ? planProblems.find(function(x){ return x.key === prob.parent_key; }) : prob;
-    if (top){
-      const phaseRoot = 'phase:' + top.phase;
-      if (planDraft.expanded.indexOf(phaseRoot) === -1) planDraft.expanded.push(phaseRoot);
-    }
-  });
   renderPlanQuestion();
 }
 
@@ -4861,6 +4856,7 @@ let pfPos = {}, pfSizes = {};        // ЦЕЛЕВЫЕ позиции (левы�
    решатель, pfDraw — где капсула сейчас на самом деле. Между ними пружина, она
    и даёт мягкий подъезд с упругим перелётом */
 let pfDraw = {}, pfVel = {}, pfStart = {}, pfEls = {}, pfSeeds = {};
+let pfDirBlobEls = {};   // один DOM-узел на направление — переиспользуется, не пересоздаётся
 let pfCamX = null, pfCamY = null, pfCamVX = 0, pfCamVY = 0, pfCamOn = false;
 let pfFieldOpen = false;   // renderLevelCard() уважает этот флаг — см. ниже
 let pfAnimRaf = null, pfFocus = null;
@@ -4966,9 +4962,13 @@ const PF_ROOT_PAD = 30;
 const PF_ROOT_R = 150, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
 // Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
 // относительно первой настройки по просьбе Denis'а
-const PF_K = 0.077, PF_DAMP = 0.793;
-const PF_CAM_K = 0.070, PF_CAM_DAMP = 0.720;
-const PF_STAGGER = 0.18;
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
 
 // Облачко темы — направление, из которого она выросла
 function pfCluster(key){
@@ -4987,9 +4987,9 @@ function pfSeed(key){
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
   return pfSeeds[key] = {
-    driftDur: (6 + rnd() * 5) * 1.35,
+    driftDur: (6 + rnd() * 5) * 1.35 * 1.33,   // ещё на треть медленнее
     driftPh:  rnd() * Math.PI * 2,
-    hueDur:   (9 + rnd() * 6) * 1.35,
+    hueDur:   (9 + rnd() * 6) * 1.35 * 1.33,   // ещё на треть медленнее
     huePh:    rnd() * Math.PI * 2,
     dx: 2.5 + rnd() * 3.5,
     dy: 2.5 + rnd() * 4,
@@ -5033,6 +5033,11 @@ function pfRelax(list, roots){
     let r = open ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
     if (anyOpen && !open && focusCl) r += PF_PUSH_AWAY;
     r += (pfSaltedRand(k, 1) - 0.5) * 40;   // ±20px
+    // Потолок — Denis заметил, что в паре случаев корень улетал почти к краю
+    // экрана. Это только ограничивает «дом», к которому тянется пружина;
+    // расталкивание всё равно может вытолкнуть корень дальше — настоящую
+    // гарантию даёт жёсткий зажим ПОСЛЕ решателя, см. в конце pfRelax
+    r = Math.min(r, PF_ROOT_MAX_R);
     const s = pfSizes[k] || {w:150,h:42};
     home[k] = { x: PF_CX + Math.cos(a)*r - s.w/2, y: PF_CY + Math.sin(a)*r - s.h/2 };
   });
@@ -5126,6 +5131,63 @@ function pfRelax(list, roots){
       pfPos[k].y = Math.max(140, Math.min(PF_H - s.h - 40, pfPos[k].y));
     });
   }
+
+  // Жёсткий зажим ПОСЛЕ решателя: расталкивание может вытолкнуть корень дальше
+  // потолка уже после того, как его «дом» был ограничен — соседние капсулы
+  // толкают его наружу, отвоёвывая себе место. Без этого шага PF_ROOT_MAX_R
+  // остаётся пожеланием, а не гарантией — проверено тестом на реальном случае
+  roots.forEach(function(k){
+    const s = pfSizes[k] || {w:150,h:42};
+    const dx = cx(k) - PF_CX, dy = cy(k) - PF_CY;
+    const d = Math.hypot(dx, dy);
+    if (d > PF_ROOT_MAX_R){
+      const f = PF_ROOT_MAX_R / d;
+      pfPos[k].x = PF_CX + dx * f - s.w/2;
+      pfPos[k].y = PF_CY + dy * f - s.h/2;
+    }
+  });
+}
+
+/* Фоновый блоб направления: живёт ВСЕГДА (один DOM-узел на направление,
+   создан один раз — переиспользуется, не пересоздаётся), еле заметный (.09),
+   и просто МЕНЯЕТ РАЗМЕР по числу видимых потомков этого направления — растёт,
+   когда букет распускается, садится обратно, когда ветка сворачивается.
+   Позиция — центр текущего облачка (среднее по видимым капсулам ветки), а не
+   сам корень: так пятно смещается вместе с букетом */
+function pfDirBlobs(v){
+  const layer = document.getElementById('plan-dir-blobs');
+  if (!layer) return;
+  pfRoots().forEach(function(r){
+    let el = pfDirBlobEls[r];
+    if (!el){
+      el = document.createElement('div');
+      el.className = 'pf-dir-blob';
+      layer.appendChild(el);
+      pfDirBlobEls[r] = el;
+    }
+    const members = v.list.filter(function(k){ return pfCluster(k) === r; });
+    if (!members.length){ el.style.opacity = '0'; return; }
+
+    let cx = 0, cy = 0, maxSpan = 0;
+    members.forEach(function(k){
+      const s = pfSizes[k] || {w:150,h:42};
+      cx += pfPos[k].x + s.w/2; cy += pfPos[k].y + s.h/2;
+    });
+    cx /= members.length; cy /= members.length;
+    members.forEach(function(k){
+      const s = pfSizes[k] || {w:150,h:42};
+      const px = pfPos[k].x + s.w/2, py = pfPos[k].y + s.h/2;
+      maxSpan = Math.max(maxSpan, Math.hypot(px - cx, py - cy));
+    });
+    // Базовый радиус даже у ОДНОЙ капсулы (свёрнутое направление) — метка
+    // территории видна и без раскрытия, просто маленькая
+    const rad = Math.max(150, maxSpan + 130);
+
+    el.style.setProperty('--c', v.color[r] || PF_COLORS[0]);
+    el.style.width = el.style.height = rad * 2 + 'px';
+    el.style.opacity = '.09';
+    el.style.transform = 'translate(' + (cx - rad) + 'px,' + (cy - rad) + 'px)';
+  });
 }
 
 /* Ореол облачка — очень слабое размытое пятно позади его капсул. Рисуется
@@ -5240,6 +5302,7 @@ function pfRender(){
       pfCamOn = true;
     }
     pfGlows(v);
+    pfDirBlobs(v);
     pfStartAnim();
   });
 
@@ -5402,6 +5465,9 @@ async function openPlanField(){
   world.style.height = PF_H + 'px';
   const glow = document.getElementById('plan-glow');
   if (glow){ glow.style.width = PF_W + 'px'; glow.style.height = PF_H + 'px'; glow.innerHTML = ''; }
+  const dirBlobs = document.getElementById('plan-dir-blobs');
+  if (dirBlobs){ dirBlobs.style.width = PF_W + 'px'; dirBlobs.style.height = PF_H + 'px'; dirBlobs.innerHTML = ''; }
+  pfDirBlobEls = {};   // слой очищен — кэш узлов тоже, иначе pfDirBlobs держится за удалённые DOM-элементы
   pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
   pfApply();
   pfWire();
