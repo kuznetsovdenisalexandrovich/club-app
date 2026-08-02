@@ -3639,7 +3639,13 @@ function renderLevelCard(){
   // Поле выбора тем прячет бар на время: visibilitychange, опрос вступления
   // в канал и закрытие ИИ-попапа — все дёргают эту функцию, и без явной
   // проверки любой из них возвращал бы бар поверх поля
-  if (pfFieldOpen){ card.style.display = 'none'; return; }
+  if (pfFieldOpen){
+    // Прячем и значок: выход происходит раньше, чем код ниже до него доберётся
+    card.style.display = 'none';
+    const b0 = document.getElementById('reward-level-badge');
+    if (b0) b0.style.display = 'none';
+    return;
+  }
   if (!isMember) {
     card.style.display = 'none';
     document.body.classList.remove('onboarding-bar-visible');
@@ -5553,7 +5559,11 @@ async function openPlanField(){
    и таббар не должны висеть поверх неё. У самого поля z-index 60, поэтому
    спрятать их можно только явно */
 function planFieldChrome(hide){
-  pfFieldOpen = !hide;
+  /* hide === true означает «спрятать хром», а прячем мы его ровно тогда, когда
+     поле ОТКРЫТО. То есть pfFieldOpen === hide. В v17 здесь стояло `!hide` —
+     флаг всегда получался обратным, защита в renderLevelCard() не срабатывала
+     НИ РАЗУ, и бар возвращался поверх поля при любом её вызове */
+  pfFieldOpen = hide;
   // .scroll-fade — затемнение низа списка, оно живёт СНАРУЖИ .shell, а у той
   // z-index:1 создаёт контекст наложения: z-index:60 поля считается внутри неё
   // и наружу не выигрывает. Отсюда светлая полоса поверх тёмного поля
