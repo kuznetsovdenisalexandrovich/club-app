@@ -219,6 +219,15 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .stream-hero{position:relative;height:220px;margin:0 -16px 0;overflow:hidden;border-radius:22px 22px 0 0}
 .stream-hero img{width:100%;height:100%;object-fit:cover;display:block;-webkit-mask-image:linear-gradient(to bottom,black 55%,transparent 100%);mask-image:linear-gradient(to bottom,black 55%,transparent 100%)}
 .stream-back{position:absolute;top:calc(var(--safe-top) + 16px);left:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(10px)}
+/* Стрелка «назад» ВНУТРИ заголовка раздела. Отдельный класс сознательно:
+   .stream-back — абсолютно позиционированная накладка для обложки потока
+   (top/left отсчитываются от .stream-hero). Если тот же класс поставить в
+   обычный .section-label, у которого нет позиционирования, отсчёт уходит к
+   странице целиком — и кнопка улетает в левый верхний угол, прямо на логотип.
+   Здесь она просто первый элемент строки заголовка */
+.inline-back{width:28px;height:28px;border-radius:50%;background:var(--card2);
+  border:1px solid var(--border);color:var(--text-dim);display:inline-flex;
+  align-items:center;justify-content:center;font-size:15px;cursor:pointer;flex-shrink:0}
 .stream-body{padding-top:4px}
 .stream-title{font-family:var(--disp);font-weight:700;font-size:19px;margin-bottom:8px}
 .stream-desc{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:20px}
@@ -1321,7 +1330,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <!-- ── Личный план: анкета ── -->
   <div class="view" id="view-plan">
     <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span class="stream-back" onclick="switchView('library')">←</span>
+      <span class="inline-back" onclick="switchView('library')">←</span>
       <span>Личный план</span>
     </div>
     <div class="card">
@@ -1354,7 +1363,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   <!-- ── Правила колоды ── -->
   <div class="view" id="view-deck-rules">
     <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span class="stream-back" onclick="switchView('cards')">←</span>
+      <span class="inline-back" onclick="switchView('cards')">←</span>
       <span>Правила колоды</span>
     </div>
     <div class="card">
