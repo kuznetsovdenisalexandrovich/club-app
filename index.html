@@ -707,6 +707,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Фоновый блоб направления — в отличие от .pf-glow (загорается только при
    раскрытии), этот виден ВСЕГДА, еле заметно, ещё до первого тапа, и просто
    РАСТЁТ вместе с раскрытием ветки: territory-маркер направления на фоне */
+/* Затемнение по краям: капсула, уходящая в темноту, читается как «поле
+   продолжается, подвинь», а обрезанная резким краем — как «не влезло».
+   Слой над капсулами (z-index 3), но кликам не мешает */
+#plan-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:
+    linear-gradient(to right,  #0b080c 0%, rgba(11,8,12,0) 13%),
+    linear-gradient(to left,   #0b080c 0%, rgba(11,8,12,0) 13%),
+    linear-gradient(to bottom, #0b080c 0%, rgba(11,8,12,0) 9%),
+    linear-gradient(to top,    #0b080c 0%, rgba(11,8,12,0) 14%)}
+
 #plan-dir-blobs{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
 .pf-dir-blob{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;
   filter:blur(70px);opacity:.09;
@@ -1326,6 +1336,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     <div id="plan-glow"></div>
     <div id="plan-world"></div>
     <svg id="plan-grain" width="100%" height="100%"><filter id="pfn"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#pfn)" opacity=".5"/></svg>
+    <div id="plan-vignette"></div>
     <div class="pf-hud">
       <div class="pf-eyebrow">Твой путь · шаг 1</div>
       <div class="pf-title">Осмотрись и собери своё</div>
@@ -4959,7 +4970,7 @@ const PF_PUSH_AWAY = 95;   // насколько чужие направлени
 /* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
    воздух: без запаса оно при парении наползает на соседние темы */
 const PF_ROOT_PAD = 30;
-const PF_ROOT_R = 150, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
 // Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
 // относительно первой настройки по просьбе Denis'а
 // Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
@@ -4969,6 +4980,7 @@ const PF_K = 0.042, PF_DAMP = 0.84;
 const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
 const PF_STAGGER = 0.24;
 const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
 
 // Облачко темы — направление, из которого она выросла
 function pfCluster(key){
@@ -5076,6 +5088,22 @@ function pfRelax(list, roots){
       pfPos[k].y += (home[k].y - pfPos[k].y) * kSpring;
     });
 
+    /* Зажим радиуса корня — ВНУТРИ цикла, ДО расталкивания. Если делать это
+       после всех проходов (как было в v19), зажим затягивает корень обратно
+       в уже разведённых соседей и капсулы наезжают друг на друга: расталкивать
+       после него уже некому. Здесь же следующий проход расталкивания видит
+       новое положение и разводит всё заново */
+    roots.forEach(function(k){
+      const s = pfSizes[k] || {w:150,h:42};
+      const dx = cx(k) - PF_CX, dy = cy(k) - PF_CY;
+      const d = Math.hypot(dx, dy);
+      if (d > PF_ROOT_MAX_R){
+        const f = PF_ROOT_MAX_R / d;
+        pfPos[k].x = PF_CX + dx * f - s.w/2;
+        pfPos[k].y = PF_CY + dy * f - s.h/2;
+      }
+    });
+
     // Сплочение: члены облачка тянутся к своему центру, иначе ветка расползается
     const cen = {};
     list.forEach(function(k){
@@ -5093,16 +5121,27 @@ function pfRelax(list, roots){
     for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
       const a = list[i], b = list[j];
       const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
-      let pad = cl[a] === cl[b] ? PF_GAP_IN
+      const aRoot = roots.indexOf(a) !== -1, bRoot = roots.indexOf(b) !== -1;
+      /* Пока НИЧЕГО не раскрыто, на поле одни направления и разводить их
+         широко незачем — большой зазор нужен, чтобы развести букеты, а букетов
+         ещё нет. Из-за общего зазора кольцо на старте раздувалось и корни
+         улетали к краям. Тесная стартовая раскладка, широкая — по мере
+         раскрытия */
+      let pad;
+      if (!anyOpen && aRoot && bRoot) pad = PF_GAP_START;
+      else pad = cl[a] === cl[b] ? PF_GAP_IN
         : (focusCl && (cl[a] === focusCl || cl[b] === focusCl) ? PF_GAP_FOCUS : PF_GAP_OUT);
       /* Капсулы не стоят на месте — каждая парит на несколько пикселей в
          стороны. Решатель об этом не знал и разводил впритык, а парение
          потом съедало весь зазор и капсулы наползали. Закладываем ход обеих */
       const sa2 = pfSeed(a), sb2 = pfSeed(b);
       pad += Math.max(sa2.dx, sa2.dy) + Math.max(sb2.dx, sb2.dy);
-      // Направлению — дополнительный воздух с обеих сторон
-      if (roots.indexOf(a) !== -1) pad += PF_ROOT_PAD;
-      if (roots.indexOf(b) !== -1) pad += PF_ROOT_PAD;
+      // Направлению — дополнительный воздух с обеих сторон, но не на старте:
+      // там он раздувает то же самое кольцо
+      if (!(!anyOpen && aRoot && bRoot)){
+        if (aRoot) pad += PF_ROOT_PAD;
+        if (bRoot) pad += PF_ROOT_PAD;
+      }
       let dx = cx(b) - cx(a), dy = cy(b) - cy(a);
       // Совпали точь-в-точь — направление разведения выбираем по индексам,
       // иначе знак берётся из нуля и обе уезжают в одну сторону
@@ -5132,20 +5171,6 @@ function pfRelax(list, roots){
     });
   }
 
-  // Жёсткий зажим ПОСЛЕ решателя: расталкивание может вытолкнуть корень дальше
-  // потолка уже после того, как его «дом» был ограничен — соседние капсулы
-  // толкают его наружу, отвоёвывая себе место. Без этого шага PF_ROOT_MAX_R
-  // остаётся пожеланием, а не гарантией — проверено тестом на реальном случае
-  roots.forEach(function(k){
-    const s = pfSizes[k] || {w:150,h:42};
-    const dx = cx(k) - PF_CX, dy = cy(k) - PF_CY;
-    const d = Math.hypot(dx, dy);
-    if (d > PF_ROOT_MAX_R){
-      const f = PF_ROOT_MAX_R / d;
-      pfPos[k].x = PF_CX + dx * f - s.w/2;
-      pfPos[k].y = PF_CY + dy * f - s.h/2;
-    }
-  });
 }
 
 /* Фоновый блоб направления: живёт ВСЕГДА (один DOM-узел на направление,
@@ -5406,7 +5431,16 @@ function pfApply(){
   if (!world) return;
   pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
   pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
-  world.style.transform = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+  const t = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+  world.style.transform = t;
+  /* Слои свечения ОБЯЗАНЫ ехать вместе с миром: их пятна позиционируются в
+     координатах поля (около 1100px), а не экрана. Пока их не двигали, они
+     висели далеко за краем экрана — поэтому «свечения не видно». Касается и
+     ореолов облачков (pfGlows), и фоновых блобов направлений (pfDirBlobs) */
+  const glow = document.getElementById('plan-glow');
+  if (glow) glow.style.transform = t;
+  const dirBlobs = document.getElementById('plan-dir-blobs');
+  if (dirBlobs) dirBlobs.style.transform = t;
 }
 function pfMomentum(){
   pfVx *= .955; pfVy *= .955;
