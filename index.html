@@ -712,7 +712,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    Заполнение до трёх тем: три — это уже достаточно для хорошего пути,
    не обязательный максимум, поэтому шкала не тянет добирать до десяти */
 .pf-dock{
-  position:relative;left:50%;transform:translateX(-50%);
+  /* absolute (не relative!) — держит пилюлю прибитой к низу поля. absolute
+     САМ ПО СЕБЕ создаёт контекст позиционирования для .pf-fill внутри, поэтому
+     смена на relative была лишней и вдобавок ломала fixed-расположение —
+     пилюля вываливалась в обычный поток документа и уезжала наверх */
+  position:absolute;left:50%;transform:translateX(-50%);
   bottom:calc(env(safe-area-inset-bottom) + 18px);
   max-width:calc(100% - 32px);z-index:4;
   border-radius:28px;padding:10px 10px 10px 20px;
@@ -4860,6 +4864,16 @@ let pfDraw = {}, pfVel = {}, pfStart = {}, pfEls = {}, pfSeeds = {};
 let pfCamX = null, pfCamY = null, pfCamVX = 0, pfCamVY = 0, pfCamOn = false;
 let pfFieldOpen = false;   // renderLevelCard() уважает этот флаг — см. ниже
 let pfAnimRaf = null, pfFocus = null;
+let pfLayoutSalt = Math.random();   // меняется на «Начать сначала» и при новом открытии поля
+
+// Псевдослучайное число от ключа И текущей соли — при новой соли раскладка
+// иная, но внутри одной сессии поля стабильна (не прыгает между тапами)
+function pfSaltedRand(key, salt){
+  let h = Math.floor(pfLayoutSalt * 1e9) ^ (salt || 0);
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  h = (h * 1103515245 + 12345) >>> 0;
+  return (h % 1000) / 1000;
+}
 let pfOx = 0, pfOy = 0, pfVx = 0, pfVy = 0, pfRaf = null;
 let pfDragging = false, pfMoved = false, pfTrail = [];
 let pfWired = false;
@@ -5009,11 +5023,16 @@ function pfRelax(list, roots){
   /* Корни: компактное кольцо. Раскрытое направление отъезжает от центра,
      расчищая место под букет, а ЧУЖИЕ разъезжаются ещё дальше — прочь от
      раскрытого. Так на экране разом меньше лишнего, но всё остаётся на месте */
+  // Поворот всего кольца — на каждую соль своё начало, узкий разброс радиуса
+  // (не угла: соседние корни не должны меняться местами) — иначе изредка
+  // выпадала бы неудачная раскладка, а не просто «другая»
+  const ringSpin = pfLayoutSalt * Math.PI * 2;
   roots.forEach(function(k, i){
-    const a = (i / roots.length) * Math.PI * 2 - Math.PI/2;
+    const a = (i / roots.length) * Math.PI * 2 - Math.PI/2 + ringSpin;
     const open = planDraft.expanded.indexOf(k) !== -1;
     let r = open ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
     if (anyOpen && !open && focusCl) r += PF_PUSH_AWAY;
+    r += (pfSaltedRand(k, 1) - 0.5) * 40;   // ±20px
     const s = pfSizes[k] || {w:150,h:42};
     home[k] = { x: PF_CX + Math.cos(a)*r - s.w/2, y: PF_CY + Math.sin(a)*r - s.h/2 };
   });
@@ -5031,8 +5050,11 @@ function pfRelax(list, roots){
     const outward = Math.atan2(pcy - PF_CY, pcx - PF_CX) || 0;
     const spread = Math.min(200, 46 * r.n) * Math.PI / 180;
     const t = r.n <= 1 ? 0 : (r.i / (r.n - 1)) - 0.5;
-    const ang = outward + t * spread;
-    const dist = 128 + (r.child ? 0 : 16);
+    // Джиттер угла держим узким (±12°) и НЕ трогаем порядок (t остаётся тем же
+    // самым) — иначе букет иногда раскрывался бы в уже занятое место
+    const jitter = (pfSaltedRand(k, 2) - 0.5) * (12 * Math.PI / 180);
+    const ang = outward + t * spread + jitter;
+    const dist = 128 + (r.child ? 0 : 16) + (pfSaltedRand(k, 3) - 0.5) * 20;
     home[k] = { x: pcx + Math.cos(ang)*dist - s.w/2, y: pcy + Math.sin(ang)*dist - s.h/2 };
   });
 
@@ -5374,6 +5396,7 @@ async function openPlanField(){
   if (!f) return;
   pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
   pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // новая раскладка при каждом открытии поля
   const world = document.getElementById('plan-world');
   world.style.width = PF_W + 'px';
   world.style.height = PF_H + 'px';
@@ -5428,6 +5451,7 @@ function planFieldReset(){
   planDraft.expanded = [];
   pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
   pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // «Начать сначала» — тоже новая раскладка
   pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
   pfApply();
   pfRender();
