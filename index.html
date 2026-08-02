@@ -671,7 +671,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   /* ВАЖНО: transform и filter капсулы целиком принадлежат JS (pfAnimFrame).
      Пока парение жило CSS-анимацией на transform, она перехватывала переезд —
      капсула не подъезжала к новому месту, а прыгала */
-  transition:box-shadow .45s, color .3s;
+  animation:pfHue var(--hue-dur,14s) ease-in-out var(--hue-delay,0s) infinite;
 }
 .pf-node.open{box-shadow:
   inset 0 1px 1px rgba(255,255,255,.28),
@@ -688,8 +688,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     0 0 34px -2px var(--c),
     0 12px 30px -12px rgba(0,0,0,.85);
 }
-.pf-node.bud{animation:pfPop .68s ease backwards}
+.pf-node.bud{animation:pfPop .68s ease backwards, pfHue var(--hue-dur,14s) ease-in-out var(--hue-delay,0s) infinite}
 @keyframes pfPop{from{opacity:0}}
+/* Переливание держим у базового оттенка: чуть тёплого, не смена цвета */
+@keyframes pfHue{0%,100%{filter:hue-rotate(0deg) saturate(1)}50%{filter:hue-rotate(9deg) saturate(1.12)}}
+
+/* Капсулы чужих веток не исчезают, но отходят на второй план — так на экране
+   разом меньше того, что не относится к раскрытой теме */
+.pf-node.far{opacity:.34}
+.pf-node{transition:box-shadow .45s, color .3s, opacity .5s}
 
 /* Ореол облачка — очень слабое размытое пятно позади капсул ветки */
 #plan-glow{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
@@ -4909,6 +4916,11 @@ function pfVisible(){
    границе, не смешивая. */
 
 const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
+/* Когда ветка раскрыта, чужие капсулы должны отойти СИЛЬНЕЕ обычного: иначе
+   на экране одновременно висит десяток тем, не относящихся к выбранной, и
+   рябит. Совсем убирать их нельзя — пропадёт ощущение, что поле большое */
+const PF_GAP_FOCUS = 100;   // зазор между раскрытой веткой и всеми остальными
+const PF_PUSH_AWAY = 95;   // насколько чужие направления отъезжают от раскрытого
 const PF_ROOT_R = 150, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
 // Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
 // относительно первой настройки по просьбе Denis'а
@@ -4962,10 +4974,18 @@ function pfRelax(list, roots){
     }
   });
 
-  // Корни: компактное кольцо; раскрытое направление отъезжает, расчищая место
+  // Какая ветка сейчас в работе: та, к которой относится последняя нажатая тема
+  const focusCl = pfFocus ? pfCluster(pfFocus) : null;
+  const anyOpen = roots.some(function(k){ return planDraft.expanded.indexOf(k) !== -1; });
+
+  /* Корни: компактное кольцо. Раскрытое направление отъезжает от центра,
+     расчищая место под букет, а ЧУЖИЕ разъезжаются ещё дальше — прочь от
+     раскрытого. Так на экране разом меньше лишнего, но всё остаётся на месте */
   roots.forEach(function(k, i){
     const a = (i / roots.length) * Math.PI * 2 - Math.PI/2;
-    const r = planDraft.expanded.indexOf(k) !== -1 ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
+    const open = planDraft.expanded.indexOf(k) !== -1;
+    let r = open ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
+    if (anyOpen && !open && focusCl) r += PF_PUSH_AWAY;
     const s = pfSizes[k] || {w:150,h:42};
     home[k] = { x: PF_CX + Math.cos(a)*r - s.w/2, y: PF_CY + Math.sin(a)*r - s.h/2 };
   });
@@ -5018,7 +5038,8 @@ function pfRelax(list, roots){
     for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
       const a = list[i], b = list[j];
       const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
-      const pad = cl[a] === cl[b] ? PF_GAP_IN : PF_GAP_OUT;
+      const pad = cl[a] === cl[b] ? PF_GAP_IN
+        : (focusCl && (cl[a] === focusCl || cl[b] === focusCl) ? PF_GAP_FOCUS : PF_GAP_OUT);
       let dx = cx(b) - cx(a), dy = cy(b) - cy(a);
       // Совпали точь-в-точь — направление разведения выбираем по индексам,
       // иначе знак берётся из нуля и обе уезжают в одну сторону
@@ -5079,6 +5100,9 @@ function pfRender(){
   const v = pfVisible(), list = v.list, roots = pfRoots();
   const world = document.getElementById('plan-world');
   if (!world) return;
+  // Ветка, с которой человек работает прямо сейчас. Всё остальное приглушаем
+  // и отодвигаем — но не убираем, иначе пропадает ощущение большого поля
+  const focusCl = (pfFocus && planDraft.expanded.length) ? pfCluster(pfFocus) : null;
 
   /* Стартовые позиции не должны совпадать: расталкивание нулевого вектора
      не знает, в какую сторону разводить, и уводит всех в одну — одно
@@ -5110,10 +5134,15 @@ function pfRender(){
   list.forEach(function(k){
     const el = document.createElement('div');
     const fresh = !pfSizes[k];
+    const far = focusCl && pfCluster(k) !== focusCl;
     el.className = 'pf-node' + (roots.indexOf(k) !== -1 ? ' root' : '')
       + (fresh && roots.indexOf(k) === -1 ? ' bud' : '')
-      + (planDraft.expanded.indexOf(k) !== -1 ? ' open' : '');
+      + (planDraft.expanded.indexOf(k) !== -1 ? ' open' : '')
+      + (far ? ' far' : '');
     el.style.setProperty('--c', v.color[k] || PF_COLORS[0]);
+    const sd0 = pfSeed(k);
+    el.style.setProperty('--hue-dur', sd0.hueDur.toFixed(1) + 's');
+    el.style.setProperty('--hue-delay', (-sd0.huePh * 2).toFixed(1) + 's');
     el.textContent = pfLabel(k);
     if (planDraft.problems.indexOf(k) !== -1) el.classList.add('on');
     el.onclick = function(){ if (!pfMoved) pfTap(k); };
@@ -5182,14 +5211,16 @@ function pfAnimFrame(){
       r.x += vel.x; r.y += vel.y;
     }
     if (PF_CALM){
-      el.style.transform = 'translate(' + r.x + 'px,' + r.y + 'px)';
+      el.style.transform = 'translate(' + r.x.toFixed(1) + 'px,' + r.y.toFixed(1) + 'px)';
     } else {
+      // Переливание отдано CSS-анимации (см. .pf-node): filter и transform —
+      // разные свойства, драться им не за что, зато JS больше не пишет стиль
+      // фильтра каждому узлу каждый кадр. Это и был главный источник нагрузки:
+      // hue-rotate заставляет перерисовывать капсулу целиком
       const sd = pfSeed(k);
       const fx = Math.sin(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dx;
       const fy = Math.cos(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dy;
-      el.style.transform = 'translate(' + (r.x + fx) + 'px,' + (r.y + fy) + 'px)';
-      const h = Math.sin(now / sd.hueDur * Math.PI * 2 + sd.huePh) * 0.5 + 0.5;
-      el.style.filter = 'hue-rotate(' + (h*9).toFixed(1) + 'deg) saturate(' + (1 + h*0.12).toFixed(2) + ')';
+      el.style.transform = 'translate(' + (r.x + fx).toFixed(1) + 'px,' + (r.y + fy).toFixed(1) + 'px)';
     }
   });
 
@@ -5330,6 +5361,11 @@ async function openPlanField(){
    и таббар не должны висеть поверх неё. У самого поля z-index 60, поэтому
    спрятать их можно только явно */
 function planFieldChrome(hide){
+  // .scroll-fade — затемнение низа списка, оно живёт СНАРУЖИ .shell, а у той
+  // z-index:1 создаёт контекст наложения: z-index:60 поля считается внутри неё
+  // и наружу не выигрывает. Отсюда светлая полоса поверх тёмного поля
+  const fade = document.querySelector('.scroll-fade');
+  if (fade) fade.style.display = hide ? 'none' : '';
   ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
     const el = document.getElementById(id);
     if (!el) return;
