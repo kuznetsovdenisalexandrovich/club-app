@@ -22,25 +22,29 @@
   /* Боковые полосы — единственный способ перейти к соседней части.
      Внутри страницы выпуска никаких обработчиков касаний нет вовсе, поэтому
      прокрутка остаётся полностью на стороне браузера, с обычной инерцией. */
-  .side{position:absolute;top:0;bottom:0;width:46px;z-index:4;cursor:pointer;
+  .side{position:absolute;top:0;bottom:0;width:54px;z-index:4;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    transition:opacity .3s ease,background .3s ease;
-    -webkit-tap-highlight-color:transparent}
-  .side.next{right:0;background:linear-gradient(270deg,rgba(24,20,17,.30),rgba(24,20,17,.14) 55%,rgba(24,20,17,0))}
-  .side.prev{left:0;background:linear-gradient(90deg,rgba(24,20,17,.24),rgba(24,20,17,.10) 55%,rgba(24,20,17,0))}
-  .side.ready.next{background:linear-gradient(270deg,rgba(24,20,17,.52),rgba(24,20,17,.26) 55%,rgba(24,20,17,0))}
+    transition:opacity .3s ease;-webkit-tap-highlight-color:transparent}
+  .side.next{right:0;background:linear-gradient(270deg,rgba(255,252,250,.72),rgba(255,252,250,.28) 60%,rgba(255,252,250,0))}
+  .side.prev{left:0;background:linear-gradient(90deg,rgba(255,252,250,.62),rgba(255,252,250,.22) 60%,rgba(255,252,250,0))}
   .side.hidden{opacity:0;pointer-events:none}
-  .side:active{background:rgba(24,20,17,.55)}
 
-  .side .lbl{writing-mode:vertical-rl;font-size:11px;letter-spacing:.16em;
-    text-transform:uppercase;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);
-    display:flex;align-items:center;gap:9px}
-  .side.prev .lbl{transform:rotate(180deg)}
-  .side .arw{font-size:15px;letter-spacing:0}
+  /* Кнопка-кругляш вместо сплошной накладки: занимает меньше места и не спорит
+     с оформлением выпуска */
+  .side .knob{width:34px;height:34px;border-radius:50%;
+    background:rgba(255,253,251,.9);border:1px solid rgba(24,20,17,.14);
+    box-shadow:0 3px 12px rgba(24,20,17,.14);
+    display:flex;align-items:center;justify-content:center;
+    color:#1c1815;font-size:17px;line-height:1;
+    transition:transform .3s ease,background .25s ease}
+  .side .cap{position:absolute;bottom:14%;writing-mode:vertical-rl;font-size:10px;
+    letter-spacing:.16em;text-transform:uppercase;color:#6d645c;opacity:.85}
+  .side.prev .cap{transform:rotate(180deg)}
+  .side.ready .knob{transform:scale(1.18);background:#1c1815;color:#fff;border-color:#1c1815}
+  .side:active .knob{transform:scale(.92)}
 
-  /* Название соседней части выезжает при касании полосы */
   #peek{position:absolute;z-index:5;right:52px;top:50%;transform:translateY(-50%);
-    max-width:58%;padding:9px 13px;border-radius:12px;background:rgba(24,20,17,.9);
+    max-width:58%;padding:9px 13px;border-radius:12px;background:rgba(28,24,21,.88);
     color:#fff;font-size:12.5px;line-height:1.35;opacity:0;pointer-events:none;
     transition:opacity .2s ease}
   #peek.show{opacity:1}
@@ -55,8 +59,8 @@
 
 <div id="win">
   <iframe id="f" src="about:blank" scrolling="yes"></iframe>
-  <div class="side prev hidden" id="side-prev"><span class="lbl"><span class="arw">‹</span>Назад</span></div>
-  <div class="side next hidden" id="side-next"><span class="lbl"><span class="arw">›</span>Дальше</span></div>
+  <div class="side prev hidden" id="side-prev"><span class="knob">‹</span><span class="cap">Назад</span></div>
+  <div class="side next hidden" id="side-next"><span class="knob">›</span><span class="cap">Дальше</span></div>
   <div id="peek"></div>
 </div>
 
@@ -108,8 +112,16 @@ function open_(i){
 
   const f = document.getElementById('f');
   f.style.visibility = 'hidden';     // иначе на месте старой части мигает пустой лист
-  f.onload = onLoaded;
-  f.src = 'pilot/' + parts[idx].file;
+
+  // ВАЖНО: сначала пустая страница, и только потом следующая часть. Без этого
+  // шага предыдущая часть ещё занимает память в момент загрузки новой, и на
+  // тяжёлых частях вебвью падает. Пауза даёт браузеру снести старый документ
+  f.onload = null;
+  f.src = 'about:blank';
+  setTimeout(function(){
+    f.onload = onLoaded;
+    f.src = 'pilot/' + parts[idx].file;
+  }, 160);
 }
 
 function turn(step){ open_(idx + step); }
