@@ -815,42 +815,75 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .pmap-path{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .pmap-line{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:7 9;
   vector-effect:non-scaling-stroke}
-.pmap-stop{position:absolute;transform:translate(-50%,0);width:104px;padding:0;border:none;
+/* top задаёт ВЕРХНИЙ КРАЙ сферы; JS вычитает радиус из центра, поэтому
+   остановки разного размера всё равно нанизаны на одну тропинку */
+.pmap-stop{position:absolute;transform:translate(-50%,0);width:112px;padding:0;border:none;
   background:none;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;
-  align-items:center;gap:7px;animation:pmapIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
+  align-items:center;gap:8px;animation:pmapIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
 @keyframes pmapIn{from{opacity:0;transform:translate(-50%,0) scale(.5)}}
 /* Матовое стекло: цвет лежит снизу, поверх него белая вуаль и блик
    в левом верхнем углу, а ::after размывает всё, что под ним (в том числе
    обложку лекции) — оттого камешек и читается как стекло, а не как заливка */
-.pmap-blob{width:60px;height:60px;border-radius:50%;position:relative;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  font-family:var(--disp);font-weight:700;font-size:17px;color:#fff;
-  background:
-    radial-gradient(72% 62% at 30% 18%, rgba(255,255,255,.8), rgba(255,255,255,0) 64%),
-    linear-gradient(156deg, rgba(255,255,255,.34), rgba(255,255,255,.04) 56%),
-    var(--pc);
+/* ══ Материал Clear edge ═══════════════════════════════════════════════
+   Слои и параметры взяты из макета: подложка, поверхность с искажением,
+   радужность, блик, ободок. Размер один на всё через --d, поэтому отступы
+   слоёв и шрифт считаются ОТ ДИАМЕТРА — иначе 46px и 84px выглядели бы
+   разным материалом. Цвет направления живёт в свечении и подкраске снизу,
+   верх остаётся белым: залить стекло цветом значит перестать быть стеклом */
+.pmap-blob{width:var(--d,60px);height:var(--d,60px);border-radius:50%;position:relative;
+  overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:700;font-size:calc(var(--d,60px) * .29);color:#fff;
+  border:1px solid rgba(255,255,255,.5);
+  background:linear-gradient(152deg, rgba(255,255,255,.19), rgba(255,255,255,.04));
+  backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);
   box-shadow:
-    inset 0 2px 2px rgba(255,255,255,.72),
-    inset 0 -9px 18px rgba(0,0,0,.16),
-    0 0 0 1px rgba(255,255,255,.3),
-    0 14px 26px -12px var(--pc),
-    0 8px 16px -10px rgba(0,0,0,.45);
-  transition:transform .16s ease}
-.pmap-blob::after{content:'';position:absolute;inset:0;border-radius:50%;z-index:1;
-  background:linear-gradient(158deg, rgba(255,255,255,.42) 0%, rgba(255,255,255,.1) 40%, rgba(255,255,255,0) 66%);
-  backdrop-filter:blur(7px) saturate(1.15);-webkit-backdrop-filter:blur(7px) saturate(1.15)}
+    0 1px 0 rgba(255,255,255,.3),
+    inset 1px 1px 2px rgba(255,255,255,.5),
+    inset 0 calc(var(--d,60px) * -.27) calc(var(--d,60px) * .55) rgba(0,0,0,.3),
+    0 calc(var(--d,60px) * .22) calc(var(--d,60px) * .4) -8px rgba(0,0,0,.45);
+  transition:transform .16s ease, box-shadow .3s ease}
+
+/* Подкраска цветом направления — снизу, до двух третей высоты */
+.pmap-blob::before{content:'';position:absolute;inset:0;z-index:2;border-radius:50%;
+  pointer-events:none;
+  background:radial-gradient(122% 92% at 50% 110%,
+    color-mix(in srgb, var(--pc) 34%, transparent), transparent 64%)}
+
+/* Блик и ободок одним слоем поверх всего, кроме номера */
+.pmap-blob i{position:absolute;inset:1px;z-index:3;border-radius:50%;pointer-events:none;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.5), transparent 16% 76%, rgba(255,255,255,.16)),
+    radial-gradient(80% 28% at 50% 0%, rgba(255,255,255,.6), transparent 68%);
+  box-shadow:inset 1px 1px 1px rgba(255,255,255,.5), inset -1px -1px 2px rgba(0,0,0,.22)}
+
+/* Фоновое свечение позади сферы. Лежит в остановке (z-index 0), сфера выше */
+.pmap-glow{position:absolute;z-index:0;border-radius:50%;pointer-events:none;
+  width:calc(var(--d,60px) * 1.6);height:calc(var(--d,60px) * 1.6);
+  left:50%;top:calc(var(--d,60px) * -.3);transform:translateX(-50%);
+  background:radial-gradient(closest-side,
+    color-mix(in srgb, var(--pc) 55%, transparent), transparent 72%);
+  filter:blur(calc(var(--d,60px) * .3));opacity:.7;transition:opacity .3s}
+.pmap-blob::after{content:'';position:absolute;inset:calc(var(--d,60px) * .08);z-index:1;
+  border-radius:50%;pointer-events:none;
+  background:
+    radial-gradient(90% 72% at 50% 72%, rgba(255,255,255,.12), rgba(255,255,255,.03) 58%, transparent 72%),
+    linear-gradient(160deg, rgba(255,255,255,.28), rgba(255,255,255,.02))}
 .pmap-stop:active .pmap-blob{transform:scale(.92)}
-.pmap-blob img{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:.42}
-.pmap-blob b{position:relative;z-index:2;text-shadow:0 1px 5px rgba(0,0,0,.4), 0 0 12px rgba(255,255,255,.35)}
-.pmap-stop.done .pmap-blob{box-shadow:
-  inset 0 2px 2px rgba(255,255,255,.72), inset 0 -9px 18px rgba(0,0,0,.16),
-  0 0 0 2.5px var(--bg2), 0 0 0 5px var(--pc), 0 14px 26px -12px var(--pc)}
+.pmap-blob img{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;opacity:.5}
+.pmap-blob b{position:relative;z-index:4;text-shadow:0 1px 5px rgba(0,0,0,.45)}
+/* Пройденная — маленькая и тихая: своё она уже отслужила */
+.pmap-stop.done .pmap-glow{opacity:.32}
+.pmap-stop.done .pmap-blob{border-color:rgba(255,255,255,.36)}
 .pmap-stop.skipped{opacity:.42}
 .pmap-stop.skipped .pmap-blob{filter:grayscale(.85)}
+.pmap-stop.skipped .pmap-glow{opacity:.1}
 .pmap-cap{font-size:11px;line-height:1.3;color:var(--text-dim);text-align:center;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pmap-mark{position:absolute;right:-1px;bottom:-1px;z-index:2;width:20px;height:20px;border-radius:50%;
-  background:var(--bg2);color:var(--text);font-size:11px;display:flex;align-items:center;justify-content:center}
+.pmap-mark{position:absolute;right:0;bottom:0;z-index:5;
+  width:calc(var(--d,60px) * .32);height:calc(var(--d,60px) * .32);border-radius:50%;
+  background:var(--bg2);color:var(--text);font-size:calc(var(--d,60px) * .17);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.35)}
 
 /* Компактная карта в библиотеке — та же тропинка, положенная на бок.
    Отрицательные поля вытаскивают ленту под края карточки: обрезанная
@@ -862,15 +895,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .prail-line{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
 .prail-line path{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:6 8}
 .prail .pmap-stop{width:78px;animation:none}
-.prail .pmap-blob{width:52px;height:52px;font-size:15px}
+
 .prail .pmap-cap{font-size:10px}
-.prail .pmap-mark{width:17px;height:17px;font-size:9px}
+
 .pmap-mark{z-index:3}
 /* Следующая остановка дышит кольцом — единственная подсказка, куда жать */
-.pmap-stop.next .pmap-blob{box-shadow:
-  inset 0 2px 2px rgba(255,255,255,.72), inset 0 -9px 18px rgba(0,0,0,.16),
-  0 0 0 2px var(--bg2), 0 0 0 4px var(--pc), 0 14px 26px -12px var(--pc);
-  animation:pmapPulse 2.6s ease-in-out infinite}
+/* Текущая — самая крупная, и свечение у неё дышит */
+.pmap-stop.next .pmap-blob{border-color:rgba(255,255,255,.72)}
+.pmap-stop.next .pmap-glow{opacity:1;animation:pmapPulse 2.6s ease-in-out infinite}
+.pmap-stop.next .pmap-cap{opacity:1;font-weight:600}
 @keyframes pmapPulse{50%{opacity:.62}}
 .prail-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 
@@ -5012,7 +5045,38 @@ const PMAP_STEP = 116;                // расстояние между ост�
 const PMAP_TOP = 46;
 // Пастельные, а не плотные: под белой вуалью насыщенный цвет выглядит краской,
 // а не стеклом — референс Denis'а (иконка Figma) держится именно на пастели
+/* Запасная палитра — если справочник ещё не загружен и направление
+   определить не по чему */
 const PMAP_COLORS = ['#f0885a','#68b0e8','#e07a95','#5fc8ab','#a98cf0','#e8c25f'];
+
+/* Размер остановки говорит о её роли, а не о порядке:
+   пройденная маленькая, следующая крупная, будущие средние */
+const PMAP_D = { done: 46, next: 84, future: 60 };
+const PRAIL_D = { done: 38, next: 64, future: 48 };
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
 
 let planStops = [];
 let planSkipped = new Set();
@@ -5047,6 +5111,7 @@ function planStopList(answers){
     const ph = top ? top.phase : '';
     return {
       g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
       ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
       sub: (top && top.sort_order) || 100,
     };
@@ -5061,7 +5126,8 @@ function planStopList(answers){
     rows.forEach(function(r){
       if (!r.lec || seen[r.lec.slug]) return;   // одна лекция может закрывать две боли
       seen[r.lec.slug] = true;
-      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent, group: w.g.label });
+      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent,
+                   group: w.g.label, phase: w.phase });
     });
   });
   return stops;
@@ -5077,20 +5143,26 @@ function planMapHtml(answers){
   }
 
   const n = planStops.length;
-  // Блоб 60px, подпись в две строки под ним — остановка целиком около 100px
-  const PMAP_R = 30;
-  const h = PMAP_TOP + (n - 1) * PMAP_STEP + 104;
-  const pt = planStops.map(function(s, i){
-    // y — верхний край остановки; тропинка идёт через ЦЕНТРЫ блобов, то есть ниже на радиус
-    return { x: PMAP_X[i % PMAP_X.length], y: PMAP_TOP + i * PMAP_STEP };
-  });
+  const nextIdx = planNextIdx();
 
-  // Тропинка: плавные S-образные переходы между остановками
-  let d = 'M ' + pt[0].x + ' ' + (pt[0].y + PMAP_R);
+  /* Размеры теперь разные, поэтому раскладка идёт по ЦЕНТРАМ: центр каждой
+     сферы садится на регулярную сетку, а верхний край считается вычитанием
+     радиуса. Иначе крупная «текущая» соскочила бы с тропинки */
+  const size = planStops.map(function(s, i){
+    return planStopSize(i, nextIdx, planVisited.has(s.lec.slug), PMAP_D);
+  });
+  const maxR = Math.max.apply(null, size) / 2;
+  const top0 = Math.max(PMAP_TOP, maxR + 14);
+  const pt = planStops.map(function(s, i){
+    return { x: PMAP_X[i % PMAP_X.length], cy: top0 + i * PMAP_STEP, r: size[i] / 2 };
+  });
+  const h = top0 + (n - 1) * PMAP_STEP + maxR + 58;
+
+  // Тропинка идёт через центры сфер
+  let d = 'M ' + pt[0].x + ' ' + pt[0].cy;
   for (let i = 1; i < pt.length; i++){
-    const a = pt[i-1], b = pt[i], m = (b.y - a.y) / 2;
-    d += ' C ' + a.x + ' ' + (a.y + PMAP_R + m) + ', ' + b.x + ' ' + (b.y + PMAP_R - m)
-       + ', ' + b.x + ' ' + (b.y + PMAP_R);
+    const a = pt[i-1], b = pt[i], m = (b.cy - a.cy) / 2;
+    d += ' C ' + a.x + ' ' + (a.cy + m) + ', ' + b.x + ' ' + (b.cy - m) + ', ' + b.x + ' ' + b.cy;
   }
 
   let html = '<div class="pmap" style="height:' + h + 'px">'
@@ -5100,13 +5172,16 @@ function planMapHtml(answers){
   planStops.forEach(function(s, i){
     const done = planVisited.has(s.lec.slug);
     const skip = planSkipped.has(s.lec.slug);
-    const color = PMAP_COLORS[i % PMAP_COLORS.length];
-    html += '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '') + '"'
-      + ' style="left:' + pt[i].x + '%;top:' + pt[i].y + 'px;--pc:' + color
-      + ';animation-delay:' + (i * 70) + 'ms"'
+    const color = planStopColor(s, i);
+    html += '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+        + (i === nextIdx ? ' next' : '') + '"'
+      + ' style="left:' + pt[i].x + '%;top:' + (pt[i].cy - pt[i].r) + 'px;--pc:' + color
+      + ';--d:' + size[i] + 'px;animation-delay:' + (i * 70) + 'ms"'
       + ' onclick="openPlanStop(' + i + ')">'
+      + '<span class="pmap-glow"></span>'
       + '<span class="pmap-blob">'
         + '<img src="images/lectures/' + s.lec.slug + '.jpg" alt="" loading="lazy" onerror="this.remove()">'
+        + '<i></i>'
         + '<b>' + (i + 1) + '</b>'
         + (done ? '<span class="pmap-mark">✓</span>' : '')
       + '</span>'
@@ -5136,36 +5211,42 @@ function planRailHtml(answers){
       + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
   }
 
-  const STEP = 86, X0 = 43, TOP = 6, WAVE = [0, 14];
+  const STEP = 92, X0 = 48, WAVE = [0, 12];
   const n = planStops.length;
-  const w = X0 * 2 + (n - 1) * STEP;
-  const yOf = function(i){ return TOP + 26 + WAVE[i % WAVE.length]; };
+  const nextIdx = planNextIdx();
 
-  let d = 'M ' + X0 + ' ' + yOf(0);
+  // Как и на полной карте — раскладка по центрам, размеры разные
+  const size = planStops.map(function(s, i){
+    return planStopSize(i, nextIdx, planVisited.has(s.lec.slug), PRAIL_D);
+  });
+  const maxR = Math.max.apply(null, size) / 2;
+  const cy = function(i){ return maxR + 8 + WAVE[i % WAVE.length]; };
+  const w = X0 * 2 + (n - 1) * STEP;
+  const railH = maxR * 2 + 12 + Math.max.apply(null, WAVE) + 40;
+
+  let d = 'M ' + X0 + ' ' + cy(0);
   for (let i = 1; i < n; i++){
     const px = X0 + (i-1) * STEP, x = X0 + i * STEP;
-    d += ' C ' + (px + STEP/2) + ' ' + yOf(i-1) + ', ' + (x - STEP/2) + ' ' + yOf(i)
-       + ', ' + x + ' ' + yOf(i);
+    d += ' C ' + (px + STEP/2) + ' ' + cy(i-1) + ', ' + (x - STEP/2) + ' ' + cy(i)
+       + ', ' + x + ' ' + cy(i);
   }
 
-  // Первая непройденная — та, к которой стоит вернуться
-  let nextIdx = planStops.findIndex(function(s){
-    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
-  });
-
-  let html = '<div class="prail"><div class="prail-inner" style="width:' + w + 'px">'
-    + '<svg class="prail-line" width="' + w + '" height="116"><path d="' + d + '"></path></svg>';
+  let html = '<div class="prail"><div class="prail-inner" style="width:' + w + 'px;height:' + railH + 'px">'
+    + '<svg class="prail-line" width="' + w + '" height="' + railH + '"><path d="' + d + '"></path></svg>';
 
   planStops.forEach(function(s, i){
     const done = planVisited.has(s.lec.slug);
     const skip = planSkipped.has(s.lec.slug);
-    const color = PMAP_COLORS[i % PMAP_COLORS.length];
+    const color = planStopColor(s, i);
     html += '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
         + (i === nextIdx ? ' next' : '') + '"'
-      + ' style="left:' + (X0 + i * STEP) + 'px;top:' + (TOP + WAVE[i % WAVE.length]) + 'px;--pc:' + color + '"'
+      + ' style="left:' + (X0 + i * STEP) + 'px;top:' + (cy(i) - size[i]/2) + 'px;--pc:' + color
+      + ';--d:' + size[i] + 'px"'
       + ' onclick="openPlanStop(' + i + ')">'
+      + '<span class="pmap-glow"></span>'
       + '<span class="pmap-blob">'
         + '<img src="images/lectures/' + s.lec.slug + '.jpg" alt="" loading="lazy" onerror="this.remove()">'
+        + '<i></i>'
         + '<b>' + (i + 1) + '</b>'
         + (done ? '<span class="pmap-mark">✓</span>' : '')
       + '</span>'
@@ -5197,7 +5278,7 @@ function openPlanStop(i){
   if (!el) return;
   if (stepEl) stepEl.textContent = 'Шаг ' + (i + 1) + ' из ' + planStops.length;
 
-  const color = PMAP_COLORS[i % PMAP_COLORS.length];
+  const color = planStopColor(s, i);
   const notes = [];
   if (s.entry && s.entry.timecode) notes.push('про это на ' + escapeHtml(s.entry.timecode));
   if (s.entry && s.entry.weight === 'touch') notes.push('затронуто вскользь');
