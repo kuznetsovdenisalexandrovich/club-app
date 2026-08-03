@@ -19,18 +19,12 @@
   #win{position:fixed;left:0;right:0;bottom:0;overflow:hidden;background:#e8e3df}
   #f{border:0;display:block;transform-origin:top left;background:#f0f0f0;position:relative;z-index:1}
 
-  /* Боковые полосы — единственный способ перейти к соседней части.
-     Внутри страницы выпуска никаких обработчиков касаний нет вовсе, поэтому
-     прокрутка остаётся полностью на стороне браузера, с обычной инерцией. */
   .side{position:absolute;top:0;bottom:0;width:54px;z-index:4;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
     transition:opacity .3s ease;-webkit-tap-highlight-color:transparent}
   .side.next{right:0;background:linear-gradient(270deg,rgba(255,252,250,.72),rgba(255,252,250,.28) 60%,rgba(255,252,250,0))}
   .side.prev{left:0;background:linear-gradient(90deg,rgba(255,252,250,.62),rgba(255,252,250,.22) 60%,rgba(255,252,250,0))}
   .side.hidden{opacity:0;pointer-events:none}
-
-  /* Кнопка-кругляш вместо сплошной накладки: занимает меньше места и не спорит
-     с оформлением выпуска */
   .side .knob{width:34px;height:34px;border-radius:50%;
     background:rgba(255,253,251,.9);border:1px solid rgba(24,20,17,.14);
     box-shadow:0 3px 12px rgba(24,20,17,.14);
@@ -42,13 +36,6 @@
   .side.prev .cap{transform:rotate(180deg)}
   .side.ready .knob{transform:scale(1.18);background:#1c1815;color:#fff;border-color:#1c1815}
   .side:active .knob{transform:scale(.92)}
-
-  #peek{position:absolute;z-index:5;right:52px;top:50%;transform:translateY(-50%);
-    max-width:58%;padding:9px 13px;border-radius:12px;background:rgba(28,24,21,.88);
-    color:#fff;font-size:12.5px;line-height:1.35;opacity:0;pointer-events:none;
-    transition:opacity .2s ease}
-  #peek.show{opacity:1}
-  #peek.left{left:52px;right:auto}
 </style>
 </head>
 <body>
@@ -58,29 +45,30 @@
 </div></div>
 
 <div id="win">
+  <iframe id="f" src="about:blank" scrolling="yes"></iframe>
   <div class="side prev hidden" id="side-prev"><span class="knob">‹</span><span class="cap">Назад</span></div>
   <div class="side next hidden" id="side-next"><span class="knob">›</span><span class="cap">Дальше</span></div>
-  <div id="peek"></div>
 </div>
 
 <script>
 /* Чтение выпуска по частям.
 
-   Выпуск свёрстан в Тильде под жёсткий холст 1280px, поэтому страница живёт
-   в iframe этой ширины и уменьшается через transform — так же, как это делает
-   мобильный браузер со всей страницей.
+   Механика намеренно вернулась к самой первой рабочей версии — той, что прошла
+   весь выпуск без падений. С тех пор я добавлял «улучшения», и каждое из них
+   подъедало память:
 
-   Целиком выпуск (~65000px) телефон не тянет: браузеру приходится держать
-   слой во всю высоту документа, и вебвью падает по памяти. Поэтому выпуск
-   разрезан на части по границам глав, и в памяти живёт ровно одна.
+   • пересоздание iframe — выброшенный узел ждёт уборки мусора, тогда как при
+     смене адреса браузер сносит прежний документ немедленно и обязательно;
+   • предзагрузка следующей части через fetch — лишняя копия документа в памяти;
+   • всплывающая подсказка с названием — лишние узлы и слушатели.
 
-   Переход между частями — только по боковым полосам. Жесты внутри страницы
-   не ловим принципиально: любой обработчик касаний там убивает инерцию
-   прокрутки, потому что браузер вынужден спрашивать наш код перед каждым
-   кадром. */
+   Здесь всего этого нет. Один и тот же iframe, смена адреса через пустую
+   страницу, ни одного обработчика касаний внутри выпуска (любой из них убивает
+   инерцию прокрутки, потому что браузер вынужден спрашивать наш код перед
+   каждым кадром). */
 
 const CANVAS = 1280;
-let parts = [], idx = 0, busy = false, preloaded = -1;
+let parts = [], idx = 0, busy = false;
 
 async function boot(){
   try {
@@ -98,54 +86,34 @@ function fitWindow(){
 
 function open_(i){
   if (busy) return;
-  const target = Math.max(0, Math.min(parts.length - 1, i));
   busy = true;
-  idx = target; preloaded = -1;
+  idx = Math.max(0, Math.min(parts.length - 1, i));
 
   document.getElementById('pos').textContent = (idx + 1) + '/' + parts.length;
   document.getElementById('ttl').textContent = parts[idx].title;
   document.getElementById('side-prev').classList.toggle('hidden', idx === 0);
   document.getElementById('side-next').classList.toggle('hidden', idx >= parts.length - 1);
   document.getElementById('side-next').classList.remove('ready');
-  document.getElementById('peek').classList.remove('show');
 
-  // ВАЖНО ПРО ПАМЯТЬ: старое окно не переиспользуем, а выбрасываем целиком и
-  // создаём новое. Подмена адреса оставляла предыдущую часть в памяти в момент
-  // загрузки следующей, и на тяжёлых частях вебвью падал. Снос узла из дерева
-  // освобождает её надёжнее, а пауза даёт браузеру время это сделать
-  const win = document.getElementById('win');
-  const oldFrame = document.getElementById('f');
-  if (oldFrame){
-    oldFrame.onload = null;
-    oldFrame.src = 'about:blank';
-    oldFrame.remove();
-  }
-
-  setTimeout(function(){
-    const f = document.createElement('iframe');
-    f.id = 'f';
-    f.setAttribute('scrolling', 'yes');
-    f.style.visibility = 'hidden';   // иначе на месте старой части мигает пустой лист
-    f.onload = onLoaded;
-    win.insertBefore(f, win.firstChild);
-    f.src = 'pilot/' + parts[idx].file;
-  }, 220);
+  const f = document.getElementById('f');
+  f.onload = onLoaded;
+  f.src = 'about:blank';
+  setTimeout(function(){ f.src = 'pilot/' + parts[idx].file; }, 60);
 }
 
 function turn(step){ open_(idx + step); }
 
 function onLoaded(){
+  const f = document.getElementById('f');
+  if (!f || !f.src || f.src.indexOf('about:blank') !== -1) return;
   busy = false;
   fitWindow();
-  const f = document.getElementById('f');
-  if (!f) return;
+
   const win = document.getElementById('win');
   const scale = baseScale();
-
   f.style.width = CANVAS + 'px';
   f.style.height = Math.ceil(win.clientHeight / scale) + 'px';
   f.style.transform = 'scale(' + scale + ')';
-  f.style.visibility = 'visible';
 
   let d;
   try { d = f.contentDocument; } catch(e){ return; }
@@ -157,39 +125,15 @@ function onLoaded(){
   d.head.appendChild(st);
   dw.scrollTo(0, 0);
 
-  // Единственный обработчик внутри страницы — пассивный, ничего не отменяет
   dw.addEventListener('scroll', function(){
-    const total = d.body.scrollHeight;
     const seen = dw.scrollY + dw.innerHeight;
-
-    if (seen > total * 0.75 && preloaded !== idx && idx + 1 < parts.length){
-      preloaded = idx;
-      fetch('pilot/' + parts[idx + 1].file).catch(function(){});
-    }
-    // Дочитал часть — полоса становится заметнее
-    document.getElementById('side-next').classList.toggle('ready', seen >= total - 60);
+    document.getElementById('side-next').classList
+      .toggle('ready', seen >= d.body.scrollHeight - 60);
   }, { passive: true });
 }
 
-function wireSide(el, step){
-  const peek = document.getElementById('peek');
-  function showPeek(){
-    const j = idx + step;
-    if (j < 0 || j >= parts.length) return;
-    peek.textContent = parts[j].title;
-    peek.classList.toggle('left', step < 0);
-    peek.classList.add('show');
-  }
-  function hidePeek(){ peek.classList.remove('show'); }
-
-  el.addEventListener('touchstart', showPeek, { passive: true });
-  el.addEventListener('touchend', hidePeek, { passive: true });
-  el.addEventListener('touchcancel', hidePeek, { passive: true });
-  el.addEventListener('click', function(){ hidePeek(); turn(step); });
-}
-
-wireSide(document.getElementById('side-next'), 1);
-wireSide(document.getElementById('side-prev'), -1);
+document.getElementById('side-next').addEventListener('click', function(){ turn(1); });
+document.getElementById('side-prev').addEventListener('click', function(){ turn(-1); });
 window.addEventListener('resize', fitWindow);
 boot();
 </script>
