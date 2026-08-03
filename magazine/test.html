@@ -5,154 +5,98 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Журнал — чтение</title>
 <style>
-  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#e8e3df;
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f7f2f1;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     -webkit-user-select:none;user-select:none}
-
   #bar{position:fixed;top:0;left:0;right:0;z-index:20;
     padding-top:max(env(safe-area-inset-top),0px);
-    background:rgba(248,246,246,.94);border-bottom:1px solid rgba(0,0,0,.08)}
-  #barin{display:flex;align-items:center;gap:10px;padding:8px 12px}
-  #pos{font-size:12px;color:#666;white-space:nowrap}
-  #ttl{font-size:12px;color:#111;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-  #win{position:fixed;left:0;right:0;bottom:0;overflow:hidden;background:#e8e3df}
-  #f{border:0;display:block;transform-origin:top left;background:#f0f0f0;position:relative;z-index:1}
-
-  .side{position:absolute;top:0;bottom:0;width:54px;z-index:4;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    transition:opacity .3s ease;-webkit-tap-highlight-color:transparent}
-  .side.next{right:0;background:linear-gradient(270deg,rgba(255,252,250,.72),rgba(255,252,250,.28) 60%,rgba(255,252,250,0))}
-  .side.prev{left:0;background:linear-gradient(90deg,rgba(255,252,250,.62),rgba(255,252,250,.22) 60%,rgba(255,252,250,0))}
-  .side.hidden{opacity:0;pointer-events:none}
-  .side .knob{width:34px;height:34px;border-radius:50%;
-    background:rgba(255,253,251,.9);border:1px solid rgba(24,20,17,.14);
-    box-shadow:0 3px 12px rgba(24,20,17,.14);
-    display:flex;align-items:center;justify-content:center;
-    color:#1c1815;font-size:17px;line-height:1;
-    transition:transform .3s ease,background .25s ease}
-  .side .cap{position:absolute;bottom:14%;writing-mode:vertical-rl;font-size:10px;
-    letter-spacing:.16em;text-transform:uppercase;color:#6d645c;opacity:.85}
-  .side.prev .cap{transform:rotate(180deg)}
-  .side.ready .knob{transform:scale(1.18);background:#1c1815;color:#fff;border-color:#1c1815}
-  .side:active .knob{transform:scale(.92)}
+    background:rgba(250,247,246,.94);border-bottom:1px solid rgba(0,0,0,.07)}
+  #barin{display:flex;align-items:center;gap:10px;padding:9px 13px}
+  #ttl{font-size:12.5px;color:#1c1815;flex:1}
+  #win{position:fixed;left:0;right:0;bottom:0;overflow:hidden;background:#f7f2f1}
+  #f{border:0;display:block;transform-origin:top left;background:#fff}
+  #splash{position:absolute;inset:0;z-index:3;display:flex;align-items:center;
+    justify-content:center;font-size:12.5px;color:#8d857d;background:#f7f2f1;
+    transition:opacity .35s ease}
+  #splash.hidden{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
 
-<div id="bar"><div id="barin">
-  <span id="pos">—</span><span id="ttl"></span>
-</div></div>
-
+<div id="bar"><div id="barin"><span id="ttl">Пилотный выпуск</span></div></div>
 <div id="win">
-  <iframe id="f" src="about:blank" scrolling="yes"></iframe>
-  <div class="side prev hidden" id="side-prev"><span class="knob">‹</span><span class="cap">Назад</span></div>
-  <div class="side next hidden" id="side-next"><span class="knob">›</span><span class="cap">Дальше</span></div>
+  <div id="splash">Открываем выпуск…</div>
+  <iframe id="f" src="pilot/index.html" scrolling="yes"></iframe>
 </div>
 
 <script>
-/* Чтение выпуска по частям.
+/* Выпуск целиком, без нарезки на части.
 
-   Механика намеренно вернулась к самой первой рабочей версии — той, что прошла
-   весь выпуск без падений. С тех пор я добавлял «улучшения», и каждое из них
-   подъедало память:
+   Резать пришлось из-за падений, но виноват был не размер документа как таковой,
+   а фон, приколоченный к экрану: внутри уменьшенной страницы его нельзя
+   перерисовать дёшево — браузер перекрашивает всё окно на каждом кадре
+   прокрутки. Убрали его — и целый выпуск держится.
 
-   • пересоздание iframe — выброшенный узел ждёт уборки мусора, тогда как при
-     смене адреса браузер сносит прежний документ немедленно и обязательно;
-   • предзагрузка следующей части через fetch — лишняя копия документа в памяти;
-   • всплывающая подсказка с названием — лишние узлы и слушатели.
+   Здесь у длинных блоков фотофон заменён градиентом. Градиент рисуется
+   практически бесплатно: это не картинка, которую надо разжимать и хранить
+   в памяти, а формула цвета.
 
-   Здесь всего этого нет. Один и тот же iframe, смена адреса через пустую
-   страницу, ни одного обработчика касаний внутри выпуска (любой из них убивает
-   инерцию прокрутки, потому что браузер вынужден спрашивать наш код перед
-   каждым кадром). */
+   Обложка оставлена нетронутой — она короткая, и вся заявка выпуска в ней. */
 
 const CANVAS = 1280;
-// Замирающий фон оставлен только на обложке — см. пояснение ниже.
-// Поставь false, если и она окажется тяжёлой
-const KEEP_FIXED_ON_COVER = true;
-let parts = [], idx = 0, busy = false;
 
-async function boot(){
-  try {
-    const d = await fetch('pilot/parts.json?v=' + Date.now()).then(r => r.json());
-    parts = d.parts || [];
-  } catch(e){}
-  if (!parts.length){ document.getElementById('pos').textContent = 'нет частей'; return; }
-  open_(0);
-}
+// Блоки, у которых фон меняется на градиент: 7097px и 14675px высотой.
+// Именно они и роняли страницу
+const GRADIENT_BLOCKS = ['rec740993783', 'rec741003030'];
+const GRADIENT = 'linear-gradient(180deg,#ffffff 0%,#fdf6f7 38%,#fbe9ee 72%,#f9dfe6 100%)';
 
-function baseScale(){ return document.getElementById('win').clientWidth / CANVAS; }
 function fitWindow(){
-  document.getElementById('win').style.top = document.getElementById('bar').offsetHeight + 'px';
+  document.getElementById('win').style.top =
+    document.getElementById('bar').offsetHeight + 'px';
 }
 
-function open_(i){
-  if (busy) return;
-  busy = true;
-  idx = Math.max(0, Math.min(parts.length - 1, i));
-
-  document.getElementById('pos').textContent = (idx + 1) + '/' + parts.length;
-  document.getElementById('ttl').textContent = parts[idx].title;
-  document.getElementById('side-prev').classList.toggle('hidden', idx === 0);
-  document.getElementById('side-next').classList.toggle('hidden', idx >= parts.length - 1);
-  document.getElementById('side-next').classList.remove('ready');
-
-  const f = document.getElementById('f');
-  f.onload = onLoaded;
-  f.src = 'about:blank';
-  setTimeout(function(){ f.src = 'pilot/' + parts[idx].file; }, 60);
-}
-
-function turn(step){ open_(idx + step); }
-
-function onLoaded(){
-  const f = document.getElementById('f');
-  if (!f || !f.src || f.src.indexOf('about:blank') !== -1) return;
-  busy = false;
+function fit(){
   fitWindow();
-
   const win = document.getElementById('win');
-  const scale = baseScale();
+  const f = document.getElementById('f');
+  const w = win.clientWidth, h = win.clientHeight;
+  if (!w || !h) return;
+  // Внутри iframe тег viewport не действует, поэтому ужимаем страницу сами —
+  // тем же множителем, что применил бы мобильный браузер
+  const scale = w / CANVAS;
   f.style.width = CANVAS + 'px';
-  f.style.height = Math.ceil(win.clientHeight / scale) + 'px';
+  f.style.height = Math.ceil(h / scale) + 'px';
   f.style.transform = 'scale(' + scale + ')';
+}
 
+document.getElementById('f').addEventListener('load', function(){
+  fit();
+  const f = document.getElementById('f');
   let d;
   try { d = f.contentDocument; } catch(e){ return; }
-  const dw = d.defaultView;
 
   const st = d.createElement('style');
   st.textContent =
     // Внутри выпуска есть элемент шире холста — из-за него сбоку лезла полоса фона
     'html,body{overflow-x:hidden!important}'
-    // ГЛАВНОЕ ПРО ПАДЕНИЯ. Фон, приколоченный к экрану, внутри уменьшенной
-    // страницы нельзя перерисовать дёшево: браузер перекрашивает всё окно на
-    // каждом кадре прокрутки. При чтении он успевает, при быстром пролистывании
-    // накопление убивает вкладку. Снимаем замирание со всех блоков...
+    // Снимаем замирание: фоны едут вместе со страницей
     + '.t396__carrier{position:absolute!important;background-attachment:scroll!important;'
     + 'height:100%!important;top:0!important;transform:none!important}'
     + '.t674__cover,.t674__cover_fixed{position:absolute!important}'
-    // ...кроме обложки: она короткая, эффект там виден лучше всего, и стоит он
-    // на ней копейки — замирать нечему, блок помещается в полтора экрана
-    + (KEEP_FIXED_ON_COVER
-        ? '#rec740993781 .t396__carrier{position:fixed!important;'
-          + 'background-attachment:fixed!important;height:100%!important}'
-        : '');
+    // Длинным блокам — градиент вместо фотографии
+    + GRADIENT_BLOCKS.map(function(id){
+        return '#' + id + ' .t396__carrier{background-image:' + GRADIENT + '!important}';
+      }).join('');
   d.head.appendChild(st);
-  dw.scrollTo(0, 0);
 
-  dw.addEventListener('scroll', function(){
-    const seen = dw.scrollY + dw.innerHeight;
-    document.getElementById('side-next').classList
-      .toggle('ready', seen >= d.body.scrollHeight - 60);
-  }, { passive: true });
-}
+  setTimeout(function(){ document.getElementById('splash').classList.add('hidden'); }, 200);
+});
 
-document.getElementById('side-next').addEventListener('click', function(){ turn(1); });
-document.getElementById('side-prev').addEventListener('click', function(){ turn(-1); });
-window.addEventListener('resize', fitWindow);
-boot();
+window.addEventListener('resize', fit);
+window.addEventListener('orientationchange', function(){ setTimeout(fit, 300); });
+setTimeout(fit, 300);
+setTimeout(fit, 1200);
+fit();
 </script>
 </body>
 </html>
