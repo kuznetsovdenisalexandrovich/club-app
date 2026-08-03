@@ -1,1 +1,32 @@
-{"parts": ["p1.html", "p2.html", "p3.html", "p4.html", "p5.html", "p6.html", "p7.html"]}
+{
+ "parts": [
+  {
+   "file": "p1.html",
+   "title": "Начало"
+  },
+  {
+   "file": "p2.html",
+   "title": "Глава 1, \"Il\" (\"Он\", пер. с фр.)"
+  },
+  {
+   "file": "p3.html",
+   "title": "Глава 1, \"Il\" (\"Он\", пер. с фр.) — продолжение"
+  },
+  {
+   "file": "p4.html",
+   "title": "Глава 2, \"Tu\" (\"Ты\", пер. с фр.)"
+  },
+  {
+   "file": "p5.html",
+   "title": "Глава 3, \"Je\" (\"Я\", пер. с фр.)"
+  },
+  {
+   "file": "p6.html",
+   "title": "Pour Le Dessert"
+  },
+  {
+   "file": "p7.html",
+   "title": "Pour Le Dessert — продолжение"
+  }
+ ]
+}
