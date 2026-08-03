@@ -1458,6 +1458,52 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
 <script src="https://play.boomstream.com/assets/javascripts/biframesdk.js?v=1.1.1" async></script>
+<style>
+/* ── Журнал ───────────────────────────────────────────────────────────────
+   Полка выпусков, попап выпуска и читалка. Читалка — фиксированный слой
+   поверх всего, включая таббар: выпуск должен занимать экран целиком. */
+.mag-shelf{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:4px}
+.mag-item{position:relative;cursor:pointer}
+.mag-cover{position:relative;width:100%;aspect-ratio:3/4;border-radius:14px;overflow:hidden;
+  background:var(--card2);border:1px solid var(--border);display:block}
+.mag-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.mag-item.locked .mag-cover img{filter:grayscale(1) brightness(.62)}
+.mag-lock{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;
+  padding:10px;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.6) 100%)}
+.mag-lock-text{font-size:11px;font-weight:600;color:#fff;text-align:center;line-height:1.35}
+.mag-new{position:absolute;top:8px;right:8px;background:var(--warm);color:#fff;font-size:10px;
+  font-weight:700;letter-spacing:.06em;padding:3px 7px;border-radius:20px;z-index:2}
+.mag-item.is-new .mag-cover{box-shadow:0 0 0 2px var(--warm),0 8px 24px rgba(232,97,74,.28)}
+.mag-name{font-size:12.5px;font-weight:600;line-height:1.35;margin-top:8px}
+.mag-sub{font-size:11px;color:var(--text-faint);margin-top:2px}
+.mag-progress{height:3px;border-radius:2px;background:var(--card2);margin-top:6px;overflow:hidden}
+.mag-progress-bar{height:100%;background:var(--warm);border-radius:2px}
+
+.mag-modal-cover{width:100%;aspect-ratio:3/4;max-height:44vh;object-fit:cover;border-radius:14px;
+  display:block;margin-bottom:14px;background:var(--card2)}
+.mag-modal-desc{font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:16px;
+  max-height:34vh;overflow-y:auto}
+.mag-modal-note{font-size:12.5px;color:var(--text-faint);line-height:1.45;margin-bottom:14px}
+
+/* Читалка. Ширина холста выпуска всегда 1280px (адаптивность в Тильде выключена
+   сознательно — иначе она режет часть эффектов на мобильных), поэтому страницу
+   масштабируем целиком, ровно как это делает мобильный браузер. Внутри iframe
+   тег viewport не действует, отсюда и ручное масштабирование. */
+#view-magazine-read.active{position:fixed;inset:0;z-index:700;background:var(--bg);
+  display:flex;flex-direction:column;padding:0;margin:0;overflow:hidden}
+.mag-reader-bar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;
+  height:calc(50px + max(env(safe-area-inset-top),0px));
+  padding-top:max(env(safe-area-inset-top),0px);
+  background:var(--bg2);border-bottom:1px solid var(--border)}
+.mag-reader-back{font-size:20px;line-height:1;cursor:pointer;padding:6px 4px}
+.mag-reader-title{font-size:13px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mag-reader-window{position:relative;flex:1;overflow:hidden}
+#mag-reader-frame{border:0;display:block;transform-origin:top left;background:#f0f0f0}
+.mag-reader-splash{position:absolute;inset:0;z-index:3;display:flex;align-items:center;
+  justify-content:center;font-size:12.5px;color:var(--text-faint);background:var(--bg);
+  transition:opacity .35s ease}
+.mag-reader-splash.hidden{opacity:0;pointer-events:none}
+</style>
 </head>
 <body>
 
@@ -1599,6 +1645,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="tile-icon" style="background:var(--lav-dim);color:var(--lav-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Что посмотреть?</div>
       </div>
+      <div class="tile" onclick="openMagazine()">
+        <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 3h11a2 2 0 0 1 2 2v16H6a2 2 0 0 1-2-2V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 7h3v12a2 2 0 0 1-2 2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7.5 7.5h6M7.5 11h6M7.5 14.5h3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        <div class="tile-label">Журнал</div>
+      </div>
       <div class="tile" onclick="openNotificationsSection()">
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Уведомления</div>
@@ -1675,6 +1725,29 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div id="stream-lectures"><div class="loading">Загрузка...</div></div>
     </div>
     <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Журнал: полка выпусков ── -->
+  <div class="view" id="view-magazine">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Журнал</span>
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:12px;color:var(--text-faint)">← назад</span>
+    </div>
+    <div id="mag-intro" class="mag-sub" style="margin-bottom:12px"></div>
+    <div id="mag-shelf" class="mag-shelf"><div class="loading">Загрузка...</div></div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Журнал: чтение выпуска ── -->
+  <div class="view" id="view-magazine-read">
+    <div class="mag-reader-bar">
+      <span class="mag-reader-back" onclick="closeMagazineReader()">←</span>
+      <span class="mag-reader-title" id="mag-reader-title"></span>
+    </div>
+    <div class="mag-reader-window" id="mag-reader-window">
+      <div class="mag-reader-splash" id="mag-reader-splash">Открываем выпуск…</div>
+      <iframe id="mag-reader-frame" src="about:blank" scrolling="yes"></iframe>
+    </div>
   </div>
 
   <!-- ── Профиль ── -->
@@ -2105,6 +2178,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div style="text-align:center;font-size:13px;color:#fff;margin-top:8px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
   <div class="payment-help-link" style="position:fixed;left:0;right:0;bottom:calc(24px + env(safe-area-inset-bottom));text-align:center" onclick="proceedPastHomeScreenInstructions()">продолжить в браузере</div>
   <div style="margin-top:14px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
+</div>
+
+<div class="center-modal-overlay" id="mag-issue-overlay" onclick="if(event.target===this)closeMagazineIssue()">
+  <div class="center-modal" id="mag-issue-modal"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2572,7 +2649,8 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  const tabEl = document.getElementById('tab-' + (name === 'stream' ? 'library' : name));
+  const MAG_VIEWS = { 'stream':'library', 'magazine':'library', 'magazine-read':'library' };
+  const tabEl = document.getElementById('tab-' + (MAG_VIEWS[name] || name));
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
   if (name === 'cards') {
@@ -2581,6 +2659,7 @@ function switchView(name) {
     // раньше, чем человек их заметит
     markCardsSeen();
   }
+  if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
   if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
@@ -2720,6 +2799,8 @@ function diagShowEnv(){
 function openContinue() {
   let last = null;
   try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
+  const mag = lastMagazineRead();
+  if (mag && (!last || (mag.ts || 0) > (last.ts || 0))) { readMagazineIssue(mag.key); return; }
   if (last) {
     const url = last.link || last.link_vk;
     openUrl(url);
@@ -2945,6 +3026,14 @@ async function loadContinueWidget() {
   const titleEl = document.getElementById('continue-title');
   let last = null;
   try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
+  const mag = lastMagazineRead();
+
+  // Что человек трогал позже — то и предлагаем продолжить
+  if (mag && (!last || (mag.ts || 0) > (last.ts || 0))) {
+    kickerEl.textContent = 'Продолжить чтение';
+    titleEl.textContent = mag.title;
+    return;
+  }
 
   if (last) {
     kickerEl.textContent = 'Продолжить просмотр';
@@ -4682,8 +4771,12 @@ async function loadStreams() {
       <div class="stream-tile-title">Смотреть позже</div>
     </div>`;
   try {
-    const streams = await fetch(`${API_URL}/streams`).then(r => r.json());
-    el.innerHTML = watchLaterTile + streams.map(s => `
+    // Данные журнала нужны здесь же — иначе плитка «Журнал» нарисуется без обложки
+    const [streams] = await Promise.all([
+      fetch(`${API_URL}/streams`).then(r => r.json()),
+      magazineData ? Promise.resolve() : loadMagazine(),
+    ]);
+    el.innerHTML = watchLaterTile + magazineTileHtml() + streams.map(s => `
       <div class="stream-tile" onclick="openStream(${jsArg(s.stream_key)})">
         <img class="stream-tile-img" src="${escapeHtml(s.image_url || '')}" alt=""
              onerror="this.style.visibility='hidden'">
@@ -4691,7 +4784,7 @@ async function loadStreams() {
       </div>
     `).join('');
   } catch (e) {
-    el.innerHTML = watchLaterTile;
+    el.innerHTML = watchLaterTile + magazineTileHtml();
   }
 }
 
@@ -7472,6 +7565,10 @@ function startWebSession(){
       tg.onEvent('backButtonClicked', function(){
         const field = document.getElementById('plan-field');
         if (field && field.classList.contains('show')){ closePlanField(); return; }
+        // Из читалки журнала логично возвращаться на полку, а не на портал
+        const reader = document.getElementById('view-magazine-read');
+        if (reader && reader.classList.contains('active')){ closeMagazineReader(); return; }
+        if (document.getElementById('view-magazine').classList.contains('active')){ switchView('portal'); return; }
         switchView('portal');
       });
     }
@@ -7490,6 +7587,282 @@ function startWebSession(){
     openFromStartParam();
   }
 })();
+
+/* ── Журнал ───────────────────────────────────────────────────────────────
+   Выпуски лежат статикой в этом же репозитории (magazine/<папка>/index.html),
+   поэтому читалка — обычный iframe того же происхождения: можно и позицию
+   прокрутки прочитать напрямую, и вернуть человека туда, где он остановился.
+
+   Правило доступа считает бэкенд: выпуск с номером N открыт, если состоялось
+   N полных оплат. Здесь мы только рисуем то, что он прислал. */
+
+const MAG_CANVAS = 1280;          // ширина холста выпуска, задана в Тильде
+let magazineData = null;          // ответ /magazine целиком
+let magReaderKey = null;          // какой выпуск открыт в читалке прямо сейчас
+let magProgressTimer = null;
+
+function magazineTileHtml(){
+  const cover = (magazineData && magazineData.tile_cover) || '';
+  return `
+    <div class="stream-tile" onclick="openMagazine()">
+      <img class="stream-tile-img" src="${escapeHtml(cover)}" alt=""
+           onerror="this.style.visibility='hidden'">
+      <div class="stream-tile-title">Журнал</div>
+    </div>`;
+}
+
+function openMagazine(){
+  switchView('magazine');
+}
+
+async function loadMagazine(){
+  const shelf = document.getElementById('mag-shelf');
+  if (!magazineData) shelf.innerHTML = '<div class="loading">Загрузка...</div>';
+  try {
+    const q = telegramId ? ('?telegram_id=' + encodeURIComponent(telegramId)) : '';
+    magazineData = await fetch(`${API_URL}/magazine${q}`).then(r => r.json());
+    renderMagazineShelf();
+  } catch (e) {
+    shelf.innerHTML = '<div class="empty">Не удалось загрузить журнал</div>';
+  }
+}
+
+function renderMagazineShelf(){
+  const shelf = document.getElementById('mag-shelf');
+  const intro = document.getElementById('mag-intro');
+  const issues = (magazineData && magazineData.issues) || [];
+
+  if (!issues.length){
+    intro.textContent = '';
+    shelf.innerHTML = '<div class="empty">Выпусков пока нет</div>';
+    return;
+  }
+
+  const open = issues.filter(i => i.unlocked).length;
+  intro.textContent = magazineData.all_unlocked
+    ? `Открыты все выпуски: ${open} из ${issues.length}`
+    : `Открыто ${open} из ${issues.length}`;
+
+  shelf.innerHTML = issues.map(function(it){
+    const cls = ['mag-item'];
+    if (!it.unlocked) cls.push('locked');
+    if (it.is_new) cls.push('is-new');
+
+    let lock = '';
+    if (!it.unlocked){
+      // Дата стоит только у ближайшего выпуска — у остальных честное «скоро»,
+      // иначе пришлось бы выдумывать даты, которых мы не знаем
+      const txt = it.unlock_date ? ('Откроется ' + escapeHtml(it.unlock_date)) : 'Скоро';
+      lock = `<div class="mag-lock"><div class="mag-lock-text">${txt}</div></div>`;
+    }
+
+    const badge = it.is_new ? '<div class="mag-new">НОВОЕ</div>' : '';
+    const cover = it.cover_url
+      ? `<img src="${escapeHtml(it.cover_url)}" alt="" onerror="this.style.visibility='hidden'">`
+      : '';
+    const progress = (it.unlocked && it.percent > 2 && it.percent < 99)
+      ? `<div class="mag-progress"><div class="mag-progress-bar" style="width:${it.percent}%"></div></div>`
+      : '';
+
+    return `
+      <div class="${cls.join(' ')}" onclick="openMagazineIssue(${jsArg(it.issue_key)})">
+        <div class="mag-cover">${cover}${lock}${badge}</div>
+        <div class="mag-name">${escapeHtml(it.title || it.issue_key)}</div>
+        <div class="mag-sub">${escapeHtml(it.published_at || '')}</div>
+        ${progress}
+      </div>`;
+  }).join('');
+}
+
+function magazineIssueByKey(key){
+  return ((magazineData && magazineData.issues) || []).find(i => i.issue_key === key) || null;
+}
+
+function openMagazineIssue(key){
+  const it = magazineIssueByKey(key);
+  if (!it) return;
+  const modal = document.getElementById('mag-issue-modal');
+
+  let action = '';
+  if (it.unlocked){
+    action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>`;
+  } else if (!isMember){
+    action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="closeMagazineIssue();openPaywall()">Получить доступ</button>`;
+  }
+
+  const savedLabel = it.saved ? 'Убрать из отложенного' : 'Отложить на попозже';
+  const note = it.unlocked ? ''
+    : `<div class="mag-modal-note">${it.unlock_date
+        ? 'Откроется ' + escapeHtml(it.unlock_date) + ' — со следующим платежом.'
+        : 'Откроется позже: каждый платёж открывает следующий выпуск.'}</div>`;
+
+  modal.innerHTML = `
+    <div class="center-modal-header">
+      <div class="center-modal-title">${escapeHtml(it.title || it.issue_key)}</div>
+      <span onclick="closeMagazineIssue()" style="cursor:pointer;font-size:16px;color:var(--text-faint)">✕</span>
+    </div>
+    ${it.cover_url ? `<img class="mag-modal-cover" src="${escapeHtml(it.cover_url)}" alt="">` : ''}
+    ${it.published_at ? `<div class="mag-sub" style="margin-bottom:10px">Вышел ${escapeHtml(it.published_at)}</div>` : ''}
+    <div class="mag-modal-desc">${escapeHtml(it.description || '')}</div>
+    ${note}
+    ${action}
+    <button class="lec-link-btn" style="width:100%;margin-top:8px" onclick="toggleMagazineSaved(${jsArg(key)})">${savedLabel}</button>`;
+
+  document.getElementById('mag-issue-overlay').classList.add('open');
+}
+
+function closeMagazineIssue(){
+  document.getElementById('mag-issue-overlay').classList.remove('open');
+}
+
+async function toggleMagazineSaved(key){
+  const it = magazineIssueByKey(key);
+  if (!it) return;
+  if (!telegramId){ showToast('Отложить можно после входа'); return; }
+  // Переиспользуем «Смотреть позже» лекций — одна полка отложенного на всё,
+  // выпуск лежит там под ключом вида magazine:<ключ>
+  const slug = 'magazine:' + key;
+  try {
+    if (it.saved){
+      await fetch(`${API_URL}/saved-lectures?telegram_id=${encodeURIComponent(telegramId)}&slug=${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      it.saved = false;
+      savedSlugs.delete(slug);
+      showToast('Убрал из отложенного');
+    } else {
+      await fetch(`${API_URL}/saved-lectures`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: telegramId, slug: slug })
+      });
+      it.saved = true;
+      savedSlugs.add(slug);
+      showToast('Отложил на попозже');
+    }
+    openMagazineIssue(key);
+  } catch (e) { showToast('Не получилось, попробуй ещё раз'); }
+}
+
+/* ── Читалка ── */
+
+function lastMagazineRead(){
+  try { return JSON.parse(localStorage.getItem('club_app_last_magazine') || 'null'); } catch(e){ return null; }
+}
+
+function rememberMagazineRead(it){
+  try {
+    localStorage.setItem('club_app_last_magazine', JSON.stringify({
+      key: it.issue_key, title: it.title || it.issue_key, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+async function readMagazineIssue(key){
+  let it = magazineIssueByKey(key);
+  if (!it){                       // зашли из виджета «Продолжить», полка ещё не грузилась
+    await loadMagazine();
+    it = magazineIssueByKey(key);
+  }
+  if (!it || !it.unlocked) return;
+
+  closeMagazineIssue();
+  magReaderKey = key;
+  rememberMagazineRead(it);
+
+  document.getElementById('mag-reader-title').textContent = it.title || '';
+  const splash = document.getElementById('mag-reader-splash');
+  splash.classList.remove('hidden');
+  switchView('magazine-read');
+
+  // Позицию спрашиваем у сервера — она переживает смену устройства
+  let position = it.position || 0;
+  if (telegramId){
+    try {
+      const d = await fetch(`${API_URL}/magazine/open`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: telegramId, issue_key: key })
+      }).then(r => r.json());
+      position = d.position || 0;
+      it.is_new = false;          // метка «новое» гаснет сразу, не дожидаясь перезагрузки полки
+    } catch(e){}
+  }
+
+  const frame = document.getElementById('mag-reader-frame');
+  frame.onload = function(){
+    magFitReader();
+    // Выпуск лежит на том же домене, что и апп, поэтому прокруткой внутри
+    // можно управлять напрямую. try/catch — на случай, если апп когда-нибудь
+    // переедет на свой домен, а выпуски останутся на github.io
+    if (position > 0){
+      try { frame.contentWindow.scrollTo(0, position); } catch(e){}
+    }
+    setTimeout(function(){ splash.classList.add('hidden'); }, 150);
+  };
+  frame.src = it.url;
+
+  magFitReader();
+  if (magProgressTimer) clearInterval(magProgressTimer);
+  magProgressTimer = setInterval(saveMagazinePosition, 4000);
+}
+
+function magFitReader(){
+  const win = document.getElementById('mag-reader-window');
+  const frame = document.getElementById('mag-reader-frame');
+  if (!win || !frame) return;
+  const w = win.clientWidth, h = win.clientHeight;
+  if (!w || !h) return;
+  // Внутри iframe тег viewport не работает, поэтому ужимаем страницу сами —
+  // ровно тем же множителем, что применил бы мобильный браузер
+  const scale = w / MAG_CANVAS;
+  frame.style.width = MAG_CANVAS + 'px';
+  frame.style.height = Math.ceil(h / scale) + 'px';
+  frame.style.transform = 'scale(' + scale + ')';
+}
+
+function saveMagazinePosition(){
+  if (!magReaderKey || !telegramId) return;
+  const frame = document.getElementById('mag-reader-frame');
+  let y = 0, total = 0;
+  try {
+    y = frame.contentWindow.scrollY || 0;
+    const doc = frame.contentDocument;
+    total = doc ? doc.body.scrollHeight : 0;
+  } catch(e){ return; }
+  if (!total) return;
+
+  const percent = Math.max(0, Math.min(100, Math.round(y / total * 100)));
+  const it = magazineIssueByKey(magReaderKey);
+  if (it){ it.position = y; it.percent = percent; }
+
+  fetch(`${API_URL}/magazine/progress`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, issue_key: magReaderKey,
+                           position: Math.round(y), percent: percent })
+  }).catch(function(){});
+}
+
+function closeMagazineReader(){
+  saveMagazinePosition();
+  if (magProgressTimer){ clearInterval(magProgressTimer); magProgressTimer = null; }
+  magReaderKey = null;
+  const frame = document.getElementById('mag-reader-frame');
+  if (frame) frame.src = 'about:blank';   // иначе выпуск продолжает жить в памяти
+  switchView('magazine');
+  renderMagazineShelf();
+}
+
+// Ссылки внутри выпуска не открываются сами: страница присылает их сюда, и мы
+// отправляем их правильным способом — телеграмные в Telegram, остальные наружу
+window.addEventListener('message', function(e){
+  const d = e.data;
+  if (!d || d.magazine !== 'link') return;
+  openUrl(d.href);
+});
+
+window.addEventListener('resize', function(){
+  if (magReaderKey) magFitReader();
+});
+window.addEventListener('orientationchange', function(){
+  if (magReaderKey) setTimeout(magFitReader, 300);
+});
 
 /* ── Карточки пантеона: пак, вскрытие, альбом ────────────────────────────── */
 
