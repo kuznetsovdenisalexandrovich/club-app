@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Испытание 7 — перелистывание</title>
+<title>Журнал — чтение</title>
 <style>
   html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#e8e3df;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     -webkit-user-select:none;user-select:none}
+
   #bar{position:fixed;top:0;left:0;right:0;z-index:20;
     padding-top:max(env(safe-area-inset-top),0px);
     background:rgba(248,246,246,.94);border-bottom:1px solid rgba(0,0,0,.08)}
@@ -16,40 +17,34 @@
   #ttl{font-size:12px;color:#111;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   #win{position:fixed;left:0;right:0;bottom:0;overflow:hidden;background:#e8e3df}
-  #f{border:0;display:block;transform-origin:top left;background:#f0f0f0;position:relative;z-index:2}
+  #f{border:0;display:block;transform-origin:top left;background:#f0f0f0;position:relative;z-index:1}
 
-  /* Что видно ПОД страницей, когда её отодвигаешь пальцем */
-  #under{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .18s ease;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:6px;padding:0 30px;text-align:center}
-  #under .k{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#8d857d}
-  #under .t{font-size:19px;line-height:1.3;color:#191512}
+  /* Боковые полосы — единственный способ перейти к соседней части.
+     Внутри страницы выпуска никаких обработчиков касаний нет вовсе, поэтому
+     прокрутка остаётся полностью на стороне браузера, с обычной инерцией. */
+  .side{position:absolute;top:0;bottom:0;width:46px;z-index:4;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:opacity .3s ease,background .3s ease;
+    -webkit-tap-highlight-color:transparent}
+  .side.next{right:0;background:linear-gradient(270deg,rgba(24,20,17,.30),rgba(24,20,17,.14) 55%,rgba(24,20,17,0))}
+  .side.prev{left:0;background:linear-gradient(90deg,rgba(24,20,17,.24),rgba(24,20,17,.10) 55%,rgba(24,20,17,0))}
+  .side.ready.next{background:linear-gradient(270deg,rgba(24,20,17,.52),rgba(24,20,17,.26) 55%,rgba(24,20,17,0))}
+  .side.hidden{opacity:0;pointer-events:none}
+  .side:active{background:rgba(24,20,17,.55)}
 
-  /* Загнутый уголок: тень под страницей + сам отгиб */
-  #curl{position:absolute;right:0;bottom:0;z-index:3;width:64px;height:64px;
-    pointer-events:none;transition:width .3s ease,height .3s ease,opacity .3s ease;opacity:.5}
-  #curl.big{width:104px;height:104px;opacity:1}
-  #curl .fold{position:absolute;inset:0;
-    background:linear-gradient(225deg,#fbf9f8 0%,#efe9e4 46%,#cfc6be 62%,#a89e95 100%);
-    clip-path:polygon(100% 0,100% 100%,0 100%);
-    border-top-left-radius:10px;
-    box-shadow:-6px -6px 16px rgba(0,0,0,.16)}
-  #curl .hint{position:absolute;right:7px;bottom:5px;font-size:9.5px;color:#6b625a;
-    letter-spacing:.04em;transform:rotate(-45deg);transform-origin:100% 100%;white-space:nowrap}
+  .side .lbl{writing-mode:vertical-rl;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);
+    display:flex;align-items:center;gap:9px}
+  .side.prev .lbl{transform:rotate(180deg)}
+  .side .arw{font-size:15px;letter-spacing:0}
 
-  /* Полосы захвата у краёв — единственное место, где ловится перелистывание */
-  #edges{position:absolute;inset:0;z-index:4;pointer-events:none}
-  #edges i{position:absolute;top:0;bottom:0;width:30px;
-    background:linear-gradient(90deg,rgba(0,0,0,.055),rgba(0,0,0,0));
-    opacity:0;transition:opacity .25s ease}
-  #edges i.r{right:0;transform:scaleX(-1)}
-  #edges i.l{left:0}
-  #edges.hint i{opacity:1}
-
-  #tip{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));z-index:15;
-    text-align:center;font-size:11.5px;color:#fff;pointer-events:none;
-    transition:opacity .5s ease}
-  #tip span{background:rgba(20,17,15,.82);padding:7px 14px;border-radius:20px}
-  #tip.gone{opacity:0}
+  /* Название соседней части выезжает при касании полосы */
+  #peek{position:absolute;z-index:5;right:52px;top:50%;transform:translateY(-50%);
+    max-width:58%;padding:9px 13px;border-radius:12px;background:rgba(24,20,17,.9);
+    color:#fff;font-size:12.5px;line-height:1.35;opacity:0;pointer-events:none;
+    transition:opacity .2s ease}
+  #peek.show{opacity:1}
+  #peek.left{left:52px;right:auto}
 </style>
 </head>
 <body>
@@ -59,28 +54,30 @@
 </div></div>
 
 <div id="win">
-  <div id="under"><div class="k" id="under-k">Дальше</div><div class="t" id="under-t"></div></div>
   <iframe id="f" src="about:blank" scrolling="yes"></iframe>
-  <div id="edges"><i class="l"></i><i class="r"></i></div>
-  <div id="curl"><div class="fold"></div><div class="hint">листать</div></div>
+  <div class="side prev hidden" id="side-prev"><span class="lbl"><span class="arw">‹</span>Назад</span></div>
+  <div class="side next hidden" id="side-next"><span class="lbl"><span class="arw">›</span>Дальше</span></div>
+  <div id="peek"></div>
 </div>
 
-<div id="tip"><span>Листай от края экрана — как страницу</span></div>
-
 <script>
-/* Перелистывание вместо кнопок.
+/* Чтение выпуска по частям.
 
-   Страница журнала листается вбок — свайпом в любом месте экрана. Палец ведёт
-   страницу за собой, под ней проступает, что будет дальше. Внизу справа загнут
-   уголок: он подсказывает, что страница листается, и становится заметнее, когда
-   часть дочитана до конца.
+   Выпуск свёрстан в Тильде под жёсткий холст 1280px, поэтому страница живёт
+   в iframe этой ширины и уменьшается через transform — так же, как это делает
+   мобильный браузер со всей страницей.
 
-   Плюс сохранено дотягивание вверх у самого низа — теперь оно ловит и то
-   движение, которым человек только что доехал до конца (в прошлый раз я
-   проверял «мы у низа» в момент касания, а до низа доезжали этим же жестом). */
+   Целиком выпуск (~65000px) телефон не тянет: браузеру приходится держать
+   слой во всю высоту документа, и вебвью падает по памяти. Поэтому выпуск
+   разрезан на части по границам глав, и в памяти живёт ровно одна.
+
+   Переход между частями — только по боковым полосам. Жесты внутри страницы
+   не ловим принципиально: любой обработчик касаний там убивает инерцию
+   прокрутки, потому что браузер вынужден спрашивать наш код перед каждым
+   кадром. */
 
 const CANVAS = 1280;
-let parts = [], idx = 0, busy = false, atBottom = false, preloaded = -1;
+let parts = [], idx = 0, busy = false, preloaded = -1;
 
 async function boot(){
   try {
@@ -89,70 +86,45 @@ async function boot(){
   } catch(e){}
   if (!parts.length){ document.getElementById('pos').textContent = 'нет частей'; return; }
   open_(0);
-  document.getElementById('edges').classList.add('hint');
-  setTimeout(function(){
-    document.getElementById('tip').classList.add('gone');
-    document.getElementById('edges').classList.remove('hint');
-  }, 4200);
 }
 
-function f0(){ return document.getElementById('f'); }
 function baseScale(){ return document.getElementById('win').clientWidth / CANVAS; }
-function baseTransform(){ return 'scale(' + baseScale() + ')'; }
 function fitWindow(){
   document.getElementById('win').style.top = document.getElementById('bar').offsetHeight + 'px';
 }
 
-function open_(i, dir){
+function open_(i){
   if (busy) return;
   const target = Math.max(0, Math.min(parts.length - 1, i));
-  if (target === idx && dir) return;
   busy = true;
-  idx = target; atBottom = false; preloaded = -1;
+  idx = target; preloaded = -1;
 
   document.getElementById('pos').textContent = (idx + 1) + '/' + parts.length;
   document.getElementById('ttl').textContent = parts[idx].title;
-  document.getElementById('curl').classList.remove('big');
-  updateUnder(0);
-  // Прячем страницу до готовности, иначе на месте старой части мигает пустой лист
-  f0().style.visibility = 'hidden';
+  document.getElementById('side-prev').classList.toggle('hidden', idx === 0);
+  document.getElementById('side-next').classList.toggle('hidden', idx >= parts.length - 1);
+  document.getElementById('side-next').classList.remove('ready');
+  document.getElementById('peek').classList.remove('show');
 
   const f = document.getElementById('f');
+  f.style.visibility = 'hidden';     // иначе на месте старой части мигает пустой лист
   f.onload = onLoaded;
   f.src = 'pilot/' + parts[idx].file;
 }
 
-function updateUnder(dir){
-  // Подложку с названием показываем, только если листать ДЕЙСТВИТЕЛЬНО есть куда.
-  // Раньше она мелькала и на краях — отсюда вспышки «это последняя часть»
-  const u = document.getElementById('under');
-  if (dir === 0){ u.style.opacity = 0; return; }
-  const j = idx + dir;
-  if (j < 0 || j >= parts.length){ u.style.opacity = 0; return; }
-  document.getElementById('under-k').textContent = (dir === -1 ? 'Назад' : 'Дальше');
-  document.getElementById('under-t').textContent = parts[j].title;
-  u.style.opacity = 1;
-}
-
-function turn(dir){
-  const j = idx + dir;
-  if (j < 0 || j >= parts.length) return false;
-  open_(j, dir);
-  return true;
-}
+function turn(step){ open_(idx + step); }
 
 function onLoaded(){
   busy = false;
   fitWindow();
   const f = document.getElementById('f');
-  f.style.visibility = 'visible';
   const win = document.getElementById('win');
   const scale = baseScale();
 
-  f.style.transition = '';
   f.style.width = CANVAS + 'px';
   f.style.height = Math.ceil(win.clientHeight / scale) + 'px';
-  f.style.transform = baseTransform();
+  f.style.transform = 'scale(' + scale + ')';
+  f.style.visibility = 'visible';
 
   let d;
   try { d = f.contentDocument; } catch(e){ return; }
@@ -164,111 +136,39 @@ function onLoaded(){
   d.head.appendChild(st);
   dw.scrollTo(0, 0);
 
+  // Единственный обработчик внутри страницы — пассивный, ничего не отменяет
   dw.addEventListener('scroll', function(){
     const total = d.body.scrollHeight;
     const seen = dw.scrollY + dw.innerHeight;
+
     if (seen > total * 0.75 && preloaded !== idx && idx + 1 < parts.length){
       preloaded = idx;
       fetch('pilot/' + parts[idx + 1].file).catch(function(){});
     }
-    atBottom = seen >= total - 60;
-    document.getElementById('curl').classList.toggle('big', atBottom && idx + 1 < parts.length);
-  }, { passive: true });
-
-  wireGestures(d, dw);
-}
-
-const EDGE = 30;   // ширина полосы захвата у края экрана, в пикселях
-
-/* ВАЖНО про прокрутку.
-
-   Обработчик touchmove в режиме passive:false заставляет браузер перед КАЖДЫМ
-   кадром прокрутки спрашивать наш код, не отменит ли он её. Прокрутка уезжает
-   с видеокарты на основной поток: пропадает инерция, страница ползёт за пальцем
-   попиксельно. Поэтому постоянно висит только пассивный обработчик, который
-   ничего не отменяет, а перехватывающий вешается ТОЛЬКО на время жеста от края
-   и снимается сразу после. */
-
-function wireGestures(d, dw){
-  const f = document.getElementById('f');
-  let x0 = 0, y0 = 0, dx = 0, pull = 0;
-  let axis = null, pulling = false, turning = null;
-
-  function reset(animate){
-    f.style.transition = animate ? 'transform .26s ease' : '';
-    f.style.transform = baseTransform();
-    if (animate) setTimeout(function(){ f.style.transition = ''; }, 280);
-  }
-
-  // Перехватывающий обработчик — живёт только во время жеста от края
-  function onEdgeMove(e){
-    const mx = e.touches[0].clientX - x0;
-    if (axis !== 'x'){
-      if (Math.abs(mx) < 12) return;
-      axis = 'x';
-    }
-    e.preventDefault();
-    const dir = mx < 0 ? 1 : -1;
-    const j = idx + dir;
-    const has = j >= 0 && j < parts.length;
-    dx = has ? mx : mx / 5;
-    updateUnder(has ? dir : 0);
-    f.style.transform = 'translateX(' + dx + 'px) ' + baseTransform();
-  }
-
-  d.addEventListener('touchstart', function(e){
-    const t = e.touches[0];
-    x0 = t.clientX; y0 = t.clientY;
-    dx = 0; pull = 0; axis = null; pulling = false;
-    f.style.transition = '';
-
-    const w = document.getElementById('win').clientWidth;
-    const px = t.clientX * baseScale();     // страница масштабирована, экран нет
-    if (px < EDGE || px > w - EDGE){
-      turning = onEdgeMove;
-      d.addEventListener('touchmove', turning, { passive: false });
-    }
-  }, { passive: true });
-
-  // Пассивный обработчик: только дотягивание вверх у самого низа.
-  // Ничего не отменяет, поэтому обычная прокрутка остаётся быстрой
-  d.addEventListener('touchmove', function(e){
-    if (axis === 'x') return;
-    const t = e.touches[0];
-    const my = t.clientY - y0;
-    if (atBottom && my < 0 && idx + 1 < parts.length){
-      if (!pulling){ pulling = true; y0 = t.clientY; }
-      pull = Math.min(140, (y0 - t.clientY) * 0.55);
-      updateUnder(1);
-      f.style.transform = 'translateY(' + (-pull) + 'px) ' + baseTransform();
-    } else if (pulling){
-      pulling = false; pull = 0; reset(false); updateUnder(0);
-    }
-  }, { passive: true });
-
-  d.addEventListener('touchend', function(){
-    if (turning){ d.removeEventListener('touchmove', turning, { passive: false }); turning = null; }
-
-    const w = document.getElementById('win').clientWidth;
-    const dir = dx < 0 ? 1 : -1;
-    const canTurn = axis === 'x' && Math.abs(dx) > w * 0.22
-                    && idx + dir >= 0 && idx + dir < parts.length;
-
-    if (canTurn){
-      f.style.transition = 'transform .2s ease';
-      f.style.transform = 'translateX(' + (dir === 1 ? -w : w) + 'px) ' + baseTransform();
-      setTimeout(function(){ if (!turn(dir)) reset(true); }, 190);
-    } else if (pulling && pull > 70){
-      if (!turn(1)) reset(true);
-    } else {
-      reset(true);
-    }
-    axis = null; dx = 0; pull = 0; pulling = false;
-    setTimeout(function(){ updateUnder(0); }, 300);
+    // Дочитал часть — полоса становится заметнее
+    document.getElementById('side-next').classList.toggle('ready', seen >= total - 60);
   }, { passive: true });
 }
 
-document.getElementById('curl').addEventListener('click', function(){ turn(1); });
+function wireSide(el, step){
+  const peek = document.getElementById('peek');
+  function showPeek(){
+    const j = idx + step;
+    if (j < 0 || j >= parts.length) return;
+    peek.textContent = parts[j].title;
+    peek.classList.toggle('left', step < 0);
+    peek.classList.add('show');
+  }
+  function hidePeek(){ peek.classList.remove('show'); }
+
+  el.addEventListener('touchstart', showPeek, { passive: true });
+  el.addEventListener('touchend', hidePeek, { passive: true });
+  el.addEventListener('touchcancel', hidePeek, { passive: true });
+  el.addEventListener('click', function(){ hidePeek(); turn(step); });
+}
+
+wireSide(document.getElementById('side-next'), 1);
+wireSide(document.getElementById('side-prev'), -1);
 window.addEventListener('resize', fitWindow);
 boot();
 </script>
