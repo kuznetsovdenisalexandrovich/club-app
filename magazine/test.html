@@ -68,6 +68,9 @@
    каждым кадром). */
 
 const CANVAS = 1280;
+// Замирающий фон оставлен только на обложке — см. пояснение ниже.
+// Поставь false, если и она окажется тяжёлой
+const KEEP_FIXED_ON_COVER = true;
 let parts = [], idx = 0, busy = false;
 
 async function boot(){
@@ -120,8 +123,22 @@ function onLoaded(){
   const dw = d.defaultView;
 
   const st = d.createElement('style');
-  // Внутри выпуска есть элемент шире холста — из-за него сбоку лезла полоса фона
-  st.textContent = 'html,body{overflow-x:hidden!important}';
+  st.textContent =
+    // Внутри выпуска есть элемент шире холста — из-за него сбоку лезла полоса фона
+    'html,body{overflow-x:hidden!important}'
+    // ГЛАВНОЕ ПРО ПАДЕНИЯ. Фон, приколоченный к экрану, внутри уменьшенной
+    // страницы нельзя перерисовать дёшево: браузер перекрашивает всё окно на
+    // каждом кадре прокрутки. При чтении он успевает, при быстром пролистывании
+    // накопление убивает вкладку. Снимаем замирание со всех блоков...
+    + '.t396__carrier{position:absolute!important;background-attachment:scroll!important;'
+    + 'height:100%!important;top:0!important;transform:none!important}'
+    + '.t674__cover,.t674__cover_fixed{position:absolute!important}'
+    // ...кроме обложки: она короткая, эффект там виден лучше всего, и стоит он
+    // на ней копейки — замирать нечему, блок помещается в полтора экрана
+    + (KEEP_FIXED_ON_COVER
+        ? '#rec740993781 .t396__carrier{position:fixed!important;'
+          + 'background-attachment:fixed!important;height:100%!important}'
+        : '');
   d.head.appendChild(st);
   dw.scrollTo(0, 0);
 
