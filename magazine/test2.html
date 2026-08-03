@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Испытание 2</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f0f0f0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #bar{position:fixed;top:0;left:0;right:0;z-index:10;
+    padding-top:max(env(safe-area-inset-top),0px);
+    padding-bottom:8px;
+    background:rgba(248,246,246,.94);border-bottom:1px solid rgba(0,0,0,.08)}
+  #btns{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px 0}
+  button{appearance:none;-webkit-appearance:none;border:1px solid #ccc;background:#fff;
+    border-radius:9px;padding:8px 10px;font:inherit;font-size:12px;cursor:pointer}
+  button.on{background:#111;color:#fff;border-color:#111}
+  #win{position:fixed;left:0;right:0;overflow:hidden;bottom:0}
+  #f{border:0;display:block;transform-origin:top left;background:#f0f0f0}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <div id="btns">
+    <button id="b1" onclick="setMode(1)">1. Как сейчас</button>
+    <button id="b2" onclick="setMode(2)">2. Без фикс. фона</button>
+    <button id="b3" onclick="setMode(3)">3. Только начало</button>
+    <button id="b4" onclick="setMode(4)">4. Без фона + начало</button>
+  </div>
+</div>
+
+<div id="win"><iframe id="f" src="about:blank" scrolling="yes"></iframe></div>
+
+<script>
+/* Все четыре режима используют ОДИН И ТОТ ЖЕ способ вписывания — тот, что стоит
+   в аппе сейчас (iframe шириной 1280 + transform). Меняется ровно одна вещь за
+   раз, чтобы понять, что именно роняет страницу:
+
+   1 — контрольный замер, должен упасть
+   2 — снят фиксированный фон: фоны прокручиваются вместе со страницей
+   3 — показано только начало выпуска: проверка гипотезы про высоту документа
+   4 — обе меры сразу
+
+   Если выживает 2 — виноват замирающий фон, и мы его меняем.
+   Если выживает 3 — виновата высота, и выпуск надо резать на главы.
+   Если только 4 — нужно и то, и другое. */
+
+const SRC = 'pilot/index.html';
+const CANVAS = 1280;
+const HEAD_BLOCKS = 14;      // сколько блоков оставляем в режиме «только начало»
+let mode = 1;
+
+function setMode(m){
+  mode = m;
+  for (let i = 1; i <= 4; i++){
+    document.getElementById('b' + i).className = (i === m ? 'on' : '');
+  }
+  const f = document.getElementById('f');
+  f.onload = onLoaded;
+  f.src = 'about:blank';
+  setTimeout(function(){ f.src = SRC + '?v=' + Date.now(); }, 60);
+}
+
+function fitWindow(){
+  const bar = document.getElementById('bar');
+  document.getElementById('win').style.top = bar.offsetHeight + 'px';
+}
+
+function onLoaded(){
+  fitWindow();
+  const f = document.getElementById('f');
+  const win = document.getElementById('win');
+  const w = win.clientWidth, h = win.clientHeight;
+  const scale = w / CANVAS;
+
+  f.style.width = CANVAS + 'px';
+  f.style.height = Math.ceil(h / scale) + 'px';
+  f.style.transform = 'scale(' + scale + ')';
+
+  let css = 'html,body{overflow-x:hidden!important}';
+
+  if (mode === 2 || mode === 4){
+    // Фоны Zero-блоков и фоновая подложка страницы перестают быть приколоченными
+    // к экрану и едут вместе с содержимым
+    css += '.t396__carrier{position:absolute!important;background-attachment:scroll!important;'
+         + 'height:100%!important;transform:none!important}'
+         + '.t674__cover,.t674__cover_fixed{position:absolute!important}';
+  }
+
+  try {
+    const d = f.contentDocument;
+    const st = d.createElement('style');
+    st.textContent = css;
+    d.head.appendChild(st);
+
+    if (mode === 3 || mode === 4){
+      const recs = d.querySelectorAll('#allrecords > .t-rec');
+      for (let i = HEAD_BLOCKS; i < recs.length; i++) recs[i].style.display = 'none';
+    }
+  } catch(e){}
+}
+
+window.addEventListener('resize', fitWindow);
+setMode(1);
+</script>
+</body>
+</html>
