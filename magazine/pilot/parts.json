@@ -2,31 +2,19 @@
  "parts": [
   {
    "file": "p1.html",
-   "title": "Начало"
+   "title": "Начало, глава 1"
   },
   {
    "file": "p2.html",
-   "title": "Глава 1, \"Il\" (\"Он\", пер. с фр.)"
+   "title": "Продолжение"
   },
   {
    "file": "p3.html",
-   "title": "Глава 1, \"Il\" (\"Он\", пер. с фр.) — продолжение"
+   "title": "Главы 2–3"
   },
   {
    "file": "p4.html",
-   "title": "Глава 2, \"Tu\" (\"Ты\", пер. с фр.)"
-  },
-  {
-   "file": "p5.html",
-   "title": "Глава 3, \"Je\" (\"Я\", пер. с фр.)"
-  },
-  {
-   "file": "p6.html",
-   "title": "Pour Le Dessert"
-  },
-  {
-   "file": "p7.html",
-   "title": "Pour Le Dessert — продолжение"
+   "title": "Глава 4, Pour Le Dessert"
   }
  ]
 }
