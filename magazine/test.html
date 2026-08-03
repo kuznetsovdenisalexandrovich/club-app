@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Испытание читалки</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f0f0f0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #bar{position:fixed;top:0;left:0;right:0;z-index:10;
+    height:calc(58px + max(env(safe-area-inset-top),0px));
+    padding-top:max(env(safe-area-inset-top),0px);
+    display:flex;align-items:center;gap:8px;padding-left:10px;padding-right:10px;
+    background:rgba(248,246,246,.94);border-bottom:1px solid rgba(0,0,0,.08)}
+  button{appearance:none;-webkit-appearance:none;border:1px solid #ccc;background:#fff;
+    border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;cursor:pointer}
+  button.on{background:#111;color:#fff;border-color:#111}
+  #win{position:fixed;left:0;right:0;overflow:hidden;
+    top:calc(58px + max(env(safe-area-inset-top),0px));bottom:0}
+  #f{border:0;display:block;transform-origin:top left;background:#f0f0f0}
+  #note{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:6px 10px;
+    font-size:11px;color:#666;background:rgba(255,255,255,.94);text-align:center}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <button id="bA" onclick="setMode('A')">Способ A</button>
+  <button id="bB" onclick="setMode('B')">Способ B</button>
+  <span id="lbl" style="font-size:12px;color:#555"></span>
+</div>
+
+<div id="win"><iframe id="f" src="about:blank" scrolling="yes"></iframe></div>
+<div id="note">Листай долго и до конца. Если упало — запомни, какой способ был включён.</div>
+
+<script>
+/* Два способа вписать выпуск шириной 1280 в узкий экран.
+
+   A — то, что стоит сейчас: iframe шириной 1280, уменьшенный через transform.
+       Подозрение: браузер собирает слой во всю ширину холста и всю высоту
+       документа, а документ тут в десятки тысяч пикселей.
+
+   B — iframe шириной ровно с экран, а внутрь документа подставляется zoom.
+       Тогда страница СЧИТАЕТСЯ уже уменьшенной, и слои получаются размером
+       с экран, а не с холст. */
+
+const SRC = 'pilot/index.html';
+const CANVAS = 1280;
+let mode = 'A';
+
+function setMode(m){
+  mode = m;
+  document.getElementById('bA').className = (m === 'A' ? 'on' : '');
+  document.getElementById('bB').className = (m === 'B' ? 'on' : '');
+  document.getElementById('lbl').textContent = (m === 'A' ? 'transform' : 'zoom внутри');
+  load();
+}
+
+function load(){
+  const f = document.getElementById('f');
+  f.onload = onLoaded;
+  f.src = 'about:blank';
+  setTimeout(function(){ f.src = SRC + '?v=' + Date.now(); }, 60);
+}
+
+function onLoaded(){
+  const f = document.getElementById('f');
+  const win = document.getElementById('win');
+  const w = win.clientWidth, h = win.clientHeight;
+  const scale = w / CANVAS;
+
+  // Полоса справа: внутри выпуска есть элемент шире холста, из-за него
+  // документ становится шире 1280 и сбоку проглядывает фон страницы
+  try {
+    const d = f.contentDocument;
+    const st = d.createElement('style');
+    st.textContent = 'html,body{overflow-x:hidden!important}';
+    d.head.appendChild(st);
+  } catch(e){}
+
+  if (mode === 'A'){
+    f.style.width = CANVAS + 'px';
+    f.style.height = Math.ceil(h / scale) + 'px';
+    f.style.transform = 'scale(' + scale + ')';
+  } else {
+    f.style.transform = 'none';
+    f.style.width = w + 'px';
+    f.style.height = h + 'px';
+    try {
+      const d = f.contentDocument;
+      const st = d.createElement('style');
+      st.textContent = 'html{zoom:' + scale + '}';
+      d.head.appendChild(st);
+    } catch(e){}
+  }
+}
+
+setMode('A');
+</script>
+</body>
+</html>
