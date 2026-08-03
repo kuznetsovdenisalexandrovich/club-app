@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Журнал</title>
+<style>
+  :root { --bar: 52px; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* Шапка читалки. В аппе её место займёт штатная шапка — здесь она для демонстрации. */
+  #mag-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    height: calc(var(--bar) + max(env(safe-area-inset-top), 0px));
+    padding-top: max(env(safe-area-inset-top), 0px);
+    display: flex; align-items: center; gap: 12px; padding-left: 14px; padding-right: 14px;
+    background: rgba(248, 246, 246, .82);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(0, 0, 0, .07);
+  }
+  #mag-back {
+    appearance: none; -webkit-appearance: none; border: 0; background: none;
+    font: inherit; font-size: 15px; color: #111; cursor: pointer; padding: 6px 2px;
+  }
+  #mag-title { font-size: 14px; color: #555; letter-spacing: .2px; }
+
+  /* Окно, в котором живёт выпуск */
+  #mag-window {
+    position: fixed; left: 0; right: 0; overflow: hidden;
+    top: calc(var(--bar) + max(env(safe-area-inset-top), 0px));
+    bottom: 0;
+  }
+  #mag-frame {
+    border: 0; display: block;
+    transform-origin: top left;
+    background: #f0f0f0;
+  }
+
+  /* Заставка, пока выпуск грузится */
+  #mag-splash {
+    position: absolute; inset: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
+    transition: opacity .35s ease; font-size: 13px; color: #8a8a8a; letter-spacing: .3px;
+  }
+  #mag-splash.hidden { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="mag-bar">
+  <button id="mag-back" type="button">‹ Назад</button>
+  <span id="mag-title">Пилотный выпуск</span>
+</div>
+
+<div id="mag-window">
+  <div id="mag-splash">Открываем выпуск…</div>
+  <iframe id="mag-frame" src="pilot/index.html" scrolling="yes"></iframe>
+</div>
+
+<script>
+(function () {
+  // Ширина холста, под которую свёрстан выпуск в Тильде.
+  // Внутри iframe тег viewport не действует — масштабируем сами, ровно так же,
+  // как это делает мобильный браузер на настоящей странице.
+  var CANVAS = 1280;
+
+  var win = document.getElementById('mag-window');
+  var frame = document.getElementById('mag-frame');
+  var splash = document.getElementById('mag-splash');
+
+  function fit() {
+    var w = win.clientWidth;
+    var h = win.clientHeight;
+    if (!w || !h) return;
+    var scale = w / CANVAS;
+    frame.style.width = CANVAS + 'px';
+    frame.style.height = Math.ceil(h / scale) + 'px';
+    frame.style.transform = 'scale(' + scale + ')';
+  }
+
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+  // Safe-area в iOS standalone приходит не сразу — пересчитываем ещё раз позже
+  setTimeout(fit, 300);
+  setTimeout(fit, 1200);
+
+  frame.addEventListener('load', function () {
+    fit();
+    setTimeout(function () { splash.classList.add('hidden'); }, 150);
+  });
+  setTimeout(function () { splash.classList.add('hidden'); }, 6000);
+
+  // Ссылки внутри выпуска приходят сюда сообщением, а не открываются сами.
+  // В приложении этот обработчик заменяется на openTelegramLink / openLink.
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.magazine !== 'link') return;
+    var href = d.href || '';
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && /^https:\/\/t\.me\//i.test(href) && tg.openTelegramLink) {
+      tg.openTelegramLink(href);
+    } else if (tg && tg.openLink) {
+      tg.openLink(href);
+    } else {
+      window.open(href, '_blank', 'noopener');
+    }
+  });
+
+  document.getElementById('mag-back').addEventListener('click', function () {
+    if (window.history.length > 1) window.history.back();
+  });
+})();
+</script>
+
+</body>
+</html>
