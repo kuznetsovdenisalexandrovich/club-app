@@ -2,19 +2,31 @@
  "parts": [
   {
    "file": "p1.html",
-   "title": "Начало, глава 1"
+   "title": "Начало"
   },
   {
    "file": "p2.html",
-   "title": "Продолжение"
+   "title": "Глава 1"
   },
   {
    "file": "p3.html",
-   "title": "Главы 2–3"
+   "title": "Продолжение"
   },
   {
    "file": "p4.html",
+   "title": "Глава 2"
+  },
+  {
+   "file": "p5.html",
+   "title": "Глава 3"
+  },
+  {
+   "file": "p6.html",
    "title": "Глава 4, Pour Le Dessert"
+  },
+  {
+   "file": "p7.html",
+   "title": "Продолжение"
   }
  ]
 }

@@ -58,7 +58,6 @@
 </div></div>
 
 <div id="win">
-  <iframe id="f" src="about:blank" scrolling="yes"></iframe>
   <div class="side prev hidden" id="side-prev"><span class="knob">‹</span><span class="cap">Назад</span></div>
   <div class="side next hidden" id="side-next"><span class="knob">›</span><span class="cap">Дальше</span></div>
   <div id="peek"></div>
@@ -110,18 +109,27 @@ function open_(i){
   document.getElementById('side-next').classList.remove('ready');
   document.getElementById('peek').classList.remove('show');
 
-  const f = document.getElementById('f');
-  f.style.visibility = 'hidden';     // иначе на месте старой части мигает пустой лист
+  // ВАЖНО ПРО ПАМЯТЬ: старое окно не переиспользуем, а выбрасываем целиком и
+  // создаём новое. Подмена адреса оставляла предыдущую часть в памяти в момент
+  // загрузки следующей, и на тяжёлых частях вебвью падал. Снос узла из дерева
+  // освобождает её надёжнее, а пауза даёт браузеру время это сделать
+  const win = document.getElementById('win');
+  const oldFrame = document.getElementById('f');
+  if (oldFrame){
+    oldFrame.onload = null;
+    oldFrame.src = 'about:blank';
+    oldFrame.remove();
+  }
 
-  // ВАЖНО: сначала пустая страница, и только потом следующая часть. Без этого
-  // шага предыдущая часть ещё занимает память в момент загрузки новой, и на
-  // тяжёлых частях вебвью падает. Пауза даёт браузеру снести старый документ
-  f.onload = null;
-  f.src = 'about:blank';
   setTimeout(function(){
+    const f = document.createElement('iframe');
+    f.id = 'f';
+    f.setAttribute('scrolling', 'yes');
+    f.style.visibility = 'hidden';   // иначе на месте старой части мигает пустой лист
     f.onload = onLoaded;
+    win.insertBefore(f, win.firstChild);
     f.src = 'pilot/' + parts[idx].file;
-  }, 160);
+  }, 220);
 }
 
 function turn(step){ open_(idx + step); }
@@ -130,6 +138,7 @@ function onLoaded(){
   busy = false;
   fitWindow();
   const f = document.getElementById('f');
+  if (!f) return;
   const win = document.getElementById('win');
   const scale = baseScale();
 
