@@ -240,7 +240,7 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .tile-label{font-size:12px;font-weight:600;line-height:1.3}
 .tile-soon{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--card2);color:var(--text-faint)}
 
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:700;white-space:nowrap}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:12px 20px;border-radius:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:1000;white-space:nowrap}
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 .loading{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px}
 
@@ -2292,6 +2292,24 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   </div>
 </div>
 
+<style>
+/* Плитка бонуса. СВЕЧЕНИЕ ЗНАЧИТ «ты этого не открывал», а не «это бонус»:
+   если рамка горит всегда, через неделю она перестаёт что-либо значить */
+.bonus-tile{position:relative;overflow:visible}
+.bonus-tile.is-new{box-shadow:0 0 0 2px var(--warm), 0 0 18px 2px rgba(255,150,60,.45);
+  border-radius:14px;animation:bonusPulse 2.6s ease-in-out infinite}
+@keyframes bonusPulse{0%,100%{box-shadow:0 0 0 2px var(--warm),0 0 14px 1px rgba(255,150,60,.35)}
+  50%{box-shadow:0 0 0 2px var(--warm),0 0 22px 4px rgba(255,150,60,.6)}}
+.bonus-badge{position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+  background:var(--warm);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.06em;
+  padding:2px 8px;border-radius:99px;white-space:nowrap;z-index:2}
+.bonus-item{display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:12px;
+  border:1px solid var(--border);margin-bottom:8px}
+.bonus-item.locked{opacity:.5}
+.bonus-item-num{width:22px;height:22px;border-radius:99px;background:var(--surface);
+  display:flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 auto}
+</style>
+
 <div class="fullscreen-popup-overlay" id="video-popup-sales-overlay" onclick="if(event.target===this) closeVideoPopup('sales')">
   <div class="fullscreen-popup-card">
     <button class="icon-btn fullscreen-popup-close" onclick="closeVideoPopup('sales')">✕</button>
@@ -2308,6 +2326,31 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="video-embed-player">
       <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
     </div>
+  </div>
+</div>
+
+<!-- Бонусы: список позиций набора -->
+<div class="sched-popup-overlay" id="bonus-popup-overlay" onclick="if(event.target===this) closeBonusPopup()">
+  <div class="sched-popup" id="bonus-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title" id="bonus-popup-title">Бонус</div>
+      <button class="icon-btn" onclick="closeBonusPopup()">✕</button>
+    </div>
+    <div class="sched-popup-body">
+      <div id="bonus-popup-sub" class="mag-sub" style="margin-bottom:12px"></div>
+      <div id="bonus-popup-items"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Плеер бонусной позиции. Отдельный от продающего видео: там код вшит в
+     разметку, а здесь он приходит с сервера и меняется на каждой позиции -->
+<div class="fullscreen-popup-overlay" id="bonus-video-overlay" onclick="if(event.target===this) closeBonusVideo()">
+  <div class="fullscreen-popup-card">
+    <button class="icon-btn fullscreen-popup-close" onclick="closeBonusVideo()">✕</button>
+    <div class="video-embed-player" id="bonus-video-slot"></div>
+    <div id="bonus-video-title" style="margin-top:10px;font-size:14px"></div>
   </div>
 </div>
 
@@ -4828,6 +4871,146 @@ function applyTagFilter() {
   renderLibrary(filtered);
 }
 
+/* ── Бонусы за вступление ──────────────────────────────────────────────────
+   Плитки в ряду «Что посмотреть». Свечение снимается, как только человек
+   открыл хотя бы одну позицию: сигнал должен значить «ты этого не видел».
+
+   Позиция открывается либо плеером Boomstream внутри аппа, либо ссылками в ТГ и
+   ВК — что заполнено, то и показываем. Ссылки закрытых позиций сервер вообще не
+   отдаёт, поэтому тут нечего прятать. */
+
+let bonusesData = [];
+let bonusOpenKey = null;
+
+async function loadBonuses(){
+  try {
+    const url = `${API_URL}/bonuses` + (telegramId ? `?telegram_id=${telegramId}` : '');
+    const r = await fetch(url);
+    bonusesData = await r.json();
+    if (!Array.isArray(bonusesData)) bonusesData = [];
+  } catch (e) {
+    bonusesData = [];
+  }
+}
+
+function bonusTilesHtml(){
+  return (bonusesData || []).map(b => `
+    <div class="stream-tile bonus-tile ${b.is_new ? 'is-new' : ''}" onclick="openBonusPopup(${jsArg(b.key)})">
+      <div class="bonus-badge">${escapeHtml(b.badge || 'БОНУС')}</div>
+      <img class="stream-tile-img" src="${escapeHtml(b.cover_url || '')}" alt=""
+           onerror="this.style.visibility='hidden'">
+      <div class="stream-tile-title">${escapeHtml(b.title || b.key)}</div>
+    </div>`).join('');
+}
+
+function findBonus(key){
+  return (bonusesData || []).find(b => b.key === key) || null;
+}
+
+function openBonusPopup(key){
+  const b = findBonus(key);
+  if (!b) return;
+  bonusOpenKey = key;
+  document.getElementById('bonus-popup-title').textContent = b.title || 'Бонус';
+  document.getElementById('bonus-popup-sub').textContent =
+    b.available ? (b.subtitle || '') : 'Этот подарок открывается участникам клуба';
+  renderBonusItems();
+  document.getElementById('bonus-popup-overlay').classList.add('open');
+}
+
+function closeBonusPopup(){
+  document.getElementById('bonus-popup-overlay').classList.remove('open');
+  bonusOpenKey = null;
+}
+
+function renderBonusItems(){
+  const b = findBonus(bonusOpenKey);
+  const box = document.getElementById('bonus-popup-items');
+  if (!b || !box) return;
+  box.innerHTML = (b.items || []).map((it, i) => {
+    let action = '';
+    if (it.locked){
+      action = b.available
+        ? '<span style="font-size:11px;color:var(--text-faint)">откроется следующей</span>'
+        : `<button class="lec-link-btn access-btn" onclick="closeBonusPopup();openPaywall()">Открыть</button>`;
+    } else if (it.boomstream){
+      action = `<button class="lec-link-btn" onclick="playBonusVideo(${jsArg(b.key)},${jsArg(it.key)})">Смотреть</button>`;
+    } else {
+      const links = [];
+      if (it.tg) links.push(`<button class="lec-link-btn" onclick="openBonusLink(${jsArg(b.key)},${jsArg(it.key)},${jsArg(it.tg)})">ТГ</button>`);
+      if (it.vk) links.push(`<button class="lec-link-btn" onclick="openBonusLink(${jsArg(b.key)},${jsArg(it.key)},${jsArg(it.vk)})">ВК</button>`);
+      action = links.join(' ') || '<span style="font-size:11px;color:var(--text-faint)">скоро</span>';
+    }
+    return `
+      <div class="bonus-item ${it.locked ? 'locked' : ''}">
+        <div class="bonus-item-num">${it.opened ? '✓' : (i + 1)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13.5px">${escapeHtml(it.title || '')}</div>
+          ${it.note ? `<div style="font-size:11.5px;color:var(--text-faint)">${escapeHtml(it.note)}</div>` : ''}
+        </div>
+        ${action}
+      </div>`;
+  }).join('') || '<div style="font-size:12.5px;color:var(--text-faint)">Пока пусто.</div>';
+}
+
+/* Отметку ставим ПО КЛИКУ, а не по возвращении: ссылка уводит наружу, и
+   возврата может не быть — та же логика, что у остановок личного плана */
+async function markBonusOpened(bonusKey, itemKey){
+  const b = findBonus(bonusKey);
+  if (b){
+    const it = (b.items || []).find(x => x.key === itemKey);
+    if (it) it.opened = true;
+    b.is_new = false;
+    // следующая позиция в наборе с порядком открывается сразу, не дожидаясь
+    // перезагрузки списка
+    if (b.sequential){
+      const idx = (b.items || []).findIndex(x => x.key === itemKey);
+      if (idx >= 0 && b.items[idx + 1]) b.items[idx + 1].locked = false;
+    }
+    renderBonusItems();
+  }
+  if (!telegramId) return;
+  try {
+    await fetch(`${API_URL}/bonuses/open`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, bonus_key: bonusKey, item_key: itemKey })
+    });
+    // перезагружаем набор: у позиции, открытой первой, сервер снимает замок со
+    // следующей, и локальная догадка может разойтись с его решением
+    await loadBonuses();
+    const el = document.getElementById('streams-row');
+    if (el && el.innerHTML) loadStreams();
+  } catch (e) { /* отметка не критична, содержимое человек уже получил */ }
+}
+
+function openBonusLink(bonusKey, itemKey, url){
+  markBonusOpened(bonusKey, itemKey);
+  if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openLink) Telegram.WebApp.openLink(url);
+  else window.open(url, '_blank');
+}
+
+/* Плеер вставляем ИФРЕЙМОМ, а не спаном с data-атрибутами, как продающее видео:
+   тот способ работает, потому что скрипт Boomstream сканирует страницу при
+   загрузке. Наши коды приходят с сервера уже после неё, и сканировать некому */
+function playBonusVideo(bonusKey, itemKey){
+  const b = findBonus(bonusKey);
+  const it = b && (b.items || []).find(x => x.key === itemKey);
+  if (!it || !it.boomstream) return;
+  document.getElementById('bonus-video-slot').innerHTML =
+    `<iframe src="https://play.boomstream.com/${encodeURIComponent(it.boomstream)}"
+             style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px"
+             allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
+  document.getElementById('bonus-video-title').textContent = it.title || '';
+  document.getElementById('bonus-video-overlay').classList.add('open');
+  markBonusOpened(bonusKey, itemKey);
+}
+
+function closeBonusVideo(){
+  document.getElementById('bonus-video-overlay').classList.remove('open');
+  // выгружаем ифрейм, иначе звук продолжает играть под закрытым попапом
+  document.getElementById('bonus-video-slot').innerHTML = '';
+}
+
 async function loadStreams() {
   const el = document.getElementById('streams-row');
   const watchLaterTile = `
@@ -4840,8 +5023,9 @@ async function loadStreams() {
     const [streams] = await Promise.all([
       fetch(`${API_URL}/streams`).then(r => r.json()),
       magazineData ? Promise.resolve() : loadMagazine(),
+      bonusesData.length ? Promise.resolve() : loadBonuses(),
     ]);
-    el.innerHTML = watchLaterTile + magazineTileHtml() + streams.map(s => `
+    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml() + streams.map(s => `
       <div class="stream-tile" onclick="openStream(${jsArg(s.stream_key)})">
         <img class="stream-tile-img" src="${escapeHtml(s.image_url || '')}" alt=""
              onerror="this.style.visibility='hidden'">
@@ -4849,7 +5033,7 @@ async function loadStreams() {
       </div>
     `).join('');
   } catch (e) {
-    el.innerHTML = watchLaterTile + magazineTileHtml();
+    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml();
   }
 }
 
@@ -8175,7 +8359,12 @@ async function revealCard(cardId){
       body: JSON.stringify({ telegram_id: telegramId, card_id: cardId })
     }, 15000);
   } catch(e){
-    showToast(e.message || 'Не получилось открыть карточку');
+    const msg = e.message || 'Не получилось открыть карточку';
+    showToast(msg);
+    // Дублируем в подзаголовок экрана: подсказка живёт полторы секунды, а
+    // человек стоит перед рубашкой и думает, что карточка просто не нажимается
+    const sub = document.getElementById('reveal-sub');
+    if (sub) sub.textContent = msg;
     return;
   }
 
