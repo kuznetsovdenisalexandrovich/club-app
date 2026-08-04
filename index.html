@@ -8455,12 +8455,41 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
             : 'Денис увидит, что ты этого хочешь, и свяжется') + '</div></div>';
   }
 
+  // Кнопка шеринга — только для СВОИХ карточек (в витрине чужих не бывает) и
+  // только когда есть картинка: делиться нечем, если её ещё не собрали
+  let share = '';
+  if (telegramId && card.key && (card.image_url || card.image_full_url)){
+    share = '<div style="margin-top:12px"><button class="lec-link-btn" style="width:100%" '
+          + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
+          + 'Похвастаться карточкой</button></div>';
+  }
+
   el.innerHTML =
       '<div class="reveal-detail-god">' + godNameHtml(card.god || '') + ' · ' + (CARD_RARITY_LABELS[card.rarity] || card.rarity) + '</div>'
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
     + (gain ? '<div class="reveal-detail-gain">' + gain + '</div>' : '')
-    + media + claim;
+    + media + claim + share;
+}
+
+/* Бот присылает карточку в чат, откуда её пересылают дальше. ССЫЛКА В ПОДПИСИ, а
+   не в кнопке: при пересылке подпись едет с картинкой, кнопка отваливается.
+   Проверку владения и права на экспорт делает сервер — здесь только кнопка */
+async function shareCollectionCard(cardKey){
+  const btn = document.getElementById('card-share-btn');
+  if (btn){ btn.disabled = true; btn.textContent = 'Отправляю…'; }
+  try {
+    await apiRequest(`${API_URL}/cards/share/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, card_key: cardKey })
+    }, 20000);
+    showToast('Карточка у тебя в чате с ботом — пересылай');
+  } catch(e){
+    showToast(e.message || 'Не отправилось');
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = 'Похвастаться карточкой'; }
+  }
 }
 
 async function claimCard(cardId){
