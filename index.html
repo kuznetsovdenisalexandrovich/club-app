@@ -7756,7 +7756,10 @@ function sessionHeaders(){
 
 function finishWebLogin(id, token){
   rememberSessionToken(token);
-  telegramId = id;
+  // ЧИСЛО, А НЕ СТРОКА: в базе telegram_id — bigint, и строка в теле POST-запроса
+  // роняла запрос на сервере (Postgres не сравнивает bigint с текстом). В
+  // Telegram идентификатор приходит числом, поэтому баг вылезал только в вебе
+  telegramId = Number(id) || id;
   document.getElementById('web-login-screen').style.display = 'none';
   if (isStandaloneWebApp()) reportHomeScreenAdded();
   startApp();
@@ -7773,7 +7776,7 @@ async function proceedToWebLogin(){
     });
     if (r.ok) {
       const data = await r.json();
-      telegramId = data.telegram_id;
+      telegramId = Number(data.telegram_id) || data.telegram_id;
       // Сервер мог выдать новый токен — запоминаем, если пришёл
       rememberSessionToken(data.session_token);
       if (isStandaloneWebApp()) reportHomeScreenAdded();
