@@ -4938,7 +4938,11 @@ function renderBonusItems(){
   box.innerHTML = (b.items || []).map((it, i) => {
     let action = '';
     if (it.locked){
-      action = b.available
+      // Закрыта по порядку — «откроется следующей». Закрыта по подписке — кнопка
+      // в пейволл. Различаем по тому, есть ли у человека доступ к набору вообще:
+      // у гостя после бесплатной позиции идёт именно стена, и это нужный момент
+      const byOrder = b.sequential && (b.available || it.free);
+      action = byOrder
         ? '<span style="font-size:11px;color:var(--text-faint)">откроется следующей</span>'
         : `<button class="lec-link-btn access-btn" onclick="closeBonusPopup();openPaywall()">Открыть</button>`;
     } else if (it.boomstream){
