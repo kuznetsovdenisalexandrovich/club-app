@@ -5018,6 +5018,13 @@ function playBonusVideo(bonusKey, itemKey){
   const slot = document.getElementById('bonus-video-slot');
   const code = String(it.boomstream).trim();
 
+  // Ориентация задаётся у ПОЗИЦИИ: в одном наборе бывает и вертикальный фильм,
+  // и горизонтальные записи. Класс wide считает размер от ширины (16:9), без
+  // него работает базовый стиль историй (9:16)
+  const card = slot.closest('.fullscreen-popup-card');
+  slot.classList.toggle('wide', !it.vertical);
+  if (card) card.classList.toggle('wide', !it.vertical);
+
   // ТЕМ ЖЕ СПОСОБОМ, ЧТО И НАШИ СТАТИЧНЫЕ ВИДЕО: span с data-атрибутами плюс
   // config.jsonp этого кода. Прямой адрес play.boomstream.com/КОД плеер не
   // отдаёт — по нему приходит «Video is not found».
@@ -5040,14 +5047,27 @@ function playBonusVideo(bonusKey, itemKey){
   };
   slot.appendChild(script);
 
-  // Если через три секунды плеер так и не появился, честно говорим об этом,
-  // а не оставляем человека перед чёрным прямоугольником
-  setTimeout(() => {
+  // ЖДЁМ И ПЕРЕПРОВЕРЯЕМ, а не смотрим один раз в назначенный момент. Конфиг
+  // тянется с чужих серверов, и через обходной маршрут только на соединение
+  // уходит секунда-другая: одиночная проверка успевала обругать плеер, который
+  // через мгновение прекрасно запускался. Ругаемся только если не появился совсем
+  let waited = 0;
+  const watch = setInterval(() => {
     const hint = document.getElementById('bonus-video-hint');
-    if (hint && !slot.querySelector('iframe, video')) {
-      hint.textContent = 'Плеер не запустился. Скажи Денису — код: ' + code;
+    // попап закрыли — сторожить больше нечего
+    if (!hint || !document.body.contains(slot)) { clearInterval(watch); return; }
+    if (slot.querySelector('iframe, video')) {
+      hint.textContent = '';
+      clearInterval(watch);
+      return;
     }
-  }, 3000);
+    waited += 600;
+    if (waited >= 2400) hint.textContent = 'Загружаю плеер…';
+    if (waited >= 15000) {
+      hint.textContent = 'Плеер не запустился. Скажи Денису — код: ' + code;
+      clearInterval(watch);
+    }
+  }, 600);
 
   document.getElementById('bonus-video-title').textContent = it.title || '';
   document.getElementById('bonus-video-overlay').classList.add('open');
@@ -5056,6 +5076,7 @@ function playBonusVideo(bonusKey, itemKey){
 
 function closeBonusVideo(){
   document.getElementById('bonus-video-overlay').classList.remove('open');
+  // содержимое чистим ниже — сторож увидит пропажу подсказки и остановится сам
   // выгружаем ифрейм, иначе звук продолжает играть под закрытым попапом
   document.getElementById('bonus-video-slot').innerHTML = '';
 }
