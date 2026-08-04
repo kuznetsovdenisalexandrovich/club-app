@@ -256,7 +256,11 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .view{display:none}
 .view.active{display:block}
 
-.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:calc(var(--safe-top, 0px) + 28px) 24px 0;gap:14px}
+/* НИЖНИЙ ОТСТУП ОБЯЗАТЕЛЕН: карточка экрана рисуется псевдоэлементом ::before и
+   заканчивается на 24px ВЫШЕ нижнего края контейнера. При нулевом отступе
+   последняя ссылка оказывается за её границей. Правка уже терялась при слиянии —
+   если увидишь здесь 0, значит потерялась снова */
+.center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:calc(var(--safe-top, 0px) + 28px) 24px 46px;gap:14px}
 .center-msg .mark{width:56px;height:56px;font-size:18px;border-radius:16px}
 .hs-step{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--border)}
 .hs-step:last-child{border-bottom:none}
