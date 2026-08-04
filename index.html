@@ -2229,7 +2229,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
   </div>
   <div style="text-align:center;font-size:13px;color:#fff;margin-top:8px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
-  <div class="payment-help-link" style="position:fixed;left:0;right:0;bottom:calc(24px + env(safe-area-inset-bottom));text-align:center" onclick="proceedPastHomeScreenInstructions()">продолжить в браузере</div>
+  <!-- Единственный выход с этого экрана для тех, кто не будет ставить апп на
+       «Домой». Класс `payment-help-link` красит текст в `--text-dim` — на тёмном
+       фоне этой заставки такая ссылка почти не читается, поэтому цвет, размер и
+       зона нажатия заданы здесь отдельно -->
+  <div class="payment-help-link" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;color:var(--text);opacity:.9;font-size:13.5px;padding:14px 0" onclick="proceedPastHomeScreenInstructions()">продолжить в браузере</div>
   <div style="margin-top:14px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
 </div>
 
