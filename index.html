@@ -5015,10 +5015,40 @@ function playBonusVideo(bonusKey, itemKey){
   const b = findBonus(bonusKey);
   const it = b && (b.items || []).find(x => x.key === itemKey);
   if (!it || !it.boomstream) return;
-  document.getElementById('bonus-video-slot').innerHTML =
-    `<iframe src="https://play.boomstream.com/${encodeURIComponent(it.boomstream)}"
-             style="position:absolute;inset:0;width:100%;height:100%;border:0"
-             allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
+  const slot = document.getElementById('bonus-video-slot');
+  const code = String(it.boomstream).trim();
+
+  // ТЕМ ЖЕ СПОСОБОМ, ЧТО И НАШИ СТАТИЧНЫЕ ВИДЕО: span с data-атрибутами плюс
+  // config.jsonp этого кода. Прямой адрес play.boomstream.com/КОД плеер не
+  // отдаёт — по нему приходит «Video is not found».
+  // ПОРЯДОК ВАЖЕН: сначала span, потом скрипт. config.jsonp при выполнении сам
+  // ищет на странице span со своим кодом и разворачивается в нём; если span
+  // появится позже, искать будет нечего
+  slot.innerHTML = '<span data-boomstream-code="' + escapeHtml(code) + '"'
+    + ' data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>'
+    + '<div id="bonus-video-hint" style="position:absolute;left:0;right:0;bottom:8px;'
+    + 'text-align:center;font-size:11.5px;color:#bbb"></div>';
+
+  const script = document.createElement('script');
+  // метка времени заставляет браузер выполнить конфиг заново при повторном
+  // открытии — из кэша он бы просто не запустился второй раз
+  script.src = `https://play.boomstream.com/${encodeURIComponent(code)}/config.jsonp?v=${Date.now()}`;
+  script.async = true;
+  script.onerror = () => {
+    const hint = document.getElementById('bonus-video-hint');
+    if (hint) hint.textContent = 'Видео не загрузилось — проверь код в дашборде';
+  };
+  slot.appendChild(script);
+
+  // Если через три секунды плеер так и не появился, честно говорим об этом,
+  // а не оставляем человека перед чёрным прямоугольником
+  setTimeout(() => {
+    const hint = document.getElementById('bonus-video-hint');
+    if (hint && !slot.querySelector('iframe, video')) {
+      hint.textContent = 'Плеер не запустился. Скажи Денису — код: ' + code;
+    }
+  }, 3000);
+
   document.getElementById('bonus-video-title').textContent = it.title || '';
   document.getElementById('bonus-video-overlay').classList.add('open');
   markBonusOpened(bonusKey, itemKey);
