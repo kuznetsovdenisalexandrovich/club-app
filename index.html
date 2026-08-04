@@ -357,6 +357,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .video-banner-title{position:absolute;left:14px;right:14px;bottom:12px;color:white;font-weight:700;font-size:14px;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,0.4)}
 .video-banner-dismiss{position:absolute;top:8px;right:8px;z-index:2;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:20px;font-size:10.5px;font-weight:700;padding:5px 10px;cursor:pointer}
 .video-embed-player{position:relative;height:min(62vh,520px);width:auto;max-width:100%;aspect-ratio:9/16;margin:0 auto;border-radius:12px;overflow:hidden;background:#000}
+/* Горизонтальные записи: у бонусов видео 16:9, а базовый стиль плеера сделан
+   под вертикальные истории. Считаем от ШИРИНЫ, а не от высоты */
+.video-embed-player.wide{height:auto;width:100%;aspect-ratio:16/9}
+.fullscreen-popup-card.wide{max-width:760px}
 .fullscreen-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:250;display:none;align-items:center;justify-content:center;padding:20px}
 .fullscreen-popup-overlay.open{display:flex;animation:overlayFadeIn .22s ease forwards}
 .fullscreen-popup-card{position:relative;background:var(--bg2);border-radius:20px;padding:16px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;animation:cardEntrance .3s cubic-bezier(0.34,1.56,0.64,1) both}
@@ -2303,12 +2307,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <style>
 /* Плитка бонуса. СВЕЧЕНИЕ ЗНАЧИТ «ты этого не открывал», а не «это бонус»:
    если рамка горит всегда, через неделю она перестаёт что-либо значить */
+/* overflow:visible нужен, чтобы стикер выступал за край плитки. Но вместе с ним
+   пропадает обрезка картинки по скруглению — возвращаем её самой картинке */
 .bonus-tile{position:relative;overflow:visible}
+.bonus-tile .stream-tile-img{border-radius:15px 15px 0 0}
 .bonus-tile.is-new{box-shadow:0 0 0 2px var(--warm), 0 0 18px 2px rgba(255,150,60,.45);
-  border-radius:14px;animation:bonusPulse 2.6s ease-in-out infinite}
+  border-radius:16px;animation:bonusPulse 2.6s ease-in-out infinite}
 @keyframes bonusPulse{0%,100%{box-shadow:0 0 0 2px var(--warm),0 0 14px 1px rgba(255,150,60,.35)}
   50%{box-shadow:0 0 0 2px var(--warm),0 0 22px 4px rgba(255,150,60,.6)}}
-.bonus-badge{position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+.bonus-badge{position:absolute;top:-8px;right:10px;
   background:var(--warm);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.06em;
   padding:2px 8px;border-radius:99px;white-space:nowrap;z-index:2}
 .bonus-item{display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:12px;
@@ -2355,9 +2362,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <!-- Плеер бонусной позиции. Отдельный от продающего видео: там код вшит в
      разметку, а здесь он приходит с сервера и меняется на каждой позиции -->
 <div class="fullscreen-popup-overlay" id="bonus-video-overlay" onclick="if(event.target===this) closeBonusVideo()">
-  <div class="fullscreen-popup-card">
+  <div class="fullscreen-popup-card wide">
     <button class="icon-btn fullscreen-popup-close" onclick="closeBonusVideo()">✕</button>
-    <div class="video-embed-player" id="bonus-video-slot"></div>
+    <div class="video-embed-player wide" id="bonus-video-slot"></div>
     <div id="bonus-video-title" style="margin-top:10px;font-size:14px"></div>
   </div>
 </div>
@@ -5010,7 +5017,7 @@ function playBonusVideo(bonusKey, itemKey){
   if (!it || !it.boomstream) return;
   document.getElementById('bonus-video-slot').innerHTML =
     `<iframe src="https://play.boomstream.com/${encodeURIComponent(it.boomstream)}"
-             style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px"
+             style="position:absolute;inset:0;width:100%;height:100%;border:0"
              allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
   document.getElementById('bonus-video-title').textContent = it.title || '';
   document.getElementById('bonus-video-overlay').classList.add('open');
