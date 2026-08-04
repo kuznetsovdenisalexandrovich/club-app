@@ -2642,6 +2642,22 @@ function toggleTheme(){
   html.dataset.theme = next;
   applyThemeIcon(next);
   try{ localStorage.setItem('club_app_theme', next); }catch(e){}
+  swapPlanImagesTheme(next);
+}
+
+/* Картинки остановок карты лежат отдельными файлами под каждую тему, а тема
+   подставляется в путь в момент отрисовки. Значит при переключении темы уже
+   нарисованные картинки сами по себе не поменяются — их надо переставить.
+   Меняем адрес прямо у существующих узлов, а не перерисовываем карту: это
+   дешевле и не сбрасывает прокрутку и открытые попапы */
+function swapPlanImagesTheme(theme){
+  const from = (theme === 'dark') ? '/light/' : '/dark/';
+  const to   = (theme === 'dark') ? '/dark/'  : '/light/';
+  document.querySelectorAll('.pmap-blob img').forEach(function(img){
+    const src = img.getAttribute('src') || '';
+    if (src.indexOf('images/plan/') === -1 || src.indexOf(from) === -1) return;
+    img.setAttribute('src', src.replace(from, to));
+  });
 }
 (function initTheme(){
   let saved = 'dark';
