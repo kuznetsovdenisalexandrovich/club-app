@@ -155,6 +155,13 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 
 
 .lec-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
+/* Кнопки помощи: рамка и цвет текста задаются явно, чтобы они не растворялись
+   в подложке — в тёмной теме карточка на карточке даёт почти нулевой контраст */
+.help-btn{width:100%;text-align:center;background:var(--card2);color:var(--text);
+  border:1px solid var(--border);border-radius:16px;padding:15px 16px;font-size:14px;
+  font-weight:600;cursor:pointer;font-family:inherit}
+.help-btn:active{opacity:.75}
+[data-theme="dark"] .help-btn{background:rgba(255,255,255,.07);border-color:rgba(173,149,255,.28)}
 .lec-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:12px;display:block;background:var(--card2)}
 .lec-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .save-btn{background:none;border:none;line-height:1;color:var(--text-faint);cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center}
@@ -1842,8 +1849,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     <div class="section-label">Помощь</div>
     <div class="card">
-      <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="openSupportPopup()">Написать в поддержку</button>
-      <button class="lec-card" style="width:100%;text-align:center;border:none;margin-top:8px" onclick="openBugPopup()">Сообщить о баге</button>
+      <!-- НЕ `lec-card` без рамки: в тёмной теме такая кнопка сливается с
+           карточкой, внутри которой лежит, и читается как выключенная -->
+      <button class="help-btn" onclick="openSupportPopup()">Написать в поддержку</button>
+      <button class="help-btn" style="margin-top:8px" onclick="openBugPopup()">Сообщить о баге</button>
     </div>
 
     <div id="debug-blocks" style="display:none">
@@ -2501,7 +2510,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="reveal-row" id="reveal-row"></div>
   <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
-  <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px" onclick="closePackReveal()">Готово</button>
+  <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px;max-width:280px;width:auto;align-self:center;padding-left:32px;padding-right:32px" onclick="closePackReveal()">Готово</button>
 </div>
 
 <div class="center-modal-overlay" id="bug-popup-overlay" onclick="if(event.target===this) closeBugPopup()">
