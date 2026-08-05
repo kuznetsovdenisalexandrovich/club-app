@@ -1594,7 +1594,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <span class="level-card-frac" id="level-card-frac">1/4</span>
   </div>
   <div class="level-bar-track"><div class="level-bar-fill" id="level-bar-fill"></div></div>
-  <div id="level-card-warning" style="display:none;font-size:11.5px;font-weight:700;color:#e05252;margin-top:8px">⚠️ Обязательно закончи регистрацию!</div>
+  <div id="level-card-warning" style="display:none;font-size:11.5px;font-weight:700;color:#e05252;margin-top:8px" data-text="onb.a1">⚠️ Обязательно закончи регистрацию!</div>
 </div>
 
 <!-- Круглый индикатор уровня (только для pointsMode, уровень 3+) — намеренно отдельно
@@ -1628,7 +1628,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="pack-banner-icon">🎴</div>
       <div>
         <div class="pack-banner-title" id="pack-banner-title">Тебя ждёт закрытый пак</div>
-        <div class="pack-banner-sub">Три карточки пантеона. Открой →</div>
+        <div class="pack-banner-sub" data-text="cards.a1">Три карточки пантеона. Открой →</div>
       </div>
     </div>
 
@@ -1748,7 +1748,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
 
     <div style="display:flex;flex-direction:column;gap:6px;align-items:center;margin-top:22px">
-      <div class="payment-help-link" style="margin:0;font-size:12px" onclick="openLegalDoc('privacy')">Согласие на обработку персональных данных</div>
+      <div class="payment-help-link" style="margin:0;font-size:12px" onclick="openLegalDoc('privacy')" data-text="legal.a1">Согласие на обработку персональных данных</div>
       <div class="payment-help-link" style="margin:0;font-size:12px" onclick="openLegalDoc('terms')">Пользовательское соглашение</div>
     </div>
 
@@ -1769,7 +1769,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     <div class="section-label">Библиотека</div>
     <button class="ai-btn" id="ai-helper-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
-    <div class="payment-help-link" style="margin:-4px 0 12px" onclick="openAskDenisPopup()">Или задать вопрос прямо Денису →</div>
+    <div class="payment-help-link" style="margin:-4px 0 12px" onclick="openAskDenisPopup()" data-text="quiz.a1">Или задать вопрос прямо Денису →</div>
     <div id="saved-banner" class="saved-banner" style="display:none"></div>
     <div id="tag-filter-row" class="tag-filter-row"></div>
     <div id="lib-list"><div class="loading">Загрузка...</div></div>
@@ -1821,7 +1821,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
 
     <div class="card" id="demo-profile-card" style="display:none">
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px">Ты смотришь клуб в демо-режиме</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px" data-text="demo.a1">Ты смотришь клуб в демо-режиме</div>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px" data-text="demo.banner">Оплати участие — откроются записи занятий, живые эфиры и баллы. Или войди, если подписка уже есть.</div>
       <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:8px" onclick="openAccessPage()">Оплатить доступ</button>
       <button class="lec-link-btn" id="demo-profile-login-btn" style="width:100%" onclick="exitDemoToLogin()">Войти по номеру</button>
@@ -1844,7 +1844,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="card points-card" onclick="openRewards()" style="cursor:pointer">
       <div class="points-value" id="p-points">0</div>
       <div class="points-caption" id="p-points-caption">баллов</div>
-      <div class="points-hint">Нажми, чтобы посмотреть, на что их можно потратить</div>
+      <div class="points-hint" data-text="points.a1">Нажми, чтобы посмотреть, на что их можно потратить</div>
     </div>
 
     <div class="section-label">Помощь</div>
@@ -1930,7 +1930,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <span onclick="switchView('deck-rules')" style="cursor:pointer;font-size:12px;color:var(--text-dim);text-decoration:underline">Правила</span>
     </div>
     <div class="card" id="cards-collection-head" style="margin-bottom:12px">
-      <div style="font-size:13px;color:var(--text-dim);line-height:1.5">Карточки приходят паками за продление участия. Собери весь пантеон.</div>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5" data-text="cards.a2">Карточки приходят паками за продление участия. Собери весь пантеон.</div>
       <div id="cards-collection-progress" style="font-size:14px;font-weight:700;margin-top:8px"></div>
       <div id="cards-secret-toggle"></div>
     </div>
@@ -1960,7 +1960,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="pf-hud">
       <div class="pf-eyebrow">Твой путь · шаг 1</div>
       <div class="pf-title">Осмотрись и собери своё</div>
-      <div class="pf-lead">Поле двигается пальцем. Тапай темы — они распускаются.</div>
+      <div class="pf-lead" data-text="plan.a1">Поле двигается пальцем. Тапай темы — они распускаются.</div>
     </div>
     <button class="pf-back" onclick="closePlanField()">✕</button>
     <div class="pf-dock">
@@ -1979,14 +1979,14 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
     <div class="card">
       <div style="font-size:13.5px;line-height:1.6;color:var(--text)">
-        <p style="margin-bottom:12px">Пак из трёх карточек приходит за каждое продление участия в клубе. Карточки нельзя купить — ни за деньги, ни за баллы.</p>
-        <p style="margin-bottom:12px">Продление со скидкой за баллы пак не даёт: паки идут только за полную оплату месяца.</p>
+        <p style="margin-bottom:12px" data-text="cards.a3">Пак из трёх карточек приходит за каждое продление участия в клубе. Карточки нельзя купить — ни за деньги, ни за баллы.</p>
+        <p style="margin-bottom:12px" data-text="cards.a4">Продление со скидкой за баллы пак не даёт: паки идут только за полную оплату месяца.</p>
         <div class="section-label" style="margin:14px 0 8px">Насколько часто что выпадает</div>
         <div id="deck-rules-chances" style="font-size:13px;line-height:1.7"></div>
         <div class="section-label" style="margin:16px 0 8px">Чтобы никого не обделить</div>
-        <p style="margin-bottom:12px">Чем дольше тебе не выпадает редкая карточка, тем выше её шанс в следующем паке. Самые редкие карточки ограничены по количеству — их физически не может выпасть больше определённого числа за период.</p>
+        <p style="margin-bottom:12px" data-text="cards.a5">Чем дольше тебе не выпадает редкая карточка, тем выше её шанс в следующем паке. Самые редкие карточки ограничены по количеству — их физически не может выпасть больше определённого числа за период.</p>
         <div class="section-label" style="margin:16px 0 8px">Если пак не открыть</div>
-        <p>Закрытые паки не сгорают и ждут тебя. Если их накопится больше трёх, самый старый откроется сам — чтобы баллы из него не лежали без дела.</p>
+        <p data-text="cards.a6">Закрытые паки не сгорают и ждут тебя. Если их накопится больше трёх, самый старый откроется сам — чтобы баллы из него не лежали без дела.</p>
       </div>
     </div>
     <div class="scroll-spacer"></div>
@@ -2006,7 +2006,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="section-label">Что такое баллы и уровень</div>
     <div class="card">
       <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и особенно за <span style="color:var(--warm);font-weight:700;cursor:pointer" onclick="comingSoon()">приглашение друзей в клуб</span>. Баллы можно потратить на кучу разных ништяков — от личной консультации до доступа к очень особенным материалам. Ими даже можно оплатить участие в клубе.</div>
-      <div class="reward-hint" style="margin-top:12px">Уровень — это твой ранг. Если баллы можно тратить, то уровень лишь растёт. Уровень сам по себе открывает доступ к разным материалам и функциям. Например, с какого-то уровня ты сможешь скачивать себе красивые выжимки занятий и скрипты продаж в PDF — и оставлять их себе, даже после окончания подписки.</div>
+      <div class="reward-hint" style="margin-top:12px" data-text="points.a2">Уровень — это твой ранг. Если баллы можно тратить, то уровень лишь растёт. Уровень сам по себе открывает доступ к разным материалам и функциям. Например, с какого-то уровня ты сможешь скачивать себе красивые выжимки занятий и скрипты продаж в PDF — и оставлять их себе, даже после окончания подписки.</div>
     </div>
 
     <div class="section-label">Как заработать</div>
@@ -2014,10 +2014,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="step-row"><span>Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
       <div class="step-row"><span>Посетить живое занятие</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
       <div class="step-row"><span>Быть участником</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+500 / мес</span></div>
-      <div class="step-row"><span>Составить свою личную карту контента</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
+      <div class="step-row"><span data-text="plan.a2">Составить свою личную карту контента</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
       <div class="step-row"><span>Пройти карту</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+2000</span></div>
-      <div class="step-row"><span>Активничать — иногда просто так, по решению Дениса</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
-      <div class="step-row" style="cursor:pointer" onclick="document.getElementById('donate-section').scrollIntoView({behavior:'smooth'})"><span style="color:var(--warm)">Или просто задонатить любую сумму ↓</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">1₽ = 1</span></div>
+      <div class="step-row"><span data-text="points.a3">Активничать — иногда просто так, по решению Дениса</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
+      <div class="step-row" style="cursor:pointer" onclick="document.getElementById('donate-section').scrollIntoView({behavior:'smooth'})"><span style="color:var(--warm)" data-text="points.a4">Или просто задонатить любую сумму ↓</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">1₽ = 1</span></div>
     </div>
 
     <div class="section-label">На что потратить</div>
@@ -2027,7 +2027,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     <div class="section-label">Уровни клуба</div>
     <div class="card">
-      <div class="reward-hint" style="margin-bottom:10px">Чем больше баллов заработано за всё время, тем выше уровень — и тем больше открывается наград.</div>
+      <div class="reward-hint" style="margin-bottom:10px" data-text="points.a5">Чем больше баллов заработано за всё время, тем выше уровень — и тем больше открывается наград.</div>
       <button class="lec-link-btn access-btn" onclick="openLevelsPopup()">Посмотреть уровни</button>
     </div>
 
@@ -2131,7 +2131,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="view" id="view-payment-help">
     <div class="section-label" style="display:flex;align-items:center;gap:8px">
       <span onclick="switchView('access')" style="cursor:pointer;font-size:16px">←</span>
-      <span>Оплата не из РФ / проблема с оплатой</span>
+      <span data-text="pay.a1">Оплата не из РФ / проблема с оплатой</span>
     </div>
     <div class="card">
       <div class="access-intro">После оплаты приложение само поймает платёж — обычно на это уходят секунды, иногда до пары минут. Никуда уходить не нужно, просто вернись сюда, и я сразу покажу, что делать дальше.<br><br>Если оплатить не получается или карта не РФ, дай знать:</div>
@@ -2148,8 +2148,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="sched-popup" id="paywall-popup" style="text-align:center">
     <div class="sched-popup-handle"></div>
     <div style="font-size:34px;margin:6px 0 10px">🔒</div>
-    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Вот ёшки, не вижу твоей подписки(</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Этот контент доступен только участникам клуба</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px" data-text="pay.a2">Вот ёшки, не вижу твоей подписки(</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px" data-text="pay.a3">Этот контент доступен только участникам клуба</div>
     <button class="lec-link-btn access-btn" onclick="closePaywall();openAccessPage()">Открыть доступ</button>
     <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePaywall();openClubInfoPage()">Узнать подробнее</button>
   </div>
@@ -2179,7 +2179,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">Посмотреть демо</button>
       <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openAccessPage()">Оплатить доступ</button>
-      <div class="payment-help-link" style="margin:12px 0 0" onclick="closeDemoEntryPopup();openQuiz()">Узнать, кто я из боженек продаж</div>
+      <div class="payment-help-link" style="margin:12px 0 0" onclick="closeDemoEntryPopup();openQuiz()" data-text="misc.a1">Узнать, кто я из боженек продаж</div>
     </div>
   </div>
 </div>
@@ -2187,7 +2187,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
   <h2 id="web-login-title">Вход по номеру телефона</h2>
-  <p id="web-login-subtitle">Укажи номер телефона, использованный для оплаты подписки.</p>
+  <p id="web-login-subtitle" data-text="pay.a4">Укажи номер телефона, использованный для оплаты подписки.</p>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
     <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" value="+" placeholder="+7 999 123-45-67" inputmode="tel" oninput="keepPlusPrefix(this)">
     <button class="lec-link-btn access-btn" id="web-login-btn" onclick="handleLoginButton()">Войти</button>
@@ -2196,13 +2196,13 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div id="web-login-notfound" style="display:none;width:100%;max-width:320px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:14px">
     <div id="web-login-notfound-text" style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px"></div>
     <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:6px" onclick="openAccessPage()">Оплатить доступ</button>
-    <div class="payment-help-link" style="margin:0" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_залогиниться_в_приложении')">Уже оплачивал — написать Денису</div>
+    <div class="payment-help-link" style="margin:0" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_залогиниться_в_приложении')" data-text="pay.a5">Уже оплачивал — написать Денису</div>
   </div>
   <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
-  <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()">Не приходит смс? Войти по номеру</div>
+  <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()" data-text="pay.a6">Не приходит смс? Войти по номеру</div>
   <div class="payment-help-link" id="web-login-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
-  <div style="margin-top:14px;font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openQuiz()">Узнай, кто ты из боженек продаж</div>
+  <div style="margin-top:14px;font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openQuiz()" data-text="misc.a2">Узнай, кто ты из боженек продаж</div>
   <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff;display:none">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
@@ -2215,7 +2215,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="hs-step">
       <div class="hs-step-num">1 шаг</div>
       <div class="hs-step-content">
-        <span>В Safari внизу экрана нажми на значок</span>
+        <span data-text="pay.a7">В Safari внизу экрана нажми на значок</span>
         <span class="hs-icon-circle">•••</span>
       </div>
     </div>
@@ -2445,7 +2445,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="center-modal-title">Уведомления недоступны здесь</div>
       <button class="icon-btn" onclick="closePushTelegramNotice()">✕</button>
     </div>
-    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:16px">Пуш-уведомления возможны только для веб-версии. В Telegram уведомления будут приходить только в бота.</div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:16px" data-text="notify.a1">Пуш-уведомления возможны только для веб-версии. В Telegram уведомления будут приходить только в бота.</div>
     <button class="lec-link-btn access-btn" onclick="goInstallFromPushNotice()">Установить приложение</button>
     <div class="payment-help-link" style="margin-top:10px" onclick="pushSkippedInTelegram()">Пропустить</div>
   </div>
@@ -2499,7 +2499,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="zoom-stage" id="zoom-stage"><img id="zoom-img" alt=""></div>
   <div class="zoom-loading" id="zoom-loading">Загружаю…</div>
   <button class="zoom-close" id="zoom-close" onclick="closeCardZoom()">✕</button>
-  <div class="zoom-hint" id="zoom-hint">Двумя пальцами приблизить · двойной тап — быстро</div>
+  <div class="zoom-hint" id="zoom-hint" data-text="misc.a3">Двумя пальцами приблизить · двойной тап — быстро</div>
 </div>
 
 <div class="god-overlay" id="god-overlay" onclick="if(event.target===this) closeGodInfo()">
@@ -2514,7 +2514,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 <div class="reveal-overlay" id="reveal-overlay">
   <div class="reveal-title" id="reveal-title">Твой пак</div>
-  <div class="reveal-sub" id="reveal-sub">Нажми на карточку, чтобы открыть</div>
+  <div class="reveal-sub" id="reveal-sub" data-text="cards.a7">Нажми на карточку, чтобы открыть</div>
   <div class="reveal-row" id="reveal-row"></div>
   <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
@@ -2527,7 +2527,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="center-modal-title">Сообщить о баге</div>
       <button class="icon-btn" onclick="closeBugPopup()">✕</button>
     </div>
-    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px">Что не так работает? Напиши, на каком экране и что произошло — так починить получится быстрее.</div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px" data-text="misc.a4">Что не так работает? Напиши, на каком экране и что произошло — так починить получится быстрее.</div>
     <textarea class="ai-question-input" id="bug-input" rows="4" maxlength="2000" placeholder="Например: на экране расписания не открывается занятие 12 августа"></textarea>
     <button class="lec-link-btn access-btn" id="bug-send-btn" style="width:100%;margin-top:10px" onclick="submitBugReport()">Отправить</button>
   </div>
@@ -2539,7 +2539,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="center-modal-title">Написать в поддержку</div>
       <button class="icon-btn" onclick="closeSupportPopup()">✕</button>
     </div>
-    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px">Опиши, что случилось — сообщение придёт Денису напрямую.</div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px" data-text="misc.a5">Опиши, что случилось — сообщение придёт Денису напрямую.</div>
     <textarea class="ai-question-input" id="support-input" rows="4" maxlength="2000" placeholder="Например: оплатил, но приложение не видит подписку"></textarea>
     <button class="lec-link-btn access-btn" id="support-send-btn" onclick="submitSupportMessage()">Отправить</button>
   </div>
@@ -2573,7 +2573,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="center-modal-title">Видео в закрытой группе</div>
       <button class="icon-btn" onclick="document.getElementById('vk-access-overlay').classList.remove('open')">✕</button>
     </div>
-    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px">Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.</div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px" data-text="library.a1">Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.</div>
     <button class="lec-link-btn access-btn" onclick="grantVkAccessAndJoin()">Получить доступ к ВК</button>
     <div class="payment-help-link" style="margin-top:10px" onclick="alreadyHaveVkAccess()">У меня уже есть доступ</div>
   </div>
@@ -4125,6 +4125,103 @@ const APP_TEXTS = {
   'invite.card_hint': {
     c:'Приглашения', l:'Подсказка про карточку', w:'Пригласить друга', i:true,
     t:'Карточка из коллекции — самый живой повод: её пересылают охотнее ссылки.' },
+
+  'onb.a1': {
+    c:'Онбординг', l:'⚠️ Обязательно закончи регистрацию!', w:'', i:true,
+    t:'⚠️ Обязательно закончи регистрацию!' },
+  'cards.a1': {
+    c:'Карточки', l:'Три карточки пантеона. Открой →', w:'', i:true,
+    t:'Три карточки пантеона. Открой →' },
+  'legal.a1': {
+    c:'Юридическое', l:'Согласие на обработку персональных данных', w:'', i:true,
+    t:'Согласие на обработку персональных данных' },
+  'quiz.a1': {
+    c:'Тест и вопросы', l:'Или задать вопрос прямо Денису →', w:'', i:true,
+    t:'Или задать вопрос прямо Денису →' },
+  'demo.a1': {
+    c:'Демо-режим', l:'Ты смотришь клуб в демо-режиме', w:'', i:true,
+    t:'Ты смотришь клуб в демо-режиме' },
+  'points.a1': {
+    c:'Баллы и уровни', l:'Нажми, чтобы посмотреть, на что их можно пот…', w:'', i:true,
+    t:'Нажми, чтобы посмотреть, на что их можно потратить' },
+  'cards.a2': {
+    c:'Карточки', l:'Карточки приходят паками за продление участи…', w:'', i:true,
+    t:'Карточки приходят паками за продление участия. Собери весь пантеон.' },
+  'plan.a1': {
+    c:'Личный план', l:'Поле двигается пальцем. Тапай темы — они рас…', w:'', i:true,
+    t:'Поле двигается пальцем. Тапай темы — они распускаются.' },
+  'cards.a3': {
+    c:'Карточки', l:'Пак из трёх карточек приходит за каждое прод…', w:'', i:true,
+    t:'Пак из трёх карточек приходит за каждое продление участия в клубе. Карточки нельзя купить — ни за деньги, ни за баллы.' },
+  'cards.a4': {
+    c:'Карточки', l:'Продление со скидкой за баллы пак не даёт: п…', w:'', i:true,
+    t:'Продление со скидкой за баллы пак не даёт: паки идут только за полную оплату месяца.' },
+  'cards.a5': {
+    c:'Карточки', l:'Чем дольше тебе не выпадает редкая карточка,…', w:'', i:true,
+    t:'Чем дольше тебе не выпадает редкая карточка, тем выше её шанс в следующем паке. Самые редкие карточки ограничены по количеству — их физически не может выпасть больше определённого числа за период.' },
+  'cards.a6': {
+    c:'Карточки', l:'Закрытые паки не сгорают и ждут тебя. Если и…', w:'', i:true,
+    t:'Закрытые паки не сгорают и ждут тебя. Если их накопится больше трёх, самый старый откроется сам — чтобы баллы из него не лежали без дела.' },
+  'points.a2': {
+    c:'Баллы и уровни', l:'Уровень — это твой ранг. Если баллы можно тр…', w:'', i:true,
+    t:'Уровень — это твой ранг. Если баллы можно тратить, то уровень лишь растёт. Уровень сам по себе открывает доступ к разным материалам и функциям. Например, с какого-то уровня ты сможешь скачивать себе красивые выжимки занятий и скрипты продаж в PDF — и оставлять их себе, даже после окончания подписки.' },
+  'plan.a2': {
+    c:'Личный план', l:'Составить свою личную карту контента', w:'', i:true,
+    t:'Составить свою личную карту контента' },
+  'points.a3': {
+    c:'Баллы и уровни', l:'Активничать — иногда просто так, по решению …', w:'', i:true,
+    t:'Активничать — иногда просто так, по решению Дениса' },
+  'points.a4': {
+    c:'Баллы и уровни', l:'Или просто задонатить любую сумму ↓', w:'', i:true,
+    t:'Или просто задонатить любую сумму ↓' },
+  'points.a5': {
+    c:'Баллы и уровни', l:'Чем больше баллов заработано за всё время, т…', w:'', i:true,
+    t:'Чем больше баллов заработано за всё время, тем выше уровень — и тем больше открывается наград.' },
+  'pay.a1': {
+    c:'Вход и оплата', l:'Оплата не из РФ / проблема с оплатой', w:'', i:true,
+    t:'Оплата не из РФ / проблема с оплатой' },
+  'pay.a2': {
+    c:'Вход и оплата', l:'Вот ёшки, не вижу твоей подписки(', w:'', i:true,
+    t:'Вот ёшки, не вижу твоей подписки(' },
+  'pay.a3': {
+    c:'Вход и оплата', l:'Этот контент доступен только участникам клуба', w:'', i:true,
+    t:'Этот контент доступен только участникам клуба' },
+  'misc.a1': {
+    c:'Разное', l:'Узнать, кто я из боженек продаж', w:'', i:true,
+    t:'Узнать, кто я из боженек продаж' },
+  'pay.a4': {
+    c:'Вход и оплата', l:'Укажи номер телефона, использованный для опл…', w:'', i:true,
+    t:'Укажи номер телефона, использованный для оплаты подписки.' },
+  'pay.a5': {
+    c:'Вход и оплата', l:'Уже оплачивал — написать Денису', w:'', i:true,
+    t:'Уже оплачивал — написать Денису' },
+  'pay.a6': {
+    c:'Вход и оплата', l:'Не приходит смс? Войти по номеру', w:'', i:true,
+    t:'Не приходит смс? Войти по номеру' },
+  'misc.a2': {
+    c:'Разное', l:'Узнай, кто ты из боженек продаж', w:'', i:true,
+    t:'Узнай, кто ты из боженек продаж' },
+  'pay.a7': {
+    c:'Вход и оплата', l:'В Safari внизу экрана нажми на значок', w:'', i:true,
+    t:'В Safari внизу экрана нажми на значок' },
+  'notify.a1': {
+    c:'Уведомления', l:'Пуш-уведомления возможны только для веб-верс…', w:'', i:true,
+    t:'Пуш-уведомления возможны только для веб-версии. В Telegram уведомления будут приходить только в бота.' },
+  'misc.a3': {
+    c:'Разное', l:'Двумя пальцами приблизить · двойной тап — бы…', w:'', i:true,
+    t:'Двумя пальцами приблизить · двойной тап — быстро' },
+  'cards.a7': {
+    c:'Карточки', l:'Нажми на карточку, чтобы открыть', w:'', i:true,
+    t:'Нажми на карточку, чтобы открыть' },
+  'misc.a4': {
+    c:'Разное', l:'Что не так работает? Напиши, на каком экране…', w:'', i:true,
+    t:'Что не так работает? Напиши, на каком экране и что произошло — так починить получится быстрее.' },
+  'misc.a5': {
+    c:'Разное', l:'Опиши, что случилось — сообщение придёт Дени…', w:'', i:true,
+    t:'Опиши, что случилось — сообщение придёт Денису напрямую.' },
+  'library.a1': {
+    c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
+    t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
   'demo.banner': {
     c:'Демо-режим', l:'Плашка демо-режима', w:'Главный экран, демо', i:true,
