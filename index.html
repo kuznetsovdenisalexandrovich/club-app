@@ -1714,10 +1714,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Расписание</div>
       </div>
-      <div class="tile" onclick="comingSoon()">
+      <div class="tile" onclick="openInvitePopup()">
         <div class="tile-icon" style="background:rgba(110,168,254,0.16);color:#6ea8fe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 18 18 6M18 6H9M18 6v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Пригласить друга</div>
-        <span class="tile-soon">Скоро</span>
       </div>
       <div class="tile" onclick="switchView('points-info')">
         <div class="tile-icon tile-icon-number" id="menu-points-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
@@ -2345,6 +2344,23 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 </div>
 
 <!-- Бонусы: список позиций набора -->
+<!-- Приглашение друга: ссылка, готовый пост и своя карточка.
+     ЧИСЛА БЕЗ ИМЁН: сколько людей пришло и сколько начислено баллов — да, кто
+     именно пришёл — нет. Человек делится ссылкой, а не получает доступ к чужим
+     профилям -->
+<div class="sched-popup-overlay" id="invite-popup-overlay" onclick="if(event.target===this) closeInvitePopup()">
+  <div class="sched-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title">Пригласить друга</div>
+      <button class="icon-btn" onclick="closeInvitePopup()">✕</button>
+    </div>
+    <div class="sched-popup-body" id="invite-body">
+      <div class="loading">Загрузка...</div>
+    </div>
+  </div>
+</div>
+
 <div class="sched-popup-overlay" id="bonus-popup-overlay" onclick="if(event.target===this) closeBonusPopup()">
   <div class="sched-popup" id="bonus-popup">
     <div class="sched-popup-handle"></div>
@@ -5079,6 +5095,126 @@ function closeBonusVideo(){
   // содержимое чистим ниже — сторож увидит пропажу подсказки и остановится сам
   // выгружаем ифрейм, иначе звук продолжает играть под закрытым попапом
   document.getElementById('bonus-video-slot').innerHTML = '';
+}
+
+/* ── Приглашение друга ─────────────────────────────────────────────────────
+   Три способа поделиться: голая ссылка, готовый пост со случайным текстом и
+   своя карточка. Плюс числа: сколько пришло и сколько за это начислено.
+
+   Награда считается на сервере и ТОЛЬКО по оплате приведённого — здесь мы её
+   не выдаём и не обещаем за клики. */
+
+let inviteData = null;
+let invitePosts = [];
+let invitePostIdx = 0;
+
+async function openInvitePopup(){
+  document.getElementById('invite-popup-overlay').classList.add('open');
+  document.getElementById('invite-body').innerHTML = '<div class="loading">Загрузка...</div>';
+  try {
+    const q = telegramId ? `?telegram_id=${telegramId}` : '';
+    const [stats, posts] = await Promise.all([
+      fetch(`${API_URL}/referral/stats${q || '?telegram_id=0'}`).then(r => r.json()),
+      fetch(`${API_URL}/referral/posts${q}`).then(r => r.json()).catch(() => []),
+    ]);
+    inviteData = stats;
+    invitePosts = Array.isArray(posts) ? posts : [];
+    invitePostIdx = invitePosts.length ? Math.floor(Math.random() * invitePosts.length) : 0;
+    renderInvite();
+  } catch (e) {
+    document.getElementById('invite-body').innerHTML =
+      '<div style="font-size:13px;color:var(--text-faint)">Не загрузилось. Попробуй ещё раз.</div>';
+  }
+}
+
+function closeInvitePopup(){
+  document.getElementById('invite-popup-overlay').classList.remove('open');
+}
+
+function renderInvite(){
+  const d = inviteData || {};
+  const box = document.getElementById('invite-body');
+  const post = invitePosts.length ? invitePosts[invitePostIdx % invitePosts.length] : null;
+
+  box.innerHTML = `
+    <div class="mag-sub" style="margin-bottom:14px">
+      Приведи друга — получишь ${d.reward_points || 1000} баллов, когда он оформит подписку.
+    </div>
+
+    <div class="card" style="padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">Твоя ссылка</div>
+      <div style="font-size:12.5px;word-break:break-all;margin-bottom:10px">${escapeHtml(d.link || '')}</div>
+      <button class="lec-link-btn" style="width:100%" onclick="copyInviteText(${jsArg(d.link || '')})">Скопировать ссылку</button>
+    </div>
+
+    ${post ? `
+    <div class="card" style="padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">Готовый пост</div>
+      <div style="font-size:13px;white-space:pre-wrap;line-height:1.5;margin-bottom:10px">${escapeHtml(post.text)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="lec-link-btn" style="flex:1" onclick="copyInviteText(${jsArg(post.text)})">Скопировать</button>
+        ${invitePosts.length > 1 ? '<button class="lec-link-btn" style="flex:1" onclick="nextInvitePost()">Другой текст</button>' : ''}
+      </div>
+    </div>` : ''}
+
+    <div class="card" style="padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">Своя карточка</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">
+        Карточка из коллекции — самый живой повод: её пересылают охотнее ссылки.
+      </div>
+      <button class="lec-link-btn" style="width:100%" onclick="closeInvitePopup();switchView('cards')">Выбрать карточку</button>
+    </div>
+
+    <div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:var(--text-faint)">Пришло по твоей ссылке</span>
+        <b>${d.invited_total || 0}</b>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:var(--text-faint)">Из них оформили подписку</span>
+        <b>${d.invited_paid || 0}</b>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:var(--text-faint)">Начислено баллов</span>
+        <b>${d.points_earned || 0}</b>
+      </div>
+      <div style="margin-top:10px;font-size:12.5px">
+        <span class="mag-link" onclick="closeInvitePopup();switchView('points-info')">Как работают баллы →</span>
+      </div>
+    </div>`;
+}
+
+/* Случайный, но НЕ тот же самый: подряд один и тот же текст выглядел бы как
+   сломанная кнопка */
+function nextInvitePost(){
+  if (invitePosts.length < 2) return;
+  let next = invitePostIdx;
+  while (next === invitePostIdx) next = Math.floor(Math.random() * invitePosts.length);
+  invitePostIdx = next;
+  renderInvite();
+}
+
+async function copyInviteText(text){
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Скопировано');
+  } catch (e) {
+    // В Telegram и старых браузерах clipboard бывает недоступен — тогда старый
+    // способ через скрытое поле, он работает почти везде
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Скопировано');
+    } catch (e2) {
+      showToast('Не удалось скопировать');
+    }
+  }
 }
 
 async function loadStreams() {
@@ -7898,6 +8034,9 @@ function startWebSession(){
   // может быть ещё не заполнен, и start_param потеряется
   function openFromStartParam(){
     try {
+      // Привязку к пригласившему пробуем ВСЕГДА, какой бы ни была ссылка:
+      // и `r_<айди>` (приглашение), и `c_<карта>_<айди>` (расшаренная карточка)
+      if (typeof attachReferralFromStart === 'function') attachReferralFromStart();
       if (appStartParam().indexOf('quiz') !== 0) return;
       if (typeof loadCards === 'function') loadCards();
       if (typeof loadGods === 'function') loadGods();
@@ -9525,6 +9664,28 @@ function renderQuizResult(){
    а НЕ в адресную строку. Поэтому ссылка вида ?quiz=XXXX внутри Telegram
    молча теряется: апп просто открывается на главной.
    Значит источников два, и оба надо читать. */
+
+/* Пришёл по чужой ссылке — привязываем к пригласившему. Сервер сам решит,
+   можно ли: себя не пригласишь, повторно не перепривяжешься, уже платящего
+   задним числом не запишешь */
+async function attachReferralFromStart(){
+  const p = appStartParam();
+  if (!p || !telegramId) return;
+  let ref = null;
+  if (p.startsWith('r_')) ref = p.slice(2);
+  else if (p.startsWith('c_')) {
+    const parts = p.split('_');            // c_<карта>_<айди>
+    if (parts.length >= 3) ref = parts[parts.length - 1];
+  }
+  const refId = Number(ref);
+  if (!refId || refId === Number(telegramId)) return;
+  try {
+    await fetch(`${API_URL}/referral/attach`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, ref_id: refId })
+    });
+  } catch (e) { /* не критично: привязка не должна ломать вход */ }
+}
 
 function appStartParam(){
   // Внутри Telegram
