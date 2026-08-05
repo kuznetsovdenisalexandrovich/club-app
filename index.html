@@ -4953,7 +4953,9 @@ function openBonusPopup(key){
   bonusOpenKey = key;
   document.getElementById('bonus-popup-title').textContent = b.title || 'Бонус';
   document.getElementById('bonus-popup-sub').textContent =
-    b.available ? (b.subtitle || '') : 'Этот подарок открывается участникам клуба';
+    b.available ? (b.subtitle || '')
+      : (b.has_free ? 'Первое видео открыто всем. Остальное — участникам клуба'
+                    : 'Этот подарок открывается участникам клуба');
   renderBonusItems();
   document.getElementById('bonus-popup-overlay').classList.add('open');
 }
@@ -4971,9 +4973,10 @@ function renderBonusItems(){
     let action = '';
     if (it.locked){
       // Закрыта по порядку — «откроется следующей». Закрыта по подписке — кнопка
-      // в пейволл. Различаем по тому, есть ли у человека доступ к набору вообще:
-      // у гостя после бесплатной позиции идёт именно стена, и это нужный момент
-      const byOrder = b.sequential && (b.available || it.free);
+      // в пейволл. Ключ различия: `available` означает доступ К НАБОРУ, и у
+      // гостя он ложный даже когда внутри есть бесплатная позиция. Поэтому
+      // после бесплатного видео гость упирается именно в стену
+      const byOrder = b.available && b.sequential;
       action = byOrder
         ? '<span style="font-size:11px;color:var(--text-faint)">откроется следующей</span>'
         : `<button class="lec-link-btn access-btn" onclick="closeBonusPopup();openPaywall()">Открыть</button>`;
