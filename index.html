@@ -2365,6 +2365,38 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      ЧИСЛА БЕЗ ИМЁН: сколько людей пришло и сколько начислено баллов — да, кто
      именно пришёл — нет. Человек делится ссылкой, а не получает доступ к чужим
      профилям -->
+<style>
+/* Первый экран для пришедшего по чужой карточке. Отдельный слой поверх всего,
+   как у теста: человек приходит из соцсетей, не будучи участником, и не должен
+   упираться в логин */
+#cardentry-overlay{position:fixed;inset:0;z-index:872;display:none;overflow-y:auto;
+  background:var(--bg);padding:calc(var(--safe-top, 0px) + 28px) 20px 40px}
+#cardentry-overlay.open{display:block}
+.ce-wrap{max-width:420px;margin:0 auto;text-align:center}
+.ce-from{font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.5}
+.ce-card{width:min(74vw,300px);margin:0 auto 18px;border-radius:16px;overflow:hidden;
+  box-shadow:0 18px 44px rgba(0,0,0,.32)}
+.ce-card img{width:100%;display:block}
+.ce-ph{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;
+  background:var(--card2);color:var(--text-faint);font-size:34px}
+.ce-name{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px}
+.ce-title{font-size:26px;font-weight:800;line-height:1.15;margin-bottom:10px}
+.ce-lead{font-size:14.5px;line-height:1.55;color:var(--text-dim);margin-bottom:22px}
+.ce-note{font-size:12px;color:var(--text-faint);margin-top:14px;line-height:1.5}
+</style>
+
+<div id="cardentry-overlay">
+  <div class="ce-wrap">
+    <div class="ce-from" id="ce-from"></div>
+    <div class="ce-card" id="ce-card"></div>
+    <div class="ce-name" id="ce-god"></div>
+    <div class="ce-title" id="ce-title"></div>
+    <div class="ce-lead" id="ce-lead"></div>
+    <button class="lec-link-btn access-btn" style="width:100%;max-width:300px" onclick="cardEntryStartQuiz()" id="ce-cta"></button>
+    <div class="ce-note" id="ce-note"></div>
+  </div>
+</div>
+
 <div class="sched-popup-overlay" id="invite-popup-overlay" onclick="if(event.target===this) closeInvitePopup()">
   <div class="sched-popup">
     <div class="sched-popup-handle"></div>
@@ -4112,6 +4144,19 @@ const APP_TEXTS = {
   'invite.header': {
     c:'Приглашения', l:'Шапка экрана приглашений', w:'Пригласить друга', i:true,
     t:'Приведи друга — получишь баллы, когда он оформит подписку.' },
+  'cardentry.from': {
+    c:'Первый экран', l:'Кто прислал карточку', w:'Приход по чужой карточке', i:true,
+    t:'Тебе прислали карточку из клуба «Ты боженька продаж»' },
+  'cardentry.lead': {
+    c:'Первый экран', l:'Главная фраза первого экрана', w:'Приход по чужой карточке', i:true,
+    t:'Это его бог продаж. У каждого он свой — и говорит о человеке больше, чем кажется. А кто ты?' },
+  'cardentry.cta': {
+    c:'Первый экран', l:'Кнопка на первом экране', w:'Приход по чужой карточке', i:true,
+    t:'Узнать, кто я' },
+  'cardentry.note': {
+    c:'Первый экран', l:'Подпись под кнопкой', w:'Приход по чужой карточке', i:true,
+    t:'Двенадцать вопросов, минута времени. Регистрация не нужна.' },
+
   'invite.header_guest': {
     c:'Приглашения', l:'Шапка приглашений для НЕ участника', w:'Пригласить друга, демо', i:true,
     t:'Приведи друга — и первый месяц в клубе будет стоить тебе 1 ₽.' },
@@ -8349,6 +8394,12 @@ function startWebSession(){
       // Привязку к пригласившему пробуем ВСЕГДА, какой бы ни была ссылка:
       // и `r_<айди>` (приглашение), и `c_<карта>_<айди>` (расшаренная карточка)
       if (typeof attachReferralFromStart === 'function') attachReferralFromStart();
+      // Приход по чужой карточке — свой первый экран, до всякого логина
+      if (typeof cardEntryFromUrl === 'function' && cardEntryFromUrl()){
+        if (typeof loadCards === 'function') loadCards();
+        if (typeof loadGods === 'function') loadGods();
+        return;
+      }
       if (appStartParam().indexOf('quiz') !== 0) return;
       if (typeof loadCards === 'function') loadCards();
       if (typeof loadGods === 'function') loadGods();
@@ -9976,6 +10027,54 @@ function renderQuizResult(){
    а НЕ в адресную строку. Поэтому ссылка вида ?quiz=XXXX внутри Telegram
    молча теряется: апп просто открывается на главной.
    Значит источников два, и оба надо читать. */
+
+/* ── Первый экран для пришедшего по чужой карточке ─────────────────────────
+   Ссылка вида `c_<карта>_<айди>`. Показываем именно ТУ карточку, которой
+   поделились, и сразу уводим в тест: людям интересны они сами, а чужая карта —
+   только повод спросить «а кто ты».
+
+   Карточку берём публичным эндпоинтом: у гостя нет ни аккаунта, ни владения.
+   Сервер отдаст её только если делиться этой карточкой разрешено. */
+
+function cardEntryFromUrl(){
+  const param = appStartParam();
+  if (!param || param.indexOf('c_') !== 0) return false;
+  // c_<ключ>_<айди> — айди отрезаем, он нужен только для реферальной привязки
+  const parts = param.slice(2).split('_');
+  if (parts.length > 1 && /^\d+$/.test(parts[parts.length - 1])) parts.pop();
+  const key = parts.join('_');
+  if (!key) return false;
+
+  hideSplash();
+  document.getElementById('ce-from').textContent = t('cardentry.from');
+  document.getElementById('ce-lead').textContent = t('cardentry.lead');
+  document.getElementById('ce-cta').textContent = t('cardentry.cta');
+  document.getElementById('ce-note').textContent = t('cardentry.note');
+  document.getElementById('ce-card').innerHTML = '<div class="ce-ph">◆</div>';
+  document.getElementById('cardentry-overlay').classList.add('open');
+
+  fetch(`${API_URL}/cards/public/${encodeURIComponent(key)}`)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(card => {
+      if (card.image_url){
+        document.getElementById('ce-card').innerHTML =
+          '<img src="' + escapeHtml(card.image_url) + '" alt="">';
+      }
+      document.getElementById('ce-god').textContent = card.god || '';
+      document.getElementById('ce-title').textContent = card.title || card.god || '';
+    })
+    .catch(() => {
+      // Карточка не открылась — экран всё равно рабочий: главное здесь не она,
+      // а вопрос «а кто ты», и тест запускается без неё
+      document.getElementById('ce-title').textContent = t('cardentry.cta');
+    });
+  return true;
+}
+
+function cardEntryStartQuiz(){
+  document.getElementById('cardentry-overlay').classList.remove('open');
+  openQuiz(true);
+}
 
 /* Пришёл по чужой ссылке — привязываем к пригласившему. Сервер сам решит,
    можно ли: себя не пригласишь, повторно не перепривяжешься, уже платящего
