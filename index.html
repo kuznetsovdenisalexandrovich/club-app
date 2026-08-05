@@ -4086,6 +4086,116 @@ try { debugMode = localStorage.getItem('debug_mode') === '1'; } catch (e) {}
 const DEBUG_ON_PHRASE  = 'отладочный режим';
 const DEBUG_OFF_PHRASE = 'обычный режим';
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ТЕКСТЫ ИНТЕРФЕЙСА
+
+   Исходники живут ЗДЕСЬ, в коде. Сервер отдаёт только замены — если их нет или
+   связи нет, человек видит исходник. Приложение не может опустеть из-за сбоя.
+
+   Как добавить текст: дописать запись в APP_TEXTS и вывести через t('ключ').
+   Список для дашборда собирается из этого же объекта и уходит на сервер при
+   запуске — руками его никто не ведёт, иначе он разъедется с кодом.
+
+   Поля записи: c — категория, l — как называть человеку, w — где показывается,
+   i — важный (идёт в раздел, а не в общий список), t — сам текст.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const APP_TEXTS = {
+  'invite.header': {
+    c:'Приглашения', l:'Шапка экрана приглашений', w:'Пригласить друга', i:true,
+    t:'Приведи друга — получишь баллы, когда он оформит подписку.' },
+  'invite.card_hint': {
+    c:'Приглашения', l:'Подсказка про карточку', w:'Пригласить друга', i:true,
+    t:'Карточка из коллекции — самый живой повод: её пересылают охотнее ссылки.' },
+
+  'points.intro': {
+    c:'Баллы и уровни', l:'Что такое баллы', w:'Экран баллов', i:true,
+    t:'Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и приглашённых друзей.' },
+  'points.levels': {
+    c:'Баллы и уровни', l:'Про уровни', w:'Экран баллов', i:true,
+    t:'Чем больше баллов заработано за всё время, тем выше уровень — и тем больше открывается наград.' },
+
+  'cards.packs': {
+    c:'Карточки', l:'Откуда берутся паки', w:'Справка по карточкам', i:true,
+    t:'Пак из трёх карточек приходит за каждое продление участия в клубе.' },
+  'cards.no_pack_for_points': {
+    c:'Карточки', l:'Оплата баллами не даёт пак', w:'Справка по карточкам', i:true,
+    t:'Продление со скидкой за баллы пак не даёт: паки идут только за полную оплату месяца.' },
+
+  'pay.waiting': {
+    c:'Вход и оплата', l:'Ожидание платежа', w:'После нажатия «Оплатить»', i:true,
+    t:'После оплаты приложение само поймает платёж — обычно это секунды, иногда до пары минут. Никуда уходить не нужно.' },
+  'pay.login_hint': {
+    c:'Вход и оплата', l:'Подсказка на входе по номеру', w:'Экран входа', i:true,
+    t:'Укажи номер телефона, использованный для оплаты подписки.' },
+
+  'bonus.guest_note': {
+    c:'Бонусы', l:'Подпись гостю в наборе бонусов', w:'Попап бонуса', i:true,
+    t:'Первое видео открыто всем. Остальное — участникам клуба.' },
+  'bonus.members_only': {
+    c:'Бонусы', l:'Подпись, когда всё закрыто', w:'Попап бонуса', i:true,
+    t:'Этот подарок открывается участникам клуба.' },
+
+  'plan.field_hint': {
+    c:'Личный план', l:'Подсказка на поле выбора тем', w:'Поле выбора тем', i:true,
+    t:'Поле двигается пальцем. Тапай темы — они распускаются.' },
+
+  'help.support_hint': {
+    c:'Помощь', l:'Подсказка в поддержке', w:'Попап поддержки', i:false,
+    t:'Опиши, что случилось — сообщение придёт Денису напрямую.' },
+  'help.bug_hint': {
+    c:'Помощь', l:'Подсказка в сообщении о баге', w:'Попап бага', i:false,
+    t:'Что не так работает? Напиши, на каком экране и что произошло — так починить получится быстрее.' },
+};
+
+let appTextOverrides = {};
+
+/* Единственная точка получения текста. Замена с сервера сильнее исходника,
+   исходник — сильнее пустоты */
+function t(key){
+  if (appTextOverrides[key]) return appTextOverrides[key];
+  const rec = APP_TEXTS[key];
+  return rec ? rec.t : '';
+}
+
+/* Раскладываем тексты по элементам с data-text="ключ" — так в разметке можно
+   не звать t() руками */
+function applyAppTexts(){
+  document.querySelectorAll('[data-text]').forEach(el => {
+    const key = el.getAttribute('data-text');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
+}
+
+async function loadAppTexts(){
+  // Сначала замены — они нужны для отрисовки. Синхронизация списка может
+  // подождать и не должна задерживать запуск
+  try {
+    const r = await fetch(`${API_URL}/app-texts`);
+    const data = await r.json();
+    if (data && typeof data === 'object') appTextOverrides = data;
+  } catch (e) { /* нет связи — покажем исходники из кода */ }
+  applyAppTexts();
+  syncAppTexts();
+}
+
+/* Отправляем серверу перечень своих ключей с исходниками. Дашборд показывает
+   ровно то, что есть в коде, и список не надо вести руками */
+async function syncAppTexts(){
+  try {
+    const items = Object.keys(APP_TEXTS).map(key => {
+      const r = APP_TEXTS[key];
+      return { key, base_text: r.t, category: r.c || '', label: r.l || '',
+               place: r.w || '', important: !!r.i, spintax: /\{[^{}]*\|/.test(r.t) };
+    });
+    await fetch(`${API_URL}/app-texts/sync`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+  } catch (e) { /* не критично: без синхронизации дашборд покажет прошлый список */ }
+}
+
 async function loadAppSettings(){
   try {
     appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
@@ -4093,6 +4203,7 @@ async function loadAppSettings(){
     appSettings.pdf_unlock_level = parseInt(appSettings.pdf_unlock_level, 10) || 3;
   } catch (e) {}
   applyAppSettings();
+  loadAppTexts();
 }
 
 function applyAppSettings(){
@@ -4954,8 +5065,7 @@ function openBonusPopup(key){
   document.getElementById('bonus-popup-title').textContent = b.title || 'Бонус';
   document.getElementById('bonus-popup-sub').textContent =
     b.available ? (b.subtitle || '')
-      : (b.has_free ? 'Первое видео открыто всем. Остальное — участникам клуба'
-                    : 'Этот подарок открывается участникам клуба');
+      : (b.has_free ? t('bonus.guest_note') : t('bonus.members_only'));
   renderBonusItems();
   document.getElementById('bonus-popup-overlay').classList.add('open');
 }
@@ -5150,7 +5260,7 @@ function renderInvite(){
 
   box.innerHTML = `
     <div class="mag-sub" style="margin-bottom:14px">
-      Приведи друга — получишь ${d.reward_points || 1000} баллов, когда он оформит подписку.
+      ${escapeHtml(t('invite.header'))}
     </div>
 
     <div class="card" style="padding:12px;margin-bottom:12px">
@@ -5172,7 +5282,7 @@ function renderInvite(){
     <div class="card" style="padding:12px;margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">Своя карточка</div>
       <div style="font-size:13px;line-height:1.5;margin-bottom:10px">
-        Карточка из коллекции — самый живой повод: её пересылают охотнее ссылки.
+        ${escapeHtml(t('invite.card_hint'))}
       </div>
       <button class="lec-link-btn" style="width:100%" onclick="closeInvitePopup();switchView('cards')">Выбрать карточку</button>
     </div>
