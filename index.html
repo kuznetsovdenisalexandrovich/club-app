@@ -1858,11 +1858,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div id="debug-blocks" style="display:none">
       <div class="section-label">Отладка</div>
       <div class="card">
-        <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="testCheckMembership()">Проверить членство (тест)</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="testCheckMembership()">Проверить членство (тест)</button>
         <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:10px;text-align:center" id="test-result"></div>
-        <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="diagPingApi()">Проверить бэкенд (простой пинг)</button>
-        <button class="lec-card" style="width:100%;text-align:center;border:none;margin-bottom:8px" onclick="diagPingUsersMe()">Проверить загрузку профиля (/users/me)</button>
-        <button class="lec-card" style="width:100%;text-align:center;border:none" onclick="diagShowEnv()">Показать инфо о среде</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="diagPingApi()">Проверить бэкенд (простой пинг)</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="diagPingUsersMe()">Проверить загрузку профиля (/users/me)</button>
+        <button class="help-btn" onclick="diagShowEnv()">Показать инфо о среде</button>
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="diag-result"></div>
       </div>
       <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
@@ -4104,6 +4104,16 @@ const APP_TEXTS = {
   'invite.header': {
     c:'Приглашения', l:'Шапка экрана приглашений', w:'Пригласить друга', i:true,
     t:'Приведи друга — получишь баллы, когда он оформит подписку.' },
+  'invite.header_guest': {
+    c:'Приглашения', l:'Шапка приглашений для НЕ участника', w:'Пригласить друга, демо', i:true,
+    t:'Приведи друга — и первый месяц в клубе будет стоить тебе 1 ₽.' },
+  'invite.promo_title': {
+    c:'Приглашения', l:'Заголовок заработанной льготы', w:'Пригласить друга, демо', i:true,
+    t:'Льготный вход открыт' },
+  'invite.promo_text': {
+    c:'Приглашения', l:'Текст заработанной льготы', w:'Пригласить друга, демо', i:true,
+    t:'Твой друг вступил в клуб — теперь первый месяц для тебя стоит 1 ₽.' },
+
   'invite.card_hint': {
     c:'Приглашения', l:'Подсказка про карточку', w:'Пригласить друга', i:true,
     t:'Карточка из коллекции — самый живой повод: её пересылают охотнее ссылки.' },
@@ -5035,7 +5045,13 @@ let bonusOpenKey = null;
 
 async function loadBonuses(){
   try {
-    const url = `${API_URL}/bonuses` + (telegramId ? `?telegram_id=${telegramId}` : '');
+    // isMember=false у участника означает включённый демо-режим — говорим об
+    // этом серверу явно, иначе он по идентификатору увидит подписку и отдаст
+    // все позиции открытыми
+    const params = [];
+    if (telegramId) params.push(`telegram_id=${telegramId}`);
+    if (!isMember) params.push('demo=1');
+    const url = `${API_URL}/bonuses` + (params.length ? `?${params.join('&')}` : '');
     const r = await fetch(url);
     bonusesData = await r.json();
     if (!Array.isArray(bonusesData)) bonusesData = [];
@@ -5258,10 +5274,22 @@ function renderInvite(){
   const box = document.getElementById('invite-body');
   const post = invitePosts.length ? invitePosts[invitePostIdx % invitePosts.length] : null;
 
+  // Не участнику баллы не нужны — ему обещаем льготный вход, и только его
+  const headKey = d.is_member ? 'invite.header' : 'invite.header_guest';
+  const promo = !d.is_member && d.promo_earned;
+
   box.innerHTML = `
     <div class="mag-sub" style="margin-bottom:14px">
-      ${escapeHtml(t('invite.header'))}
+      ${escapeHtml(t(headKey))}
     </div>
+
+    ${promo ? `
+    <div class="card" style="padding:12px;margin-bottom:12px;border:1px solid var(--warm)">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:6px">${escapeHtml(t('invite.promo_title'))}</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${escapeHtml(t('invite.promo_text'))}</div>
+      <button class="lec-link-btn access-btn" style="width:100%" id="promo-btn" onclick="openReferralPromo()">Войти по льготной цене</button>
+      <div id="promo-status" style="font-size:11.5px;color:var(--text-faint);margin-top:8px"></div>
+    </div>` : ''}
 
     <div class="card" style="padding:12px;margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">Твоя ссылка</div>
@@ -5296,14 +5324,52 @@ function renderInvite(){
         <span style="color:var(--text-faint)">Из них оформили подписку</span>
         <b>${d.invited_paid || 0}</b>
       </div>
+      ${d.is_member ? `
       <div style="display:flex;justify-content:space-between;font-size:13px">
         <span style="color:var(--text-faint)">Начислено баллов</span>
         <b>${d.points_earned || 0}</b>
       </div>
       <div style="margin-top:10px;font-size:12.5px">
         <span class="mag-link" onclick="closeInvitePopup();switchView('points-info')">Как работают баллы →</span>
-      </div>
+      </div>` : ''}
     </div>`;
+}
+
+/* Льготная ссылка делается в Salebot под конкретного человека, поэтому берём её
+   тем же round-trip, что и обычные ссылки оплаты — блок `get_referral_promo_link` */
+async function openReferralPromo(){
+  const btn = document.getElementById('promo-btn');
+  const st = document.getElementById('promo-status');
+  if (!telegramId){
+    if (st) st.textContent = 'Ссылку делает бот — открой приложение из Telegram.';
+    return;
+  }
+  if (btn){ btn.disabled = true; }
+  if (st) st.textContent = 'Готовлю ссылку…';
+  try {
+    await fetch(`${API_URL}/app/action`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, action: 'get_referral_promo_link', params: {} })
+    });
+    for (let i = 0; i < 12; i++){
+      await new Promise(r => setTimeout(r, 1500));
+      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=get_referral_promo_link`);
+      const data = await r.json();
+      if (data.status === 'done' && data.result){
+        const link = data.result.link || data.result.promo_link || data.result.url;
+        if (link){
+          if (st) st.textContent = '';
+          openUrl(link);
+          return;
+        }
+      }
+    }
+    if (st) st.textContent = 'Бот не ответил. Попробуй ещё раз через минуту.';
+  } catch (e){
+    if (st) st.textContent = 'Не получилось: ' + (e.message || e);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* Случайный, но НЕ тот же самый: подряд один и тот же текст выглядел бы как
