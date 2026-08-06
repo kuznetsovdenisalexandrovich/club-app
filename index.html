@@ -5431,6 +5431,73 @@ function payShareUrl(src){
   return BOT_LINK + '/app?startapp=pay_' + encodeURIComponent(src || 'unknown');
 }
 
+/* ── ТАБЛИЦА ДИПЛИНКОВ ──────────────────────────────────────────────────────
+   Одна строка = один маршрут. Новый диплинк добавляется СЮДА, а не отдельной
+   веткой в openFromStartParam — иначе разбор точки входа со временем
+   превратится в лестницу из if-ов.
+
+   go      — что сделать, когда человек пришёл
+   guests  — пускать ли не-участника:
+             true  — можно (бесплатная часть, годится для рекламы)
+             false — упрётся в пейвол, а метка запомнится как источник
+   Для сложных случаев с параметром (bonus_<ключ>, pay_<метка>) остаются
+   отдельные функции выше — таблица покрывает переходы БЕЗ параметра */
+const DEEPLINKS = {
+  // — Открытая часть: годится для рекламы и холодного трафика —
+  // (`quiz` сюда не входит: он перехватывается раньше в openFromStartParam,
+  //  потому что `quiz_КОД` показывает чужой результат — свой отдельный экран)
+  'club':        { go: () => switchView('club-info'),     guests: true  },
+  'about':       { go: () => switchView('club-info'),     guests: true  },
+  'library':     { go: () => switchView('library'),       guests: true  },
+  'watch':       { go: () => switchView('library'),       guests: true  },
+  'magazine':    { go: () => openMagazine(),              guests: true  },
+  'bonuses':     { go: () => switchView('portal'),        guests: true  },
+  'points':      { go: () => switchView('points-info'),   guests: true  },
+  'levels':      { go: () => openLevelsPopup(),           guests: true  },
+  'deck-rules':  { go: () => switchView('deck-rules'),    guests: true  },
+  'support':     { go: () => openSupportPopup(),          guests: true  },
+  'help':        { go: () => switchView('payment-help'), guests: true  },
+
+  // — Только для участников: гость упирается в пейвол —
+  'schedule':    { go: () => switchView('schedule'),      guests: false },
+  'cards':       { go: () => switchView('cards'),         guests: false },
+  'plan':        { go: () => openPersonalPlan(),          guests: false },
+  'rewards':     { go: () => openRewards(),               guests: false },
+  'profile':     { go: () => switchView('profile'),       guests: false },
+  'subscription':{ go: () => openSubManage(),             guests: false },
+  'notifications':{ go: () => openNotificationsSection(), guests: false },
+  'howto':       { go: () => openHowToUsePopup(),         guests: false },
+  'tour':        { go: () => startLibraryTour(),          guests: false },
+  'ai':          { go: () => openAiPopup(),               guests: false },
+  'access':      { go: () => switchView('access'),        guests: false },
+};
+
+/* Разбор простого диплинка по таблице выше */
+function routeFromUrl(){
+  const param = appStartParam();
+  const route = DEEPLINKS[param];
+  if (!route) return false;
+
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+
+  // Метку ставим всегда: даже переход на бесплатную часть — это точка входа,
+  // и по ней потом видно, какая ссылка привела человека
+  rememberEntrySource('link_' + param);
+
+  setTimeout(function(){
+    if (!route.guests && !isMember){ openPaywall(); return; }
+    try { route.go(); } catch(e){}
+  }, 80);
+  return true;
+}
+
+/* Готовая ссылка на любой маршрут из таблицы */
+function deeplinkUrl(name){
+  return BOT_LINK + '/app?startapp=' + encodeURIComponent(name);
+}
+
 function renderBonusItems(){
   const b = findBonus(bonusOpenKey);
   const box = document.getElementById('bonus-popup-items');
@@ -8595,6 +8662,13 @@ function startWebSession(){
         payFromUrl();
         return;
       }
+      // Простые маршруты по таблице DEEPLINKS: schedule, library, cards и т.д.
+      // Стоит ПОСЛЕ разборов с параметром и ПЕРЕД тестом: `quiz` есть и в
+      // таблице, но `quiz_КОД` со своим экраном результата должен победить
+      if (typeof routeFromUrl === 'function' && appStartParam().indexOf('quiz') !== 0
+          && routeFromUrl()){
+        return;
+      }
       if (appStartParam().indexOf('quiz') !== 0) return;
       if (typeof loadCards === 'function') loadCards();
       if (typeof loadGods === 'function') loadGods();
@@ -8743,11 +8817,12 @@ function openMagazineIssue(key){
   let action = '';
   if (it.unlocked){
     // «ПК» — маленькая вторая кнопка, только если у выпуска заполнен ПК-слаг
-    // на Тильде (has_pc). Специально не растягиваем на всю ширину — это
-    // второстепенный путь, «Читать» (мобильная) остаётся основным действием
-    action = `<div style="display:flex;gap:8px">
-      <button class="lec-link-btn access-btn" style="flex:1" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>
-      ${it.has_pc ? `<button class="lec-link-btn" style="flex:0 0 auto;padding-left:16px;padding-right:16px" onclick="readMagazineIssue(${jsArg(key)},'pc')">ПК</button>` : ''}
+    // на Тильде (has_pc). align-items:stretch даёт обеим одинаковую высоту:
+    // у `.lec-link-btn` ниже по файлу стоит `flex:0 0 auto` с max-width, и без
+    // растяжки кнопки в паре получаются разной высоты
+    action = `<div style="display:flex;gap:8px;align-items:stretch">
+      <button class="lec-link-btn access-btn" style="flex:1;max-width:none" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>
+      ${it.has_pc ? `<button class="lec-link-btn" style="flex:0 0 72px;max-width:none;padding-left:0;padding-right:0" onclick="readMagazineIssue(${jsArg(key)},'pc')">ПК</button>` : ''}
     </div>`;
   } else if (!isMember){
     action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="closeMagazineIssue();openPaywall()">Получить доступ</button>`;
