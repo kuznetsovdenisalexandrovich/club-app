@@ -8906,6 +8906,14 @@ async function readMagazineIssue(key, variant){
   closeMagazineIssue();
   if (variant === 'mobile') rememberMagazineRead(it);
 
+  // ОТКУДА ОТКРЫВАЕМ — сообщаем серверу. Сама страница выпуска этого знать не
+  // может: она открывается отдельным окном и про родителя ничего не помнит.
+  // Без этого кнопка «В приложение» внутри выпуска не знала бы, куда вернуть:
+  // в мини-апп Telegram или в веб-версию на домашнем экране
+  const ctx = (window.Telegram && window.Telegram.WebApp
+               && window.Telegram.WebApp.initDataUnsafe
+               && window.Telegram.WebApp.initDataUnsafe.user) ? 'tg' : 'pwa';
+
   // Выпуск открывается СТРАНИЦЕЙ, а не окошком внутри аппа. Внутри iframe его
   // приходится уменьшать снаружи, браузер рисует холст 1280px целиком и только
   // потом сжимает — на длинных выпусках вебвью падает по памяти. У страницы
@@ -8917,7 +8925,8 @@ async function readMagazineIssue(key, variant){
   try {
     const d = await fetch(`${API_URL}/magazine/${encodeURIComponent(key)}/ticket`
                           + `?telegram_id=${encodeURIComponent(telegramId)}`
-                          + `&variant=${encodeURIComponent(variant)}`)
+                          + `&variant=${encodeURIComponent(variant)}`
+                          + `&ctx=${encodeURIComponent(ctx)}`)
                     .then(r => r.json());
     if (!d || !d.url){ showToast('Выпуск пока закрыт'); return; }
     if (variant === 'mobile'){
