@@ -8817,12 +8817,13 @@ function openMagazineIssue(key){
   let action = '';
   if (it.unlocked){
     // «ПК» — маленькая вторая кнопка, только если у выпуска заполнен ПК-слаг
-    // на Тильде (has_pc). align-items:stretch даёт обеим одинаковую высоту:
-    // у `.lec-link-btn` ниже по файлу стоит `flex:0 0 auto` с max-width, и без
-    // растяжки кнопки в паре получаются разной высоты
+    // на Тильде (has_pc). ВАЖНО: у `.access-btn` собственный `margin-bottom:10px`,
+    // и он растягивает строку флекса — вторая кнопка, растянувшись до той же
+    // высоты, выглядела выше основной. Поэтому отступ снимаем явно, а высоту
+    // равняем через align-items:stretch
     action = `<div style="display:flex;gap:8px;align-items:stretch">
-      <button class="lec-link-btn access-btn" style="flex:1;max-width:none" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>
-      ${it.has_pc ? `<button class="lec-link-btn" style="flex:0 0 72px;max-width:none;padding-left:0;padding-right:0" onclick="readMagazineIssue(${jsArg(key)},'pc')">ПК</button>` : ''}
+      <button class="lec-link-btn access-btn" style="flex:1;max-width:none;margin-bottom:0" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>
+      ${it.has_pc ? `<button class="lec-link-btn" style="flex:0 0 72px;max-width:none;margin-bottom:0;padding-left:0;padding-right:0" onclick="readMagazineIssue(${jsArg(key)},'pc')">ПК</button>` : ''}
     </div>`;
   } else if (!isMember){
     action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="closeMagazineIssue();openPaywall()">Получить доступ</button>`;
