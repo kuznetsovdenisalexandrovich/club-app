@@ -1632,6 +1632,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
     </div>
 
+    <div id="raffle-block" style="display:none"></div>
+
     <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
       <div class="demo-banner-icon">👀</div>
       <div>
@@ -2938,7 +2940,13 @@ async function apiRequest(url, options, timeoutMs = 15000){
   if (!res.ok) throw new Error(res.error || 'нет связи с сервером');
   const r = res.response;
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.detail || `сервер ответил ${r.status}`);
+  if (!r.ok){
+    // Код ответа нужен вызывающему: 402 у карточек «Пролога» — это не ошибка,
+    // а предложение оформить доступ, и показывать его надо пейволлом
+    const err = new Error(data.detail || `сервер ответил ${r.status}`);
+    err.status = r.status;
+    throw err;
+  }
   return data;
 }
 
@@ -4166,6 +4174,48 @@ const APP_TEXTS = {
   'invite.promo_text': {
     c:'Приглашения', l:'Текст заработанной льготы', w:'Пригласить друга, демо', i:true,
     t:'Твой друг вступил в клуб — теперь первый месяц для тебя стоит 1 ₽.' },
+
+  'cards.badges_title': {
+    c:'Карточки', l:'Заголовок ряда Знаков', w:'Альбом коллекции', i:true,
+    t:'Знаки' },
+  'cards.badges_hint': {
+    c:'Карточки', l:'Подпись под Знаками', w:'Альбом коллекции', i:true,
+    t:'Эти карты не выпадают. Каждая приходит сама, когда выполнено условие.' },
+  'cards.special_title': {
+    c:'Карточки', l:'Заголовок ряда особых карт', w:'Альбом коллекции', i:true,
+    t:'Особые' },
+  'cards.special_hint': {
+    c:'Карточки', l:'Подпись под особыми картами', w:'Альбом коллекции', i:true,
+    t:'Пролог и призы розыгрышей — карты вне сезонной полки.' },
+  'prologue.locked': {
+    c:'Карточки', l:'Баллы Пролога закрыты у гостя', w:'Карточка Пролога, демо', i:true,
+    t:'Баллы этой карточки откроются, когда оформишь доступ в клуб' },
+
+  'raffle.title': {
+    c:'Розыгрыш', l:'Заголовок блока розыгрыша', w:'Главный экран', i:true,
+    t:'Розыгрыш этого месяца' },
+  'raffle.cta': {
+    c:'Розыгрыш', l:'Кнопка записаться', w:'Главный экран', i:true,
+    t:'Участвовать' },
+  'raffle.registered': {
+    c:'Розыгрыш', l:'Уже записан', w:'Главный экран', i:true,
+    t:'Ты в игре. Карта уйдёт одному из участников.' },
+  'raffle.guest': {
+    c:'Розыгрыш', l:'Приглашение гостю', w:'Главный экран, демо', i:true,
+    t:'Разыгрывается среди участников клуба.' },
+  'raffle.winner': {
+    c:'Розыгрыш', l:'Объявление победителя', w:'Главный экран', i:true,
+    t:'Карту забрал(а)' },
+
+  'share.quiz': {
+    c:'Шеринг', l:'Кнопка поделиться результатом теста', w:'Экран результата', i:true,
+    t:'Показать друзьям' },
+  'share.card': {
+    c:'Шеринг', l:'Кнопка поделиться картой из коллекции', w:'Витрина карточки', i:true,
+    t:'Похвастаться картой' },
+  'share.badge': {
+    c:'Шеринг', l:'Кнопка поделиться Знаком', w:'Витрина Знака', i:true,
+    t:'Показать знак' },
 
   'invite.card_hint': {
     c:'Приглашения', l:'Подсказка про карточку', w:'Пригласить друга', i:true,
@@ -7685,6 +7735,10 @@ function enterDemoMode(){
   loadStreams();
   loadLibrary();
   loadWidgetMonth();
+  // Карточки грузим и в демо: у гостя уже может быть карта «Пролога» за тест,
+  // и она должна мозолить глаз, а не ждать оплаты, чтобы показаться
+  loadCards();
+  loadRaffle();
   renderDemoBanner();
 }
 
@@ -8053,6 +8107,7 @@ function startApp(){
   loadWidgetMonth();
   loadSavedSlugs();
   loadCards();
+  loadRaffle();
 }
 
 function loadUrgentNewsForWebEntry(){
@@ -9080,6 +9135,13 @@ async function claimCard(cardId){
     loadCards();
   } catch(e){
     if (btn){ btn.disabled = false; btn.textContent = 'Забрать'; }
+    // Гость нажал «Забрать» на карточке «Пролога»: баллы внутри есть, но
+    // открываются подпиской. Это момент предложения, а не отказа
+    if (e && e.status === 402){
+      showToast(e.message || t('prologue.locked'));
+      setTimeout(openPaywall, 600);
+      return;
+    }
     showToast(e.message || 'Не получилось забрать');
   }
 }
@@ -9101,8 +9163,10 @@ function renderCardsAlbum(){
 
   // Плейсхолдер показываем ТОЛЬКО под карточки, которые реально в колоде.
   // Секретные и выведенные из оборота попадают в альбом лишь тогда, когда они
-  // у человека уже есть — иначе он охотился бы за недостижимым
-  const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret; });
+  // у человека уже есть — иначе он охотился бы за недостижимым.
+  // РЯДЫ РАЗНЕСЕНЫ ПО КЛАССАМ: полка сезона — про удачу и собирание, Знаки — про
+  // заслугу. В одной сетке полка заслуг перестала бы что-либо значить
+  const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret && isRegularCard(c); });
 
   // Секретные карточки, которые уже есть у человека, показываем в альбоме только
   // по его собственному выбору — тумблер "Показать секретные". По умолчанию
@@ -9123,6 +9187,7 @@ function renderCardsAlbum(){
   const showSecret = ownedSecrets.length > 0 && getShowSecretPref();
 
   const extras = cardCatalog.filter(function(c){
+    if (!isRegularCard(c)) return false;      // Знаки и особые живут своими рядами
     if (!owned[c.key] || (c.active && !c.secret)) return false;
     if (c.secret && !showSecret) return false;
     return true;
@@ -9163,7 +9228,171 @@ function renderCardsAlbum(){
           + '<div class="album-name">' + (c.title || c.key) + '</div>'
           + '</div>';
       }).join('') + '</div>';
-  }).join('');
+  }).join('') + badgeShelfHtml(owned, newKeys) + specialShelfHtml(owned, newKeys);
+}
+
+function isRegularCard(c){ return (c.card_class || 'regular') === 'regular'; }
+
+/* Условие Знака пишем прямо под ним. Заблокированная плитка с ПОНЯТНЫМ правилом
+   работает лучше сюрприза, о котором никто не знал: цель видно, и путь к ней
+   открыт всем одинаково — на этом и держится ощущение честности */
+const BADGE_CONDITION_TEXT = {
+  year_in_club:    function(n){ return 'год в клубе'; },
+  path_done:       function(n){ return 'пройти личный путь'; },
+  referrals:       function(n){ return 'привести ' + (n || 10) + ' участников'; },
+  season_complete: function(n){ return 'собрать полку сезона'; },
+};
+
+function badgeConditionText(c){
+  const fn = BADGE_CONDITION_TEXT[c.badge_trigger || ''];
+  if (fn) return fn(c.badge_threshold);
+  return 'за уровень';   // Знак, повешенный на уровень, условия в самой карточке не имеет
+}
+
+function badgeShelfHtml(owned, newKeys){
+  const list = cardCatalog.filter(function(c){
+    return (c.card_class || '') === 'badge' && (c.active || owned[c.key]) && !c.secret;
+  });
+  if (!list.length) return '';
+  const got = list.filter(function(c){ return owned[c.key]; }).length;
+
+  return '<div class="album-god-title" style="margin-top:22px">' + escapeHtml(t('cards.badges_title'))
+      + ' · ' + got + '/' + list.length + '</div>'
+    + '<div class="sm-hint" style="margin:-4px 0 8px">' + escapeHtml(t('cards.badges_hint')) + '</div>'
+    + '<div class="album-grid">' + list.map(function(c){
+        const n = owned[c.key] || 0;
+        const art = (n && c.image_url)
+          ? '<img src="' + c.image_url + '" alt="">'
+          : '<div style="font-size:20px;color:var(--warm);opacity:' + (n ? '.6' : '.25') + '">◆</div>';
+        const mark = (n && newKeys.indexOf(c.key) !== -1) ? '<div class="album-new">новая</div>' : '';
+        return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
+          + '<div class="album-art">' + art + '</div>' + mark
+          + '<div class="album-name">' + escapeHtml(c.title || c.key) + '</div>'
+          + '<div class="album-name" style="opacity:.6;font-size:10px">' + escapeHtml(badgeConditionText(c)) + '</div>'
+          + '</div>';
+      }).join('') + '</div>';
+}
+
+/* «Пролог» и призы розыгрышей показываем ТОЛЬКО когда они уже на руках:
+   плейсхолдер «Пролога» бессмыслен — он приходит за тест, а плейсхолдер приза
+   выдал бы, что разыгрывается, ещё до объявления */
+function specialShelfHtml(owned, newKeys){
+  const list = cardCatalog.filter(function(c){
+    const k = c.card_class || 'regular';
+    return (k === 'prologue' || k === 'raffle') && owned[c.key];
+  });
+  if (!list.length) return '';
+
+  return '<div class="album-god-title" style="margin-top:22px">' + escapeHtml(t('cards.special_title')) + '</div>'
+    + '<div class="sm-hint" style="margin:-4px 0 8px">' + escapeHtml(t('cards.special_hint')) + '</div>'
+    + '<div class="album-grid">' + list.map(function(c){
+        const art = c.image_url
+          ? '<img src="' + c.image_url + '" alt="">'
+          : '<div style="font-size:20px;color:var(--warm);opacity:.6">◆</div>';
+        const mark = (newKeys.indexOf(c.key) !== -1) ? '<div class="album-new">новая</div>' : '';
+        return '<div class="album-card owned" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
+          + '<div class="album-art">' + art + '</div>' + mark
+          + '<div class="album-name">' + escapeHtml(c.title || c.key) + '</div>'
+          + '</div>';
+      }).join('') + '</div>';
+}
+
+
+/* ── РОЗЫГРЫШ ────────────────────────────────────────────────────────────────
+   Отдельное событие клуба: не пак и не Знак. Приз — готовая карта, она видна
+   ДО регистрации: записываются за конкретную картинку, а не за обещание.
+   Подписка проверяется сервером в момент розыгрыша, а не сейчас. */
+
+let raffleCurrent = null;
+let raffleLast    = null;
+
+async function loadRaffle(){
+  try {
+    const url = telegramId
+      ? `${API_URL}/raffles/current?telegram_id=${telegramId}`
+      : `${API_URL}/raffles/current`;
+    const d = await apiRequest(url, {}, 10000);
+    raffleCurrent = d.current || null;
+    raffleLast    = d.last || null;
+  } catch(e){ raffleCurrent = null; raffleLast = null; }
+  renderRaffleBlock();
+}
+
+function raffleDaysLeft(iso){
+  if (!iso) return '';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (isNaN(ms) || ms <= 0) return 'регистрация закрыта';
+  const days = Math.ceil(ms / 86400000);
+  if (days <= 1) return 'остался последний день';
+  if (days < 5) return 'осталось ' + days + ' дня';
+  return 'осталось ' + days + ' дней';
+}
+
+function renderRaffleBlock(){
+  const el = document.getElementById('raffle-block');
+  if (!el) return;
+
+  const r = raffleCurrent;
+  if (!r){
+    // Идущего нет — показываем итог последнего, если он свежий. Объявленный
+    // победитель и есть доказательство, что розыгрыш настоящий
+    if (raffleLast && raffleLast.winner_name){
+      el.style.display = '';
+      el.innerHTML = '<div class="pack-banner" style="cursor:default">'
+        + '<div class="pack-banner-icon">🏆</div><div>'
+        + '<div class="pack-banner-title">' + escapeHtml(t('raffle.winner')) + ' '
+          + escapeHtml(raffleLast.winner_name) + '</div>'
+        + '<div class="pack-banner-sub">Участников: ' + (raffleLast.participants_count || 0) + '</div>'
+        + '</div></div>';
+      return;
+    }
+    el.style.display = 'none';
+    return;
+  }
+
+  const art = (r.prize && r.prize.image_url)
+    ? '<img src="' + escapeHtml(r.prize.image_url) + '" alt="" style="width:52px;aspect-ratio:3/4;object-fit:cover;border-radius:8px;display:block">'
+    : '<div class="pack-banner-icon">🎁</div>';
+
+  let action;
+  if (r.registered){
+    action = '<div class="pack-banner-sub">' + escapeHtml(t('raffle.registered')) + '</div>';
+  } else if (!isMember){
+    action = '<div class="pack-banner-sub">' + escapeHtml(t('raffle.guest')) + '</div>';
+  } else {
+    action = '<button class="lec-link-btn access-btn" style="margin-top:6px" '
+      + 'onclick="event.stopPropagation();registerForRaffle()">' + escapeHtml(t('raffle.cta')) + '</button>';
+  }
+
+  el.style.display = '';
+  el.innerHTML = '<div class="pack-banner" style="cursor:default;align-items:flex-start">'
+    + art
+    + '<div style="flex:1">'
+      + '<div class="pack-banner-title">' + escapeHtml(r.title || t('raffle.title')) + '</div>'
+      + '<div class="pack-banner-sub">' + escapeHtml(r.prize && r.prize.title ? r.prize.title : '')
+        + (r.register_to ? ' · ' + escapeHtml(raffleDaysLeft(r.register_to)) : '') + '</div>'
+      + (r.description ? '<div class="sm-hint" style="margin-top:4px">' + escapeHtml(r.description) + '</div>' : '')
+      + action
+      + '<div class="sm-hint" style="margin-top:4px;opacity:.7">Записалось: ' + (r.participants || 0) + '</div>'
+    + '</div></div>';
+}
+
+async function registerForRaffle(){
+  if (!raffleCurrent) return;
+  if (!telegramId || !isMember){ openPaywall(); return; }
+  try {
+    await apiRequest(`${API_URL}/raffles/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, key: raffleCurrent.key })
+    }, 15000);
+    showToast('Записал(о)сь — удачи');
+    loadRaffle();
+  } catch(e){
+    // Не участник — это не ошибка, а повод предложить вступить
+    if (e && e.status === 402){ openPaywall(); return; }
+    showToast(e.message || 'Не получилось записаться');
+  }
 }
 
 let cardBrowseList = [];    // список своих карточек для пролистывания в витрине
@@ -9470,12 +9699,15 @@ function renderCollectionStrip(){
   const cnt   = document.getElementById('coll-strip-count');
   if (!block || !strip) return;
 
-  const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret; });
+  // Полоса показывает ход по полке сезона, поэтому Знаки и особые в счёт не
+  // берём: иначе «собрано 3 из 20» смешало бы заслуги с удачей
+  const inDeck = cardCatalog.filter(function(c){ return c.active && !c.secret && isRegularCard(c); });
   const owned = ownedMap();
   // Тот же тумблер, что и в альбоме коллекции (renderCardsAlbum) — секретная
   // карточка не должна светиться на главном экране, если владелец её спрятал
   const showSecret = getShowSecretPref();
   const extras = cardCatalog.filter(function(c){
+    if (!isRegularCard(c)) return false;      // Знаки и особые живут своими рядами
     if (!owned[c.key] || (c.active && !c.secret)) return false;
     if (c.secret && !showSecret) return false;
     return true;
@@ -10088,6 +10320,12 @@ async function attachReferralFromStart(){
     const parts = p.split('_');            // c_<карта>_<айди>
     if (parts.length >= 3) ref = parts[parts.length - 1];
   }
+  else if (p.startsWith('quiz_')) {
+    // quiz_КОД_айди — результат теста тоже приводит рефералов
+    const parts = p.split('_');
+    const tail = parts[parts.length - 1];
+    if (parts.length >= 3 && /^\d+$/.test(tail)) ref = tail;
+  }
   const refId = Number(ref);
   if (!refId || refId === Number(telegramId)) return;
   try {
@@ -10121,7 +10359,12 @@ function appStartParam(){
    где живёт клуб, и работает у всех, у кого он есть */
 function quizShareUrl(){
   const code = quizResult ? quizResult.code : '';
-  return BOT_LINK + '/app?startapp=quiz_' + encodeURIComponent(code);
+  // АЙДИ ОТПРАВИТЕЛЯ В ССЫЛКЕ. Без него самый расходящийся по чатам объект во
+  // всей системе не приводил рефералов вообще: люди приходили по результату
+  // теста, вступали, а тому, кто поделился, не начислялось ничего.
+  // Формат `quiz_КОД_айди` разбирается тем же приёмом, что `c_<ключ>_<айди>`
+  const tail = telegramId ? ('_' + telegramId) : '';
+  return BOT_LINK + '/app?startapp=quiz_' + encodeURIComponent(code) + tail;
 }
 
 async function shareQuizResult(){
@@ -10159,8 +10402,13 @@ function openQuizAfterCta(){
 function quizFromUrl(){
   const param = appStartParam();
   if (param.indexOf('quiz') !== 0) return false;
-  // quiz_LNMS → LNMS; голый quiz без кода — просто открыть тест
-  const code = param.replace(/^quiz_?/, '').toUpperCase();
+  // quiz_LNMS → LNMS; quiz_LNMS_12345 → LNMS (хвост-айди отрезаем).
+  // Отрезаем ТОЛЬКО если хвост целиком из цифр — тот же приём, что у карточек:
+  // иначе пострадали бы коды с подчёркиванием, если такие когда-нибудь появятся
+  let raw = param.replace(/^quiz_?/, '');
+  const bits = raw.split('_');
+  if (bits.length > 1 && /^\d+$/.test(bits[bits.length - 1])) bits.pop();
+  const code = bits.join('_').toUpperCase();
   if (!code){ openQuiz(true); return true; }
   if (!QUIZ_RESULTS[code]){ openQuiz(true); return true; }
 
