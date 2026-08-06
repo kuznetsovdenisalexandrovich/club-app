@@ -4197,6 +4197,12 @@ const APP_TEXTS = {
   'invite.header': {
     c:'Приглашения', l:'Шапка экрана приглашений', w:'Пригласить друга', i:true,
     t:'Приведи друга — получишь баллы, когда он оформит подписку.' },
+  'cardentry.badge_lead': {
+    c:'Первый экран', l:'Главная фраза для Знака', w:'Приход по чужой ссылке — Знак', i:true,
+    t:'Эту карту нельзя получить случайно — она приходит сама, когда выполнено условие. У этого человека получилось.' },
+  'cardentry.badge_cta': {
+    c:'Первый экран', l:'Кнопка для Знака', w:'Приход по чужой ссылке — Знак', i:true,
+    t:'Узнать про клуб' },
   'cardentry.from': {
     c:'Первый экран', l:'Кто прислал карточку', w:'Приход по чужой карточке', i:true,
     t:'Тебе прислали карточку из клуба «Ты боженька продаж»' },
@@ -9136,12 +9142,17 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   }
 
   // Кнопка шеринга — только для СВОИХ карточек (в витрине чужих не бывает) и
-  // только когда есть картинка: делиться нечем, если её ещё не собрали
+  // только когда есть картинка: делиться нечем, если её ещё не собрали.
+  // НА ДУБЛЕ КНОПКУ ПРЯЧЕМ: предложение похвастаться третьей одинаковой картой
+  // читается издевательством, а не поводом для гордости
   let share = '';
-  if (telegramId && card.key && (card.image_url || card.image_full_url)){
+  const isDupe = (copies || 0) > 1;
+  if (telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
+    const isBadge = (card.card_class === 'badge');
+    const label = isBadge ? t('share.badge') : t('share.card');
     share = '<div style="margin-top:12px"><button class="lec-link-btn" style="width:100%" '
           + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
-          + 'Похвастаться карточкой</button></div>';
+          + escapeHtml(label) + '</button></div>';
   }
 
   el.innerHTML =
@@ -9157,6 +9168,8 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
    Проверку владения и права на экспорт делает сервер — здесь только кнопка */
 async function shareCollectionCard(cardKey){
   const btn = document.getElementById('card-share-btn');
+  const card = (cardCatalog || []).find(function(c){ return c.key === cardKey; });
+  const label = (card && card.card_class === 'badge') ? t('share.badge') : t('share.card');
   if (btn){ btn.disabled = true; btn.textContent = 'Отправляю…'; }
   try {
     await apiRequest(`${API_URL}/cards/share/send`, {
@@ -9165,10 +9178,11 @@ async function shareCollectionCard(cardKey){
       body: JSON.stringify({ telegram_id: telegramId, card_key: cardKey })
     }, 20000);
     showToast('Карточка у тебя в чате с ботом — пересылай');
+    track('card_share', cardKey);
   } catch(e){
     showToast(e.message || 'Не отправилось');
   } finally {
-    if (btn){ btn.disabled = false; btn.textContent = 'Похвастаться карточкой'; }
+    if (btn){ btn.disabled = false; btn.textContent = label; }
   }
 }
 
@@ -10295,7 +10309,7 @@ function renderQuizResult(){
           + '</div>'
         : '')
     + godLink
-    + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">Поделиться карточкой</button>'
+    + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
     // Отправка в бот только для тех, кто вошёл — анониму слать некуда
     + (telegramId
         ? '<button class="lec-link-btn" style="width:100%;margin-top:9px" id="quiz-bot-btn" onclick="sendQuizCardToBot()">Прислать картинку в бот</button>'
@@ -10349,6 +10363,16 @@ function cardEntryFromUrl(){
       }
       document.getElementById('ce-god').textContent = card.god || '';
       document.getElementById('ce-title').textContent = card.title || card.god || '';
+
+      // ЗНАК — соцдоказательство продукта, не игра про личность: у него другая
+      // фраза и кнопка ведёт не в тест, а на «о клубе». Остальные классы (обычная
+      // карта, «Пролог») по-прежнему ведут в тест — это и есть холодная воронка
+      if (card.card_class === 'badge'){
+        document.getElementById('ce-lead').textContent = t('cardentry.badge_lead');
+        const btn = document.getElementById('ce-cta');
+        btn.textContent = t('cardentry.badge_cta');
+        btn.onclick = cardEntryOpenClub;
+      }
     })
     .catch(() => {
       // Карточка не открылась — экран всё равно рабочий: главное здесь не она,
@@ -10356,6 +10380,18 @@ function cardEntryFromUrl(){
       document.getElementById('ce-title').textContent = t('cardentry.cta');
     });
   return true;
+}
+
+function cardEntryOpenClub(){
+  document.getElementById('cardentry-overlay').classList.remove('open');
+  // ТОТ ЖЕ ТРЕТИЙ СЛУЧАЙ, что у «Что за клуб?» из результата теста: карточка
+  // Знака — самый первый экран, который видит холодный гость, оболочка почти
+  // наверняка ещё не запущена. Один switchView тут ничего не покажет
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  switchView('club-info');
+  track('club_info_open', 'badge_share');
 }
 
 function cardEntryStartQuiz(){
@@ -10557,8 +10593,12 @@ function quizWantPlan(){
 
 function quizCardUrl(){
   if (!quizResult) return '';
+  // С telegram_id картинка становится ИМЕННОЙ: ссылка внутри неё несёт айди
+  // отправителя, поэтому расшаренная карточка приводит рефералов — тот же
+  // формат quiz_КОД_айди, что и у текстовой ссылки «Поделиться»
   const q = 'code=' + encodeURIComponent(quizResult.code)
-          + (quizResult.secondCode ? '&second=' + encodeURIComponent(quizResult.secondCode) : '');
+          + (quizResult.secondCode ? '&second=' + encodeURIComponent(quizResult.secondCode) : '')
+          + (telegramId ? '&telegram_id=' + encodeURIComponent(telegramId) : '');
   return `${API_URL}/quiz/card?` + q;
 }
 
