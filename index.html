@@ -5389,6 +5389,48 @@ function bonusShareUrl(key){
   return BOT_LINK + '/app?startapp=bonus_' + encodeURIComponent(key);
 }
 
+/* ── Метка источника (зачаток UTM) ──────────────────────────────────────────
+   Диплинк вида pay_<метка> ведёт на оплату и запоминает, ОТКУДА человек пришёл.
+   Метка нужна дважды: сказать, что именно продало (журнал, рилс, пост), и
+   потом — показать «полную версию того, что тебя сюда привело».
+   Храним и на сервере (событие entry_source), и локально: у гостя без входа
+   telegram_id ещё нет, а событие без него не пишется */
+function rememberEntrySource(src){
+  if (!src) return;
+  try { localStorage.setItem('club_app_entry_source', src); } catch(e){}
+  track('entry_source', src);
+}
+
+function lastEntrySource(){
+  try { return localStorage.getItem('club_app_entry_source') || ''; } catch(e){ return ''; }
+}
+
+/* Точка входа для диплинков вида pay_<метка> — кнопка «вступить» в конце
+   выпуска журнала, в рилсах, в постах. Участнику пейвол не показываем:
+   он уже внутри, ему это выглядело бы как ошибка */
+function payFromUrl(){
+  const param = appStartParam();
+  if (param.indexOf('pay_') !== 0) return false;
+  const src = param.slice('pay_'.length);
+
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+
+  rememberEntrySource(src);
+  setTimeout(function(){
+    if (isMember) { switchView('portal'); return; }
+    openPaywall();
+  }, 80);
+  return true;
+}
+
+/* Готовая ссылка на оплату с меткой источника — её вставляют в кнопку в конце
+   выпуска журнала, в описание рилса и т.п. */
+function payShareUrl(src){
+  return BOT_LINK + '/app?startapp=pay_' + encodeURIComponent(src || 'unknown');
+}
+
 function renderBonusItems(){
   const b = findBonus(bonusOpenKey);
   const box = document.getElementById('bonus-popup-items');
@@ -8546,6 +8588,11 @@ function startWebSession(){
       // постов в канале, чтобы вести не в апп вообще, а сразу к делу
       if (typeof bonusFromUrl === 'function' && appStartParam().indexOf('bonus_') === 0){
         setTimeout(function(){ bonusFromUrl(); }, 60);
+        return;
+      }
+      // Диплинк на оплату с меткой источника, напр. pay_magazine_pilot
+      if (typeof payFromUrl === 'function' && appStartParam().indexOf('pay_') === 0){
+        payFromUrl();
         return;
       }
       if (appStartParam().indexOf('quiz') !== 0) return;
