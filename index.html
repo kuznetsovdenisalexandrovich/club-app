@@ -8661,7 +8661,13 @@ function openMagazineIssue(key){
 
   let action = '';
   if (it.unlocked){
-    action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>`;
+    // «ПК» — маленькая вторая кнопка, только если у выпуска заполнен ПК-слаг
+    // на Тильде (has_pc). Специально не растягиваем на всю ширину — это
+    // второстепенный путь, «Читать» (мобильная) остаётся основным действием
+    action = `<div style="display:flex;gap:8px">
+      <button class="lec-link-btn access-btn" style="flex:1" onclick="readMagazineIssue(${jsArg(key)})">Читать</button>
+      ${it.has_pc ? `<button class="lec-link-btn" style="flex:0 0 auto;padding-left:16px;padding-right:16px" onclick="readMagazineIssue(${jsArg(key)},'pc')">ПК</button>` : ''}
+    </div>`;
   } else if (!isMember){
     action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="closeMagazineIssue();openPaywall()">Получить доступ</button>`;
   }
@@ -8731,7 +8737,8 @@ function rememberMagazineRead(it){
   } catch(e){}
 }
 
-async function readMagazineIssue(key){
+async function readMagazineIssue(key, variant){
+  variant = variant || 'mobile';
   let it = magazineIssueByKey(key);
   if (!it){                       // зашли из виджета «Продолжить», полка ещё не грузилась
     await loadMagazine();
@@ -8741,22 +8748,26 @@ async function readMagazineIssue(key){
   if (!telegramId){ showToast('Открыть выпуск можно после входа'); return; }
 
   closeMagazineIssue();
-  rememberMagazineRead(it);
+  if (variant === 'mobile') rememberMagazineRead(it);
 
   // Выпуск открывается СТРАНИЦЕЙ, а не окошком внутри аппа. Внутри iframe его
   // приходится уменьшать снаружи, браузер рисует холст 1280px целиком и только
   // потом сжимает — на длинных выпусках вебвью падает по памяти. У страницы
   // верхнего уровня браузер уменьшает ДО отрисовки, как на самой Тильде.
   // Ссылку выдаёт бэкенд: она подписана и живёт четверть часа, а место, на
-  // котором человек остановился, страница помнит сама
+  // котором человек остановился, страница помнит сама (только для мобильной —
+  // у ПК-версии другая раскладка, восстанавливать позицию там нечем)
   showToast('Открываем выпуск…');
   try {
     const d = await fetch(`${API_URL}/magazine/${encodeURIComponent(key)}/ticket`
-                          + `?telegram_id=${encodeURIComponent(telegramId)}`)
+                          + `?telegram_id=${encodeURIComponent(telegramId)}`
+                          + `&variant=${encodeURIComponent(variant)}`)
                     .then(r => r.json());
     if (!d || !d.url){ showToast('Выпуск пока закрыт'); return; }
-    it.is_new = false;            // метка «новое» гаснет сразу, не дожидаясь перезагрузки полки
-    renderMagazineShelf();
+    if (variant === 'mobile'){
+      it.is_new = false;          // метка «новое» гаснет сразу, не дожидаясь перезагрузки полки
+      renderMagazineShelf();
+    }
     openUrl(d.url);
   } catch (e) {
     showToast('Не получилось открыть, попробуй ещё раз');
