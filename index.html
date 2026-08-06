@@ -5361,6 +5361,34 @@ function closeBonusPopup(){
   bonusOpenKey = null;
 }
 
+/* Точка входа для диплинков вида bonus_<ключ> — рассылки, посты в канале.
+   Открывает попап набора и, если первая позиция с видео не заперта,
+   сразу проигрывает её — «сходу», без лишнего тапа по списку внутри */
+function bonusFromUrl(){
+  const param = appStartParam();
+  if (param.indexOf('bonus_') !== 0) return false;
+  const key = param.slice('bonus_'.length);
+  if (!key) return false;
+
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+
+  loadBonuses().then(function(){
+    const b = findBonus(key);
+    if (!b) return;
+    openBonusPopup(key);
+    const first = (b.items || []).find(function(it){ return it.boomstream; });
+    if (first && !first.locked) playBonusVideo(key, first.key);
+  });
+  return true;
+}
+
+/* Готовая ссылка для канала/рассылки — открывает мини-апп сразу на бонусе */
+function bonusShareUrl(key){
+  return BOT_LINK + '/app?startapp=bonus_' + encodeURIComponent(key);
+}
+
 function renderBonusItems(){
   const b = findBonus(bonusOpenKey);
   const box = document.getElementById('bonus-popup-items');
@@ -8512,6 +8540,12 @@ function startWebSession(){
       if (typeof cardEntryFromUrl === 'function' && cardEntryFromUrl()){
         if (typeof loadCards === 'function') loadCards();
         if (typeof loadGods === 'function') loadGods();
+        return;
+      }
+      // Диплинк на конкретный бонус, напр. bonus_masterclass — для рассылок и
+      // постов в канале, чтобы вести не в апп вообще, а сразу к делу
+      if (typeof bonusFromUrl === 'function' && appStartParam().indexOf('bonus_') === 0){
+        setTimeout(function(){ bonusFromUrl(); }, 60);
         return;
       }
       if (appStartParam().indexOf('quiz') !== 0) return;
