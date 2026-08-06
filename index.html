@@ -2935,6 +2935,51 @@ async function fetchWithTimeout(url, options, timeoutMs){
 /* fetchWithTimeout возвращает СВОЙ объект {ok, status, elapsed, response}, где ok — это
    "сеть не отвалилась", а не "HTTP 200". Для обычных запросов к API нужен помощник,
    который разворачивает всё это в данные или во внятную ошибку. */
+
+/* ── ШАГИ ПО ПРИЛОЖЕНИЮ ───────────────────────────────────────────────────────
+   Отмечаем только то, на что будет реакция: вход, тест, интерес к клубу,
+   просмотр продающего видео, страница доступа, упор в замок, журнал.
+   Отправка «выстрелил и забыл»: аналитика не должна ни тормозить экран, ни
+   ронять его, если сервер недоступен. */
+
+function track(event, ref, value){
+  if (!telegramId) return;          // некому приписать — не пишем
+  try {
+    fetch(`${API_URL}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, event: event,
+                             ref: ref || '', value: value || 0 })
+    }).catch(function(){});
+  } catch(e){}
+}
+
+/* СЕРДЦЕБИЕНИЕ ПЛЕЕРА. У продающего видео нет своего API прогресса, и полагаться
+   на чужой плеер не хочется. Поэтому меряем не позицию в ролике, а ВРЕМЯ
+   ПРОСМОТРА: пока попап открыт и вкладка активна, раз в 15 секунд прибавляем.
+   Уход на другую вкладку останавливает счёт — иначе «смотрел час» набивалось бы
+   забытым окном */
+let videoWatchTimer = null;
+let videoWatchSecs  = 0;
+let videoWatchWhich = '';
+
+function startVideoHeartbeat(which){
+  stopVideoHeartbeat();
+  videoWatchWhich = which || '';
+  videoWatchSecs  = 0;
+  videoWatchTimer = setInterval(function(){
+    if (document.hidden) return;
+    videoWatchSecs += 15;
+    track('sales_video', videoWatchWhich, videoWatchSecs);
+  }, 15000);
+}
+
+function stopVideoHeartbeat(){
+  if (videoWatchTimer){ clearInterval(videoWatchTimer); videoWatchTimer = null; }
+  if (videoWatchSecs > 0) track('sales_video', videoWatchWhich, videoWatchSecs);
+  videoWatchSecs = 0;
+}
+
 async function apiRequest(url, options, timeoutMs = 15000){
   const res = await fetchWithTimeout(url, options, timeoutMs);
   if (!res.ok) throw new Error(res.error || 'нет связи с сервером');
@@ -7695,9 +7740,12 @@ initSwipeToClose('ai-popup', closeAiPopup);
 
 function openVideoPopup(which){
   document.getElementById(`video-popup-${which}-overlay`).classList.add('open');
+  track('sales_video', which, 0);
+  startVideoHeartbeat(which);
 }
 function closeVideoPopup(which){
   document.getElementById(`video-popup-${which}-overlay`).classList.remove('open');
+  stopVideoHeartbeat();
 }
 initSwipeToClose('paywall-popup', closePaywall);
 initSwipeToClose('postpay-popup', closePostPay);
@@ -7706,6 +7754,7 @@ initSwipeToClose('postpay-popup', closePostPay);
 
 function openPaywall(){
   document.getElementById('paywall-overlay').classList.add('open');
+  track('paywall_hit');
 }
 function openDemoEntryPopup(){
   document.getElementById('demo-entry-overlay').classList.add('open');
@@ -7739,6 +7788,7 @@ function enterDemoMode(){
   // и она должна мозолить глаз, а не ждать оплаты, чтобы показаться
   loadCards();
   loadRaffle();
+  track('app_open', 'demo');
   renderDemoBanner();
 }
 
@@ -7748,6 +7798,7 @@ function closePaywall(){
 
 function openClubInfoPage(){
   switchView('club-info');
+  track('club_info_open');
 }
 
 function expandClubInfo(){
@@ -7847,6 +7898,7 @@ document.addEventListener('visibilitychange', () => {
 
 async function openAccessPage(){
   switchView('access');
+  track('access_open');
   const el = document.getElementById('access-buttons');
   el.innerHTML = '<div class="loading">Готовим ссылки...</div>';
 
@@ -8092,6 +8144,7 @@ function applyTelegramSafeArea(){
 }
 
 function startApp(){
+  track('app_open');
   document.getElementById('app-shell').style.display = 'block';
   document.getElementById('tabbar').style.display = 'flex';
   hideSplash();   // оболочка на экране — заставка своё отработала
@@ -8595,6 +8648,7 @@ function magazineIssueByKey(key){
 }
 
 function openMagazineIssue(key){
+  track('magazine_open', key);
   const it = magazineIssueByKey(key);
   if (!it) return;
   const modal = document.getElementById('mag-issue-modal');
@@ -10156,6 +10210,7 @@ function finishQuiz(){
   quizResult = { code: score.code, secondCode: score.secondCode,
                  axes: score.axes, at: Date.now() };
   try { localStorage.setItem(quizStorageKey(), JSON.stringify(quizResult)); } catch(e){}
+  track('quiz_done', score.code);
   // В профиль — чтобы результат не терялся при смене устройства/браузера и
   // чтобы со временем из него можно было собрать личный план. Без телеграм-id
   // (веб-версия вне Telegram, ещё не вошёл) сохраняем только локально.
