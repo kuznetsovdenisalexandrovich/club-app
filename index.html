@@ -1898,6 +1898,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Быстрые тесты</div>
+        <div id="debug-magazine-unlock" style="margin-bottom:10px"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('showLevelUpPopup(4,{reward_keys:[\"Архивные лекции\"],unlock_keys:[\"Скачивание PDF-выжимок\"]});'')">Попап уровня</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('launchConfetti()')">Конфетти</button>
@@ -8752,8 +8753,45 @@ async function loadMagazine(){
     const q = telegramId ? ('?telegram_id=' + encodeURIComponent(telegramId)) : '';
     magazineData = await fetch(`${API_URL}/magazine${q}`).then(r => r.json());
     renderMagazineShelf();
+    renderMagazineDebugToggle();
   } catch (e) {
     shelf.innerHTML = '<div class="empty">Не удалось загрузить журнал</div>';
+  }
+}
+
+/* Тумблер отладки «все выпуски открыты» — в отладочной секции профиля.
+   Появляется, только если бэкенд подтвердил право (debug_available): прятать
+   кнопку недостаточно, но и показывать её всем незачем. Настоящая проверка
+   прав живёт на сервере */
+function renderMagazineDebugToggle(){
+  const box = document.getElementById('debug-magazine-unlock');
+  if (!box) return;
+  if (!magazineData || !magazineData.debug_available){ box.innerHTML = ''; return; }
+  box.innerHTML =
+    '<label class="toggle-switch">'
+    + '<input type="checkbox" id="debug-magazine-checkbox" onchange="toggleMagazineDebug()" '
+    + (magazineData.debug_on ? 'checked' : '') + '>'
+    + '<span class="toggle-track"><span class="toggle-thumb"></span></span>'
+    + '<span class="toggle-label-text">Все выпуски журнала открыты</span></label>';
+}
+
+async function toggleMagazineDebug(){
+  const el = document.getElementById('debug-magazine-checkbox');
+  if (!el) return;
+  const on = el.checked;
+  try {
+    const r = await fetch(`${API_URL}/magazine/debug-unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, on: on })
+    }).then(r => r.json());
+    if (!r || r.status !== 'ok'){ el.checked = !on; showToast('Не получилось переключить'); return; }
+    magazineData = null;                 // полку пересобираем с нуля, кэш здесь врал бы
+    await loadMagazine();
+    showToast(on ? 'Все выпуски открыты' : 'Очередь выпусков вернулась');
+  } catch (e) {
+    el.checked = !on;
+    showToast('Не получилось переключить');
   }
 }
 
