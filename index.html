@@ -2538,6 +2538,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 #hd-overlay{position:fixed;inset:0;z-index:880;display:none;overflow-y:auto;
   -webkit-overflow-scrolling:touch}
 #hd-overlay.open{display:block}
+/* Внутренняя ссылка на экран аппа — выглядит как обычная ссылка, но ведёт
+   не наружу, а внутрь приложения (см. helpDocsGoApp) */
+#hd-overlay .hd-inner-link{color:var(--accent-strong);cursor:pointer;
+  border-bottom:1px solid rgba(115,92,244,.32)}
+[data-theme="dark"] #hd-overlay .hd-inner-link{border-bottom-color:rgba(154,137,255,.34)}
 #hd-overlay{
   color-scheme:light;
 
@@ -3910,7 +3915,12 @@ async function loadNews() {
       }
     });
     el.innerHTML = html;
+    // Блок новостей появляется не всегда — до ответа сервера мы не знаем, есть
+    // ли новость вообще, поэтому скелет тут не поставить (заняли бы место
+    // впустую). Смягчаем само появление
+    el.classList.add('fade-rise');
     el.style.display = 'block';
+    headerEl.classList.add('fade-rise');
     headerEl.style.display = 'flex';
   } catch (e) {
     el.style.display = 'none';
@@ -7193,7 +7203,7 @@ function planMapHtml(answers){
   const h = top0 + (n - 1) * PMAP_STEP + maxR + 58;
 
   // Тропинка — не линия, а редкие точки по той же кривой: четыре на промежуток
-  let html = '<div class="pmap" style="height:' + h + 'px"><div class="pmap-crumbs">';
+  let html = '<div class="pmap fade-rise" style="height:' + h + 'px"><div class="pmap-crumbs">';
   for (let i = 1; i < pt.length; i++){
     const a = pt[i-1], b = pt[i], m = (b.cy - a.cy) / 2;
     for (let k = 1; k <= PMAP_DOTS; k++){
@@ -8561,8 +8571,25 @@ function calShiftMonth(delta){
   loadCalendarMonth();
 }
 
+/* Скелет календаря — число ячеек ИЗВЕСТНО заранее (дни месяца плюс отступ
+   до первого дня недели), поэтому сетка сразу занимает точный размер и при
+   загрузке ничего не прыгает. Это тот случай, где скелет уместнее плавного
+   появления: место всё равно будет занято, вопрос только чем */
+function calSkeletonHtml(year, month){
+  const leading = WEEKDAY_LEAD(new Date(year, month - 1, 1));
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let html = '';
+  for (let i = 0; i < leading; i++) html += '<div class="cal-day"></div>';
+  for (let d = 0; d < daysInMonth; d++){
+    html += '<div class="cal-day"><div class="skel" style="width:60%;height:60%;border-radius:10px"></div></div>';
+  }
+  return html;
+}
+
 async function loadCalendarMonth(){
   document.getElementById('cal-month-label').textContent = `${MONTHS_NOM[calMonth-1]} ${calYear}`;
+  const gridEl = document.getElementById('cal-grid');
+  if (!gridEl.dataset.loadedOnce) gridEl.innerHTML = calSkeletonHtml(calYear, calMonth);
   try {
     const monthParam = `${calYear}-${pad2(calMonth)}`;
     const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
@@ -8570,6 +8597,7 @@ async function loadCalendarMonth(){
     renderCategoryFilterRow();
     renderCalendarGrid('cal-grid', calYear, calMonth, calDaysData, activeCategories);
     renderTeasers(data.teasers || []);
+    gridEl.dataset.loadedOnce = '1';
   } catch (e) {
     document.getElementById('cal-grid').innerHTML = '<div class="empty">Не удалось загрузить расписание</div>';
   }
@@ -8577,12 +8605,15 @@ async function loadCalendarMonth(){
 
 async function loadWidgetMonth(){
   document.getElementById('cal-widget-month-label').textContent = `${MONTHS_NOM[TODAY_MONTH-1]} ${TODAY_YEAR}`;
+  const wGridEl = document.getElementById('cal-widget-grid');
+  if (!wGridEl.dataset.loadedOnce) wGridEl.innerHTML = calSkeletonHtml(TODAY_YEAR, TODAY_MONTH);
   try {
     const monthParam = `${TODAY_YEAR}-${pad2(TODAY_MONTH)}`;
     const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
     widgetDaysData = data.days || {};
     renderCalendarGrid('cal-widget-grid', TODAY_YEAR, TODAY_MONTH, widgetDaysData, null);
     renderTodayLine();
+    wGridEl.dataset.loadedOnce = '1';
   } catch (e) {
     document.getElementById('cal-widget-grid').innerHTML = '<div class="empty">Не удалось загрузить</div>';
   }
@@ -8659,7 +8690,7 @@ function renderTeasers(teasers){
   if (!teasers.length) { labelEl.style.display = 'none'; listEl.innerHTML = ''; return; }
   labelEl.style.display = '';
   listEl.innerHTML = teasers.map((t, i) => `
-    <div class="teaser-card">
+    <div class="teaser-card fade-rise">
       <div class="teaser-title">✨ ${t.title}</div>
       <div class="teaser-desc">${t.description || ''}</div>
       ${t.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(window._teasers[${i}].link)">Подробнее</button></div>` : ''}
@@ -9650,6 +9681,15 @@ function helpDocsRenderBody(src){
     return s
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      // ВНУТРЕННЯЯ ссылка: [текст](app:schedule) — ведёт на экран самого аппа.
+      // Ключи те же, что в таблице DEEPLINKS, поэтому список поддерживаемых
+      // адресов не надо вести отдельно: добавили маршрут — он сразу доступен
+      // и в справке. Неизвестный ключ намеренно НЕ превращаем в ссылку —
+      // пусть в тексте останется видно, что адрес битый, а не молча ничего
+      .replace(/\[([^\]]+)\]\(app:([a-z-]+)\)/g, function(m, text, key){
+        if (typeof DEEPLINKS === 'undefined' || !DEEPLINKS[key]) return text;
+        return '<a class="hd-inner-link" onclick="helpDocsGoApp(\'' + key + '\')">' + text + '</a>';
+      })
       .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
       .replace(/`([^`]+)`/g,'<code>$1</code>');
   }
@@ -9772,6 +9812,19 @@ function helpDocsGo(secKey, artKey){
   const ov = document.getElementById('hd-overlay');
   if (ov) ov.scrollTop = 0;
   helpDocsCloseSideIfMobile();
+}
+
+/* Переход по внутренней ссылке из текста справки. Закрываем слой и идём тем
+   же путём, что и обычный диплинк — включая проверку участия: если раздел
+   только для участников, гость упрётся в пейвол, а не в пустой экран */
+function helpDocsGoApp(key){
+  const route = (typeof DEEPLINKS !== 'undefined') ? DEEPLINKS[key] : null;
+  if (!route) return;
+  closeHelpDocs();
+  setTimeout(function(){
+    if (!route.guests && !isMember){ openPaywall(); return; }
+    try { route.go(); } catch(e){}
+  }, 60);
 }
 
 /* Боковое меню на узком экране — как в исходном файле: выезжает поверх,
@@ -10618,7 +10671,7 @@ function renderCardsAlbum(){
         // Название видно всегда — охотиться хочется за конкретным, а не за «???»
         const mark = (n && newKeys.indexOf(c.key) !== -1)
           ? '<div class="album-new">новая</div>' : '';
-        return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
+        return '<div class="album-card fade-rise ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
           + '<div class="album-art">' + art + '</div>'
           + (n > 1 ? '<div class="album-count">×' + n + '</div>' : '')
           + mark
@@ -10662,7 +10715,7 @@ function badgeShelfHtml(owned, newKeys){
           ? '<img src="' + c.image_url + '" alt="">'
           : '<div style="font-size:20px;color:var(--warm);opacity:' + (n ? '.6' : '.25') + '">◆</div>';
         const mark = (n && newKeys.indexOf(c.key) !== -1) ? '<div class="album-new">новая</div>' : '';
-        return '<div class="album-card ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
+        return '<div class="album-card fade-rise ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
           + '<div class="album-art">' + art + '</div>' + mark
           + '<div class="album-name">' + escapeHtml(c.title || c.key) + '</div>'
           + '<div class="album-name" style="opacity:.6;font-size:10px">' + escapeHtml(badgeConditionText(c)) + '</div>'
