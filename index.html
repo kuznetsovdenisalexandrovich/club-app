@@ -971,16 +971,24 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Компактная карта в библиотеке — та же тропинка, положенная на бок.
    Отрицательные поля вытаскивают ленту под края карточки: обрезанная
    на полпути остановка сама говорит «здесь ещё есть, листай» */
+/* display:flex + justify-content:center — лента ЦЕНТРИРУЕТСЯ, когда помещается
+   целиком (07.08.2026: после уменьшения кружков её ширина стала вдвое меньше
+   карточки, и она висела прижатой к левому краю). Если остановок много и
+   ширины не хватает, flex-start включается сам — прокрутка не ломается */
 .prail{position:relative;margin:12px -16px 0;padding:0;overflow-x:auto;overflow-y:hidden;
+  display:flex;justify-content:safe center;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
 .prail::-webkit-scrollbar{display:none}
-.prail-inner{position:relative;height:116px}
+.prail-inner{position:relative;height:116px;flex:0 0 auto}
 .prail-line{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
 .prail-line path{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:6 8}
-/* В ленте своя анимация — мягче и без сдвига: остановки тут мельче
-   и стоят плотно, крупное движение выглядело бы суетой */
-.prail .pmap-stop{width:auto;animation:prailIn .42s cubic-bezier(.22,.61,.36,1) backwards}
-@keyframes prailIn{from{opacity:0;transform:translate(-50%,calc(-50% + 4px)) scale(.9)}}
+/* В ЛЕНТЕ КОНФЕТКИ НЕ АНИМИРУЮТСЯ ПООТДЕЛЬНОСТИ (07.08.2026).
+   Раньше у каждой была своя анимация с нарастающей задержкой — вместе с
+   догрузкой картинок это читалось как два отдельных шага: сначала конфетки
+   проступают по очереди, потом всё разом «встаёт на место».
+   Теперь плавно появляется ЛЕНТА ЦЕЛИКОМ (класс fade-rise на .prail), одним
+   спокойным движением — предсказуемо и без ступенек */
+.prail .pmap-stop{width:auto;animation:none}
 /* В ЛЕНТЕ подписи под кружками не показываем (07.08.2026): названия лекций
    обрезались в три строки и раздували блок вдвое. Полное название человек
    видит в попапе остановки и на полной карте — там места достаточно */
@@ -1638,8 +1646,14 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   display:block;overflow:visible;transition:transform .16s ease}
 .pmap-blob::before,.pmap-blob::after{content:none}
 .pmap-blob i,.pmap-glow{display:none}
-.pmap-blob img{position:static;width:100%;height:100%;object-fit:contain;opacity:1;
-  border-radius:0}
+.pmap-blob img{position:static;width:100%;height:100%;object-fit:contain;
+  border-radius:0;
+  /* Картинка проявляется сама, когда файл пришёл — раньше она возникала
+     мгновенно поверх пустого кружка (07.08.2026). Анимация на <img>
+     стартует ровно в момент отрисовки, отдельный onload не нужен */
+  animation:planImgIn .4s ease both}
+@keyframes planImgIn{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){ .pmap-blob img{animation:none;opacity:1} }
 .pmap-blob b{display:none}                    /* цифра нарисована в картинке */
 
 /* Галочка садится на край сферы, а не квадрата: сфера занимает центральные
@@ -7221,7 +7235,11 @@ function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
     + ' style="' + (extraStyle || '') + '--d:' + side + 'px"'
     + ' onclick="openPlanStop(' + i + ')">'
     + '<span class="pmap-blob">'
-      + '<img src="' + planStopImg(i, stop) + '" alt="' + (i + 1) + '" loading="lazy">'
+      // БЕЗ loading="lazy" (07.08.2026): картинок всего несколько и они мелкие,
+      // а отложенная загрузка тянула их ПО ОДНОЙ уже после появления кружков —
+      // получалось, что остановки проступают по очереди рывками.
+      // Denis: «по очереди загрузились конфетки». Теперь приходят разом
+      + '<img src="' + planStopImg(i, stop) + '" alt="' + (i + 1) + '" decoding="async">'
       + (done ? '<span class="pmap-mark">✓</span>' : '')
     + '</span>'
     + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
@@ -7399,7 +7417,7 @@ function planRailHtml(answers){
   const w = X0 * 2 + (n - 1) * STEP;
   const railH = maxR * 2 + 12 + Math.max.apply(null, WAVE) + 40;
 
-  let html = '<div class="prail"><div class="prail-inner" style="width:' + w + 'px;height:' + railH + 'px">'
+  let html = '<div class="prail fade-rise"><div class="prail-inner" style="width:' + w + 'px;height:' + railH + 'px">'
     + '<div class="pmap-crumbs">';
   for (let i = 1; i < n; i++){
     const a = { x: X0 + (i-1) * STEP, cy: cy(i-1) }, b = { x: X0 + i * STEP, cy: cy(i) };
@@ -7415,7 +7433,7 @@ function planRailHtml(answers){
     const done = planVisited.has(s.lec.slug);
     const skip = planSkipped.has(s.lec.slug);
     html += planStopNode(i, s, size[i], done, skip, i === nextIdx,
-      'left:' + (X0 + i * STEP) + 'px;top:' + cy(i) + 'px;animation-delay:' + (i * 45) + 'ms;');
+      'left:' + (X0 + i * STEP) + 'px;top:' + cy(i) + 'px;');
   });
   html += '</div></div>';
 
@@ -7570,7 +7588,7 @@ function planGhostRailHtml(){
   let html = '<div class="plan-ghost-row">';
   for (let i = 0; i < 6; i++){
     html += '<span class="plan-ghost-stop">'
-      + '<img src="images/plan/' + theme + '/' + (i + 1) + '-1.jpg" alt="" loading="lazy">'
+      + '<img src="images/plan/' + theme + '/' + (i + 1) + '-1.jpg" alt="" decoding="async">'
       + '</span>';
   }
   html += '</div>';
