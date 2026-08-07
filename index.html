@@ -341,6 +341,9 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .howto-path-item:last-child{border-bottom:none}
 .howto-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-faint);flex-shrink:0}
 .howto-check.done{background:var(--green);border-color:var(--green);color:white}
+.howto-btn{display:flex;align-items:center;gap:10px;padding:14px 16px;margin-bottom:10px;background:var(--card2);border:1px solid var(--border);border-radius:16px;box-shadow:var(--sh-sm);cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text)}
+.howto-btn:active{transform:scale(0.98)}
+.howto-btn .howto-arrow{width:17px;height:17px;stroke:var(--text-faint);margin-left:auto;flex-shrink:0}
 
 .tour-overlay{display:none;z-index:400}
 .tour-overlay.open{display:block}
@@ -466,9 +469,50 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .reveal-overlay.open{display:flex}
 .reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
 .reveal-sub{font-size:12px;color:rgba(241,234,224,.6);margin-bottom:22px;text-align:center}
-.reveal-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+/* ── Вскрытие пака ─────────────────────────────────────────────────────────
+   Раскладка веером, «сдача» карт и вспышка-кольцо перенесены из концепта.
+   Логика при этом наша: карточек ровно три (CARDS_PER_PACK на бэкенде),
+   позиции заданы по nth-child — если размер пака когда-нибудь изменится,
+   ЭТИ ТРИ ПРАВИЛА НАДО ДОПИСАТЬ, иначе лишние карты лягут стопкой в центре */
+.reveal-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+  position:relative;min-height:150px;align-items:center}
 .reveal-card{width:96px;aspect-ratio:3/4.35;border-radius:12px;cursor:pointer;position:relative;
-  transition:transform .35s ease;transform-style:preserve-3d}
+  transition:transform .55s cubic-bezier(.2,.8,.2,1), opacity .4s ease;transform-style:preserve-3d;
+  animation:reveal-deal .7s var(--deal-delay,0ms) cubic-bezier(.2,.8,.2,1) backwards;
+  will-change:transform}
+/* Лёгкий веер: середина чуть выше и поверх, боковые с наклоном.
+   Позиция задаётся ЯВНЫМ КЛАССОМ, а не nth-child: внутри ряда лежит ещё и
+   кольцо-вспышка, и любой новый служебный элемент сдвинул бы нумерацию.
+   will-change тут безопасен — элементы размером с ладонь, а не полотно
+   в тысячи пикселей (в журнале это когда-то стоило нам падений вебвью) */
+.reveal-card.pos-1{--deal-delay:160ms;transform:rotate(-7deg) translateY(4px)}
+.reveal-card.pos-2{--deal-delay:60ms;transform:translateY(-10px);z-index:3}
+.reveal-card.pos-3{--deal-delay:240ms;transform:rotate(7deg) translateY(4px)}
+.reveal-card.pos-1.flipped{transform:rotate(-7deg) translateY(4px) rotateY(180deg)}
+.reveal-card.pos-2.flipped{transform:translateY(-10px) rotateY(180deg)}
+.reveal-card.pos-3.flipped{transform:rotate(7deg) translateY(4px) rotateY(180deg)}
+@keyframes reveal-deal{
+  from{opacity:0;transform:translateY(26px) scale(.9)}
+}
+/* Вспышка-кольцо в момент переворота */
+.reveal-ring{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;
+  border-radius:50%;border:2px solid var(--warm);opacity:0;pointer-events:none;z-index:0}
+.reveal-ring.burst{animation:reveal-ring-burst .75s ease-out}
+@keyframes reveal-ring-burst{
+  0%{opacity:.75;transform:scale(.4)}
+  100%{opacity:0;transform:scale(2.1)}
+}
+.reveal-particle{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;
+  pointer-events:none;z-index:4;animation:reveal-particle-fly .85s ease-out forwards}
+@keyframes reveal-particle-fly{
+  from{opacity:1;transform:translate(0,0) scale(1)}
+  to{opacity:0;transform:translate(var(--px),var(--py)) scale(.3)}
+}
+@media (prefers-reduced-motion:reduce){
+  .reveal-card{animation:none}
+  .reveal-ring.burst{animation:none}
+  .reveal-particle{display:none}
+}
 .reveal-card.flipped{transform:rotateY(180deg)}
 .reveal-face{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;overflow:hidden}
 .reveal-back{background:linear-gradient(150deg,#2A2433,#4A3A52);border:1.5px solid rgba(241,234,224,.25);
@@ -479,6 +523,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .reveal-front-name{font-size:9.5px;font-weight:700;padding:4px 5px;text-align:center;line-height:1.2}
 .reveal-detail{margin-top:20px;max-width:330px;text-align:center;color:#F1EAE0}
 .reveal-detail-god{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--warm)}
+/* Три плашки из концепта: фракция, редкость, награда. Награда показывается
+   только когда баллы реально начислены — на дубле её нет, и пустая плашка
+   «+0» читалась бы как отказ */
+.reveal-stats{display:flex;gap:8px;margin:0 0 12px}
+.reveal-stat{flex:1;min-width:0;background:rgba(241,234,224,.06);
+  border:1px solid rgba(241,234,224,.14);border-radius:12px;padding:8px 10px;text-align:center}
+.reveal-stat-label{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(241,234,224,.5);margin-bottom:3px}
+.reveal-stat-value{font-size:12.5px;font-weight:700;color:#f1eae0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .reveal-detail-title{font-size:19px;font-weight:700;margin:4px 0 8px}
 .reveal-detail-text{font-size:13.5px;line-height:1.5;color:rgba(241,234,224,.8)}
 .reveal-detail-gain{font-size:14px;font-weight:700;color:var(--warm);margin-top:10px}
@@ -2144,6 +2198,27 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="scroll-spacer"></div>
   </div>
 
+  <!-- ── Справка клуба — вшита в апп 07.08.2026, раньше открывалась отдельной
+       страницей через openUrl (дёрганое окно браузера). Своя визуальная ниша
+       (мягкий неоморфизм), но тема наследуется от документа — своей кнопки
+       переключения темы внутри нет ── -->
+  <div class="view" id="view-help-docs">
+    <div class="hd-root">
+      <div class="hd-top">
+        <div class="hd-back-btn" onclick="helpDocsBack()">
+          <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+        </div>
+        <div class="hd-top-title" data-text="helpdocs.title">Справка</div>
+      </div>
+      <div class="hd-search-wrap">
+        <svg class="hd-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input class="hd-search-input" id="hd-search-input" data-text="helpdocs.search_placeholder" placeholder="Поиск по справке" oninput="helpDocsSearch(this.value)">
+      </div>
+      <div id="hd-body"><div class="hd-loading" data-text="helpdocs.loading">Загрузка…</div></div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
 </div>
 
 <!-- Пейволл-алерт -->
@@ -2388,6 +2463,89 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .ce-note{font-size:12px;color:var(--text-faint);margin-top:14px;line-height:1.5}
 </style>
 
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   СПРАВКА КЛУБА (view-help-docs) — 07.08.2026, вшита в апп вместо отдельной
+   страницы. Своя визуальная ниша, мягкий неоморфизм по образцу, который
+   прислал Denis: скруглённые поверхности, двойные тени, закруглённый шрифт
+   в заголовках. Тема наследуется от документа ([data-theme] на <html>,
+   апп уже им управляет) — своего переключателя внутри нет.
+   Все классы и функции — с префиксом hd-/helpDocs, чтобы не столкнуться
+   с остальным аппом ни сейчас, ни при будущих правках.
+   ═══════════════════════════════════════════════════════════════════ */
+.hd-root{
+  --hd-surface:#e9ecef; --hd-surface-soft:#eef1f3; --hd-surface-pressed:#e2e6e9;
+  --hd-text:#252a30; --hd-text-dim:#68717a; --hd-text-faint:#969da4;
+  --hd-accent:#735cf4; --hd-accent-strong:#5f49df; --hd-accent-soft:rgba(115,92,244,.12);
+  --hd-line:rgba(37,42,48,.07); --hd-highlight:rgba(255,255,255,.82); --hd-shadow:rgba(113,121,130,.26);
+  --hd-sh-raised:14px 14px 30px var(--hd-shadow),-14px -14px 30px var(--hd-highlight);
+  --hd-sh-soft:8px 8px 18px rgba(113,121,130,.21),-8px -8px 18px rgba(255,255,255,.76);
+  --hd-sh-small:5px 5px 12px rgba(113,121,130,.20),-5px -5px 12px rgba(255,255,255,.72);
+  --hd-sh-inset:inset 5px 5px 11px rgba(113,121,130,.20),inset -5px -5px 11px rgba(255,255,255,.72);
+  --hd-font-disp:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold",-apple-system,BlinkMacSystemFont,sans-serif;
+  padding-bottom:16px;
+}
+[data-theme="dark"] .hd-root{
+  --hd-surface:#17191d; --hd-surface-soft:#1b1e22; --hd-surface-pressed:#121418;
+  --hd-text:#f2f3f5; --hd-text-dim:#a6abb2; --hd-text-faint:#6f757e;
+  --hd-accent:#9a89ff; --hd-accent-strong:#b0a3ff; --hd-accent-soft:rgba(154,137,255,.14);
+  --hd-line:rgba(255,255,255,.055); --hd-highlight:rgba(255,255,255,.035); --hd-shadow:rgba(0,0,0,.56);
+  --hd-sh-raised:14px 14px 30px rgba(0,0,0,.54),-10px -10px 24px rgba(255,255,255,.022);
+  --hd-sh-soft:8px 8px 18px rgba(0,0,0,.48),-6px -6px 16px rgba(255,255,255,.018);
+  --hd-sh-small:5px 5px 12px rgba(0,0,0,.42),-4px -4px 10px rgba(255,255,255,.018);
+  --hd-sh-inset:inset 5px 5px 11px rgba(0,0,0,.62),inset -4px -4px 10px rgba(255,255,255,.022);
+}
+.hd-root *{box-sizing:border-box}
+.hd-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.hd-back-btn{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  color:var(--hd-text);background:var(--hd-surface);border:1px solid var(--hd-line);border-radius:13px;
+  box-shadow:var(--hd-sh-small);cursor:pointer}
+.hd-back-btn:active{box-shadow:var(--hd-sh-inset)}
+.hd-back-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hd-top-title{font-family:var(--hd-font-disp);font-weight:800;font-size:15.5px;letter-spacing:-.02em;color:var(--hd-text)}
+.hd-search-wrap{position:relative;margin-bottom:12px}
+.hd-search-input{width:100%;padding:10px 12px 10px 35px;color:var(--hd-text);background:var(--hd-surface-pressed);
+  border:1px solid var(--hd-line);border-radius:13px;box-shadow:var(--hd-sh-inset);font-size:13px}
+.hd-search-input::placeholder{color:var(--hd-text-faint)}
+.hd-search-input:focus{outline:none;box-shadow:var(--hd-sh-inset),0 0 0 3px var(--hd-accent-soft)}
+.hd-search-icon{position:absolute;top:50%;left:12px;width:14px;height:14px;fill:none;stroke:var(--hd-text-faint);
+  stroke-width:2;stroke-linecap:round;transform:translateY(-50%)}
+.hd-loading,.hd-error{padding:30px 0;text-align:center;color:var(--hd-text-faint);font-size:13px}
+.hd-sec{border-bottom:1px solid var(--hd-line)}
+.hd-sec:last-child{border-bottom:none}
+.hd-sec-head{display:flex;align-items:center;gap:8px;padding:12px 4px;color:var(--hd-text);font-size:14px;
+  font-weight:680;cursor:pointer;user-select:none}
+.hd-sec-head .hd-chev{width:14px;height:14px;margin-left:auto;fill:none;stroke:var(--hd-text-faint);stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .18s ease}
+.hd-sec.open .hd-chev{stroke:var(--hd-accent);transform:rotate(90deg)}
+.hd-sec-items{display:none;padding:0 0 8px}
+.hd-sec.open .hd-sec-items{display:block}
+.hd-link{display:block;margin:2px 0;padding:9px 12px;color:var(--hd-text-dim);border-radius:12px;font-size:13px;
+  line-height:1.4;cursor:pointer}
+.hd-link.empty{color:var(--hd-text-faint);font-style:italic;cursor:default}
+.hd-link:active{background:var(--hd-surface-pressed);box-shadow:var(--hd-sh-inset)}
+.hd-article{position:relative;min-height:0;padding:22px 18px;background:var(--hd-surface);border:1px solid var(--hd-line);
+  border-radius:24px;box-shadow:var(--hd-sh-raised);margin-bottom:14px}
+.hd-article h1{margin:0 0 .5em;font-family:var(--hd-font-disp);font-weight:760;font-size:clamp(22px,7vw,28px);
+  line-height:1.15;color:var(--hd-text)}
+.hd-article h2{margin:1.6em 0 .5em;font-family:var(--hd-font-disp);font-weight:720;font-size:16px;color:var(--hd-text)}
+.hd-article p{margin:0 0 1em;color:var(--hd-text);font-size:14px;line-height:1.6}
+.hd-article ul{margin:0 0 1em;padding-left:1.2em}
+.hd-article li{margin-bottom:.4em;color:var(--hd-text);font-size:14px;line-height:1.55}
+.hd-article strong{font-weight:760;color:var(--hd-text)}
+.hd-article a{color:var(--hd-accent-strong)}
+.hd-crumb{margin:0 0 10px 4px;color:var(--hd-text-faint);font-size:11px;cursor:pointer}
+.hd-next{padding:16px 15px;background:var(--hd-surface);border:1px solid var(--hd-line);border-radius:19px;
+  box-shadow:var(--hd-sh-soft)}
+.hd-next-label{margin-bottom:8px;color:var(--hd-text-faint);font-size:10px;font-weight:760;letter-spacing:.1em;
+  text-transform:uppercase}
+.hd-next-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:10px 10px;color:var(--hd-text);
+  border-radius:13px;font-size:13.5px;cursor:pointer}
+.hd-next-row:active{background:var(--hd-surface-pressed);box-shadow:var(--hd-sh-inset)}
+.hd-next-row svg{flex-shrink:0;width:14px;height:14px;margin-left:auto;fill:none;stroke:var(--hd-text-faint);
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+
 <div id="cardentry-overlay">
   <div class="ce-wrap">
     <div class="ce-from" id="ce-from"></div>
@@ -2444,17 +2602,21 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="sched-popup-title">Как пользоваться клубом</div>
       <button class="icon-btn" onclick="closeHowToUsePopup()">✕</button>
     </div>
-    <div class="howto-path-item" onclick="closeHowToUsePopup();openVideoPopup('onboarding')">
-      <span class="howto-check">▶</span>
-      <span>Видео-инструкция</span>
+    <div class="howto-btn" onclick="closeHowToUsePopup();openVideoPopup('onboarding')">
+      <span>Видео для всех новеньких</span>
+      <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
-    <div class="howto-path-item" onclick="closeHowToUsePopup();startLibraryTour()">
-      <span class="howto-check" id="howto-check-tour">○</span>
-      <span>Как работает приложение</span>
+    <div class="howto-btn" onclick="closeHowToUsePopup();startLibraryTour()">
+      <span>Тур по основным функциям</span>
+      <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
-    <div class="howto-path-item" onclick="closeHowToUsePopup();openPersonalPlan()">
-      <span class="howto-check">○</span>
-      <span>Составить свой план</span>
+    <div class="howto-btn" onclick="closeHowToUsePopup();openPersonalPlan()">
+      <span>Составить личный план</span>
+      <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </div>
+    <div class="howto-btn" onclick="closeHowToUsePopup();switchView('help-docs')">
+      <span>Полное описание приложения</span>
+      <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
   </div>
 </div>
@@ -2550,7 +2712,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <div class="reveal-overlay" id="reveal-overlay">
   <div class="reveal-title" id="reveal-title">Твой пак</div>
   <div class="reveal-sub" id="reveal-sub" data-text="cards.a7">Нажми на карточку, чтобы открыть</div>
-  <div class="reveal-row" id="reveal-row"></div>
+  <div class="reveal-row" id="reveal-row"><div class="reveal-ring" id="reveal-ring"></div></div>
   <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
   <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px;max-width:280px;width:auto;align-self:center;padding-left:32px;padding-right:32px" onclick="closePackReveal()">Готово</button>
@@ -2852,6 +3014,7 @@ function switchView(name) {
   }
   if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
+  if (name === 'help-docs') { helpDocsLoad(); }
   if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
@@ -4427,6 +4590,40 @@ const APP_TEXTS = {
   'help.bug_hint': {
     c:'Помощь', l:'Подсказка в сообщении о баге', w:'Попап бага', i:false,
     t:'Что не так работает? Напиши, на каком экране и что произошло — так починить получится быстрее.' },
+
+  'helpdocs.title': {
+    c:'Справка клуба', l:'Заголовок экрана', w:'Справка — шапка', i:false,
+    t:'Справка' },
+  'helpdocs.search_placeholder': {
+    c:'Справка клуба', l:'Плейсхолдер поиска', w:'Справка — поиск', i:false,
+    t:'Поиск по справке' },
+  'helpdocs.search_empty': {
+    c:'Справка клуба', l:'Пустой результат поиска', w:'Справка — поиск', i:false,
+    t:'Ничего не нашлось' },
+  'helpdocs.loading': {
+    c:'Справка клуба', l:'Загрузка содержимого', w:'Справка — старт', i:false,
+    t:'Загрузка…' },
+  'helpdocs.load_error': {
+    c:'Справка клуба', l:'Ошибка загрузки', w:'Справка — старт', i:false,
+    t:'Не удалось загрузить справку. Попробуй ещё раз.' },
+  'helpdocs.intro_title': {
+    c:'Справка клуба', l:'Заголовок вступления', w:'Справка — главная', i:false,
+    t:'Справка клуба' },
+  'helpdocs.intro_body': {
+    c:'Справка клуба', l:'Текст вступления', w:'Справка — главная', i:true,
+    t:'Здесь коротко объяснено, как всё устроено и что где искать. Разверни раздел ниже или воспользуйся поиском.' },
+  'helpdocs.sections_label': {
+    c:'Справка клуба', l:'Подпись над списком разделов', w:'Справка — главная', i:false,
+    t:'Разделы' },
+  'helpdocs.more_in_section': {
+    c:'Справка клуба', l:'Подпись «ещё в разделе»', w:'Справка — статья', i:false,
+    t:'Ещё в разделе' },
+  'helpdocs.back_to_list': {
+    c:'Справка клуба', l:'Ссылка назад к списку', w:'Справка — статья', i:false,
+    t:'Справка' },
+  'helpdocs.no_articles': {
+    c:'Справка клуба', l:'Раздел без статей', w:'Справка — список', i:false,
+    t:'нет статей' },
 };
 
 let appTextOverrides = {};
@@ -5134,12 +5331,8 @@ function pushSkippedInTelegram(){
   showToast('Уведомления будут приходить в Telegram бота');
 }
 
-/* ── "Как пользоваться клубом" — попап-чек-лист (отдельная точка входа с портала) ── */
+/* ── "Как пользоваться клубом" — попап с быстрыми переходами (отдельная точка входа с портала) ── */
 function openHowToUsePopup(){
-  const check = document.getElementById('howto-check-tour');
-  const done = onboardStepDone('tour');
-  check.classList.toggle('done', done);
-  check.textContent = done ? '✓' : '○';
   document.getElementById('howto-popup-overlay').classList.add('open');
 }
 function closeHowToUsePopup(){
@@ -5458,6 +5651,7 @@ const DEEPLINKS = {
   'deck-rules':  { go: () => switchView('deck-rules'),    guests: true  },
   'support':     { go: () => openSupportPopup(),          guests: true  },
   'help':        { go: () => switchView('payment-help'), guests: true  },
+  'guide':       { go: () => switchView('help-docs'),     guests: true  },
 
   // — Только для участников: гость упирается в пейвол —
   'schedule':    { go: () => switchView('schedule'),      guests: false },
@@ -8746,6 +8940,149 @@ function openMagazine(){
   switchView('magazine');
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   СПРАВКА КЛУБА (view-help-docs) — 07.08.2026. Данные с бэкенда
+   (GET /help-docs), тот же узкий markdown-парсер, что и в дашборде и в
+   прежней отдельной странице. Состояние экрана — hub (список разделов) или
+   article (конкретная статья) — держим в паре переменных, без роутера.
+   ═══════════════════════════════════════════════════════════════════ */
+let hdData = null;              // { sections: [{key,label,articles:[{key,title,body}]}] }
+let hdOpenSecs = new Set();
+let hdState = 'hub';            // 'hub' | 'article'
+let hdCurrentSection = null;
+let hdCurrentArticle = null;
+
+async function helpDocsLoad(){
+  if (hdData) { helpDocsRenderHub(); return; }   // не дёргаем сервер повторно за один визит в апп
+  const body = document.getElementById('hd-body');
+  try {
+    hdData = await fetch(`${API_URL}/help-docs`).then(r => r.json());
+    helpDocsRenderHub();
+  } catch (e) {
+    body.innerHTML = `<div class="hd-error" data-text="helpdocs.load_error">Не удалось загрузить справку. Попробуй ещё раз.</div>`;
+  }
+}
+
+function helpDocsFindArticle(secKey, artKey){
+  const sec = (hdData.sections || []).find(s => s.key === secKey);
+  if (!sec) return null;
+  const art = sec.articles.find(a => a.key === artKey);
+  return art ? { sec, art } : null;
+}
+
+/* Тот же узкий markdown, что и в дашборде: ## заголовок, - список,
+   **жирный**, [текст](url). Экранирование ОБЯЗАТЕЛЬНО — текст статьи
+   приходит с сервера, а не пишется руками в код */
+function helpDocsRenderBody(src){
+  const lines = (src || '').trim().split('\n');
+  let html = '', inList = false, para = [];
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function inline(s){
+    return esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+  function flushPara(){ if (para.length){ html += '<p>' + inline(para.join(' ').trim()) + '</p>'; para = []; } }
+  for (const raw of lines){
+    const line = raw.trim();
+    if (!line){ flushPara(); if (inList){ html += '</ul>'; inList = false; } continue; }
+    if (line.startsWith('## ')){ flushPara(); if (inList){ html += '</ul>'; inList = false; } html += '<h2>' + inline(line.slice(3)) + '</h2>'; continue; }
+    if (line.startsWith('- ')){ flushPara(); if (!inList){ html += '<ul>'; inList = true; } html += '<li>' + inline(line.slice(2)) + '</li>'; continue; }
+    if (inList){ html += '</ul>'; inList = false; }
+    para.push(line);
+  }
+  flushPara(); if (inList) html += '</ul>';
+  return html;
+}
+
+function helpDocsChev(){
+  return '<svg class="hd-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+}
+function helpDocsArrow(){
+  return '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+}
+
+function helpDocsBuildList(sections){
+  return sections.map(sec => {
+    const isOpen = hdOpenSecs.has(sec.key);
+    const items = sec.articles.length
+      ? sec.articles.map(a =>
+          `<div class="hd-link" onclick="helpDocsGo('${sec.key}','${a.key}')">${a.title}</div>`
+        ).join('')
+      : `<div class="hd-link empty" data-text="helpdocs.no_articles">нет статей</div>`;
+    return `<div class="hd-sec${isOpen ? ' open' : ''}">
+      <div class="hd-sec-head" onclick="helpDocsToggleSec('${sec.key}')">${sec.label}${helpDocsChev()}</div>
+      <div class="hd-sec-items">${items}</div>
+    </div>`;
+  }).join('');
+}
+
+function helpDocsRenderHub(){
+  hdState = 'hub'; hdCurrentSection = null; hdCurrentArticle = null;
+  const sections = (hdData && hdData.sections) || [];
+  const introTitle = t('helpdocs.intro_title');
+  const introBody = t('helpdocs.intro_body');
+  const sectionsLabel = t('helpdocs.sections_label');
+  document.getElementById('hd-body').innerHTML =
+    `<div class="hd-article"><h1>${introTitle}</h1><p>${introBody}</p></div>
+     <div class="hd-sec-label" style="margin:0 0 6px 4px;color:var(--hd-text-faint);font-size:10px;font-weight:760;letter-spacing:.1em;text-transform:uppercase">${sectionsLabel}</div>
+     ${helpDocsBuildList(sections)}`;
+}
+
+function helpDocsGo(secKey, artKey){
+  const found = helpDocsFindArticle(secKey, artKey);
+  if (!found){ helpDocsRenderHub(); return; }
+  hdState = 'article'; hdCurrentSection = secKey; hdCurrentArticle = artKey;
+  hdOpenSecs.add(secKey);
+
+  const others = found.sec.articles.filter(a => a.key !== artKey);
+  let nextHtml = '';
+  if (others.length){
+    nextHtml = `<div class="hd-next"><div class="hd-next-label" data-text="helpdocs.more_in_section">Ещё в разделе</div>`
+      + others.map(a => `<div class="hd-next-row" onclick="helpDocsGo('${secKey}','${a.key}')">${a.title}${helpDocsArrow()}</div>`).join('')
+      + `</div>`;
+  }
+
+  document.getElementById('hd-body').innerHTML =
+    `<div class="hd-crumb" onclick="helpDocsRenderHub()" data-text="helpdocs.back_to_list">Справка</div>
+     <div class="hd-article"><h1>${found.art.title}</h1>${helpDocsRenderBody(found.art.body)}</div>
+     ${nextHtml}`;
+  document.querySelector('.view#view-help-docs').scrollTop = 0;
+}
+
+function helpDocsToggleSec(key){
+  hdOpenSecs.has(key) ? hdOpenSecs.delete(key) : hdOpenSecs.add(key);
+  helpDocsRenderHub();
+}
+
+function helpDocsSearch(q){
+  q = (q || '').trim().toLowerCase();
+  const body = document.getElementById('hd-body');
+  if (!q){ helpDocsRenderHub(); return; }
+  const sections = (hdData && hdData.sections) || [];
+  let html = '';
+  for (const sec of sections){
+    const hits = sec.articles.filter(a =>
+      a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q));
+    if (!hits.length) continue;
+    html += `<div class="hd-sec open"><div class="hd-sec-head">${sec.label}</div><div class="hd-sec-items">`
+      + hits.map(a => `<div class="hd-link" onclick="helpDocsGo('${sec.key}','${a.key}')">${a.title}</div>`).join('')
+      + `</div></div>`;
+  }
+  body.innerHTML = html || `<div class="hd-loading" data-text="helpdocs.search_empty">Ничего не нашлось</div>`;
+}
+
+/* Из статьи — назад к списку разделов. Из списка — совсем из справки на
+   портал: это единственная точка входа (попап «Как пользоваться клубом»),
+   истории переходов в аппе нет, поэтому цель фиксированная */
+function helpDocsBack(){
+  if (hdState === 'article'){ helpDocsRenderHub(); return; }
+  const search = document.getElementById('hd-search-input');
+  if (search) search.value = '';
+  switchView('portal');
+}
+
 async function loadMagazine(){
   const shelf = document.getElementById('mag-shelf');
   if (!magazineData) shelf.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -9229,8 +9566,12 @@ function openPackReveal(){
   if (bigEl){ bigEl.innerHTML = ''; bigEl.classList.remove('on'); }
   document.getElementById('reveal-done').style.display = 'none';
 
-  document.getElementById('reveal-row').innerHTML = revealQueue.map(function(id, i){
-    return '<div class="reveal-card" id="reveal-card-' + id + '" onclick="revealCard(' + id + ')">'
+  // Кольцо-вспышку рисуем первым и отдельно: оно живёт внутри ряда, но не
+  // должно попасть в раскладку карточек — поэтому позиции карт на классах
+  document.getElementById('reveal-row').innerHTML =
+    '<div class="reveal-ring" id="reveal-ring"></div>'
+    + revealQueue.map(function(id, i){
+    return '<div class="reveal-card pos-' + (i + 1) + '" id="reveal-card-' + id + '" onclick="revealCard(' + id + ')">'
       + '<div class="reveal-face reveal-back">◆</div>'
       + '<div class="reveal-face reveal-front" id="reveal-front-' + id + '"></div>'
       + '</div>';
@@ -9250,6 +9591,50 @@ function closePackReveal(){
   // Перечитываем: пак ушёл из закрытых, баллы могли начислиться
   loadCards();
   loadProfile();
+}
+
+/* Вспышка в момент переворота: кольцо плюс горсть частиц из-под карточки.
+   Частицы удаляют себя сами по окончании анимации — иначе за три вскрытия
+   в разметке накапливается несколько десятков мёртвых элементов.
+   Для редких карточек искр больше: это единственное отличие, которое человек
+   замечает раньше, чем прочитает слово «легендарная» */
+function packRevealBurst(cardEl, card){
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const row = document.getElementById('reveal-row');
+  if (!row) return;
+
+  const ring = document.getElementById('reveal-ring');
+  if (ring){
+    ring.classList.remove('burst');
+    void ring.offsetWidth;          // перезапуск анимации: без этого второй клик не даёт вспышки
+    ring.classList.add('burst');
+  }
+
+  const rare = card && (card.rarity === 'legendary' || card.rarity === 'epic');
+  const count = rare ? 22 : 12;
+  const palette = rare
+    ? ['#f3d59d', '#d6b06d', '#e8614a']
+    : ['rgba(241,234,224,.8)', '#d6b06d'];
+
+  const rowRect = row.getBoundingClientRect();
+  const cardRect = cardEl.getBoundingClientRect();
+  const cx = cardRect.left - rowRect.left + cardRect.width / 2;
+  const cy = cardRect.top - rowRect.top + cardRect.height / 2;
+
+  for (let i = 0; i < count; i++){
+    const p = document.createElement('span');
+    p.className = 'reveal-particle';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 40 + Math.random() * 70;
+    p.style.left = cx + 'px';
+    p.style.top = cy + 'px';
+    p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
+    p.style.background = palette[i % palette.length];
+    p.style.animationDelay = (Math.random() * 90) + 'ms';
+    p.addEventListener('animationend', function(){ p.remove(); }, { once: true });
+    row.appendChild(p);
+  }
 }
 
 async function revealCard(cardId){
@@ -9283,6 +9668,7 @@ async function revealCard(cardId){
   }
   el.classList.add('flipped');
   revealOpened++;
+  packRevealBurst(el, card);
 
   showCardDetail(card, data ? data.points_awarded : 0, cardId, data ? data.claimed : false);
 
@@ -9370,11 +9756,24 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
           + escapeHtml(label) + '</button></div>';
   }
 
+  // Три плашки из концепта вместо строки «бог · редкость»: та же информация,
+  // плюс награда. Всё остальное — крупный арт, описание, кнопки — наше
+  const statHtml =
+      '<div class="reveal-stats">'
+    + '<div class="reveal-stat"><div class="reveal-stat-label">Фракция</div>'
+    + '<div class="reveal-stat-value">' + (godNameHtml(card.god || '') || '—') + '</div></div>'
+    + '<div class="reveal-stat"><div class="reveal-stat-label">Редкость</div>'
+    + '<div class="reveal-stat-value">' + escapeHtml(CARD_RARITY_LABELS[card.rarity] || card.rarity || '—') + '</div></div>'
+    + (pointsAwarded
+        ? '<div class="reveal-stat"><div class="reveal-stat-label">Награда</div>'
+          + '<div class="reveal-stat-value">+' + pointsAwarded + '</div></div>'
+        : '')
+    + '</div>';
+
   el.innerHTML =
-      '<div class="reveal-detail-god">' + godNameHtml(card.god || '') + ' · ' + (CARD_RARITY_LABELS[card.rarity] || card.rarity) + '</div>'
+      statHtml
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
-    + (gain ? '<div class="reveal-detail-gain">' + gain + '</div>' : '')
     + media + claim + share;
 }
 
