@@ -1883,11 +1883,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="tile-icon tile-icon-number" id="menu-cards-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Коллекция</div>
       </div>
-      <div class="tile" onclick="openUrl('https://vk.ru/im/channels/-237934122')">
+      <div class="tile" onclick="openVkLink(VK_CHANNEL_LINK)">
         <div class="tile-icon" style="background:rgba(0,119,255,0.16);color:#0077ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Резервный канал ВК</div>
       </div>
-      <div class="tile" onclick="openUrl('https://vk.me/join/VGhVV5r6VhK14fNSGsM4gCfuOFT_I0vnGtI=')">
+      <div class="tile" onclick="openVkLink(VK_CHAT_LINK)">
         <div class="tile-icon" style="background:rgba(0,119,255,0.16);color:#0077ff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a7.5 7.5 0 0 1-11.4 6.4L4 19l1.2-4.3A7.5 7.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Резервный чат ВК</div>
       </div>
@@ -3815,6 +3815,14 @@ img.img-fade.is-instant{opacity:1;transition:none}
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();enablePushNotifications()">Включить push-уведомления</button>
     </div>
+    <!-- Спасательные кнопки: если человек потерял доступ или отметил «уже есть»
+         по ошибке, отсюда можно пройти путь заново, не ища его в лекциях -->
+    <div class="sm-block">
+      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();grantVkAccessAndJoin()" data-text="settings.vk1">Получить доступ к ВКонтакте</button>
+    </div>
+    <div class="sm-block">
+      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openStepsPopup()" data-text="settings.tg1">Получить доступ в Telegram</button>
+    </div>
   </div>
 </div>
 
@@ -4624,9 +4632,11 @@ async function loadContinueWidget() {
 
 let isMember = false;
 let vkAccessGranted = false;
-// TODO: подтвердить у Denis'а точную ссылку на закрытую группу ВК с видео —
-// сейчас переиспользуем ту же, что и у тайла "Резервный канал ВК" на главной
-const VK_GROUP_JOIN_LINK = 'https://vk.ru/im/channels/-237934122';
+// ДОСТУП В ГРУППУ ОТКРЫВАЕТ И КАНАЛ, И ЧАТ (подтверждено Denis'ом 08.08.2026) —
+// поэтому одобряем одну заявку в группу, а канал и чат после этого доступны сами.
+const VK_GROUP_LINK   = 'https://vk.ru/club232119632';
+const VK_CHANNEL_LINK = 'https://vk.ru/im/channels/-237934122';
+const VK_CHAT_LINK    = 'https://vk.ru/im/convo/2000000180';
 // Захватываем "первый ли это раз как участник" РОВНО ОДИН РАЗ за сессию аппа. Сервер
 // консьюмит этот флаг при первом же обращении к /users/me — если потом дёрнуть /users/me
 // второй раз в ту же секунду (напр. авто-попап шагов сам обновляет статус), сервер уже
@@ -6243,6 +6253,13 @@ const APP_TEXTS = {
     c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
     t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
+  'settings.vk1': {
+    c:'Настройки приложения', l:'Кнопка получения доступа в ВК', w:'Настройки приложения', i:true,
+    t:'Получить доступ к ВКонтакте' },
+  'settings.tg1': {
+    c:'Настройки приложения', l:'Кнопка получения доступа в Telegram', w:'Настройки приложения', i:true,
+    t:'Получить доступ в Telegram' },
+
   'demo.banner': {
     c:'Демо-режим', l:'Плашка демо-режима', w:'Главный экран, демо', i:true,
     t:'Оплати участие — откроются записи занятий, живые эфиры и баллы. Или войди, если подписка уже есть.' },
@@ -6851,6 +6868,8 @@ document.addEventListener('visibilitychange', async () => {
   } else {
     pendingJoinKey = null;
   }
+  // Вернулся из ВК после подачи заявки — ждём подтверждения от бэкенда
+  if (vkAccessWatch && !vkAccessGranted) pollForVkAccess();
 });
 
 async function pollForJoinUpdate(attempts = 6, delayMs = 3000){
@@ -9674,11 +9693,28 @@ async function downloadPdf(slug, btn){
 
 let pendingVkOpenIndex = null;
 let pendingVkOpenSrc = 'lib';
+let pendingVkOpenUrl = null;   // ворота открылись не из-за лекции, а из-за кнопки канала/чата
+let vkAccessWatch = false;     // ждём, пока бэкенд подтвердит выданный доступ
 
 function openVkAccessGate(index, src){
   pendingVkOpenIndex = index;
   pendingVkOpenSrc = src || 'lib';
+  pendingVkOpenUrl = null;
   document.getElementById('vk-access-overlay').classList.add('open');
+}
+
+// Те же ворота, но человек шёл не в лекцию, а по кнопке «Канал ВК» / «Чат ВК»
+function openVkGateForUrl(url){
+  pendingVkOpenIndex = null;
+  pendingVkOpenUrl = url;
+  document.getElementById('vk-access-overlay').classList.add('open');
+}
+
+// Единая точка входа для любых ссылок в ВК: сначала участие, потом доступ
+function openVkLink(url){
+  if (!isMember) { openPaywall(); return; }
+  if (!vkAccessGranted) { openVkGateForUrl(url); return; }
+  openUrl(url);
 }
 
 function markVkAccessGranted(){
@@ -9691,10 +9727,24 @@ function markVkAccessGranted(){
   }).catch(()=>{});
 }
 
-function grantVkAccessAndJoin(){
-  markVkAccessGranted();
-  openUrl(VK_GROUP_JOIN_LINK);
-  proceedAfterVkAccess();
+// НЕ ставим отметку заранее. Раньше здесь стояло оптимистичное markVkAccessGranted() —
+// апп считал, что доступ есть, ещё до того, как человек дошёл до ВК. Бросил на полпути —
+// и ворота больше не покажутся, а видео не откроются. Теперь отметку ставит БЭКЕНД
+// в момент реального одобрения заявки, а мы её подхватываем при возврате в апп.
+async function grantVkAccessAndJoin(){
+  document.getElementById('vk-access-overlay').classList.remove('open');
+  let url = VK_GROUP_LINK;
+  try {
+    const r = await fetch(`${API_URL}/access/vk/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId })
+    });
+    const d = await r.json();
+    if (d && d.url) url = d.url;
+  } catch (e) {}
+  vkAccessWatch = true;
+  openUrl(url);
 }
 
 function alreadyHaveVkAccess(){
@@ -9705,8 +9755,27 @@ function alreadyHaveVkAccess(){
 function proceedAfterVkAccess(){
   document.getElementById('vk-access-overlay').classList.remove('open');
   const idx = pendingVkOpenIndex;
+  const url = pendingVkOpenUrl;
   pendingVkOpenIndex = null;
+  pendingVkOpenUrl = null;
+  if (url) { openUrl(url); return; }
   if (idx !== null) openLectureLink(idx, 'vk', pendingVkOpenSrc); // vkAccessGranted уже true — на этот раз пройдёт
+}
+
+// Человек ушёл в ВК подавать заявку. Одобрение делает наш бэкенд, но не мгновенно:
+// сначала ВК должен доставить событие в Salebot, тот — дёрнуть нас. Поэтому после
+// возврата опрашиваем несколько раз с паузой, а не один.
+async function pollForVkAccess(attempts = 8, delayMs = 3000){
+  for (let i = 0; i < attempts; i++){
+    if (vkAccessGranted) break;
+    await new Promise(res => setTimeout(res, delayMs));
+    try {
+      const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}`);
+      const d = await r.json();
+      if (d && d.in_group) { vkAccessGranted = true; break; }
+    } catch (e) {}
+  }
+  vkAccessWatch = false;
 }
 
 function openLectureLink(index, platform, src) {
