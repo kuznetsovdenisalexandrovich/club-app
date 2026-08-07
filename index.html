@@ -5283,19 +5283,44 @@ function homeApplyLayout(){
 
 /* Блок, унесённый на главную, должен быть НАПОЛНЕН: его данные грузятся при
    первом входе в библиотеку, куда человек теперь может и не заходить.
-   Тянем отложенно, чтобы не удлинять и без того длинный старт */
+
+   ДВЕ ЛОВУШКИ, обе поймал Denis на app-v86 («блок личного плана отваливается»,
+   на главной показывалось пустое «Составить план» при готовом плане):
+
+   1. НУЖНО ДОЖДАТЬСЯ АВТОРИЗАЦИИ. `loadPlanAnswers()` первым делом проверяет
+      telegramId и молча выходит, если его ещё нет. Через 400мс после запуска
+      его обычно ещё нет — ответы анкеты не приходили никогда, и блок навсегда
+      оставался в пустом состоянии. Ждём появления telegramId, а не по таймеру.
+   2. ОТРИСОВЫВАТЬ НАДО ПОСЛЕ ЗАГРУЗКИ, а не вместе с её запуском. Прежний код
+      звал renderPersonalPlanBody() сразу за loadLibrary(), не дожидаясь её, —
+      блок рисовался по пустым данным. */
 let homeMovedLoaded = false;
+const HOME_MOVED_TRIES = 40;      // ~12 секунд ожидания авторизации, дальше сдаёмся
+
 function homeEnsureMovedLoaded(){
   const moved = LIB_DEFAULT.some(function(k){ return homeOrder.indexOf(k) !== -1; });
   if (!moved || homeMovedLoaded) return;
   homeMovedLoaded = true;
-  setTimeout(function(){
-    try {
-      if (typeof allLectures !== 'undefined' && !allLectures.length) loadLibrary();
-      loadStreams();
-      renderPersonalPlanBody();
-    } catch(e){}
-  }, 400);
+  setTimeout(function(){ homeLoadMovedData(0); }, 400);
+}
+
+async function homeLoadMovedData(tries){
+  // Ждём, пока приложение узнает, кто пользователь: без telegramId запросы
+  // за ответами анкеты возвращаются пустыми и блок остаётся ни с чем
+  if (!telegramId){
+    if (tries < HOME_MOVED_TRIES) setTimeout(function(){ homeLoadMovedData(tries + 1); }, 300);
+    return;
+  }
+  try {
+    const jobs = [loadStreams()];
+    // loadLibrary сама тянет справочник проблем и ответы анкеты и сама
+    // дорисовывает блок. Если библиотека уже загружена — тянем только план
+    if (typeof allLectures !== 'undefined' && !allLectures.length) jobs.push(loadLibrary());
+    else jobs.push(loadPlanProblems(), loadPlanAnswers());
+    await Promise.all(jobs);
+    renderPersonalPlanBody();
+    renderPersonalPlanSection();
+  } catch(e){}
 }
 
 /* Служебная обвязка: полоски, глаза, строчки скрытых, нижние ссылки */
