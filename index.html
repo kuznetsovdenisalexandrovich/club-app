@@ -2495,6 +2495,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    ═══════════════════════════════════════════════════════════════════ */
 @keyframes fade-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .fade-rise{animation:fade-rise .32s cubic-bezier(.2,.8,.2,1) both}
+/* Вкладка собирается невидимо и проявляется целиком — см. openLibraryFirstTime.
+   Именно opacity, а не display: скрытый блок не имеет размеров, и раскладка
+   всё равно посчиталась бы только в момент показа, то есть скачок остался бы */
+.view.view-booting{opacity:0}
+.view{transition:opacity .28s ease}
+@media (prefers-reduced-motion:reduce){ .view{transition:none} }
 /* Разбег по позиции — карточки проявляются волной, а не все разом.
    Пять шагов хватает: дальше глаз разницы не замечает, а ждать дольше
    уже раздражает */
@@ -3625,6 +3631,28 @@ function syncTgBackButton(name){
   } catch(e){}
 }
 
+/* Первое открытие «Что посмотреть» — собираем невидимо, показываем целиком.
+
+   Заставка при запуске закрывает сборку ТОЛЬКО главного экрана; эта вкладка
+   грузится позже, при первом переключении, и там своя лесенка: личный план,
+   потоки и библиотека приходят порознь и дёргают раскладку. Приём тот же —
+   держим вкладку прозрачной, пока не придёт первая порция, потом проявляем
+   разом. Ограничитель обязателен по той же причине, что и у заставки:
+   на медленной сети лучше неполный экран, чем пустой.
+
+   Только при ПЕРВОМ открытии: дальше данные уже в памяти, и прятать нечего. */
+function openLibraryFirstTime(){
+  const view = document.getElementById('view-library');
+  if (view) view.classList.add('view-booting');
+  const boot = Promise.allSettled([loadLibrary(), loadStreams()]);
+  const cap = new Promise(function(resolve){ setTimeout(resolve, 1400); });
+  Promise.race([boot, cap]).then(function(){
+    requestAnimationFrame(function(){
+      if (view) view.classList.remove('view-booting');
+    });
+  });
+}
+
 function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -3632,7 +3660,7 @@ function switchView(name) {
   const MAG_VIEWS = { 'stream':'library', 'magazine':'library', 'magazine-read':'library' };
   const tabEl = document.getElementById('tab-' + (MAG_VIEWS[name] || name));
   if (tabEl) tabEl.classList.add('active');
-  if (name === 'library' && !allLectures.length) { loadLibrary(); loadStreams(); }
+  if (name === 'library' && !allLectures.length) openLibraryFirstTime();
   if (name === 'cards') {
     renderCardsAlbum();
     // Отмечаем увиденное только после отрисовки, иначе метки погаснут
@@ -7025,8 +7053,12 @@ function planHtml(answers, compact){
    отдельной редакторской работы для этого не нужно. */
 
 const PMAP_X = [26, 50, 74, 50];      // змейка: влево — центр — вправо — центр
-const PMAP_STEP = 116;                // расстояние между остановками, px
-const PMAP_TOP = 46;
+/* УМЕНЬШЕНО ВДВОЕ 07.08.2026 по просьбе Denis'а: карта занимала пол-экрана
+   на вкладке «Что посмотреть» и отодвигала библиотеку далеко вниз. Шаг и
+   размеры кружков ужаты согласованно — иначе тропинка между остановками
+   перестала бы попадать в кружки */
+const PMAP_STEP = 62;                 // расстояние между остановками, px
+const PMAP_TOP = 26;
 // Пастельные, а не плотные: под белой вуалью насыщенный цвет выглядит краской,
 // а не стеклом — референс Denis'а (иконка Figma) держится именно на пастели
 /* Запасная палитра — если справочник ещё не загружен и направление
@@ -7039,7 +7071,7 @@ const PMAP_COLORS = ['#f0885a','#68b0e8','#e07a95','#5fc8ab','#a98cf0','#e8c25f'
    пройденная маленькая, следующая крупная, будущие средние.
    Значения укрупнены 04.08 — картинки теперь несут рисованную цифру,
    и мелкий кружок её съедал */
-const PMAP_D = { done: 62, next: 112, future: 82 };
+const PMAP_D = { done: 34, next: 60, future: 44 };
 const PRAIL_D = { done: 50, next: 86, future: 66 };
 
 /* КАРТИНКИ ОСТАНОВОК. Файлы лежат в images/plan/{тема}/{цифра}-{вариация}.jpg
