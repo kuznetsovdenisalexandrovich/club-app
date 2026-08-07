@@ -3676,7 +3676,9 @@ function switchView(name) {
     if (el) el.textContent = points;
     loadRewardsData().then(() => {
       const listEl = document.getElementById('pi-rewards-list');
-      if (listEl) listEl.innerHTML = lastRewardsData ? rewardsListHtml() : '<div class="empty">Не удалось загрузить</div>';
+      if (!listEl) return;
+      listEl.innerHTML = lastRewardsData ? rewardsListHtml() : '<div class="empty">Не удалось загрузить</div>';
+      listEl.classList.add('fade-rise');
     });
   }
   syncTgBackButton(name);
@@ -3986,6 +3988,7 @@ async function loadNews() {
 
 async function loadNotifications() {
   const el = document.getElementById('notif-list');
+  const firstRender = !el.dataset.loadedOnce;
   if (!listMembership) await fetchListMembership();
   if (!listMembership) {
     el.innerHTML = roundTripErrorHtml();
@@ -4010,6 +4013,10 @@ async function loadNotifications() {
       </div>`;
 
   renderNotifChannel();
+  // Плавность только на первом появлении — при переключении тумблера функция
+  // перерисовывается ещё дважды (оптимистично и после сверки с сервером),
+  // и повторное затухание-проявление ощущалось бы как лаг, а не как забота
+  if (firstRender) { el.classList.add('fade-rise'); el.dataset.loadedOnce = '1'; }
 }
 
 /* ── Слой 1: где приходят уведомления ───────────────────────────────────────
@@ -4536,9 +4543,11 @@ async function openRewards(){
   document.getElementById('rewards-overlay').classList.add('open');
   document.getElementById('rewards-body').innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Загружаю…</div>';
   await loadRewardsData();
-  document.getElementById('rewards-body').innerHTML = lastRewardsData
+  const body = document.getElementById('rewards-body');
+  body.innerHTML = lastRewardsData
     ? `<div class="sm-hint" style="margin-bottom:4px">У тебя <b>${lastRewardsData.points}</b> баллов.</div>${rewardsListHtml()}`
     : `<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить.</div>`;
+  body.classList.add('fade-rise');
 }
 
 function closeRewards(){
