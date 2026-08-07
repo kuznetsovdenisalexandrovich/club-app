@@ -2475,6 +2475,52 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .ce-title{font-size:26px;font-weight:800;line-height:1.15;margin-bottom:10px}
 .ce-lead{font-size:14.5px;line-height:1.55;color:var(--text-dim);margin-bottom:22px}
 .ce-note{font-size:12px;color:var(--text-faint);margin-top:14px;line-height:1.5}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ПОЯВЛЕНИЕ ПОДГРУЖАЕМОГО СОДЕРЖИМОГО (07.08.2026)
+
+   Denis: «сейчас резко добавляются элементы и приложение прям под пальцем
+   подменяет экран». Две меры, и они дополняют друг друга:
+
+   1. СКЕЛЕТЫ — там, где количество блоков известно ЗАРАНЕЕ. В ряду плиток
+      это «Смотреть позже», бонусы и «Журнал»: их всегда фиксированное
+      число, поэтому можно занять точное место нужного размера, и подмены
+      не происходит вовсе — содержимое проявляется на готовом месте.
+      Для потоков и лекций так НЕЛЬЗЯ: их количество приходит с сервера,
+      скелет угадал бы неверно и сам дал бы прыжок.
+   2. МЯГКОЕ ПОЯВЛЕНИЕ — для всего остального: блок всплывает за 0.32с
+      вместо мгновенной подстановки.
+
+   Обе меры выключаются системной настройкой «уменьшить движение».
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes fade-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fade-rise{animation:fade-rise .32s cubic-bezier(.2,.8,.2,1) both}
+/* Разбег по позиции — карточки проявляются волной, а не все разом.
+   Пять шагов хватает: дальше глаз разницы не замечает, а ждать дольше
+   уже раздражает */
+.fade-rise:nth-child(2){animation-delay:.04s}
+.fade-rise:nth-child(3){animation-delay:.08s}
+.fade-rise:nth-child(4){animation-delay:.12s}
+.fade-rise:nth-child(5){animation-delay:.16s}
+.fade-rise:nth-child(n+6){animation-delay:.2s}
+
+/* Скелет: тот же каркас, что у настоящей плитки, с бегущим бликом */
+@keyframes skel-shine{from{background-position:-160% 0}to{background-position:260% 0}}
+.skel{position:relative;overflow:hidden;background:var(--card2);
+  background-image:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.16) 42%,transparent 64%);
+  background-size:220% 100%;background-repeat:no-repeat;
+  animation:skel-shine 1.35s ease-in-out infinite}
+[data-theme="light"] .skel{
+  background-image:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.62) 42%,transparent 64%)}
+.skel-tile{border-radius:16px;overflow:hidden;background:var(--card);
+  border:1px solid var(--border);display:flex;flex-direction:column}
+.skel-tile .skel-img{width:100%;aspect-ratio:3/2;display:block}
+.skel-tile .skel-line{height:10px;margin:9px 10px 11px;border-radius:5px}
+.skel-mag{width:100%;aspect-ratio:3/4;border-radius:14px;border:1px solid var(--border)}
+@media (prefers-reduced-motion:reduce){
+  .fade-rise{animation:none}
+  .skel{animation:none}
+}
 </style>
 
 <style>
@@ -6589,6 +6635,19 @@ async function loadStreams() {
       <svg class="watch-later-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2"></path><path d="M9 2h6"></path></svg>
       <div class="stream-tile-title">Смотреть позже</div>
     </div>`;
+
+  // Скелет РОВНО на четыре плитки — столько их с известным заранее числом:
+  // «Смотреть позже», два бонуса (мастер-класс и бэкстейдж) и «Журнал».
+  // Потоки скелетом не занимаем: их количество приходит с сервера, угадав
+  // неверно, мы дали бы ровно тот прыжок, от которого уходим.
+  // Рисуем только на ПЕРВОЙ загрузке — при повторном заходе на вкладку
+  // данные уже в памяти, и мигать скелетом незачем
+  if (!el.dataset.loadedOnce){
+    el.innerHTML = Array.from({length: 4}).map(() =>
+      '<div class="skel-tile"><div class="skel skel-img"></div><div class="skel skel-line"></div></div>'
+    ).join('');
+  }
+
   try {
     // Данные журнала нужны здесь же — иначе плитка «Журнал» нарисуется без обложки
     const [streams] = await Promise.all([
@@ -6597,14 +6656,16 @@ async function loadStreams() {
       bonusesData.length ? Promise.resolve() : loadBonuses(),
     ]);
     el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml() + streams.map(s => `
-      <div class="stream-tile" onclick="openStream(${jsArg(s.stream_key)})">
+      <div class="stream-tile fade-rise" onclick="openStream(${jsArg(s.stream_key)})">
         <img class="stream-tile-img" src="${escapeHtml(s.image_url || '')}" alt=""
              onerror="this.style.visibility='hidden'">
         <div class="stream-tile-title">${escapeHtml(s.title || s.stream_key)}</div>
       </div>
     `).join('');
+    el.dataset.loadedOnce = '1';
   } catch (e) {
     el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml();
+    el.dataset.loadedOnce = '1';
   }
 }
 
@@ -6647,7 +6708,7 @@ function lecCardHtml(l, i, src){
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i},${jsArg(src)})`);
   return `
-    <div class="lec-card">
+    <div class="lec-card fade-rise">
       <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
       <div class="lec-card-top">
         <div class="lec-title">${l.title}</div>
@@ -9803,7 +9864,7 @@ function renderMagazineShelf(){
     : `Открыто ${open} из ${issues.length}`;
 
   shelf.innerHTML = issues.map(function(it){
-    const cls = ['mag-item'];
+    const cls = ['mag-item', 'fade-rise'];
     if (!it.unlocked) cls.push('locked');
     if (it.is_new) cls.push('is-new');
 
