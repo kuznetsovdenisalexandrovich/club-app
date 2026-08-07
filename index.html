@@ -216,14 +216,15 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .stream-tile{border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative;display:flex;flex-direction:column}
 .stream-tile:active{transform:scale(0.97)}
 /* Пропорция вместо фикс. высоты — плитка в сетке шире, чем была в ряду */
-/* Обложка проявляется, когда картинка догрузилась, а не возникает за кадр.
-   Сделано СТИЛЕМ, а не правкой трёх мест разметки (потоки, бонусы, журнал):
-   `animation` на самом <img> стартует в момент, когда браузер его отрисовал,
-   то есть ровно тогда, когда файл пришёл — отдельный обработчик onload не нужен */
-.stream-tile-img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--card2);
-  animation:tileImgIn .42s ease both}
-@keyframes tileImgIn{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){ .stream-tile-img{animation:none} }
+/* ОБЛОЖКА ПРОЯВЛЯЕТСЯ ПО СОБЫТИЮ load, А НЕ CSS-АНИМАЦИЕЙ (07.08.2026).
+   Здесь стояло `animation:tileImgIn .42s both` с комментарием, что анимация
+   на <img> стартует «когда файл пришёл». Это НЕВЕРНО: браузер отрисовывает
+   пустую коробку <img> сразу при вставке в DOM, и часы анимации идут с этого
+   момента. Если картинка приехала через 700мс, её 0.42с плавности давно
+   закончились — и файл возникал рывком на полной непрозрачности. Ровно на это
+   Denis жаловался. Теперь появлением занимается общий механизм в конце
+   стилей (класс .img-fade) плюс скрипт, слушающий настоящий load */
+.stream-tile-img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--card2)}
 .stream-tile-title{font-size:11.5px;font-weight:700;padding:8px 10px;line-height:1.3}
 
 .tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
@@ -1652,12 +1653,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .pmap-blob i,.pmap-glow{display:none}
 .pmap-blob img{position:static;width:100%;height:100%;object-fit:contain;
   border-radius:0;
-  /* Картинка проявляется сама, когда файл пришёл — раньше она возникала
-     мгновенно поверх пустого кружка (07.08.2026). Анимация на <img>
-     стартует ровно в момент отрисовки, отдельный onload не нужен */
-  animation:planImgIn .4s ease both}
-@keyframes planImgIn{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){ .pmap-blob img{animation:none;opacity:1} }
+  /* ЯВНАЯ НЕПРОЗРАЧНОСТЬ. Выше по файлу у `.pmap-blob img` стоит opacity:.5 —
+     наследие старого оформления кружков. Раньше её перекрывала анимация
+     planImgIn (`both` удерживал конечный кадр opacity:1); анимация убрана
+     07.08.2026 как неработающая, поэтому непрозрачность приходится задать
+     здесь руками, иначе конфетки стали бы полупрозрачными */
+  opacity:1}
 .pmap-blob b{display:none}                    /* цифра нарисована в картинке */
 
 /* Галочка садится на край сферы, а не квадрата: сфера занимает центральные
@@ -1883,7 +1884,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
 
     <div class="section-label">Потоки</div>
-    <div id="streams-row" class="streams-row"><div class="loading">Загрузка...</div></div>
+    <!-- data-imgs-sync: обложки внутри ряда проявляются партиями, а не по одной.
+         Ряд заполняется двумя заходами (фиксированные плитки, затем потоки) —
+         каждый заход своя партия, это намеренно -->
+    <div id="streams-row" class="streams-row" data-imgs-sync><div class="loading">Загрузка...</div></div>
 
     <div class="section-label">Библиотека</div>
     <button class="ai-btn" id="ai-helper-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
@@ -3232,6 +3236,31 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   МЯГКОЕ ПОЯВЛЕНИЕ КАРТИНОК — общий механизм (07.08.2026)
+
+   ПОЧЕМУ ЭТОТ БЛОК ПОСЛЕДНИЙ В ФАЙЛЕ: у отдельных картинок в проекте есть
+   свои правила непрозрачности (например, `.pmap-blob img{opacity:.5}` из
+   старого оформления кружков). Селектор `img.img-fade` весит ровно столько
+   же, сколько `.pmap-blob img` — значит побеждает тот, кто НИЖЕ по файлу.
+   Поэтому блок стоит в конце последней таблицы стилей, а не рядом с
+   остальными анимациями. Не переносить выше.
+
+   ПОЧЕМУ НЕ CSS-АНИМАЦИЕЙ, КАК БЫЛО РАНЬШЕ: анимация на <img> начинает
+   отсчёт в момент, когда браузер отрисовал ЭЛЕМЕНТ, а не когда пришёл ФАЙЛ.
+   Пустая коробка <img> рисуется сразу при вставке в DOM, картинка приезжает
+   через сотни миллисекунд — к этому моменту анимация давно доиграла, и файл
+   возникает рывком на полной непрозрачности. Именно на это жаловался Denis.
+   Появлением управляет скрипт по настоящему событию load.
+   ═══════════════════════════════════════════════════════════════════════ */
+img.img-fade{opacity:0}
+img.img-fade.is-shown{opacity:1;transition:opacity .42s ease}
+/* Картинка из кэша показывается сразу, без проявления: она пришла в том же
+   кадре, что и разметка, и «плавность» читалась бы как лишняя задержка */
+img.img-fade.is-instant{opacity:1;transition:none}
+@media (prefers-reduced-motion:reduce){
+  img.img-fade{opacity:1;transition:none}
+}
 
 </style>
 
@@ -3382,7 +3411,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 </div>
 
 <div class="zoom-overlay" id="zoom-overlay">
-  <div class="zoom-stage" id="zoom-stage"><img id="zoom-img" alt=""></div>
+  <div class="zoom-stage" id="zoom-stage"><img id="zoom-img" alt="" data-nofade></div>
   <div class="zoom-loading" id="zoom-loading">Загружаю…</div>
   <button class="zoom-close" id="zoom-close" onclick="closeCardZoom()">✕</button>
   <div class="zoom-hint" id="zoom-hint" data-text="misc.a3">Двумя пальцами приблизить · двойной тап — быстро</div>
@@ -3600,6 +3629,144 @@ function hideSplash(){
 
 // Страховка: что бы ни случилось с загрузкой, экран не заперт навсегда
 setTimeout(hideSplash, 6000);
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   МЯГКОЕ ПОЯВЛЕНИЕ КАРТИНОК. Один механизм на всё приложение (07.08.2026)
+
+   ЗАЧЕМ. Раньше плавность делалась CSS-анимацией прямо на <img> — и не
+   работала: анимация отсчитывает время от отрисовки ЭЛЕМЕНТА, а не от
+   прихода ФАЙЛА. Пустая коробка <img> появляется в DOM мгновенно, картинка
+   догружается через сотни миллисекунд, к этому моменту плавность доиграла, и
+   файл возникает рывком. Denis: «просто выдаёт картинки сразу, как они
+   загрузились, несинхронный ужас».
+
+   ЧТО ДЕЛАЕМ. Наблюдатель ловит каждую новую <img> в документе и:
+   • одиночную — прячет и проявляет по её собственному событию load;
+   • картинки внутри контейнера с атрибутом data-imgs-sync — держит и
+     показывает ВСЕ РАЗОМ, когда пришла последняя (это просьба Denis'а про
+     конфетки личного плана: «хотя бы конфетки выдавать одновременно»).
+
+   ГРУППА — ЭТО ОДНА ПАРТИЯ ВСТАВКИ, А НЕ КОНТЕЙНЕР ЦЕЛИКОМ. Ряд потоков
+   заполняется двумя заходами (сначала фиксированные плитки, потом потоки с
+   сервера) — это сделано намеренно и ломать не надо. Каждая партия
+   проявляется своей волной: внутри партии синхронно, партии независимы.
+
+   СТРАХОВКА ПО ВРЕМЕНИ. Одна застрявшая картинка не держит остальных: через
+   IMG_GROUP_WAIT показываем всех, кто успел, а опоздавшие проявляются каждая
+   сама по себе.
+
+   ИЗ КЭША — БЕЗ ПРОЯВЛЕНИЯ. Если картинка уже готова в момент вставки,
+   показываем мгновенно: «плавность» там читалась бы как лишняя задержка.
+
+   ИСКЛЮЧЕНИЯ. Заставка (#splash) и полноэкранный зум карточек живут по своим
+   правилам загрузки — им ставится data-nofade, механизм их не трогает.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const IMG_GROUP_WAIT = 1600;   // мс: сколько ждём отставших внутри одной партии
+
+function imgFadeSkip(img){
+  return img.hasAttribute('data-nofade') || !!img.closest('#splash,[data-nofade]');
+}
+
+// Картинка уже готова к показу? complete бывает true и у сломанной — тогда
+// проявлять нечего, но и держать её скрытой нельзя (останется дыра)
+function imgReady(img){ return img.complete && img.naturalWidth > 0; }
+
+function imgShow(img, instant){
+  img.classList.add(instant ? 'is-instant' : 'is-shown');
+}
+
+/* Одиночная картинка: прячем и ждём её собственный load */
+/* Смена src у УЖЕ существующей картинки: наблюдатель такого не видит, он
+   ловит только новые узлы. Сбрасываем состояние и просим проявление заново */
+function fadeSwapSrc(img, url){
+  if (!img) return;
+  img.classList.remove('img-fade', 'is-shown', 'is-instant');
+  img.src = url || '';
+  if (url) fadeOnLoad(img);
+}
+
+function fadeOnLoad(img){
+  if (!img || imgFadeSkip(img) || img.classList.contains('img-fade')) return;
+  img.classList.add('img-fade');
+  if (imgReady(img)){ imgShow(img, true); return; }
+  const show = function(){ imgShow(img, false); };
+  img.addEventListener('load', show, { once: true });
+  // Сломанная картинка не должна остаться невидимой: у части из них стоит
+  // onerror="this.remove()", но не у всех
+  img.addEventListener('error', function(){ imgShow(img, true); }, { once: true });
+}
+
+/* Партия картинок: показываем все разом, когда пришла последняя */
+function fadeGroupTogether(imgs){
+  const list = imgs.filter(function(im){ return !imgFadeSkip(im) && !im.classList.contains('img-fade'); });
+  if (!list.length) return;
+  list.forEach(function(im){ im.classList.add('img-fade'); });
+
+  // Если ВСЯ партия уже в кэше — показываем мгновенно, без проявления
+  if (list.every(imgReady)){ list.forEach(function(im){ imgShow(im, true); }); return; }
+
+  let left = list.length, done = false;
+  const revealAll = function(){
+    if (done) return;
+    done = true;
+    list.forEach(function(im){ imgShow(im, false); });
+  };
+  const tick = function(){ if (--left <= 0) revealAll(); };
+  list.forEach(function(im){
+    if (imgReady(im)){ tick(); return; }
+    im.addEventListener('load', tick, { once: true });
+    im.addEventListener('error', tick, { once: true });
+  });
+  setTimeout(function(){
+    if (done) return;
+    done = true;
+    // Показываем тех, кто успел; отставшие проявятся поодиночке
+    list.forEach(function(im){
+      if (imgReady(im)) imgShow(im, false);
+      else im.addEventListener('load', function(){ imgShow(im, false); }, { once: true });
+    });
+  }, IMG_GROUP_WAIT);
+}
+
+/* Разбор одной партии вставки: собираем картинки и раскладываем их по
+   контейнерам-группам. Всё, что вне групп, проявляется поодиночке */
+function imgFadeScan(roots){
+  const groups = new Map();
+  const singles = [];
+  roots.forEach(function(node){
+    if (!node || node.nodeType !== 1) return;
+    const imgs = [];
+    if (node.tagName === 'IMG') imgs.push(node);
+    Array.prototype.push.apply(imgs, Array.prototype.slice.call(node.querySelectorAll('img')));
+    imgs.forEach(function(im){
+      const box = im.closest('[data-imgs-sync]');
+      if (box){
+        if (!groups.has(box)) groups.set(box, []);
+        groups.get(box).push(im);
+      } else singles.push(im);
+    });
+  });
+  singles.forEach(fadeOnLoad);
+  groups.forEach(function(list){ fadeGroupTogether(list); });
+}
+
+(function watchImages(){
+  // Статичная разметка страницы — до всякой подгрузки
+  imgFadeScan([document.body || document.documentElement]);
+
+  const obs = new MutationObserver(function(muts){
+    const added = [];
+    muts.forEach(function(m){
+      Array.prototype.forEach.call(m.addedNodes, function(n){ added.push(n); });
+    });
+    if (added.length) imgFadeScan(added);
+  });
+  // Только childList: атрибуты не слушаем намеренно — механизм сам меняет
+  // классы картинок, и наблюдатель за атрибутами вызывал бы сам себя
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+})();
 
 
 // Быстрый контур для разработки (GitHub Pages → Railway напрямую, минуя кастомный
@@ -6933,7 +7100,10 @@ async function openStream(key) {
     ]);
     document.getElementById('stream-title').textContent = stream.title || key;
     document.getElementById('stream-desc').textContent = stream.description || '';
-    document.getElementById('stream-hero-img').src = stream.image_url || '';
+    // Обложка потока — существующий <img>, которому меняют src. Наблюдатель
+    // ловит только НОВЫЕ элементы, поэтому здесь просим проявление руками,
+    // иначе при повторном открытии потока картинка возникала бы рывком
+    fadeSwapSrc(document.getElementById('stream-hero-img'), stream.image_url || '');
     renderedItems = lectures;
     document.getElementById('stream-lectures').innerHTML = lectures.map((l, i) => lecCardHtml(l, i)).join('');
   } catch (e) {
@@ -7375,7 +7545,7 @@ function planMapHtml(answers){
   const h = top0 + (n - 1) * PMAP_STEP + maxR + 58;
 
   // Тропинка — не линия, а редкие точки по той же кривой: четыре на промежуток
-  let html = '<div class="pmap fade-rise" style="height:' + h + 'px"><div class="pmap-crumbs">';
+  let html = '<div class="pmap fade-rise" data-imgs-sync style="height:' + h + 'px"><div class="pmap-crumbs">';
   for (let i = 1; i < pt.length; i++){
     const a = pt[i-1], b = pt[i], m = (b.cy - a.cy) / 2;
     for (let k = 1; k <= PMAP_DOTS; k++){
@@ -7440,7 +7610,9 @@ function planRailHtml(answers){
   }));
   const railH = Math.round(bottom + RAIL_PAD);
 
-  let html = '<div class="prail fade-rise"><div class="prail-inner" style="width:' + w + 'px;height:' + railH + 'px">'
+  /* data-imgs-sync — просьба Denis'а: конфетки пути показываются ВСЕ РАЗОМ,
+     когда догрузилась последняя, а не каждая по мере готовности */
+  let html = '<div class="prail fade-rise" data-imgs-sync><div class="prail-inner" style="width:' + w + 'px;height:' + railH + 'px">'
     + '<div class="pmap-crumbs">';
   for (let i = 1; i < n; i++){
     const a = { x: X0 + (i-1) * STEP, cy: cy(i-1) }, b = { x: X0 + i * STEP, cy: cy(i) };
