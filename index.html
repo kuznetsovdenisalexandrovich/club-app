@@ -2198,27 +2198,41 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="scroll-spacer"></div>
   </div>
 
-  <!-- ── Справка клуба — вшита в апп 07.08.2026, раньше открывалась отдельной
-       страницей через openUrl (дёрганое окно браузера). Своя визуальная ниша
-       (мягкий неоморфизм), но тема наследуется от документа — своей кнопки
-       переключения темы внутри нет ── -->
-  <div class="view" id="view-help-docs">
-    <div class="hd-root">
-      <div class="hd-top">
-        <div class="hd-back-btn" onclick="helpDocsBack()">
-          <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
-        </div>
-        <div class="hd-top-title" data-text="helpdocs.title">Справка</div>
-      </div>
-      <div class="hd-search-wrap">
-        <svg class="hd-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input class="hd-search-input" id="hd-search-input" data-text="helpdocs.search_placeholder" placeholder="Поиск по справке" oninput="helpDocsSearch(this.value)">
-      </div>
-      <div id="hd-body"><div class="hd-loading" data-text="helpdocs.loading">Загрузка…</div></div>
+</div>
+
+<!-- ── СПРАВКА КЛУБА — полноэкранный слой поверх аппа ──────────────────────
+     Denis: «сделаем в полный экран как самостоятельную страницу, а не просто
+     заберём у неё элементы». Поэтому это НЕ `.view` внутри аппа с его шапкой
+     и табами, а отдельный слой поверх всего (как первый экран для пришедшего
+     по чужой карточке) — со своей вёрсткой один в один из присланного файла:
+     плавающая верхняя панель, боковое меню, статья-карточка.
+     Тема НЕ своя: кнопка переключения зовёт общий toggleTheme() аппа, чтобы
+     не разошлись два независимых состояния светло/темно.
+     Все стили изолированы внутрь #hd-overlay — на остальной апп не влияют,
+     и апп не влияет на них ── -->
+<div id="hd-overlay">
+  <div class="top">
+    <div class="icon-sq burger" id="hd-burger" role="button" tabindex="0" aria-label="Открыть меню" aria-expanded="false" onclick="helpDocsToggleSide()">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </div>
-    <div class="scroll-spacer"></div>
+    <div class="icon-sq" aria-label="Закрыть справку" onclick="closeHelpDocs()">
+      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+    </div>
+    <div class="top-logo">Ты <span>Боженька</span> Продаж</div>
+    <div class="top-sub" data-text="helpdocs.title">справка</div>
+    <div class="top-right">
+      <div class="icon-sq" aria-label="Тема" onclick="toggleTheme();helpDocsSyncThemeIcon()">
+        <svg id="hd-theme-icon" viewBox="0 0 24 24"></svg>
+      </div>
+    </div>
   </div>
 
+  <div class="side-backdrop" id="hd-side-backdrop" onclick="helpDocsToggleSide(false)"></div>
+
+  <div class="layout">
+    <nav class="side" id="hd-side"></nav>
+    <main class="main" id="hd-main"></main>
+  </div>
 </div>
 
 <!-- Пейволл-алерт -->
@@ -2465,85 +2479,647 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 <style>
 /* ═══════════════════════════════════════════════════════════════════════
-   СПРАВКА КЛУБА (view-help-docs) — 07.08.2026, вшита в апп вместо отдельной
-   страницы. Своя визуальная ниша, мягкий неоморфизм по образцу, который
-   прислал Denis: скруглённые поверхности, двойные тени, закруглённый шрифт
-   в заголовках. Тема наследуется от документа ([data-theme] на <html>,
-   апп уже им управляет) — своего переключателя внутри нет.
-   Все классы и функции — с префиксом hd-/helpDocs, чтобы не столкнуться
-   с остальным аппом ни сейчас, ни при будущих правках.
+   СПРАВКА КЛУБА — полноэкранный слой #hd-overlay.
+   СТИЛИ ПЕРЕНЕСЕНЫ ОДИН В ОДИН из файла, который прислал Denis
+   (docs-index-v2-soft-neumorphism.html), автоматической изоляцией: каждому
+   селектору дописан префикс #hd-overlay, `:root` стал самим оверлеем,
+   `body` — им же, `[data-theme="dark"]` — `[data-theme="dark"] #hd-overlay`.
+   Поэтому стили справки не протекают в апп, а стили аппа — в справку.
+   ПРАВИТЬ ОСТОРОЖНО: при следующем обновлении дизайна проще прогнать
+   исходный файл той же изоляцией заново, чем править здесь руками.
    ═══════════════════════════════════════════════════════════════════ */
-.hd-root{
-  --hd-surface:#e9ecef; --hd-surface-soft:#eef1f3; --hd-surface-pressed:#e2e6e9;
-  --hd-text:#252a30; --hd-text-dim:#68717a; --hd-text-faint:#969da4;
-  --hd-accent:#735cf4; --hd-accent-strong:#5f49df; --hd-accent-soft:rgba(115,92,244,.12);
-  --hd-line:rgba(37,42,48,.07); --hd-highlight:rgba(255,255,255,.82); --hd-shadow:rgba(113,121,130,.26);
-  --hd-sh-raised:14px 14px 30px var(--hd-shadow),-14px -14px 30px var(--hd-highlight);
-  --hd-sh-soft:8px 8px 18px rgba(113,121,130,.21),-8px -8px 18px rgba(255,255,255,.76);
-  --hd-sh-small:5px 5px 12px rgba(113,121,130,.20),-5px -5px 12px rgba(255,255,255,.72);
-  --hd-sh-inset:inset 5px 5px 11px rgba(113,121,130,.20),inset -5px -5px 11px rgba(255,255,255,.72);
-  --hd-font-disp:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold",-apple-system,BlinkMacSystemFont,sans-serif;
-  padding-bottom:16px;
+/* Сам слой: поверх всего, во весь экран, со своей прокруткой */
+#hd-overlay{position:fixed;inset:0;z-index:880;display:none;overflow-y:auto;
+  -webkit-overflow-scrolling:touch}
+#hd-overlay.open{display:block}
+#hd-overlay{
+  color-scheme:light;
+
+  --bg:#e9ecef;
+  --surface:#e9ecef;
+  --surface-soft:#eef1f3;
+  --surface-pressed:#e2e6e9;
+
+  --text:#252a30;
+  --text-dim:#68717a;
+  --text-faint:#969da4;
+
+  --accent:#735cf4;
+  --accent-strong:#5f49df;
+  --accent-soft:rgba(115,92,244,.12);
+
+  --line:rgba(37,42,48,.07);
+  --highlight:rgba(255,255,255,.82);
+  --shadow:rgba(113,121,130,.26);
+
+  --shadow-raised:
+    14px 14px 30px var(--shadow),
+    -14px -14px 30px var(--highlight);
+
+  --shadow-soft:
+    8px 8px 18px rgba(113,121,130,.21),
+    -8px -8px 18px rgba(255,255,255,.76);
+
+  --shadow-small:
+    5px 5px 12px rgba(113,121,130,.20),
+    -5px -5px 12px rgba(255,255,255,.72);
+
+  --shadow-inset:
+    inset 5px 5px 11px rgba(113,121,130,.20),
+    inset -5px -5px 11px rgba(255,255,255,.72);
+
+  --font-display:
+    ui-rounded,
+    "SF Pro Rounded",
+    "Arial Rounded MT Bold",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  --font-body:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  --radius-xl:30px;
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:12px;
+}[data-theme="dark"] #hd-overlay{
+  color-scheme:dark;
+
+  --bg:#17191d;
+  --surface:#17191d;
+  --surface-soft:#1b1e22;
+  --surface-pressed:#121418;
+
+  --text:#f2f3f5;
+  --text-dim:#a6abb2;
+  --text-faint:#6f757e;
+
+  --accent:#9a89ff;
+  --accent-strong:#b0a3ff;
+  --accent-soft:rgba(154,137,255,.14);
+
+  --line:rgba(255,255,255,.055);
+  --highlight:rgba(255,255,255,.035);
+  --shadow:rgba(0,0,0,.56);
+
+  --shadow-raised:
+    14px 14px 30px rgba(0,0,0,.54),
+    -10px -10px 24px rgba(255,255,255,.022);
+
+  --shadow-soft:
+    8px 8px 18px rgba(0,0,0,.48),
+    -6px -6px 16px rgba(255,255,255,.018);
+
+  --shadow-small:
+    5px 5px 12px rgba(0,0,0,.42),
+    -4px -4px 10px rgba(255,255,255,.018);
+
+  --shadow-inset:
+    inset 5px 5px 11px rgba(0,0,0,.62),
+    inset -4px -4px 10px rgba(255,255,255,.022);
+}#hd-overlay *{box-sizing:border-box}#hd-overlay{
+  scroll-behavior:smooth;
+  background:var(--bg);
+}#hd-overlay,#hd-overlay{
+  margin:0;
+  padding:0;
+  overflow-x:hidden;
+}#hd-overlay{
+  min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom);
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  transition:background-color .28s ease,color .28s ease;
+}#hd-overlay.side-open{
+  overflow:hidden;
+}#hd-overlay button,#hd-overlay input{
+  font:inherit;
+}#hd-overlay a{
+  color:var(--accent-strong);
+  text-decoration:none;
+}#hd-overlay a:hover{
+  text-decoration:none;
+}#hd-overlay h1,#hd-overlay h2,#hd-overlay h3{
+  margin:0 0 .55em;
+  color:var(--text);
+  font-family:var(--font-display);
+  font-weight:720;
+  letter-spacing:-.035em;
+}#hd-overlay /* ── Верхняя панель ───────────────────────────────────────── */
+
+#hd-overlay .top{
+  position:sticky;
+  top:0;
+  z-index:50;
+
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  width:min(1160px,calc(100% - 32px));
+  margin:16px auto 0;
+  padding:12px 14px 12px 18px;
+
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:20px;
+  box-shadow:var(--shadow-soft);
+
+  transition:background-color .28s ease,box-shadow .28s ease;
+}#hd-overlay .top-logo{
+  font-family:var(--font-display);
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:-.035em;
+  white-space:nowrap;
+}#hd-overlay .top-logo span{
+  color:var(--accent);
+}#hd-overlay .top-sub{
+  margin-left:1px;
+  color:var(--text-faint);
+  font-size:11px;
+  white-space:nowrap;
+}#hd-overlay .top-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-left:auto;
+}#hd-overlay .icon-sq{
+  display:flex;
+  flex-shrink:0;
+  align-items:center;
+  justify-content:center;
+
+  width:40px;
+  height:40px;
+
+  color:var(--text);
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--shadow-small);
+  cursor:pointer;
+
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    background-color .28s ease;
+}#hd-overlay .icon-sq:hover{
+  transform:translateY(-1px);
+}#hd-overlay .icon-sq:active{
+  transform:translateY(0);
+  box-shadow:var(--shadow-inset);
+}#hd-overlay .icon-sq svg{
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}#hd-overlay .burger{
+  display:none;
+}#hd-overlay /* ── Раскладка ────────────────────────────────────────────── */
+
+#hd-overlay .layout{
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:26px;
+
+  width:min(1160px,calc(100% - 32px));
+  margin:28px auto 0;
+}#hd-overlay .side{
+  position:sticky;
+  top:96px;
+  align-self:start;
+
+  width:auto;
+  max-height:calc(100vh - 116px);
+  padding:16px 13px 26px;
+  overflow-y:auto;
+
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-soft);
+
+  transition:
+    background-color .28s ease,
+    box-shadow .28s ease,
+    transform .28s cubic-bezier(.2,.8,.2,1);
+}#hd-overlay .side-mobile-head{
+  display:none;
+}#hd-overlay .search-wrap{
+  position:relative;
+  margin-bottom:8px;
+}#hd-overlay .search-input{
+  width:100%;
+  padding:10px 12px 10px 35px;
+
+  color:var(--text);
+  background:var(--surface-pressed);
+  border:1px solid var(--line);
+  border-radius:13px;
+  box-shadow:var(--shadow-inset);
+
+  font-family:var(--font-body);
+  font-size:12.5px;
+
+  transition:box-shadow .16s ease,background-color .28s ease;
+}#hd-overlay .search-input::placeholder{
+  color:var(--text-faint);
+}#hd-overlay .search-input:focus{
+  outline:none;
+  box-shadow:
+    var(--shadow-inset),
+    0 0 0 3px var(--accent-soft);
+}#hd-overlay .search-icon{
+  position:absolute;
+  top:50%;
+  left:12px;
+  z-index:1;
+
+  width:14px;
+  height:14px;
+
+  fill:none;
+  stroke:var(--text-faint);
+  stroke-width:2;
+  stroke-linecap:round;
+
+  transform:translateY(-50%);
+}#hd-overlay .side-sec{
+  border-bottom:1px solid var(--line);
+}#hd-overlay .side-sec:last-child{
+  border-bottom:none;
+}#hd-overlay .side-head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  padding:11px 10px;
+
+  color:var(--text);
+  font-size:13.5px;
+  font-weight:680;
+  cursor:pointer;
+  user-select:none;
+
+  transition:color .15s ease;
+}#hd-overlay .side-head:hover{
+  color:var(--accent-strong);
+}#hd-overlay .side-head .chev{
+  width:14px;
+  height:14px;
+  margin-left:auto;
+
+  fill:none;
+  stroke:var(--text-faint);
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+
+  transition:transform .18s ease,stroke .18s ease;
+}#hd-overlay .side-sec.open .chev{
+  stroke:var(--accent);
+  transform:rotate(90deg);
+}#hd-overlay .side-items{
+  display:none;
+  padding:0 0 9px;
+}#hd-overlay .side-sec.open .side-items{
+  display:block;
+}#hd-overlay .side-link{
+  display:block;
+  margin:2px 0;
+  padding:9px 12px;
+
+  color:var(--text-dim);
+  border-radius:12px;
+
+  font-size:13px;
+  line-height:1.4;
+  cursor:pointer;
+
+  transition:
+    color .15s ease,
+    transform .15s ease,
+    box-shadow .15s ease,
+    background-color .15s ease;
+}#hd-overlay .side-link:hover{
+  color:var(--text);
+  transform:translateX(2px);
+}#hd-overlay .side-link.active{
+  color:var(--accent-strong);
+  font-weight:720;
+  background:var(--surface-pressed);
+  box-shadow:var(--shadow-inset);
+}#hd-overlay .main{
+  min-width:0;
+  max-width:none;
+  padding:0 0 80px;
+}#hd-overlay .crumb{
+  margin:0 0 10px 10px;
+  color:var(--text-faint);
+  font-size:11px;
+}#hd-overlay .crumb span{
+  cursor:pointer;
+}#hd-overlay .crumb span:hover{
+  color:var(--accent-strong);
+}#hd-overlay /* ── Статья ───────────────────────────────────────────────── */
+
+#hd-overlay .article{
+  position:relative;
+  overflow:hidden;
+
+  min-height:360px;
+  padding:clamp(28px,4.8vw,58px);
+
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-raised);
+
+  transition:background-color .28s ease,box-shadow .28s ease;
+}#hd-overlay .article::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+
+  width:100%;
+  height:1px;
+
+  background:rgba(255,255,255,.52);
+  opacity:.45;
+  pointer-events:none;
+}[data-theme="dark"] #hd-overlay .article::before{
+  opacity:.10;
+}#hd-overlay .article h1{
+  max-width:760px;
+  margin:0 0 .55em;
+  font-size:clamp(29px,4.3vw,46px);
+  font-weight:760;
+  line-height:1.06;
+}#hd-overlay .article h2{
+  max-width:760px;
+  margin:2em 0 .62em;
+  font-size:18px;
+  font-weight:720;
+  line-height:1.25;
+}#hd-overlay .article p{
+  max-width:760px;
+  margin:0 0 1.15em;
+  color:var(--text);
+}#hd-overlay .article ul,#hd-overlay .article ol{
+  max-width:760px;
+  margin:0 0 1.2em;
+  padding-left:1.3em;
+}#hd-overlay .article li{
+  margin-bottom:.5em;
+}#hd-overlay .article strong{
+  color:var(--text);
+  font-weight:760;
+}#hd-overlay .article code{
+  padding:.12em .42em;
+
+  background:var(--surface-pressed);
+  border:1px solid var(--line);
+  border-radius:7px;
+  box-shadow:var(--shadow-inset);
+
+  font-size:.9em;
+}#hd-overlay .lede{
+  max-width:760px;
+  margin-bottom:1.6em;
+  color:var(--text-dim);
+  font-size:17px;
+  line-height:1.6;
+}#hd-overlay /* ── Ссылки под статьями ──────────────────────────────────── */
+
+#hd-overlay .next-links{
+  margin-top:25px;
+  padding:20px 22px;
+
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-soft);
+}#hd-overlay .next-links .nl-label{
+  margin-bottom:9px;
+  color:var(--text-faint);
+  font-size:10px;
+  font-weight:760;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}#hd-overlay .next-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  margin:3px 0;
+  padding:11px 12px;
+
+  color:var(--text);
+  border-radius:13px;
+  font-size:13.5px;
+  cursor:pointer;
+
+  transition:
+    color .15s ease,
+    transform .15s ease,
+    background-color .15s ease,
+    box-shadow .15s ease;
+}#hd-overlay .next-row:hover{
+  color:var(--accent-strong);
+  transform:translateX(2px);
+  background:var(--surface-pressed);
+  box-shadow:var(--shadow-inset);
+}#hd-overlay .next-row svg{
+  flex-shrink:0;
+  width:15px;
+  height:15px;
+  margin-left:auto;
+
+  fill:none;
+  stroke:var(--text-faint);
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}#hd-overlay /* ── Мобильное меню ───────────────────────────────────────── */
+
+#hd-overlay .side-backdrop{
+  display:none;
 }
-[data-theme="dark"] .hd-root{
-  --hd-surface:#17191d; --hd-surface-soft:#1b1e22; --hd-surface-pressed:#121418;
-  --hd-text:#f2f3f5; --hd-text-dim:#a6abb2; --hd-text-faint:#6f757e;
-  --hd-accent:#9a89ff; --hd-accent-strong:#b0a3ff; --hd-accent-soft:rgba(154,137,255,.14);
-  --hd-line:rgba(255,255,255,.055); --hd-highlight:rgba(255,255,255,.035); --hd-shadow:rgba(0,0,0,.56);
-  --hd-sh-raised:14px 14px 30px rgba(0,0,0,.54),-10px -10px 24px rgba(255,255,255,.022);
-  --hd-sh-soft:8px 8px 18px rgba(0,0,0,.48),-6px -6px 16px rgba(255,255,255,.018);
-  --hd-sh-small:5px 5px 12px rgba(0,0,0,.42),-4px -4px 10px rgba(255,255,255,.018);
-  --hd-sh-inset:inset 5px 5px 11px rgba(0,0,0,.62),inset -4px -4px 10px rgba(255,255,255,.022);
+
+@media (max-width:880px){#hd-overlay .top{
+    width:calc(100% - 16px);
+    margin-top:8px;
+    padding:
+      calc(max(env(safe-area-inset-top),0px) + 10px)
+      12px
+      10px;
+    border-radius:17px;
+  }#hd-overlay .burger{
+    display:flex;
+  }#hd-overlay .layout{
+    display:block;
+    width:calc(100% - 16px);
+    margin-top:16px;
+  }#hd-overlay .side{
+    position:fixed;
+    top:0;
+    right:auto;
+    bottom:auto;
+    left:0;
+    z-index:80;
+
+    width:min(88vw,340px);
+    height:100vh;
+    height:100dvh;
+    max-height:none;
+    padding:
+      calc(env(safe-area-inset-top) + 14px)
+      15px
+      calc(env(safe-area-inset-bottom) + 22px);
+
+    overflow-y:auto;
+    overscroll-behavior:contain;
+
+    background:var(--surface);
+    border:0;
+    border-right:1px solid var(--line);
+    border-radius:0;
+    box-shadow:20px 0 44px rgba(0,0,0,.28);
+
+    transform:translate3d(-105%,0,0);
+    -webkit-overflow-scrolling:touch;
+  }#hd-overlay .side.open{
+    transform:translate3d(0,0,0);
+  }#hd-overlay .side-mobile-head{
+    position:sticky;
+    top:calc(-1 * env(safe-area-inset-top));
+    z-index:4;
+
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    margin:
+      calc(-1 * env(safe-area-inset-top) - 14px)
+      -15px
+      14px;
+    padding:
+      calc(env(safe-area-inset-top) + 14px)
+      15px
+      13px;
+
+    background:var(--surface);
+    border-bottom:1px solid var(--line);
+  }#hd-overlay .side-mobile-title{
+    min-width:0;
+  }#hd-overlay .side-mobile-title strong{
+    display:block;
+    overflow:hidden;
+    color:var(--text);
+    font-family:var(--font-display);
+    font-size:13.5px;
+    font-weight:800;
+    letter-spacing:-.025em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }#hd-overlay .side-mobile-title span{
+    display:block;
+    margin-top:1px;
+    color:var(--text-faint);
+    font-size:10.5px;
+  }#hd-overlay .side-close{
+    display:flex;
+    flex-shrink:0;
+    align-items:center;
+    justify-content:center;
+
+    width:40px;
+    height:40px;
+    margin-left:auto;
+
+    color:var(--text);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--shadow-small);
+    cursor:pointer;
+  }#hd-overlay .side-close:active{
+    box-shadow:var(--shadow-inset);
+  }#hd-overlay .side-close svg{
+    width:18px;
+    height:18px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+  }#hd-overlay .side-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:70;
+
+    background:rgba(20,22,27,.36);
+    opacity:0;
+    visibility:hidden;
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+
+    transition:opacity .22s ease,visibility .22s ease;
+  }#hd-overlay .side-backdrop.open{
+    display:block;
+    opacity:1;
+    visibility:visible;
+  }#hd-overlay .main{
+    padding-bottom:60px;
+  }#hd-overlay .article{
+    min-height:0;
+    padding:29px 21px;
+    border-radius:24px;
+  }#hd-overlay .article h1{
+    font-size:clamp(26px,8vw,36px);
+  }#hd-overlay .next-links{
+    padding:17px 15px;
+    border-radius:19px;
+  }#hd-overlay .lede{
+    font-size:15.5px;
+  }#hd-overlay .crumb{
+    margin-left:7px;
+  }
 }
-.hd-root *{box-sizing:border-box}
-.hd-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.hd-back-btn{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  color:var(--hd-text);background:var(--hd-surface);border:1px solid var(--hd-line);border-radius:13px;
-  box-shadow:var(--hd-sh-small);cursor:pointer}
-.hd-back-btn:active{box-shadow:var(--hd-sh-inset)}
-.hd-back-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.hd-top-title{font-family:var(--hd-font-disp);font-weight:800;font-size:15.5px;letter-spacing:-.02em;color:var(--hd-text)}
-.hd-search-wrap{position:relative;margin-bottom:12px}
-.hd-search-input{width:100%;padding:10px 12px 10px 35px;color:var(--hd-text);background:var(--hd-surface-pressed);
-  border:1px solid var(--hd-line);border-radius:13px;box-shadow:var(--hd-sh-inset);font-size:13px}
-.hd-search-input::placeholder{color:var(--hd-text-faint)}
-.hd-search-input:focus{outline:none;box-shadow:var(--hd-sh-inset),0 0 0 3px var(--hd-accent-soft)}
-.hd-search-icon{position:absolute;top:50%;left:12px;width:14px;height:14px;fill:none;stroke:var(--hd-text-faint);
-  stroke-width:2;stroke-linecap:round;transform:translateY(-50%)}
-.hd-loading,.hd-error{padding:30px 0;text-align:center;color:var(--hd-text-faint);font-size:13px}
-.hd-sec{border-bottom:1px solid var(--hd-line)}
-.hd-sec:last-child{border-bottom:none}
-.hd-sec-head{display:flex;align-items:center;gap:8px;padding:12px 4px;color:var(--hd-text);font-size:14px;
-  font-weight:680;cursor:pointer;user-select:none}
-.hd-sec-head .hd-chev{width:14px;height:14px;margin-left:auto;fill:none;stroke:var(--hd-text-faint);stroke-width:2;
-  stroke-linecap:round;stroke-linejoin:round;transition:transform .18s ease}
-.hd-sec.open .hd-chev{stroke:var(--hd-accent);transform:rotate(90deg)}
-.hd-sec-items{display:none;padding:0 0 8px}
-.hd-sec.open .hd-sec-items{display:block}
-.hd-link{display:block;margin:2px 0;padding:9px 12px;color:var(--hd-text-dim);border-radius:12px;font-size:13px;
-  line-height:1.4;cursor:pointer}
-.hd-link.empty{color:var(--hd-text-faint);font-style:italic;cursor:default}
-.hd-link:active{background:var(--hd-surface-pressed);box-shadow:var(--hd-sh-inset)}
-.hd-article{position:relative;min-height:0;padding:22px 18px;background:var(--hd-surface);border:1px solid var(--hd-line);
-  border-radius:24px;box-shadow:var(--hd-sh-raised);margin-bottom:14px}
-.hd-article h1{margin:0 0 .5em;font-family:var(--hd-font-disp);font-weight:760;font-size:clamp(22px,7vw,28px);
-  line-height:1.15;color:var(--hd-text)}
-.hd-article h2{margin:1.6em 0 .5em;font-family:var(--hd-font-disp);font-weight:720;font-size:16px;color:var(--hd-text)}
-.hd-article p{margin:0 0 1em;color:var(--hd-text);font-size:14px;line-height:1.6}
-.hd-article ul{margin:0 0 1em;padding-left:1.2em}
-.hd-article li{margin-bottom:.4em;color:var(--hd-text);font-size:14px;line-height:1.55}
-.hd-article strong{font-weight:760;color:var(--hd-text)}
-.hd-article a{color:var(--hd-accent-strong)}
-.hd-crumb{margin:0 0 10px 4px;color:var(--hd-text-faint);font-size:11px;cursor:pointer}
-.hd-next{padding:16px 15px;background:var(--hd-surface);border:1px solid var(--hd-line);border-radius:19px;
-  box-shadow:var(--hd-sh-soft)}
-.hd-next-label{margin-bottom:8px;color:var(--hd-text-faint);font-size:10px;font-weight:760;letter-spacing:.1em;
-  text-transform:uppercase}
-.hd-next-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:10px 10px;color:var(--hd-text);
-  border-radius:13px;font-size:13.5px;cursor:pointer}
-.hd-next-row:active{background:var(--hd-surface-pressed);box-shadow:var(--hd-sh-inset)}
-.hd-next-row svg{flex-shrink:0;width:14px;height:14px;margin-left:auto;fill:none;stroke:var(--hd-text-faint);
-  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+@media (max-width:420px){#hd-overlay .top-sub{
+    display:none;
+  }#hd-overlay .side{
+    width:92vw;
+  }
+}#hd-overlay .side::-webkit-scrollbar{
+  width:0;
+  height:0;
+}
+
+@media (prefers-reduced-motion:reduce){#hd-overlay *,#hd-overlay *::before,#hd-overlay *::after{
+    scroll-behavior:auto !important;
+    transition:none !important;
+    animation:none !important;
+  }
+}
+
+
 </style>
 
 <div id="cardentry-overlay">
@@ -2614,7 +3190,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <span>Составить личный план</span>
       <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
-    <div class="howto-btn" onclick="closeHowToUsePopup();switchView('help-docs')">
+    <div class="howto-btn" onclick="closeHowToUsePopup();openHelpDocs()">
       <span>Полное описание приложения</span>
       <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
@@ -3014,7 +3590,6 @@ function switchView(name) {
   }
   if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
-  if (name === 'help-docs') { helpDocsLoad(); }
   if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
@@ -5651,7 +6226,7 @@ const DEEPLINKS = {
   'deck-rules':  { go: () => switchView('deck-rules'),    guests: true  },
   'support':     { go: () => openSupportPopup(),          guests: true  },
   'help':        { go: () => switchView('payment-help'), guests: true  },
-  'guide':       { go: () => switchView('help-docs'),     guests: true  },
+  'guide':       { go: () => openHelpDocs(),              guests: true  },
 
   // — Только для участников: гость упирается в пейвол —
   'schedule':    { go: () => switchView('schedule'),      guests: false },
@@ -8941,54 +9516,94 @@ function openMagazine(){
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   СПРАВКА КЛУБА (view-help-docs) — 07.08.2026. Данные с бэкенда
-   (GET /help-docs), тот же узкий markdown-парсер, что и в дашборде и в
-   прежней отдельной странице. Состояние экрана — hub (список разделов) или
-   article (конкретная статья) — держим в паре переменных, без роутера.
+   СПРАВКА КЛУБА — полноэкранный слой #hd-overlay (07.08.2026).
+
+   Denis попросил перенести присланный макет целиком, «как самостоятельную
+   страницу», а не растащить его на элементы внутри аппа. Поэтому вёрстка,
+   классы и поведение повторяют исходный файл один в один: боковое меню с
+   раскрывающимися разделами и поиском, статья карточкой, ссылки «ещё в
+   разделе», на узком экране меню уезжает за гамбургер.
+
+   ОТЛИЧИЯ ОТ ИСХОДНОГО ФАЙЛА — только вынужденные:
+   1. Контент приходит с бэкенда (GET /help-docs), а не лежит в константе.
+   2. Тема НЕ своя: кнопка зовёт общий toggleTheme() аппа, иначе получилось
+      бы два независимых состояния светло/темно, которые разъедутся.
+   3. Адрес страницы не трогаем (никаких location.hash) — апп живёт на одном
+      адресе, и переписывание хэша ломает возврат в Telegram.
    ═══════════════════════════════════════════════════════════════════ */
 let hdData = null;              // { sections: [{key,label,articles:[{key,title,body}]}] }
 let hdOpenSecs = new Set();
-let hdState = 'hub';            // 'hub' | 'article'
 let hdCurrentSection = null;
 let hdCurrentArticle = null;
 
+const HD_CHEV  = '<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+const HD_ARROW = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+const HD_SUN   = 'M12 3v2M12 19v2M5 5l1.4 1.4M17.6 17.6L19 19M3 12h2M19 12h2M5 19l1.4-1.4M17.6 6.4L19 5M12 8a4 4 0 100 8 4 4 0 000-8z';
+const HD_MOON  = 'M20 14.5A8 8 0 119.5 4a6.5 6.5 0 1010.5 10.5z';
+
+function openHelpDocs(){
+  document.getElementById('hd-overlay').classList.add('open');
+  helpDocsSyncThemeIcon();
+  helpDocsLoad();
+}
+
+function closeHelpDocs(){
+  helpDocsToggleSide(false);
+  document.getElementById('hd-overlay').classList.remove('open');
+}
+
+/* Иконка темы показывает, КУДА переключишь, как в исходном файле: в светлой
+   теме луна, в тёмной солнце. Состояние берём у документа — им управляет апп */
+function helpDocsSyncThemeIcon(){
+  const el = document.getElementById('hd-theme-icon');
+  if (!el) return;
+  const dark = document.documentElement.dataset.theme === 'dark';
+  el.innerHTML = '<path d="' + (dark ? HD_SUN : HD_MOON) + '"/>';
+}
+
 async function helpDocsLoad(){
-  if (hdData) { helpDocsRenderHub(); return; }   // не дёргаем сервер повторно за один визит в апп
-  const body = document.getElementById('hd-body');
+  if (hdData){ helpDocsRenderHub(); return; }   // за один визит в апп ходим на сервер один раз
+  const main = document.getElementById('hd-main');
+  main.innerHTML = '<div class="article"><p>' + t('helpdocs.loading') + '</p></div>';
   try {
     hdData = await fetch(`${API_URL}/help-docs`).then(r => r.json());
     helpDocsRenderHub();
   } catch (e) {
-    body.innerHTML = `<div class="hd-error" data-text="helpdocs.load_error">Не удалось загрузить справку. Попробуй ещё раз.</div>`;
+    main.innerHTML = '<div class="article"><p>' + t('helpdocs.load_error') + '</p></div>';
   }
 }
 
 function helpDocsFindArticle(secKey, artKey){
-  const sec = (hdData.sections || []).find(s => s.key === secKey);
+  const sec = ((hdData && hdData.sections) || []).find(s => s.key === secKey);
   if (!sec) return null;
-  const art = sec.articles.find(a => a.key === artKey);
+  const art = sec.articles.find(a => a.key === artKey) || sec.articles[0];
   return art ? { sec, art } : null;
 }
 
-/* Тот же узкий markdown, что и в дашборде: ## заголовок, - список,
-   **жирный**, [текст](url). Экранирование ОБЯЗАТЕЛЬНО — текст статьи
-   приходит с сервера, а не пишется руками в код */
+/* Узкий markdown: ## заголовок, - список, **жирный**, [текст](url), `код`.
+   Экранирование обязательно — текст приходит с сервера */
 function helpDocsRenderBody(src){
   const lines = (src || '').trim().split('\n');
   let html = '', inList = false, para = [];
-  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function inline(s){
-    return esc(s)
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    return s
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>');
   }
   function flushPara(){ if (para.length){ html += '<p>' + inline(para.join(' ').trim()) + '</p>'; para = []; } }
   for (const raw of lines){
     const line = raw.trim();
     if (!line){ flushPara(); if (inList){ html += '</ul>'; inList = false; } continue; }
-    if (line.startsWith('## ')){ flushPara(); if (inList){ html += '</ul>'; inList = false; } html += '<h2>' + inline(line.slice(3)) + '</h2>'; continue; }
-    if (line.startsWith('- ')){ flushPara(); if (!inList){ html += '<ul>'; inList = true; } html += '<li>' + inline(line.slice(2)) + '</li>'; continue; }
+    if (line.startsWith('## ')){
+      flushPara(); if (inList){ html += '</ul>'; inList = false; }
+      html += '<h2>' + inline(line.slice(3)) + '</h2>'; continue;
+    }
+    if (line.startsWith('- ')){
+      flushPara(); if (!inList){ html += '<ul>'; inList = true; }
+      html += '<li>' + inline(line.slice(2)) + '</li>'; continue;
+    }
     if (inList){ html += '</ul>'; inList = false; }
     para.push(line);
   }
@@ -8996,92 +9611,131 @@ function helpDocsRenderBody(src){
   return html;
 }
 
-function helpDocsChev(){
-  return '<svg class="hd-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
-}
-function helpDocsArrow(){
-  return '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+function helpDocsRenderSide(){
+  document.getElementById('hd-side').innerHTML =
+    `<div class="side-mobile-head">
+      <div class="side-mobile-title">
+        <strong>Ты Боженька Продаж</strong>
+        <span>${t('helpdocs.title')}</span>
+      </div>
+      <button class="side-close" type="button" aria-label="Закрыть меню" onclick="helpDocsToggleSide(false)">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="search-input" id="hd-search-input" placeholder="${t('helpdocs.search_placeholder')}" oninput="helpDocsSearch(this.value)">
+    </div><div id="hd-side-list">${helpDocsBuildSideList()}</div>`;
 }
 
-function helpDocsBuildList(sections){
-  return sections.map(sec => {
+function helpDocsBuildSideList(){
+  let html = '';
+  for (const sec of ((hdData && hdData.sections) || [])){
     const isOpen = hdOpenSecs.has(sec.key);
-    const items = sec.articles.length
-      ? sec.articles.map(a =>
-          `<div class="hd-link" onclick="helpDocsGo('${sec.key}','${a.key}')">${a.title}</div>`
-        ).join('')
-      : `<div class="hd-link empty" data-text="helpdocs.no_articles">нет статей</div>`;
-    return `<div class="hd-sec${isOpen ? ' open' : ''}">
-      <div class="hd-sec-head" onclick="helpDocsToggleSec('${sec.key}')">${sec.label}${helpDocsChev()}</div>
-      <div class="hd-sec-items">${items}</div>
-    </div>`;
-  }).join('');
+    html += `<div class="side-sec${isOpen ? ' open' : ''}">
+      <div class="side-head" onclick="helpDocsToggleSec('${sec.key}')">${sec.label}${HD_CHEV}</div>
+      <div class="side-items">`;
+    if (sec.articles.length){
+      for (const art of sec.articles){
+        const active = sec.key === hdCurrentSection && art.key === hdCurrentArticle;
+        html += `<div class="side-link${active ? ' active' : ''}" onclick="helpDocsGo('${sec.key}','${art.key}')">${art.title}</div>`;
+      }
+    } else {
+      html += `<div class="side-link" style="opacity:.6;font-style:italic;cursor:default">${t('helpdocs.no_articles')}</div>`;
+    }
+    html += '</div></div>';
+  }
+  return html;
 }
 
+function helpDocsToggleSec(key){
+  hdOpenSecs.has(key) ? hdOpenSecs.delete(key) : hdOpenSecs.add(key);
+  document.getElementById('hd-side-list').innerHTML = helpDocsBuildSideList();
+}
+
+function helpDocsSearch(q){
+  q = (q || '').trim().toLowerCase();
+  const list = document.getElementById('hd-side-list');
+  if (!q){ list.innerHTML = helpDocsBuildSideList(); return; }
+  let html = '';
+  for (const sec of ((hdData && hdData.sections) || [])){
+    const hits = sec.articles.filter(a =>
+      a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q));
+    if (!hits.length) continue;
+    html += `<div class="side-sec open"><div class="side-head">${sec.label}</div><div class="side-items">`;
+    for (const art of hits){
+      html += `<div class="side-link" onclick="helpDocsGo('${sec.key}','${art.key}')">${art.title}</div>`;
+    }
+    html += '</div></div>';
+  }
+  list.innerHTML = html ||
+    `<div style="padding:14px 8px;font-size:13.5px;color:var(--text-faint)">${t('helpdocs.search_empty')}</div>`;
+}
+
+/* Стартовый экран: вступление плюс список разделов строками */
 function helpDocsRenderHub(){
-  hdState = 'hub'; hdCurrentSection = null; hdCurrentArticle = null;
+  hdCurrentSection = null; hdCurrentArticle = null;
   const sections = (hdData && hdData.sections) || [];
-  const introTitle = t('helpdocs.intro_title');
-  const introBody = t('helpdocs.intro_body');
-  const sectionsLabel = t('helpdocs.sections_label');
-  document.getElementById('hd-body').innerHTML =
-    `<div class="hd-article"><h1>${introTitle}</h1><p>${introBody}</p></div>
-     <div class="hd-sec-label" style="margin:0 0 6px 4px;color:var(--hd-text-faint);font-size:10px;font-weight:760;letter-spacing:.1em;text-transform:uppercase">${sectionsLabel}</div>
-     ${helpDocsBuildList(sections)}`;
+  let html = `<div class="article"><h1>${t('helpdocs.intro_title')}</h1><p class="lede">${t('helpdocs.intro_body')}</p></div>`;
+  html += `<div class="next-links"><div class="nl-label">${t('helpdocs.sections_label')}</div>`;
+  for (const sec of sections){
+    if (!sec.articles.length) continue;      // пустой раздел читателю показывать нечего
+    html += `<div class="next-row" onclick="helpDocsGo('${sec.key}','${sec.articles[0].key}')">${sec.label}${HD_ARROW}</div>`;
+  }
+  html += '</div>';
+  document.getElementById('hd-main').innerHTML = html;
+  helpDocsRenderSide();
+  helpDocsCloseSideIfMobile();
 }
 
 function helpDocsGo(secKey, artKey){
   const found = helpDocsFindArticle(secKey, artKey);
   if (!found){ helpDocsRenderHub(); return; }
-  hdState = 'article'; hdCurrentSection = secKey; hdCurrentArticle = artKey;
+  hdCurrentSection = secKey; hdCurrentArticle = found.art.key;
   hdOpenSecs.add(secKey);
 
-  const others = found.sec.articles.filter(a => a.key !== artKey);
+  const others = found.sec.articles.filter(a => a.key !== found.art.key);
   let nextHtml = '';
   if (others.length){
-    nextHtml = `<div class="hd-next"><div class="hd-next-label" data-text="helpdocs.more_in_section">Ещё в разделе</div>`
-      + others.map(a => `<div class="hd-next-row" onclick="helpDocsGo('${secKey}','${a.key}')">${a.title}${helpDocsArrow()}</div>`).join('')
-      + `</div>`;
+    nextHtml = `<div class="next-links"><div class="nl-label">${t('helpdocs.more_in_section')}</div>`;
+    for (const a of others){
+      nextHtml += `<div class="next-row" onclick="helpDocsGo('${secKey}','${a.key}')">${a.title}${HD_ARROW}</div>`;
+    }
+    nextHtml += '</div>';
   }
 
-  document.getElementById('hd-body').innerHTML =
-    `<div class="hd-crumb" onclick="helpDocsRenderHub()" data-text="helpdocs.back_to_list">Справка</div>
-     <div class="hd-article"><h1>${found.art.title}</h1>${helpDocsRenderBody(found.art.body)}</div>
-     ${nextHtml}`;
-  document.querySelector('.view#view-help-docs').scrollTop = 0;
+  document.getElementById('hd-main').innerHTML =
+    `<div class="crumb"><span onclick="helpDocsRenderHub()">${t('helpdocs.back_to_list')}</span> · ${found.sec.label}</div>
+     <div class="article"><h1>${found.art.title}</h1>${helpDocsRenderBody(found.art.body)}</div>${nextHtml}`;
+  helpDocsRenderSide();
+  const ov = document.getElementById('hd-overlay');
+  if (ov) ov.scrollTop = 0;
+  helpDocsCloseSideIfMobile();
 }
 
-function helpDocsToggleSec(key){
-  hdOpenSecs.has(key) ? hdOpenSecs.delete(key) : hdOpenSecs.add(key);
-  helpDocsRenderHub();
+/* Боковое меню на узком экране — как в исходном файле: выезжает поверх,
+   фон затемняется, прокрутка страницы под ним блокируется */
+function helpDocsSetSideOpen(open){
+  const side = document.getElementById('hd-side');
+  const backdrop = document.getElementById('hd-side-backdrop');
+  const overlay = document.getElementById('hd-overlay');
+  if (!side || !backdrop) return;
+  side.classList.toggle('open', open);
+  backdrop.classList.toggle('open', open);
+  if (overlay) overlay.classList.toggle('side-open', open);
+  const burger = document.getElementById('hd-burger');
+  if (burger) burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function helpDocsCloseSideIfMobile(){
+  if (window.innerWidth <= 880) helpDocsSetSideOpen(false);
+}
+function helpDocsToggleSide(force){
+  const side = document.getElementById('hd-side');
+  if (!side) return;
+  const open = typeof force === 'boolean' ? force : !side.classList.contains('open');
+  helpDocsSetSideOpen(open);
 }
 
-function helpDocsSearch(q){
-  q = (q || '').trim().toLowerCase();
-  const body = document.getElementById('hd-body');
-  if (!q){ helpDocsRenderHub(); return; }
-  const sections = (hdData && hdData.sections) || [];
-  let html = '';
-  for (const sec of sections){
-    const hits = sec.articles.filter(a =>
-      a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q));
-    if (!hits.length) continue;
-    html += `<div class="hd-sec open"><div class="hd-sec-head">${sec.label}</div><div class="hd-sec-items">`
-      + hits.map(a => `<div class="hd-link" onclick="helpDocsGo('${sec.key}','${a.key}')">${a.title}</div>`).join('')
-      + `</div></div>`;
-  }
-  body.innerHTML = html || `<div class="hd-loading" data-text="helpdocs.search_empty">Ничего не нашлось</div>`;
-}
-
-/* Из статьи — назад к списку разделов. Из списка — совсем из справки на
-   портал: это единственная точка входа (попап «Как пользоваться клубом»),
-   истории переходов в аппе нет, поэтому цель фиксированная */
-function helpDocsBack(){
-  if (hdState === 'article'){ helpDocsRenderHub(); return; }
-  const search = document.getElementById('hd-search-input');
-  if (search) search.value = '';
-  switchView('portal');
-}
 
 async function loadMagazine(){
   const shelf = document.getElementById('mag-shelf');
