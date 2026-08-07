@@ -216,7 +216,14 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .stream-tile{border-radius:16px;overflow:hidden;cursor:pointer;background:var(--card);border:1px solid var(--border);position:relative;display:flex;flex-direction:column}
 .stream-tile:active{transform:scale(0.97)}
 /* Пропорция вместо фикс. высоты — плитка в сетке шире, чем была в ряду */
-.stream-tile-img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--card2)}
+/* Обложка проявляется, когда картинка догрузилась, а не возникает за кадр.
+   Сделано СТИЛЕМ, а не правкой трёх мест разметки (потоки, бонусы, журнал):
+   `animation` на самом <img> стартует в момент, когда браузер его отрисовал,
+   то есть ровно тогда, когда файл пришёл — отдельный обработчик onload не нужен */
+.stream-tile-img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:var(--card2);
+  animation:tileImgIn .42s ease both}
+@keyframes tileImgIn{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){ .stream-tile-img{animation:none} }
 .stream-tile-title{font-size:11.5px;font-weight:700;padding:8px 10px;line-height:1.3}
 
 .tag-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
@@ -888,8 +895,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    остановки разного размера всё равно нанизаны на одну тропинку */
 .pmap-stop{position:absolute;transform:translate(-50%,0);width:112px;padding:0;border:none;
   background:none;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;
-  align-items:center;gap:8px;animation:pmapIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
-@keyframes pmapIn{from{opacity:0;transform:translate(-50%,0) scale(.5)}}
+  align-items:center;gap:8px;
+  /* СМЯГЧЕНО 07.08.2026. Было `.5s cubic-bezier(.2,.9,.3,1.2)` от scale(.5):
+     кривая с забросом ЗА единицу плюс двукратный рост — кружки буквально
+     выстреливали. Теперь короткий подъём с лёгким доростом, без отскока */
+  animation:pmapIn .46s cubic-bezier(.22,.61,.36,1) backwards}
+/* ВАЖНО: стартовый кадр обязан повторять центрирование самого элемента
+   (translate(-50%,-50%) в блоке ниже) — иначе за время анимации кружок
+   дополнительно съезжает на половину высоты, и это читается как рывок */
+@keyframes pmapIn{from{opacity:0;transform:translate(-50%,calc(-50% + 6px)) scale(.86)}}
 /* Матовое стекло: цвет лежит снизу, поверх него белая вуаль и блик
    в левом верхнем углу, а ::after размывает всё, что под ним (в том числе
    обложку лекции) — оттого камешек и читается как стекло, а не как заливка */
@@ -963,7 +977,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .prail-inner{position:relative;height:116px}
 .prail-line{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
 .prail-line path{fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:6 8}
-.prail .pmap-stop{width:auto;animation:none}
+/* В ленте своя анимация — мягче и без сдвига: остановки тут мельче
+   и стоят плотно, крупное движение выглядело бы суетой */
+.prail .pmap-stop{width:auto;animation:prailIn .42s cubic-bezier(.22,.61,.36,1) backwards}
+@keyframes prailIn{from{opacity:0;transform:translate(-50%,calc(-50% + 4px)) scale(.9)}}
 /* В ЛЕНТЕ подписи под кружками не показываем (07.08.2026): названия лекций
    обрезались в три строки и раздували блок вдвое. Полное название человек
    видит в попапе остановки и на полной карте — там места достаточно */
@@ -972,9 +989,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* ── Пустое состояние личного плана (07.08.2026) ──
    Вместо надписи «пока пусто» — призрачная лента под вуалью и одна кнопка.
    Вуаль намеренно НЕ полностью непрозрачная: сквозь неё видно, что появится */
-.plan-empty-wrap{position:relative;min-height:64px;display:flex;align-items:center;justify-content:center}
+.plan-empty-wrap{position:relative;min-height:76px;display:flex;align-items:center;justify-content:center}
 .plan-empty-ghost{opacity:.5;filter:saturate(.35);pointer-events:none;width:100%}
-.plan-ghost-stop{position:absolute;top:8px;width:40px;height:40px;display:block}
+.plan-ghost-row{display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:10px 4px;flex-wrap:nowrap;overflow:hidden}
+.plan-ghost-stop{flex:0 0 auto;width:40px;height:40px;display:block}
 .plan-ghost-stop img{width:100%;height:100%;object-fit:contain;display:block}
 .plan-empty-veil{position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.55) 62%,rgba(255,255,255,.72));
@@ -6919,7 +6938,11 @@ function renderPersonalPlanSection(){
   if (!el) return;
   const saved = allLectures.filter(l => savedSlugs.has(l.slug));
   if (!saved.length) {
-    el.innerHTML = '<div class="reward-hint">Пока пусто — сохраняй лекции звёздочкой, и они появятся здесь</div>';
+    // Пустой блок отложенного просто НЕ ПОКАЗЫВАЕМ (07.08.2026). Раньше здесь
+    // висела строка «Пока пусто — сохраняй лекции звёздочкой»: она лежала
+    // внутри карточки личного плана и читалась так, будто пуста САМА КАРТА,
+    // хотя карта рядом полна остановок. Denis на неё и споткнулся
+    el.innerHTML = '';
     return;
   }
   savedCardItems = saved;
@@ -7371,7 +7394,7 @@ function planRailHtml(answers){
     const done = planVisited.has(s.lec.slug);
     const skip = planSkipped.has(s.lec.slug);
     html += planStopNode(i, s, size[i], done, skip, i === nextIdx,
-      'left:' + (X0 + i * STEP) + 'px;top:' + cy(i) + 'px;');
+      'left:' + (X0 + i * STEP) + 'px;top:' + cy(i) + 'px;animation-delay:' + (i * 45) + 'ms;');
   });
   html += '</div></div>';
 
@@ -7518,16 +7541,18 @@ function renderPersonalPlanBody(){
 
 /* Призрачная лента для пустого состояния — те же кружки, но без данных.
    Рисуем прямо картинками остановок: они уже лежат в проекте, и человек
-   видит настоящий вид будущего пути, а не абстрактные серые кубики */
+   видит настоящий вид будущего пути, а не абстрактные серые кубики.
+   Центрируем флексом, а не абсолютными координатами: числа остановок
+   немного, и прижатая к левому краю лента выглядела обрезанной */
 function planGhostRailHtml(){
   const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
-  let html = '<div class="prail"><div class="prail-inner" style="width:100%;height:64px">';
-  for (let i = 0; i < 4; i++){
-    html += '<span class="plan-ghost-stop" style="left:' + (30 + i * 52) + 'px">'
+  let html = '<div class="plan-ghost-row">';
+  for (let i = 0; i < 6; i++){
+    html += '<span class="plan-ghost-stop">'
       + '<img src="images/plan/' + theme + '/' + (i + 1) + '-1.jpg" alt="" loading="lazy">'
       + '</span>';
   }
-  html += '</div></div>';
+  html += '</div>';
   return html;
 }
 
