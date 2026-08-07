@@ -6757,19 +6757,32 @@ async function loadStreams() {
   }
 
   try {
-    // Данные журнала нужны здесь же — иначе плитка «Журнал» нарисуется без обложки
-    const [streams] = await Promise.all([
-      fetch(`${API_URL}/streams`).then(r => r.json()),
+    /* ФИКСИРОВАННЫЕ ПЛИТКИ НЕ ЖДУТ ПОТОКОВ (07.08.2026, по замечанию Denis'а).
+
+       Раньше весь ряд ждал три запроса разом и рисовался по самому медленному.
+       Я возражал, что иначе плитки будут допрыгивать и сдвигать нарисованное —
+       ОШИБОЧНО: фиксированные стоят ПЕРВЫМИ, а потоки дописываются ПОСЛЕ них.
+       Дописывание в конец ничего не сдвигает, сдвинуло бы только вставка в
+       начало. Поэтому: «Смотреть позже», бонусы и «Журнал» показываем сразу
+       (их данные обычно уже загружены при старте аппа), потоки подъезжают
+       следом и проявляются каждый сам. */
+    const streamsPromise = fetch(`${API_URL}/streams`).then(r => r.json()).catch(() => []);
+
+    // Данные журнала и бонусов нужны для обложек фиксированных плиток
+    await Promise.all([
       magazineData ? Promise.resolve() : loadMagazine(),
       bonusesData.length ? Promise.resolve() : loadBonuses(),
     ]);
-    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml() + streams.map(s => `
+    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml();
+
+    const streams = await streamsPromise;
+    el.insertAdjacentHTML('beforeend', streams.map(s => `
       <div class="stream-tile fade-rise" onclick="openStream(${jsArg(s.stream_key)})">
         <img class="stream-tile-img" src="${escapeHtml(s.image_url || '')}" alt=""
              onerror="this.style.visibility='hidden'">
         <div class="stream-tile-title">${escapeHtml(s.title || s.stream_key)}</div>
       </div>
-    `).join('');
+    `).join(''));
     el.dataset.loadedOnce = '1';
   } catch (e) {
     el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml();
@@ -6914,20 +6927,28 @@ async function loadLibrary() {
   const listEl = document.getElementById('lib-list');
   listEl.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
-    const data = await fetch(`${API_URL}/lectures?limit=100`).then(r => r.json());
+    /* ТРИ ЗАПРОСА СТАРТУЮТ ОДНОВРЕМЕННО (07.08.2026).
+
+       Раньше справочник проблем и ответы участника запрашивались ТОЛЬКО ПОСЛЕ
+       того, как придут все сто лекций — то есть стояли в очереди без всякой
+       нужды: друг от друга они не зависят вовсе. Карта личного плана из-за
+       этого ждала сумму двух ожиданий вместо самого долгого из них.
+       Denis: «карта медленно подтягивалась» — вот прямая причина. */
+    const lecturesPromise = fetch(`${API_URL}/lectures?limit=100`).then(r => r.json());
+    const planPromise = Promise.all([loadPlanProblems(), loadPlanAnswers()]);
+
+    const data = await lecturesPromise;
     allLectures = data;
     allTags = collectTags(data);
     renderTagFilter();
     applyTagFilter();
     renderPersonalPlanSection();
-    // Личный план собирается из этой же библиотеки — справочник проблем и
-    // ответы участника тянем следом, чтобы блок не мигал пустотой.
-    // ОБЯЗАТЕЛЬНО ЖДЁМ ЭТУ ЦЕПОЧКУ, а не просто запускаем: без await здесь
-    // loadLibrary() отдавала управление раньше, чем карта личного плана
-    // реально была готова — openLibraryFirstTime() считал вкладку собранной
-    // и показывал её, а карта выскакивала следом с заметным опозданием
-    // (07.08.2026, Denis: «карта тоже грузится долго»)
-    await Promise.all([loadPlanProblems(), loadPlanAnswers()]).then(renderPersonalPlanBody);
+
+    // Карта рисуется из библиотеки, поэтому дожидаемся обеих сторон.
+    // Ждать ОБЯЗАТЕЛЬНО: без await вкладка считалась бы собранной раньше,
+    // чем карта появилась, и та выскакивала бы с опозданием
+    await planPromise;
+    renderPersonalPlanBody();
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
