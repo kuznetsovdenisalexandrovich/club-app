@@ -3908,45 +3908,73 @@ async function loadNews() {
   const el = document.getElementById('news-card');
   const headerEl = document.getElementById('news-header');
   try {
+    // ЗАПРОС СПИСКОВ SALEBOT ВЫНЕСЕН ИЗ ОБЩЕГО Promise.all (07.08.2026).
+    // Раньше он блокировал показ даже простой общей новости — а он нужен
+    // ТОЛЬКО таргетированным новостям («кто в списке Х»). Denis: «Обновления
+    // клуба» показывались заметно позже заставки — вот прямая причина:
+    // fetchListMembership может идти дольше остального (Salebot из России
+    // отвечает нестабильно, см. хостинговую сагу), а общий текст никакого
+    // отношения к спискам не имеет и мог бы появиться сразу
     const [news, urgent] = await Promise.all([
       fetch(`${API_URL}/news/latest`).then(r => r.json()),
       fetch(`${API_URL}/news/urgent`).then(r => r.json()).catch(() => ({ text: null })),
-      listMembership ? Promise.resolve() : fetchListMembership(),
     ]);
 
     const hasCommon = news.common_text && news.common_text.trim();
     const hasUrgent = urgent && urgent.text && urgent.text.trim();
-    if (!hasCommon && !hasUrgent) {
+    const hasTargeted = isMember && (news.targeted || []).length > 0;
+
+    if (!hasCommon && !hasUrgent && !hasTargeted) {
       el.style.display = 'none';
       headerEl.style.display = 'none';
       return;
     }
 
-    let html = '';
-    if (hasUrgent) {
-      html += `<div class="news-block news-block--urgent">${urgent.text}</div>`;
+    function commonHtml(){
+      let html = '';
+      if (hasUrgent) {
+        html += `<div class="news-block news-block--urgent">${urgent.text}</div>`;
+      }
+      // Срочная новость приходит отдельным эндпоинтом. Если свежая новость помечена
+      // срочной, её текст возвращают ОБА эндпоинта — рисуем один раз, в рамке
+      const sameText = hasUrgent && hasCommon
+        && urgent.text.trim() === news.common_text.trim();
+      if (hasCommon && !sameText) {
+        html += `<div class="news-block">${news.common_text}</div>`;
+      }
+      return html;
     }
-    // Срочная новость приходит отдельным эндпоинтом. Если свежая новость помечена
-    // срочной, её текст возвращают ОБА эндпоинта — рисуем один раз, в рамке
-    const sameText = hasUrgent && hasCommon
-      && urgent.text.trim() === news.common_text.trim();
-    if (hasCommon && !sameText) {
-      html += `<div class="news-block">${news.common_text}</div>`;
+
+    // Показываем сразу то, что не зависит от списков — обычно это и есть
+    // весь текст, который увидит человек
+    if (hasCommon || hasUrgent) {
+      el.innerHTML = commonHtml();
+      el.classList.add('fade-rise');
+      el.style.display = 'block';
+      headerEl.classList.add('fade-rise');
+      headerEl.style.display = 'flex';
     }
-    (news.targeted || []).forEach(t => {
-      if (!isMember) return; // в демо-режиме таргетированные новости не показываем
+
+    if (!hasTargeted) return;
+
+    // Таргетированные новости требуют списков — ждём их ОТДЕЛЬНО, не задерживая
+    // уже показанный общий текст. Если общего текста не было, карточка появится
+    // только сейчас — с той же плавностью
+    if (!listMembership) await fetchListMembership();
+    let targetedHtml = '';
+    news.targeted.forEach(t => {
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
       const isListMember = key && listMembership && listMembership[key] === 'True';
       if (isListMember) {
-        html += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
+        targetedHtml += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
       }
     });
-    el.innerHTML = html;
-    // Блок новостей появляется не всегда — до ответа сервера мы не знаем, есть
-    // ли новость вообще, поэтому скелет тут не поставить (заняли бы место
-    // впустую). Смягчаем само появление
-    el.classList.add('fade-rise');
+    if (!targetedHtml) return;
+
+    const wasHidden = el.style.display !== 'block';
+    el.innerHTML = commonHtml() + targetedHtml;
+    if (wasHidden) el.classList.add('fade-rise');
     el.style.display = 'block';
     headerEl.classList.add('fade-rise');
     headerEl.style.display = 'flex';
@@ -6851,8 +6879,13 @@ async function loadLibrary() {
     applyTagFilter();
     renderPersonalPlanSection();
     // Личный план собирается из этой же библиотеки — справочник проблем и
-    // ответы участника тянем следом, чтобы блок не мигал пустотой
-    Promise.all([loadPlanProblems(), loadPlanAnswers()]).then(renderPersonalPlanBody);
+    // ответы участника тянем следом, чтобы блок не мигал пустотой.
+    // ОБЯЗАТЕЛЬНО ЖДЁМ ЭТУ ЦЕПОЧКУ, а не просто запускаем: без await здесь
+    // loadLibrary() отдавала управление раньше, чем карта личного плана
+    // реально была готова — openLibraryFirstTime() считал вкладку собранной
+    // и показывал её, а карта выскакивала следом с заметным опозданием
+    // (07.08.2026, Denis: «карта тоже грузится долго»)
+    await Promise.all([loadPlanProblems(), loadPlanAnswers()]).then(renderPersonalPlanBody);
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
