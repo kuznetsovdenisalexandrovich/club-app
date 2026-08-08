@@ -4171,6 +4171,47 @@ function openLibraryFirstTime(){
   loadStreams();
 }
 
+
+/* ── ТИХОЕ ОБНОВЛЕНИЕ ЭКРАНА ────────────────────────────────────────────
+   ЗАЧЕМ. Почти все списки грузились ОДИН РАЗ при запуске и больше никогда.
+   Человек, у которого мини-апп живёт неделями, видел картину мира на момент
+   первого открытия: добавленный модуль бонуса, новая лекция, свежий поток до
+   него просто не доезжали. Поймали это на участнице, которой не открывался
+   третий модуль мастер-класса, хотя сервер ссылку уже отдавал.
+
+   ПРАВИЛА, чтобы обновление не превратилось в мигание:
+   • перерисовываем ТОЛЬКО при изменении данных (см. listSignature)
+   • заглушки «Загрузка...» на повторных заходах не показываем
+   • не чаще раза в SCREEN_REFRESH_MS на экран — иначе перескок между
+     вкладками начнёт долбить бэкенд                                     */
+const SCREEN_REFRESH_MS = 20000;
+const screenRefreshedAt = {};
+
+async function refreshScreenData(name, force){
+  const now = Date.now();
+  if (!force && (now - (screenRefreshedAt[name] || 0) < SCREEN_REFRESH_MS)) return;
+  screenRefreshedAt[name] = now;
+  try {
+    if (name === 'portal'){
+      await Promise.allSettled([loadNews(), loadContinueWidget(), loadWidgetMonth(), loadRaffle()]);
+    } else if (name === 'library'){
+      await Promise.allSettled([loadSavedSlugs(), loadLibrary(), loadStreams()]);
+    } else if (name === 'cards'){
+      // Колода перерисовывается только если состав изменился: renderCardsAlbum
+      // пересобирает всю разметку, и лишний вызов заново проявил бы все арты
+      const before = listSignature(cardCatalog) + '|' + listSignature(myCards);
+      await loadCards();
+      if (before !== listSignature(cardCatalog) + '|' + listSignature(myCards)) renderCardsAlbum();
+    } else if (name === 'profile'){
+      await Promise.allSettled([loadProfile(), loadSubStatus()]);
+    } else if (name === 'rewards' || name === 'points-info'){
+      await loadRewardsData();
+    }
+  } catch (e) {
+    console.warn('[обновление] ' + name + ':', e);
+  }
+}
+
 function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -4205,6 +4246,9 @@ function switchView(name) {
   syncTgBackButton(name);
   window.scrollTo(0, 0);
   updateLevelBarScrollPosition();
+  // Тихо подтягиваем свежее — уже ПОСЛЕ того, как экран показан, чтобы
+  // переход оставался мгновенным
+  setTimeout(function(){ refreshScreenData(name); }, 120);
 }
 
 function openNotificationsSection(){
@@ -6931,6 +6975,13 @@ document.addEventListener('visibilitychange', async () => {
   }
   // Вернулся из ВК после подачи заявки — ждём подтверждения от бэкенда
   if (vkAccessWatch && !vkAccessGranted) pollForVkAccess();
+
+  // Человек вернулся в приложение — обновляем тот экран, на котором он стоит.
+  // force: возврат в апп это как раз тот момент, когда данные могли устареть
+  const active = document.querySelector('.view.active');
+  if (active && active.id.indexOf('view-') === 0){
+    refreshScreenData(active.id.slice('view-'.length), true);
+  }
 });
 
 async function pollForJoinUpdate(attempts = 6, delayMs = 3000){
@@ -8051,9 +8102,21 @@ async function openStream(key) {
   }
 }
 
+/* Дешёвая подпись списка: длина плюс идентификаторы. Сравнивать целиком
+   JSON.stringify на сотне лекций дорого и незачем — нам нужен только ответ
+   «изменилось или нет». */
+function listSignature(arr){
+  if (!Array.isArray(arr)) return '';
+  return arr.length + ':' + arr.map(x => x && (x.slug || x.key || x.id || '')).join(',');
+}
+let libSignature = '';
+
 async function loadLibrary() {
   const listEl = document.getElementById('lib-list');
-  listEl.innerHTML = '<div class="loading">Загрузка...</div>';
+  // Заглушку показываем ТОЛЬКО на первой загрузке. При повторных заходах на
+  // вкладку список уже нарисован, и «Загрузка...» поверх готового — это ровно
+  // тот рывок, от которого мы уходим везде
+  if (!allLectures.length) listEl.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
     /* ТРИ ЗАПРОСА СТАРТУЮТ ОДНОВРЕМЕННО (07.08.2026).
 
@@ -8066,17 +8129,25 @@ async function loadLibrary() {
     const planPromise = Promise.all([loadPlanProblems(), loadPlanAnswers()]);
 
     const data = await lecturesPromise;
+    // ЕСЛИ НИЧЕГО НЕ ИЗМЕНИЛОСЬ — НЕ ПЕРЕРИСОВЫВАЕМ. Иначе при каждом заходе
+    // на вкладку одинаковый список пересобирается заново, и все обложки
+    // проявляются повторно: механизм мягкого появления навешан на событие
+    // `load` картинок, а они грузятся заново вместе с новой разметкой
+    const sameAsBefore = allLectures.length && libSignature === listSignature(data);
     allLectures = data;
-    allTags = collectTags(data);
-    renderTagFilter();
-    applyTagFilter();
-    renderPersonalPlanSection();
+    libSignature = listSignature(data);
+    if (!sameAsBefore) {
+      allTags = collectTags(data);
+      renderTagFilter();
+      applyTagFilter();
+      renderPersonalPlanSection();
+    }
 
     // Карта рисуется из библиотеки, поэтому дожидаемся обеих сторон.
     // Ждать ОБЯЗАТЕЛЬНО: без await вкладка считалась бы собранной раньше,
     // чем карта появилась, и та выскакивала бы с опозданием
     await planPromise;
-    renderPersonalPlanBody();
+    if (!sameAsBefore) renderPersonalPlanBody();
   } catch (e) {
     listEl.innerHTML = '<div class="empty">Не удалось загрузить библиотеку</div>';
   }
