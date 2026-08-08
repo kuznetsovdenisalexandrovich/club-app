@@ -4215,7 +4215,8 @@ function viewBannerHtml(secs){
   const name = (viewSessionInfo && viewSessionInfo.name) || 'участника';
   return '<span style="opacity:.75">Глазами</span> <b>' + name + '</b>'
        + '<span style="opacity:.45"> · </span><span style="font-variant-numeric:tabular-nums">' + left + '</span>'
-       + '<span style="opacity:.45"> · </span><span style="text-decoration:underline;opacity:.75">выйти</span>';
+       + '<span style="opacity:.45"> · </span><span id="view-unlock-link" style="text-decoration:underline">открыть</span>'
+       + '<span style="opacity:.45"> · </span><span id="view-exit-link" style="text-decoration:underline;opacity:.75">выйти</span>';
 }
 
 function showViewBanner(info){
@@ -4234,7 +4235,14 @@ function showViewBanner(info){
       + 'box-shadow:0 8px 22px -6px rgba(0,0,0,.55);backdrop-filter:blur(10px);'
       + '-webkit-backdrop-filter:blur(10px);white-space:nowrap;max-width:92vw;overflow:hidden;'
       + 'text-overflow:ellipsis';
-    el.onclick = viewExit;
+    /* Разбор клика по цели, а не отдельные обработчики: содержимое плашки
+       перерисовывается каждую секунду отсчётом, и обработчики на внутренних
+       узлах слетали бы вместе с ним */
+    el.onclick = function(e){
+      const id = e.target && e.target.id;
+      if (id === 'view-unlock-link'){ openUnlockPanel(); return; }
+      viewExit();
+    };
     document.body.appendChild(el);
   }
   let left = Math.max(0, Number(info.seconds_left) || 0);
@@ -4265,6 +4273,102 @@ function viewSessionEnded(title, note){
     + '<div style="font-size:18px;font-weight:700;margin-bottom:8px">' + title + '</div>'
     + '<div style="font-size:14px;opacity:.65;line-height:1.5">'
     + (note || 'Открой просмотр заново из дашборда.') + '</div></div></div>';
+}
+
+
+/* ── ПАНЕЛЬ «ОТКРЫТЬ УЧАСТНИКУ» (09.08.2026, этап 3) ────────────────────────
+   Отдельная панель, а не кнопки внутри экранов приложения. Причина: экраны
+   рисуются десятком функций, вшивать в каждую по кнопке «открыть» — это
+   десяток мест, где можно ошибиться, и риск, что кнопка мелькнёт у обычного
+   участника. Здесь одно место, живущее только в режиме просмотра.
+
+   Само открытие идёт отдельным эндпоинтом /view/unlock со своей сессией базы:
+   режим «только чтение» при этом не ослабляется ни на грамм. */
+
+async function openUnlockPanel(){
+  let panel = document.getElementById('view-unlock-panel');
+  if (!panel){
+    panel = document.createElement('div');
+    panel.id = 'view-unlock-panel';
+    panel.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;'
+      + 'align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)';
+    panel.onclick = function(e){ if (e.target === panel) closeUnlockPanel(); };
+    document.body.appendChild(panel);
+  }
+  panel.innerHTML = '<div style="background:#1b1830;color:#f4f2ff;width:100%;max-width:520px;'
+    + 'border-radius:20px 20px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 18px);'
+    + 'max-height:80vh;overflow:auto;font-family:-apple-system,system-ui,sans-serif">'
+    + '<div style="opacity:.6;font-size:13px">Загрузка...</div></div>';
+  try{
+    const r = await fetch(API_URL + '/view/lockables');
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'не получилось');
+    renderUnlockPanel(d);
+  }catch(e){
+    renderUnlockPanel({locked: [], error: (e && e.message) || 'не получилось'});
+  }
+}
+
+function closeUnlockPanel(){
+  const p = document.getElementById('view-unlock-panel');
+  if (p) p.remove();
+}
+
+function renderUnlockPanel(d){
+  const panel = document.getElementById('view-unlock-panel');
+  if (!panel) return;
+  const name = (viewSessionInfo && viewSessionInfo.name) || 'участника';
+  const rows = (d.locked || []).map(function(it, i){
+    return '<div style="display:flex;gap:10px;align-items:center;padding:11px 0;'
+      + 'border-top:1px solid rgba(255,255,255,.08)">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:14px">' + it.title + '</div>'
+      + '<div style="font-size:11px;opacity:.5;margin-top:2px">' + (it.note || '') + '</div>'
+      + '</div>'
+      + '<button id="unlock-btn-' + i + '" style="flex:none;border:0;border-radius:999px;'
+      + 'padding:8px 14px;font-size:12px;font-weight:700;background:#7c6cf0;color:#fff;cursor:pointer">'
+      + 'Открыть</button></div>';
+  }).join('');
+
+  panel.firstChild.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">'
+    + '<div style="flex:1;font-size:16px;font-weight:700">Открыть участнику</div>'
+    + '<div style="font-size:20px;opacity:.5;cursor:pointer" id="unlock-close">✕</div></div>'
+    + '<div style="font-size:12px;opacity:.55;margin-bottom:10px">Кому: ' + name
+    + '. Открывается разово и только этому человеку — общие правила клуба не меняются.</div>'
+    + (d.error ? '<div style="font-size:13px;color:#ff8f8f;padding:10px 0">' + d.error + '</div>'
+               : (rows || '<div style="font-size:13px;opacity:.55;padding:14px 0">'
+                  + 'Закрытого ничего не осталось — открывать нечего.</div>'));
+
+  const closeBtn = document.getElementById('unlock-close');
+  if (closeBtn) closeBtn.onclick = closeUnlockPanel;
+  (d.locked || []).forEach(function(it, i){
+    const btn = document.getElementById('unlock-btn-' + i);
+    if (btn) btn.onclick = function(){ doUnlock(it, btn); };
+  });
+}
+
+async function doUnlock(item, btn){
+  btn.disabled = true;
+  btn.textContent = '...';
+  try{
+    const r = await fetch(API_URL + '/view/unlock', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({kind: item.kind, target: item.target, title: item.title})
+    });
+    const d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(d.detail || 'не получилось');
+    btn.textContent = 'Открыто';
+    btn.style.background = 'rgba(62,207,142,.25)';
+    /* Перезагружаем страницу просмотра, а не перерисовываем экран руками:
+       открытое место могло изменить сразу несколько экранов, и честнее
+       показать приложение заново, чем угадывать, что именно обновить */
+    setTimeout(function(){ location.reload(); }, 700);
+  }catch(e){
+    btn.disabled = false;
+    btn.textContent = 'Ошибка';
+    setTimeout(function(){ btn.textContent = 'Открыть'; }, 1800);
+  }
 }
 
 async function startViewMode(){
