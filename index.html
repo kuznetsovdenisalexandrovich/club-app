@@ -1577,6 +1577,30 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   .card,.tile,.coll-card,.icon-btn,.theme-switch{transition:none!important}
 }
 
+
+/* ── Плеер эфира ──────────────────────────────────────────────────────── */
+#live-host{position:fixed;z-index:640;border-radius:18px;overflow:hidden;
+  background:var(--card,#fff);box-shadow:0 10px 30px rgba(0,0,0,.18);
+  transition:left .22s ease,top .22s ease,width .22s ease}
+#live-host.live-corner{left:auto !important;right:12px;
+  top:auto !important;bottom:calc(var(--tabbar-h, 72px) + 12px);
+  width:190px !important}
+#live-host.live-corner .live-title{display:none}
+#live-host.live-corner .live-practice{display:none !important}
+.live-bar{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.live-badge{font-size:10px;font-weight:700;letter-spacing:.06em;color:#fff;
+  background:#e8614a;border-radius:6px;padding:3px 7px;flex-shrink:0}
+.live-badge.live-badge-soon{background:var(--text-dim,#8b8b8b)}
+.live-title{font-size:13px;font-weight:600;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-ctl{background:none;border:none;font-size:13px;line-height:1;padding:4px;
+  color:var(--text-dim,#8b8b8b);cursor:pointer;flex-shrink:0}
+.live-frame-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000}
+#live-frame{position:absolute;inset:0;width:100%;height:100%;border:0}
+.live-practice{display:flex;align-items:center;justify-content:center;
+  width:calc(100% - 20px);margin:10px;padding:11px;border:none;border-radius:12px;
+  background:var(--lav-dim,#eee);color:var(--lav-deep,#333);
+  font-size:13px;font-weight:600;cursor:pointer}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -1783,6 +1807,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          появляются по событию и сами исчезают, дать их выключить — значит
          дать случайно отключить то, что приносит деньги.
          Порядок ниже — ПЕРВОНАЧАЛЬНЫЙ ВИД, к нему возвращает сброс -->
+    <!-- Место под плеер эфира. Сам плеер лежит в #live-host вне экранов и
+         позиционируется поверх этой заглушки — переносить iframe нельзя,
+         он перезагрузится. Настройке не подлежит сознательно: появляется
+         по событию и сам исчезает -->
+    <div id="live-slot" style="display:none"></div>
+
     <div id="home-blocks">
 
     <div class="hblock" data-block="news">
@@ -4129,6 +4159,9 @@ function openLibraryFirstTime(){
 function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
+  // Плеер эфира не переезжает по документу, но при смене экрана меняет вид:
+  // на главной он в ленте, на остальных — уголком
+  if (typeof positionLiveHost === 'function') setTimeout(positionLiveHost, 0);
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
   const MAG_VIEWS = { 'stream':'library', 'magazine':'library', 'magazine-read':'library' };
   const tabEl = document.getElementById('tab-' + (MAG_VIEWS[name] || name));
@@ -9699,6 +9732,139 @@ let pendingVkOpenSrc = 'lib';
 let pendingVkOpenUrl = null;   // ворота открылись не из-за лекции, а из-за кнопки канала/чата
 let vkAccessWatch = false;     // ждём, пока бэкенд подтвердит выданный доступ
 
+
+/* ═══ ЖИВОЙ ЭФИР НА ГЛАВНОЙ ═══════════════════════════════════════════════
+   ПОЧЕМУ ПЛЕЕР ЛЕЖИТ ОТДЕЛЬНО ОТ ГЛАВНОЙ, А НЕ ВНУТРИ НЕЁ.
+   Требование Denis'а: свернуть эфир в угол и продолжить бродить по приложению,
+   вплоть до открытия страницы оплаты не отключаясь. Перенос узла с iframe
+   в другое место документа ПЕРЕЗАГРУЖАЕТ iframe — поток начнётся сначала.
+   Поэтому iframe создаётся ОДИН РАЗ в собственном контейнере с position:fixed,
+   лежащем вне переключаемых экранов, и никогда не переезжает. Меняются только
+   его координаты и размер: в развёрнутом виде он позиционируется ПОВЕРХ
+   пустого места-заглушки на главной, в свёрнутом — уезжает в угол.
+
+   Системный PiP (выйти из приложения и продолжать смотреть) так НЕ получится:
+   браузер умеет это только с настоящим элементом <video>, а плеер живёт в чужом
+   iframe. Если их плеер даёт свою кнопку PiP — сработает она, не мы.        */
+
+const LIVE_POLL_MS = 60000;      // как часто переспрашиваем «идёт ли эфир»
+let liveNow = null;              // последний ответ /schedule/now
+let liveMinimized = false;
+let liveDismissed = false;       // человек закрыл блок крестиком в этой сессии
+let liveIframeSrc = '';          // чтобы не пересоздавать iframe тем же адресом
+let liveLastError = '';
+
+function liveHostEl(){ return document.getElementById('live-host'); }
+function liveSlotEl(){ return document.getElementById('live-slot'); }
+
+/* Заглушка на главной держит место, плеер позиционируется поверх неё */
+function positionLiveHost(){
+  const host = liveHostEl(), slot = liveSlotEl();
+  if (!host || !slot || host.style.display === 'none') return;
+
+  const portalActive = document.getElementById('view-portal')?.classList.contains('active');
+  const inline = portalActive && !liveMinimized;
+
+  if (inline){
+    const r = slot.getBoundingClientRect();
+    // Ушли прокруткой так, что место скрылось за краем экрана — сворачиваем сами,
+    // иначе плеер повиснет за пределами видимой области и человек решит, что он пропал
+    if (r.bottom < 60 || r.top > window.innerHeight - 60){
+      host.classList.add('live-corner');
+      host.style.left = ''; host.style.top = ''; host.style.width = '';
+      return;
+    }
+    host.classList.remove('live-corner');
+    host.style.left  = r.left + 'px';
+    host.style.top   = r.top + 'px';
+    host.style.width = r.width + 'px';
+  } else {
+    host.classList.add('live-corner');
+    host.style.left = ''; host.style.top = ''; host.style.width = '';
+  }
+}
+
+function toggleLiveMinimized(){
+  liveMinimized = !liveMinimized;
+  if (!liveMinimized) switchView('portal');
+  positionLiveHost();
+}
+
+function dismissLive(){
+  liveDismissed = true;
+  renderLiveBlock();
+}
+
+function openLivePractice(){
+  if (liveNow && liveNow.link) openUrl(liveNow.link);
+}
+
+/* Рисуем то, что вернул сервер. Ошибки показываем ТЕКСТОМ, а не молчим —
+   Denis просил подробную диагностику, тут много движущихся частей */
+function renderLiveBlock(){
+  const host = liveHostEl(), slot = liveSlotEl();
+  if (!host || !slot) return;
+
+  const show = !!(liveNow && liveNow.found && liveNow.is_live && liveNow.embed_link && !liveDismissed);
+  if (!show){
+    host.style.display = 'none';
+    slot.style.display = 'none';
+    return;
+  }
+
+  slot.style.display = 'block';
+  host.style.display = 'block';
+
+  document.getElementById('live-title').textContent = liveNow.title || 'Прямой эфир';
+  const badge = document.getElementById('live-badge');
+  badge.textContent = liveNow.started ? 'В ЭФИРЕ' : 'СКОРО НАЧНЁМ';
+  badge.classList.toggle('live-badge-soon', !liveNow.started);
+
+  const practiceBtn = document.getElementById('live-practice-btn');
+  practiceBtn.style.display = liveNow.link ? 'flex' : 'none';
+
+  // Пересоздаём iframe ТОЛЬКО если поменялся адрес — иначе поток начнётся заново
+  const frame = document.getElementById('live-frame');
+  const src = liveNow.embed_link + (liveNow.embed_link.includes('?') ? '&' : '?') + 'muted=true&autoplay=true';
+  if (liveIframeSrc !== src){
+    liveIframeSrc = src;
+    frame.src = src;
+  }
+  positionLiveHost();
+}
+
+async function loadLiveNow(){
+  try {
+    const r = await fetch(`${API_URL}/schedule/now`);
+    if (!r.ok){
+      liveLastError = 'сервер ответил ' + r.status;
+      console.warn('[эфир] /schedule/now →', r.status);
+      return;
+    }
+    const d = await r.json();
+    // Эфир сменился на другой — снимаем «закрыл крестиком», это уже другое событие
+    if (liveNow && d.found && d.live_event_id && d.live_event_id !== liveNow.live_event_id){
+      liveDismissed = false;
+    }
+    liveNow = d;
+    liveLastError = '';
+    renderLiveBlock();
+  } catch (e) {
+    liveLastError = String(e && e.message || e);
+    console.warn('[эфир] не смог спросить, идёт ли трансляция:', liveLastError);
+  }
+}
+
+function startLiveWatch(){
+  loadLiveNow();
+  setInterval(loadLiveNow, LIVE_POLL_MS);
+  window.addEventListener('scroll', positionLiveHost, { passive: true });
+  window.addEventListener('resize', positionLiveHost);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadLiveNow();
+  });
+}
+
 function openVkAccessGate(index, src){
   pendingVkOpenIndex = index;
   pendingVkOpenSrc = src || 'lib';
@@ -10451,6 +10617,9 @@ function startApp(){
     loadAppSettings(), loadProfile(), loadContinueWidget(), loadNews(),
     loadWidgetMonth(), loadSavedSlugs(), loadCards(), loadRaffle(),
   ]);
+  // Эфир СОЗНАТЕЛЬНО вне boot: заставка не должна ждать ответа про трансляцию.
+  // Блок появится сам, когда придёт ответ — на 99% запусков эфира нет
+  startLiveWatch();
   const cap = new Promise(function(resolve){ setTimeout(resolve, SPLASH_CAP); });
   Promise.race([boot, cap]).then(function(){
     // ещё кадр на раскладку — иначе снимаем заставку ровно в момент вставки
@@ -13359,6 +13528,22 @@ async function sendQuizCardToBot(){
 }
 
 </script>
+<!-- ПЛЕЕР ЭФИРА. Лежит вне переключаемых экранов и НИКОГДА не переезжает
+     по документу: перенос узла с iframe перезагружает поток. Меняются
+     только координаты (см. positionLiveHost) -->
+<div id="live-host" style="display:none">
+  <div class="live-bar">
+    <span class="live-badge" id="live-badge">В ЭФИРЕ</span>
+    <span class="live-title" id="live-title">Прямой эфир</span>
+    <button class="live-ctl" id="live-min-btn" onclick="toggleLiveMinimized()" title="Свернуть">▭</button>
+    <button class="live-ctl" onclick="dismissLive()" title="Закрыть">✕</button>
+  </div>
+  <div class="live-frame-wrap">
+    <iframe id="live-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen frameborder="0"></iframe>
+  </div>
+  <button class="live-practice" id="live-practice-btn" onclick="openLivePractice()" style="display:none">Подключиться к практике</button>
+</div>
+
 </body>
 
 </html>
