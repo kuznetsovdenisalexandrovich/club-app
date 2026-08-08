@@ -7139,6 +7139,37 @@ const LIBRARY_TOUR_STEPS = [
 let tourActive = false;
 let tourStep = 0;
 let tourResizeObserver = null;
+let tourScrolledForStep = -1;   // до какого шага уже домотали
+
+/* Ждём УСЛОВИЕ, а не отмеренную паузу. Правило выучено на блоке личного плана:
+   «отваливается» почти всегда значит «спросили раньше времени». */
+function tourWaitFor(condFn, timeoutMs = 6000, everyMs = 120){
+  return new Promise(resolve => {
+    const started = Date.now();
+    (function tick(){
+      let ok = false;
+      try { ok = !!condFn(); } catch (e) {}
+      if (ok || Date.now() - started > timeoutMs) { resolve(ok); return; }
+      setTimeout(tick, everyMs);
+    })();
+  });
+}
+
+/* Экран съехал после того, как мы домотали (например, дорисовалась карточка
+   «Где присылать» НАД списком уведомлений) — подтягиваем цель обратно в вид.
+   Один раз на шаг: иначе будем бороться с человеком, который сам отмотал. */
+function ensureTourTargetVisible(el){
+  if (!el || !tourActive) return;
+  if (tourScrolledForStep === tourStep) {
+    const r = el.getBoundingClientRect();
+    const outOfView = r.bottom < 40 || r.top > window.innerHeight - 40;
+    if (!outOfView) return;      // всё видно — не трогаем
+  }
+  tourScrolledForStep = tourStep;
+  // Высокий блок центрировать бессмысленно — уводит заголовок за верх экрана
+  const tall = el.getBoundingClientRect().height > window.innerHeight * 0.7;
+  el.scrollIntoView({ behavior: 'smooth', block: tall ? 'start' : 'center' });
+}
 
 function startLibraryTour(){
   switchView('library');
@@ -7201,6 +7232,10 @@ function showTourStep(){
       tooltip.style.top = (docTop - 46) + 'px';
     }
     document.getElementById('tour-overlay').classList.add('open');
+    // Подсветка уже на месте — теперь убеждаемся, что она в поле зрения.
+    // Раньше этого не было: наблюдатель за размерами пересчитывал ДЫРКУ, но не
+    // мотал экран, и после дорисовки соседних блоков подсветка уезжала за край
+    if (step.targetId) ensureTourTargetVisible(document.getElementById(step.targetId));
   } catch (e) {
     console.error('Тур онбординга упал:', e);
     endLibraryTour(false);
@@ -7213,6 +7248,7 @@ function tourAdvanceOn(eventName){
   if (!step || step.completeEvent !== eventName) return;
   document.getElementById('tour-overlay').classList.remove('open');
   tourStep++;
+  tourScrolledForStep = -1;
   if (step.holdAfterComplete) {
     // Ждём — следующий шаг покажем только после того, как человек закроет попап ИИ
     // (см. closeAiPopup — она сама двигает тур дальше по значению tourStep)
@@ -10446,14 +10482,22 @@ function closeAiPopup(){
       switchView('schedule');
       // Ждём реальной загрузки расписания/уведомлений, а не угаданной паузы.
       try { await window._scheduleLoadPromise; } catch (e) {}
-      // Прокручиваем НЕСКОЛЬКО раз с паузами — если что-то на странице (картинки, календарь)
-      // ещё чуть досдвигает вёрстку уже после первой прокрутки, следующая попытка поправит.
-      for (let i = 0; i < 4; i++) {
-        const notifEl = document.getElementById('notif-list');
-        if (notifEl) notifEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        await new Promise(r => setTimeout(r, 400));
-      }
-      showTourStep();
+      // И ОТДЕЛЬНО ждём, пока ОБА блока над целью дорисуются. Список уведомлений
+      // сначала показывает «Загрузка...», а над ним есть карточка «Где присылать»,
+      // которая наполняется своим запросом. Пока они не встали, любая прокрутка
+      // окажется мимо: дорисовавшись, они толкают цель вниз. Раньше тут стоял
+      // цикл из четырёх попыток по 400мс — на это уже не хватало.
+      await tourWaitFor(() => {
+        const list = document.getElementById('notif-list');
+        const row  = document.getElementById('notif-channel-row');
+        const listReady = list && !list.querySelector('.loading') && list.offsetHeight > 40;
+        const rowReady  = !row || row.children.length > 0;
+        return listReady && rowReady;
+      });
+      // Ещё кадр на раскладку — иначе меряем размеры ровно в момент вставки
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 60)));
+      tourScrolledForStep = -1;
+      showTourStep();     // сам домотает через ensureTourTargetVisible
     }, 300);
   }
 }
