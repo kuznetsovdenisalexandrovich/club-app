@@ -3738,6 +3738,21 @@ img.img-fade.is-instant{opacity:1;transition:none}
   </div>
 </div>
 
+
+<!-- Точка входа по диплинку на эфир: показывает запись или честное «ничего нет» -->
+<div class="center-modal-overlay" id="live-entry-overlay" onclick="if(event.target===this) closeLiveEntryPopup()">
+  <div class="center-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title" id="live-entry-title">Эфир</div>
+      <button class="icon-btn" onclick="closeLiveEntryPopup()">✕</button>
+    </div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:14px" id="live-entry-text"></div>
+    <div class="live-frame-wrap" id="live-record-wrap" style="display:none;border-radius:14px;overflow:hidden;margin-bottom:12px">
+      <iframe id="live-record-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen frameborder="0"></iframe>
+    </div>
+    <button class="lec-link-btn access-btn" id="live-entry-library-btn" onclick="closeLiveEntryPopup();switchView('library')" data-text="live.none.btn">Открыть библиотеку</button>
+  </div>
+</div>
 <div class="center-modal-overlay" id="vk-access-overlay" onclick="if(event.target===this) document.getElementById('vk-access-overlay').classList.remove('open')">
   <div class="center-modal" id="vk-access-modal">
     <div class="center-modal-header">
@@ -6289,6 +6304,16 @@ const APP_TEXTS = {
     c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
     t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
+  'live.none.title': {
+    c:'Эфиры', l:'Заголовок «эфира нет»', w:'Попап по ссылке на эфир', i:true,
+    t:'Эфира сейчас нет' },
+  'live.none.text': {
+    c:'Эфиры', l:'Текст «эфира нет»', w:'Попап по ссылке на эфир', i:true,
+    t:'Ближайший будет по расписанию, а запись прошедшего скоро появится в библиотеке. Пока можно посмотреть всё остальное.' },
+  'live.none.btn': {
+    c:'Эфиры', l:'Кнопка в попапе «эфира нет»', w:'Попап по ссылке на эфир', i:true,
+    t:'Открыть библиотеку' },
+
   'settings.vk1': {
     c:'Настройки приложения', l:'Кнопка получения доступа в ВК', w:'Настройки приложения', i:true,
     t:'Получить доступ к ВКонтакте' },
@@ -7441,6 +7466,11 @@ const DEEPLINKS = {
   // — Открытая часть: годится для рекламы и холодного трафика —
   // (`quiz` сюда не входит: он перехватывается раньше в openFromStartParam,
   //  потому что `quiz_КОД` показывает чужой результат — свой отдельный экран)
+  // ЭФИР — одна ссылка навсегда. Куда она приведёт, решает бэкенд в момент
+  // клика: идёт эфир → плеер, недавно прошёл → запись, иначе → в библиотеку.
+  // Уникальные ссылки под каждое занятие сознательно НЕ заводим
+  'live':        { go: () => openLiveEntry(),             guests: true  },
+  'efir':        { go: () => openLiveEntry(),             guests: true  },
   'club':        { go: () => switchView('club-info'),     guests: true  },
   'about':       { go: () => switchView('club-info'),     guests: true  },
   'library':     { go: () => switchView('library'),       guests: true  },
@@ -9841,6 +9871,16 @@ function renderLiveBlock(){
   const host = liveHostEl(), slot = liveSlotEl();
   if (!host || !slot) return;
 
+  // ЗАКРЫТАЯ БЕСПЛАТНАЯ ЧАСТЬ: не-участник плеер больше не видит. Именно это
+  // делает кнопка «Закрыть бесплатную часть» в дашборде — вторая её работа
+  // (погасить площадки) происходит на бэкенде
+  const freeClosed = liveNow && liveNow.free_open === false;
+  if (freeClosed && !isMember){
+    const host = liveHostEl(), slot = liveSlotEl();
+    if (host) host.style.display = 'none';
+    if (slot) slot.style.display = 'none';
+    return;
+  }
   const show = !!(liveNow && liveNow.found && liveNow.is_live && liveNow.embed_link && !liveDismissed);
   if (!show){
     host.style.display = 'none';
@@ -9867,6 +9907,65 @@ function renderLiveBlock(){
     frame.src = src;
   }
   positionLiveHost();
+}
+
+/* Точка входа по диплинку. Три состояния приходят с бэкенда — апп их только
+   показывает, чтобы правило «что считать актуальным» жило в одном месте. */
+async function openLiveEntry(){
+  try {
+    const r = await fetch(`${API_URL}/live/entry`);
+    const d = await r.json();
+
+    if (d.state === 'live'){
+      switchView('portal');
+      // Блок сам появится на главной по /schedule/now — просто убеждаемся,
+      // что человек его увидит, и снимаем «закрыл крестиком»
+      liveDismissed = false;
+      liveMinimized = false;
+      await loadLiveNow();
+      setTimeout(() => document.getElementById('live-slot')?.scrollIntoView({behavior:'smooth', block:'center'}), 300);
+      return;
+    }
+
+    if (d.state === 'record'){
+      if (!isMember) { openPaywall(); return; }
+      openLiveRecord(d);
+      return;
+    }
+
+    showLiveNothing();
+  } catch (e) {
+    console.warn('[эфир] точка входа недоступна:', e);
+    showLiveNothing();
+  }
+}
+
+function closeLiveEntryPopup(){
+  document.getElementById('live-entry-overlay').classList.remove('open');
+  // Плеер записи останавливаем, убрав адрес: иначе звук продолжит идти
+  // из закрытого окна — ловушка, на которую легко не обратить внимания
+  const f = document.getElementById('live-record-frame');
+  if (f) f.removeAttribute('src');
+}
+
+function openLiveRecord(d){
+  document.getElementById('live-entry-title').textContent = d.title || 'Прямой эфир';
+  const days = d.days_left || 0;
+  document.getElementById('live-entry-text').textContent =
+    (d.finished_at ? `Эфир от ${d.finished_at}. ` : '') +
+    (days > 0 ? `Запись будет доступна ещё ${days} дн.` : 'Запись скоро пропадёт.');
+  document.getElementById('live-record-wrap').style.display = 'block';
+  document.getElementById('live-entry-library-btn').style.display = 'none';
+  document.getElementById('live-record-frame').src = d.embed_link || '';
+  document.getElementById('live-entry-overlay').classList.add('open');
+}
+
+function showLiveNothing(){
+  document.getElementById('live-entry-title').textContent = t('live.none.title');
+  document.getElementById('live-entry-text').textContent = t('live.none.text');
+  document.getElementById('live-record-wrap').style.display = 'none';
+  document.getElementById('live-entry-library-btn').style.display = '';
+  document.getElementById('live-entry-overlay').classList.add('open');
 }
 
 async function loadLiveNow(){
