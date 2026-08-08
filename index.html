@@ -4162,6 +4162,130 @@ function swapPlanImagesTheme(theme){
 let telegramId = null;
 let allLectures = [];
 
+/* ── РЕЖИМ ПРОСМОТРА ГЛАЗАМИ УЧАСТНИКА (09.08.2026) ─────────────────────────
+   Дашборд выдаёт ссылку вида ?view=<токен>, действующую 15 минут и только
+   после подтверждения в боте. Приложение здесь НИЧЕГО НЕ РЕШАЕТ: и право
+   смотреть, и запрет писать живут на сервере — этот файл публичный, любая
+   проверка внутри него была бы декорацией. */
+
+const VIEW_TOKEN = (function(){
+  try{
+    const m = location.search.match(/[?&]view=([^&#]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }catch(e){ return ''; }
+})();
+
+let viewSessionInfo = null;
+let viewCountdownTimer = null;
+
+/* ОДНА ТОЧКА НА ВСЕ ЗАПРОСЫ. В файле больше семидесяти вызовов fetch, и часть
+   идёт мимо apiRequest — перечислять их руками значит гарантированно забыть
+   один, а забытый запрос уехал бы на сервер БЕЗ токена и был бы засчитан как
+   настоящее действие участника. Поэтому оборачиваем сам fetch: токен уезжает
+   со всеми запросами к нашему бэкенду, включая те, что мы напишем завтра. */
+if (VIEW_TOKEN){
+  const realFetch = window.fetch.bind(window);
+  window.fetch = function(input, init){
+    try{
+      const url = (typeof input === 'string') ? input : ((input && input.url) || '');
+      if (url.indexOf(API_URL) === 0){
+        const merged = Object.assign({}, init || {});
+        const headers = new Headers(
+          (init && init.headers) ||
+          ((typeof input !== 'string' && input && input.headers) ? input.headers : {})
+        );
+        headers.set('x-view-token', VIEW_TOKEN);
+        merged.headers = headers;
+        return realFetch(input, merged);
+      }
+    }catch(e){}
+    return realFetch(input, init);
+  };
+}
+
+function viewExit(){
+  /* Выход из просмотра — просто адрес без параметра. Сессия на сервере
+     доживёт свои минуты сама, отзывать её отсюда незачем */
+  location.href = location.origin + location.pathname;
+}
+
+function viewBannerHtml(secs){
+  const m = Math.floor(secs / 60), s = secs % 60;
+  const left = m + ':' + (s < 10 ? '0' : '') + s;
+  const name = (viewSessionInfo && viewSessionInfo.name) || 'участника';
+  return '<span style="opacity:.75">Глазами</span> <b>' + name + '</b>'
+       + '<span style="opacity:.45"> · </span><span style="font-variant-numeric:tabular-nums">' + left + '</span>'
+       + '<span style="opacity:.45"> · </span><span style="text-decoration:underline;opacity:.75">выйти</span>';
+}
+
+function showViewBanner(info){
+  viewSessionInfo = info;
+  let el = document.getElementById('view-banner');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'view-banner';
+    /* Плавающая плашка, а НЕ полоса в потоке документа: полоса сдвинула бы
+       вёрстку и подралась бы с безопасной зоной, которую мы чинили 07.08.
+       Плашка ничего не двигает и при этом висит перед глазами постоянно */
+    el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);'
+      + 'top:calc(var(--safe-top, 0px) + 8px);z-index:9999;'
+      + 'padding:7px 14px;border-radius:999px;cursor:pointer;'
+      + 'background:rgba(220,53,69,.92);color:#fff;font-size:12px;line-height:1;'
+      + 'box-shadow:0 8px 22px -6px rgba(0,0,0,.55);backdrop-filter:blur(10px);'
+      + '-webkit-backdrop-filter:blur(10px);white-space:nowrap;max-width:92vw;overflow:hidden;'
+      + 'text-overflow:ellipsis';
+    el.onclick = viewExit;
+    document.body.appendChild(el);
+  }
+  let left = Math.max(0, Number(info.seconds_left) || 0);
+  el.innerHTML = viewBannerHtml(left);
+  if (viewCountdownTimer) clearInterval(viewCountdownTimer);
+  viewCountdownTimer = setInterval(function(){
+    left -= 1;
+    if (left <= 0){
+      clearInterval(viewCountdownTimer);
+      viewCountdownTimer = null;
+      viewSessionEnded('Просмотр закончился');
+      return;
+    }
+    el.innerHTML = viewBannerHtml(left);
+  }, 1000);
+}
+
+function viewSessionEnded(title, note){
+  if (viewCountdownTimer){ clearInterval(viewCountdownTimer); viewCountdownTimer = null; }
+  const banner = document.getElementById('view-banner');
+  if (banner) banner.remove();
+  document.body.innerHTML =
+    '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;'
+    + 'text-align:center;padding:28px;font-family:-apple-system,system-ui,sans-serif;'
+    + 'background:#14121c;color:#f4f2ff">'
+    + '<div style="max-width:300px">'
+    + '<div style="font-size:44px;margin-bottom:12px">👁</div>'
+    + '<div style="font-size:18px;font-weight:700;margin-bottom:8px">' + title + '</div>'
+    + '<div style="font-size:14px;opacity:.65;line-height:1.5">'
+    + (note || 'Открой просмотр заново из дашборда.') + '</div></div></div>';
+}
+
+async function startViewMode(){
+  /* Внутри Telegram апп может открыться и так — разворачиваем окно, но за
+     идентификатором идём НЕ в initData, а к серверу: чьими глазами смотрим,
+     решает сессия просмотра, а не то, кто держит телефон */
+  const tg = window.Telegram?.WebApp;
+  if (tg && tg.ready){ try{ tg.ready(); tg.expand(); }catch(e){} }
+  try{
+    const r = await fetch(API_URL + '/view/session?view_token=' + encodeURIComponent(VIEW_TOKEN));
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'сессия просмотра недействительна');
+    telegramId = Number(data.telegram_id) || data.telegram_id;
+    showViewBanner(data);
+    startApp();
+  }catch(e){
+    viewSessionEnded('Просмотр недоступен', (e && e.message) || 'Ссылка истекла или отозвана.');
+  }
+}
+
+
 async function refreshApp() {
   const btn = document.getElementById('refresh-btn');
   btn.classList.add('spinning');
@@ -11672,6 +11796,14 @@ function startWebSession(){
       if (typeof loadGods === 'function') loadGods();
       setTimeout(function(){ quizFromUrl(); }, 60);
     } catch(e){}
+  }
+
+  /* Просмотр глазами участника перехватывает запуск ДО всех обычных веток:
+     ни телеграмный initData, ни веб-сессия здесь не при чём — кто мы сейчас,
+     говорит сервер по токену из адреса */
+  if (VIEW_TOKEN){
+    startViewMode();
+    return;
   }
 
   const tg = window.Telegram?.WebApp;
