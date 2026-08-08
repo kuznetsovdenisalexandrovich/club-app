@@ -1585,8 +1585,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    скролл, и блок заметно догонял страницу. В уголок он уходит уже fixed —
    но это ДРУГОЙ режим, а не постоянный. Смена position не трогает DOM,
    поэтому поток не прерывается. */
+/* ФОН НЕПРОЗРАЧНЫЙ. `--card` в тёмной теме полупрозрачен (rgba) — обычным
+   карточкам это идёт, они лежат на фоне страницы. Но наш блок абсолютный и
+   рисуется ПОВЕРХ, поэтому сквозь него просвечивало содержимое ленты */
 #live-host{position:absolute;z-index:640;border-radius:18px;overflow:hidden;
-  background:var(--card,#fff);box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  background:var(--bg2,#fff);border:1px solid var(--border,transparent);
+  box-shadow:0 10px 30px rgba(0,0,0,.18)}
 #live-host.live-corner{position:fixed;left:auto !important;right:12px;
   top:auto !important;bottom:calc(var(--tabbar-h, 72px) + 12px);
   width:190px !important;transition:right .2s ease,bottom .2s ease}
@@ -3774,7 +3778,7 @@ img.img-fade.is-instant{opacity:1;transition:none}
     </div>
     <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:14px" id="live-entry-text"></div>
     <div class="live-frame-wrap" id="live-record-wrap" style="display:none;border-radius:14px;overflow:hidden;margin-bottom:12px">
-      <iframe id="live-record-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen frameborder="0"></iframe>
+      <iframe id="live-record-frame" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>
     </div>
     <button class="lec-link-btn access-btn" id="live-entry-library-btn" onclick="closeLiveEntryPopup();switchView('library')" data-text="live.none.btn">Открыть библиотеку</button>
   </div>
@@ -9983,6 +9987,22 @@ function positionLiveHost(){
   host.style.left  = (r.left + window.scrollX) + 'px';
   host.style.top   = (r.top + window.scrollY) + 'px';
   host.style.width = r.width + 'px';
+  syncLiveSlotHeight();
+}
+
+/* ЗАГЛУШКА ДОЛЖНА ЗАНИМАТЬ РОВНО ТУ ЖЕ ВЫСОТУ, что и блок. Без этого она
+   оставалась нулевой, лента шла ПОД плеером, и он выглядел висящим поверх
+   чужих блоков — ровно то, на что Denis пожаловался. Высоту берём с самого
+   блока после отрисовки: заранее она неизвестна — зависит от ширины экрана,
+   длины названия и наличия кнопки практики. */
+function syncLiveSlotHeight(){
+  const host = liveHostEl(), slot = liveSlotEl();
+  if (!host || !slot) return;
+  if (host.style.display === 'none'){ slot.style.height = ''; return; }
+  // В уголке место в ленте всё равно держим: иначе при прокрутке вверх-вниз
+  // содержимое прыгало бы туда-сюда
+  const h = host.offsetHeight;
+  if (h) slot.style.height = h + 'px';
 }
 
 /* Тап по видео в свёрнутом виде разворачивает. В ленте плеер живёт своей
@@ -10003,10 +10023,42 @@ function livePlayPageUrl(){
   return code ? ('https://kinescope.io/' + code) : '';
 }
 
+/* Плеер иногда падает прямо посреди эфира — Denis поймал это на встроенной
+   «картинке в картинке». Перезапуск не должен требовать перезагрузки всего
+   приложения: снимаем адрес и ставим заново, это пересоздаёт плеер. */
+function reloadLivePlayer(){
+  if (liveFullOpen){
+    const ff = document.getElementById('live-full-frame');
+    const url = livePlayPageUrl();
+    if (ff && url){
+      ff.removeAttribute('src');
+      setTimeout(function(){ ff.src = url + (url.includes('?') ? '&' : '?') + 'r=' + Date.now(); }, 60);
+    }
+    return;
+  }
+  const f = document.getElementById('live-frame');
+  if (f){
+    f.removeAttribute('src');
+    liveIframeSrc = '';          // иначе renderLiveBlock решит, что адрес не менялся
+    setTimeout(renderLiveBlock, 60);
+  }
+}
+
 function expandLiveFull(){
   const url = livePlayPageUrl();
   if (!url) return;
   liveFullOpen = true;
+
+  // СИСТЕМНАЯ «КАРТИНКА В КАРТИНКЕ» — ТОЛЬКО ВНЕ TELEGRAM. Внутри мини-аппа
+  // их кнопка роняет плеер целиком (ошибка a6227). В обычном браузере
+  // веб-версии запрет ни к чему, там она может работать
+  const insideTelegram = !!(window.Telegram?.WebApp?.platform);
+  const ffEl = document.getElementById('live-full-frame');
+  if (ffEl){
+    ffEl.setAttribute('allow', insideTelegram
+      ? 'autoplay; fullscreen; clipboard-write'
+      : 'autoplay; fullscreen; picture-in-picture; clipboard-write');
+  }
   document.getElementById('live-full-title').textContent =
     (liveNow && liveNow.title) || 'Прямой эфир';
   const badge = document.getElementById('live-full-badge');
@@ -10070,6 +10122,7 @@ function renderLiveBlock(){
   if (!show){
     host.style.display = 'none';
     slot.style.display = 'none';
+    slot.style.height = '';   // освобождаем место в ленте
     return;
   }
 
@@ -10092,6 +10145,13 @@ function renderLiveBlock(){
     frame.src = src;
   }
   positionLiveHost();
+  // Ещё раз следующим кадром: сразу после вставки высота ещё не посчитана.
+  // Через проверку — отсутствие кадрового таймера не должно ронять отрисовку
+  const afterFrame = function(fn){
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fn);
+    else setTimeout(fn, 16);
+  };
+  afterFrame(function(){ syncLiveSlotHeight(); positionLiveHost(); });
 }
 
 /* Точка входа по диплинку. Три состояния приходят с бэкенда — апп их только
@@ -13868,8 +13928,12 @@ async function sendQuizCardToBot(){
     <button class="live-full-back" onclick="collapseLiveFull()" title="Назад">←</button>
     <span class="live-badge" id="live-full-badge">В ЭФИРЕ</span>
     <span class="live-title" id="live-full-title">Прямой эфир</span>
+    <button class="live-ctl" onclick="reloadLivePlayer()" title="Перезапустить плеер">⟳</button>
   </div>
-  <iframe id="live-full-frame" allow="autoplay; fullscreen; picture-in-picture; camera; microphone; clipboard-write" allowfullscreen frameborder="0"></iframe>
+  <!-- «Картинка в картинке» РАЗРЕШАЕТСЯ ТОЛЬКО ВНЕ TELEGRAM — атрибут
+       проставляется в expandLiveFull. Внутри мини-аппа их кнопка не просто
+       не срабатывала, а роняла весь плеер с ошибкой (Denis поймал 08.08) -->
+  <iframe id="live-full-frame" allow="autoplay; fullscreen; clipboard-write" allowfullscreen frameborder="0"></iframe>
   <div class="live-full-foot" id="live-full-foot">
     <button class="live-btn" id="live-full-practice" onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
     <div class="live-full-hint" id="live-full-hint" data-text="live.fullhint">Если страница не открылась, эфир можно смотреть в блоке на главной.</div>
@@ -13880,10 +13944,11 @@ async function sendQuizCardToBot(){
   <div class="live-bar">
     <span class="live-badge" id="live-badge">В ЭФИРЕ</span>
     <span class="live-title" id="live-title">Прямой эфир</span>
+    <button class="live-ctl" onclick="reloadLivePlayer()" title="Перезапустить плеер">⟳</button>
     <button class="live-ctl" onclick="dismissLive()" title="Скрыть">✕</button>
   </div>
   <div class="live-frame-wrap" id="live-frame-wrap" onclick="onLiveFrameAreaTap(event)">
-    <iframe id="live-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen frameborder="0"></iframe>
+    <iframe id="live-frame" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>
     <!-- В свёрнутом виде плеер отдан под один жест: тап разворачивает.
          Прозрачная накладка нужна, потому что клики внутрь чужого iframe
          нам не видны — без неё уголок было бы нечем развернуть -->
