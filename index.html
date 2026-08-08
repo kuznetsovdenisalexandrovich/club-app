@@ -1579,28 +1579,54 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 
 /* ── Плеер эфира ──────────────────────────────────────────────────────── */
-#live-host{position:fixed;z-index:640;border-radius:18px;overflow:hidden;
-  background:var(--card,#fff);box-shadow:0 10px 30px rgba(0,0,0,.18);
-  transition:left .22s ease,top .22s ease,width .22s ease}
-#live-host.live-corner{left:auto !important;right:12px;
+/* ПОЗИЦИОНИРОВАНИЕ. В ленте блок стоит АБСОЛЮТНО (по координатам документа) —
+   тогда он прокручивается вместе со страницей сам, браузером, и не «летает»
+   следом за пальцем. Раньше было position:fixed с пересчётом на каждый
+   скролл, и блок заметно догонял страницу. В уголок он уходит уже fixed —
+   но это ДРУГОЙ режим, а не постоянный. Смена position не трогает DOM,
+   поэтому поток не прерывается. */
+#live-host{position:absolute;z-index:640;border-radius:18px;overflow:hidden;
+  background:var(--card,#fff);box-shadow:0 10px 30px rgba(0,0,0,.18)}
+#live-host.live-corner{position:fixed;left:auto !important;right:12px;
   top:auto !important;bottom:calc(var(--tabbar-h, 72px) + 12px);
-  width:190px !important}
+  width:190px !important;transition:right .2s ease,bottom .2s ease}
 #live-host.live-corner .live-title{display:none}
-#live-host.live-corner .live-practice{display:none !important}
-.live-bar{display:flex;align-items:center;gap:8px;padding:8px 10px}
+#live-host.live-corner .live-actions{display:none !important}
+#live-host.live-corner .live-bar{padding:5px 7px}
+/* Свёрнутый уголок целиком работает как одна кнопка «развернуть» */
+#live-host.live-corner .live-tap-catch{display:block}
+.live-tap-catch{display:none;position:absolute;inset:0;cursor:pointer}
+
+.live-bar{display:flex;align-items:center;gap:8px;padding:10px 12px}
 .live-badge{font-size:10px;font-weight:700;letter-spacing:.06em;color:#fff;
-  background:#e8614a;border-radius:6px;padding:3px 7px;flex-shrink:0}
+  background:#e8614a;border-radius:6px;padding:4px 8px;flex-shrink:0}
 .live-badge.live-badge-soon{background:var(--text-dim,#8b8b8b)}
-.live-title{font-size:13px;font-weight:600;flex:1;min-width:0;
+.live-title{font-size:14px;font-weight:600;flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.live-ctl{background:none;border:none;font-size:13px;line-height:1;padding:4px;
+/* Кнопки крупнее: попасть пальцем в 13px было заданием на меткость */
+.live-ctl{background:none;border:none;font-size:17px;line-height:1;
+  width:36px;height:36px;border-radius:50%;
   color:var(--text-dim,#8b8b8b);cursor:pointer;flex-shrink:0}
 .live-frame-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000}
 #live-frame{position:absolute;inset:0;width:100%;height:100%;border:0}
-.live-practice{display:flex;align-items:center;justify-content:center;
-  width:calc(100% - 20px);margin:10px;padding:11px;border:none;border-radius:12px;
+.live-actions{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px}
+.live-btn{display:flex;align-items:center;justify-content:center;width:100%;
+  padding:14px;border:none;border-radius:14px;cursor:pointer;
   background:var(--lav-dim,#eee);color:var(--lav-deep,#333);
-  font-size:13px;font-weight:600;cursor:pointer}
+  font-size:14px;font-weight:600}
+.live-btn-main{background:linear-gradient(135deg,var(--lav,#9b8cf2),var(--coral,#e8614a));
+  color:#fff}
+
+/* ── Полный экран эфира ─────────────────────────────────────────────── */
+#live-full{position:fixed;inset:0;z-index:900;background:var(--bg,#111);
+  display:flex;flex-direction:column}
+.live-full-bar{display:flex;align-items:center;gap:10px;
+  padding:calc(max(var(--safe-top, 0px), 8px) + 10px) 14px 10px}
+.live-full-back{background:none;border:none;font-size:22px;line-height:1;
+  width:40px;height:40px;border-radius:50%;color:var(--text,#222);cursor:pointer;flex-shrink:0}
+#live-full-frame{width:100%;flex:1;border:0;background:#000}
+.live-full-foot{padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+.live-full-hint{font-size:12px;color:var(--text-faint,#999);line-height:1.45;margin-top:8px;text-align:center}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -1770,6 +1796,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <button class="lec-link-btn access-btn" style="width:auto;padding:9px 16px;margin:0"
         onclick="stopHomeEdit()" data-text="home.edit4">Готово</button>
     </div>
+    <!-- Место под плеер эфира — ПЕРВЫМ на главной. Сам плеер лежит в #live-host
+         вне переключаемых экранов и позиционируется поверх этой заглушки:
+         переносить iframe по документу нельзя, он перезагрузится.
+         Настройке не подлежит сознательно: появляется по событию и сам исчезает -->
+    <div id="live-slot" style="display:none"></div>
+
     <div class="pack-banner" id="pack-banner" style="display:none" onclick="openPackReveal()">
       <div class="pack-banner-dot"></div>
       <div class="pack-banner-icon">🎴</div>
@@ -1807,12 +1839,6 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          появляются по событию и сами исчезают, дать их выключить — значит
          дать случайно отключить то, что приносит деньги.
          Порядок ниже — ПЕРВОНАЧАЛЬНЫЙ ВИД, к нему возвращает сброс -->
-    <!-- Место под плеер эфира. Сам плеер лежит в #live-host вне экранов и
-         позиционируется поверх этой заглушки — переносить iframe нельзя,
-         он перезагрузится. Настройке не подлежит сознательно: появляется
-         по событию и сам исчезает -->
-    <div id="live-slot" style="display:none"></div>
-
     <div id="home-blocks">
 
     <div class="hblock" data-block="news">
@@ -6348,6 +6374,16 @@ const APP_TEXTS = {
     c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
     t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
+  'live.open': {
+    c:'Эфиры', l:'Кнопка «развернуть эфир»', w:'Блок эфира на главной', i:true,
+    t:'Смотреть и обсуждать' },
+  'live.practice': {
+    c:'Эфиры', l:'Кнопка входа в практику', w:'Блок эфира и полный экран', i:true,
+    t:'Подключиться к практике' },
+  'live.fullhint': {
+    c:'Эфиры', l:'Подсказка на полном экране эфира', w:'Полный экран эфира', i:true,
+    t:'Если страница не открылась, эфир можно смотреть в блоке на главной.' },
+
   'live.none.title': {
     c:'Эфиры', l:'Заголовок «эфира нет»', w:'Попап по ссылке на эфир', i:true,
     t:'Эфира сейчас нет' },
@@ -9909,7 +9945,7 @@ let vkAccessWatch = false;     // ждём, пока бэкенд подтвер
 
 const LIVE_POLL_MS = 60000;      // как часто переспрашиваем «идёт ли эфир»
 let liveNow = null;              // последний ответ /schedule/now
-let liveMinimized = false;
+let liveFullOpen = false;   // открыт ли полный экран эфира
 let liveDismissed = false;       // человек закрыл блок крестиком в этой сессии
 let liveIframeSrc = '';          // чтобы не пересоздавать iframe тем же адресом
 let liveLastError = '';
@@ -9917,37 +9953,92 @@ let liveLastError = '';
 function liveHostEl(){ return document.getElementById('live-host'); }
 function liveSlotEl(){ return document.getElementById('live-slot'); }
 
-/* Заглушка на главной держит место, плеер позиционируется поверх неё */
+/* Заглушка на главной держит место, плеер позиционируется поверх неё.
+
+   В ЛЕНТЕ КООРДИНАТЫ ДОКУМЕНТНЫЕ, А НЕ ЭКРАННЫЕ. Блок стоит абсолютно, то есть
+   прокручивается вместе со страницей средствами браузера — пересчитывать
+   ничего не надо и дрожания нет. Раньше он был fixed и догонял страницу на
+   каждом кадре прокрутки: Denis назвал это «летающим». */
 function positionLiveHost(){
   const host = liveHostEl(), slot = liveSlotEl();
   if (!host || !slot || host.style.display === 'none') return;
+  if (liveFullOpen) return;   // на полном экране блок не участвует
 
   const portalActive = document.getElementById('view-portal')?.classList.contains('active');
-  const inline = portalActive && !liveMinimized;
+  const r = slot.getBoundingClientRect();
 
-  if (inline){
-    const r = slot.getBoundingClientRect();
-    // Ушли прокруткой так, что место скрылось за краем экрана — сворачиваем сами,
-    // иначе плеер повиснет за пределами видимой области и человек решит, что он пропал
-    if (r.bottom < 60 || r.top > window.innerHeight - 60){
-      host.classList.add('live-corner');
-      host.style.left = ''; host.style.top = ''; host.style.width = '';
-      return;
-    }
-    host.classList.remove('live-corner');
-    host.style.left  = r.left + 'px';
-    host.style.top   = r.top + 'px';
-    host.style.width = r.width + 'px';
-  } else {
+  // В УГОЛОК УХОДИМ ТОЛЬКО ПО-НАСТОЯЩЕМУ: когда блок уехал за верх экрана
+  // целиком (промотал далеко вниз) или человек ушёл на другой экран.
+  // Прежний порог срабатывал, едва блок коснулся края, — из-за этого он
+  // превращался в уголок почти сразу, чего Denis и не хотел
+  const scrolledPast = r.bottom < -40;
+  const corner = !portalActive || scrolledPast;
+
+  if (corner){
     host.classList.add('live-corner');
     host.style.left = ''; host.style.top = ''; host.style.width = '';
+    return;
+  }
+  host.classList.remove('live-corner');
+  host.style.left  = (r.left + window.scrollX) + 'px';
+  host.style.top   = (r.top + window.scrollY) + 'px';
+  host.style.width = r.width + 'px';
+}
+
+/* Тап по видео в свёрнутом виде разворачивает. В ленте плеер живёт своей
+   жизнью — там перехватывать нажатия незачем */
+function onLiveFrameAreaTap(e){ /* накладка сама зовёт expandLiveFull */ }
+
+/* ── Полный экран ────────────────────────────────────────────────────────
+   Показываем ПУБЛИЧНУЮ страницу трансляции: там чат и родные элементы
+   управления Kinescope, включая «картинку в картинке». Маленький блок
+   остаётся на чистом /embed/.
+
+   ЦЕНА РЕШЕНИЯ, осознанная: при разворачивании и сворачивании поток
+   перезапускается — это два разных адреса. Оба перехода делает сам человек
+   осознанным нажатием, поэтому секунда ожидания там уместна, в отличие от
+   случайного пересоздания при переходе между экранами. */
+function livePlayPageUrl(){
+  const code = (liveNow && liveNow.play_code) || '';
+  return code ? ('https://kinescope.io/' + code) : '';
+}
+
+function expandLiveFull(){
+  const url = livePlayPageUrl();
+  if (!url) return;
+  liveFullOpen = true;
+  document.getElementById('live-full-title').textContent =
+    (liveNow && liveNow.title) || 'Прямой эфир';
+  const badge = document.getElementById('live-full-badge');
+  badge.textContent = (liveNow && liveNow.started) ? 'В ЭФИРЕ' : 'СКОРО НАЧНЁМ';
+  badge.classList.toggle('live-badge-soon', !(liveNow && liveNow.started));
+  document.getElementById('live-full-practice').style.display =
+    (liveNow && liveNow.link) ? 'flex' : 'none';
+  document.getElementById('live-full-frame').src = url;
+  document.getElementById('live-full').style.display = 'flex';
+  // Маленький плеер на это время замолкает — два потока разом не нужны
+  const host = liveHostEl();
+  if (host) host.style.display = 'none';
+  const f = document.getElementById('live-frame');
+  if (f) { liveIframeSrc = ''; f.removeAttribute('src'); }
+  if (window.Telegram?.WebApp?.BackButton) {
+    try { window.Telegram.WebApp.BackButton.show(); } catch (e) {}
   }
 }
 
-function toggleLiveMinimized(){
-  liveMinimized = !liveMinimized;
-  if (!liveMinimized) switchView('portal');
-  positionLiveHost();
+function collapseLiveFull(){
+  liveFullOpen = false;
+  document.getElementById('live-full').style.display = 'none';
+  const ff = document.getElementById('live-full-frame');
+  if (ff) ff.removeAttribute('src');   // иначе звук продолжит идти из закрытой страницы
+  renderLiveBlock();                   // вернёт маленький плеер и его адрес
+  // Имя активного экрана берём из разметки: отдельной переменной под него в
+  // аппе нет, а выдумывать её ради одной строки не стоит
+  const active = document.querySelector('.view.active');
+  const name = active ? active.id.replace(/^view-/, '') : 'portal';
+  if (typeof syncTgBackButton === 'function') {
+    try { syncTgBackButton(name); } catch (e) {}
+  }
 }
 
 function dismissLive(){
@@ -10015,7 +10106,6 @@ async function openLiveEntry(){
       // Блок сам появится на главной по /schedule/now — просто убеждаемся,
       // что человек его увидит, и снимаем «закрыл крестиком»
       liveDismissed = false;
-      liveMinimized = false;
       await loadLiveNow();
       setTimeout(() => document.getElementById('live-slot')?.scrollIntoView({behavior:'smooth', block:'center'}), 300);
       return;
@@ -13768,17 +13858,41 @@ async function sendQuizCardToBot(){
 <!-- ПЛЕЕР ЭФИРА. Лежит вне переключаемых экранов и НИКОГДА не переезжает
      по документу: перенос узла с iframe перезагружает поток. Меняются
      только координаты (см. positionLiveHost) -->
+
+<!-- ПОЛНЫЙ ЭКРАН ЭФИРА. Здесь показываем ПУБЛИЧНУЮ страницу трансляции
+     Kinescope (play_link), а не чистый /embed/: на ней есть чат и их
+     собственные элементы управления, включая системную «картинку в картинке».
+     Маленький блок на главной остаётся на /embed/ — там чат ни к чему. -->
+<div id="live-full" style="display:none">
+  <div class="live-full-bar">
+    <button class="live-full-back" onclick="collapseLiveFull()" title="Назад">←</button>
+    <span class="live-badge" id="live-full-badge">В ЭФИРЕ</span>
+    <span class="live-title" id="live-full-title">Прямой эфир</span>
+  </div>
+  <iframe id="live-full-frame" allow="autoplay; fullscreen; picture-in-picture; camera; microphone; clipboard-write" allowfullscreen frameborder="0"></iframe>
+  <div class="live-full-foot" id="live-full-foot">
+    <button class="live-btn" id="live-full-practice" onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
+    <div class="live-full-hint" id="live-full-hint" data-text="live.fullhint">Если страница не открылась, эфир можно смотреть в блоке на главной.</div>
+  </div>
+</div>
+
 <div id="live-host" style="display:none">
   <div class="live-bar">
     <span class="live-badge" id="live-badge">В ЭФИРЕ</span>
     <span class="live-title" id="live-title">Прямой эфир</span>
-    <button class="live-ctl" id="live-min-btn" onclick="toggleLiveMinimized()" title="Свернуть">▭</button>
-    <button class="live-ctl" onclick="dismissLive()" title="Закрыть">✕</button>
+    <button class="live-ctl" onclick="dismissLive()" title="Скрыть">✕</button>
   </div>
-  <div class="live-frame-wrap">
+  <div class="live-frame-wrap" id="live-frame-wrap" onclick="onLiveFrameAreaTap(event)">
     <iframe id="live-frame" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen frameborder="0"></iframe>
+    <!-- В свёрнутом виде плеер отдан под один жест: тап разворачивает.
+         Прозрачная накладка нужна, потому что клики внутрь чужого iframe
+         нам не видны — без неё уголок было бы нечем развернуть -->
+    <div class="live-tap-catch" id="live-tap-catch" onclick="expandLiveFull()"></div>
   </div>
-  <button class="live-practice" id="live-practice-btn" onclick="openLivePractice()" style="display:none">Подключиться к практике</button>
+  <div class="live-actions" id="live-actions">
+    <button class="live-btn live-btn-main" onclick="expandLiveFull()" data-text="live.open">Смотреть и обсуждать</button>
+    <button class="live-btn" id="live-practice-btn" onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
+  </div>
 </div>
 
 </body>
