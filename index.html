@@ -1631,6 +1631,26 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 #live-full-frame{width:100%;flex:1;border:0;background:#000}
 .live-full-foot{padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
 .live-full-hint{font-size:12px;color:var(--text-faint,#999);line-height:1.45;margin-top:8px;text-align:center}
+
+/* ── Чат эфира ────────────────────────────────────────────────────────── */
+#live-full-frame{flex:0 0 auto;aspect-ratio:16/9}
+.live-chat{flex:1;min-height:0;display:flex;flex-direction:column;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.live-chat-list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  display:flex;flex-direction:column;gap:8px;padding-bottom:6px}
+.live-chat-msg{font-size:13.5px;line-height:1.45}
+.live-chat-who{font-weight:700;margin-right:6px}
+.live-chat-msg.from-admin .live-chat-who{color:var(--coral,#e8614a)}
+.live-chat-time{font-size:11px;color:var(--text-faint,#999);margin-left:6px}
+.live-chat-empty{font-size:13px;color:var(--text-faint,#999);text-align:center;padding:18px 0}
+.live-chat-note{font-size:12px;color:var(--text-faint,#999);padding:4px 2px;min-height:18px}
+.live-chat-form{display:flex;gap:8px;align-items:center}
+.live-chat-input{flex:1;min-width:0;padding:12px 14px;border-radius:14px;
+  border:1px solid var(--border,#ddd);background:var(--card2,#fff);
+  color:var(--text,#222);font-size:14px;font-family:inherit}
+.live-chat-send{width:46px;height:46px;border:none;border-radius:14px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--lav,#9b8cf2),var(--coral,#e8614a));
+  color:#fff;font-size:19px;cursor:pointer}
 </style>
 <script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
 <script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
@@ -6378,6 +6398,16 @@ const APP_TEXTS = {
     c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
     t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
+  'live.chat.empty': {
+    c:'Эфиры', l:'Пустой чат', w:'Чат эфира', i:true,
+    t:'Пока тихо. Задай вопрос — Денис читает чат здесь в первую очередь.' },
+  'live.chat.closed': {
+    c:'Эфиры', l:'Чат закрыт', w:'Чат эфира', i:true,
+    t:'Чат закрыт' },
+  'live.chat.needlogin': {
+    c:'Эфиры', l:'Чат: нужен вход', w:'Чат эфира', i:true,
+    t:'Чтобы писать, зайди через Telegram' },
+
   'live.open': {
     c:'Эфиры', l:'Кнопка «развернуть эфир»', w:'Блок эфира на главной', i:true,
     t:'Смотреть и обсуждать' },
@@ -9947,7 +9977,17 @@ let vkAccessWatch = false;     // ждём, пока бэкенд подтвер
    браузер умеет это только с настоящим элементом <video>, а плеер живёт в чужом
    iframe. Если их плеер даёт свою кнопку PiP — сработает она, не мы.        */
 
-const LIVE_POLL_MS = 60000;      // как часто переспрашиваем «идёт ли эфир»
+/* КАК ЧАСТО СПРАШИВАЕМ «ИДЁТ ЛИ ЭФИР».
+   Раньше стоял один интервал в минуту, и это давало неприятное: Denis
+   стартует эфир, человек уже сидит в приложении и никуда не переключается —
+   до минуты он не видит ничего. Но и долбить сервер каждые пять секунд
+   круглосуточно незачем: 364 дня в году эфира нет.
+   Поэтому частота ЗАВИСИТ ОТ ОБСТАНОВКИ. */
+const LIVE_POLL_IDLE_MS  = 30000;   // ничего не ожидается — это ПОТОЛОК ожидания
+                                    // человека, который уже сидит в приложении,
+                                    // когда Denis нажимает «Начать эфир»
+const LIVE_POLL_SOON_MS  = 10000;   // эфир вот-вот начнётся или уже идёт
+const LIVE_POLL_TAIL_MS  = 20000;   // недавно был — вдруг начнётся снова
 let liveNow = null;              // последний ответ /schedule/now
 let liveFullOpen = false;   // открыт ли полный экран эфира
 let liveDismissed = false;       // человек закрыл блок крестиком в этой сессии
@@ -10026,6 +10066,114 @@ function livePlayPageUrl(){
 /* Плеер иногда падает прямо посреди эфира — Denis поймал это на встроенной
    «картинке в картинке». Перезапуск не должен требовать перезагрузки всего
    приложения: снимаем адрес и ставим заново, это пересоздаёт плеер. */
+
+/* ── ЧАТ ЭФИРА ──────────────────────────────────────────────────────────
+   Опросом, а не постоянным соединением: сообщений на клубном эфире немного,
+   а забираем только новые (`since_id`), так что почти всегда ответ пустой.
+   Опрос живёт ТОЛЬКО пока открыт полный экран — на главной чат не нужен. */
+const CHAT_POLL_MS = 4000;
+let chatTimer = null;
+let chatLastId = 0;
+let chatSending = false;
+
+function chatListEl(){ return document.getElementById('live-chat-list'); }
+
+function renderChatMessages(items, replace){
+  const box = chatListEl();
+  if (!box) return;
+  if (replace) box.innerHTML = '';
+  // Прокручиваем вниз, только если человек и так стоял внизу: иначе мы бы
+  // выдёргивали его из чтения старых сообщений каждым новым
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  (items || []).forEach(function(m){
+    const div = document.createElement('div');
+    div.className = 'live-chat-msg' + (m.from_admin ? ' from-admin' : '');
+    div.innerHTML = '<span class="live-chat-who">' + escapeHtml(m.name || 'Участник') + '</span>'
+      + escapeHtml(m.text || '')
+      + '<span class="live-chat-time">' + escapeHtml(m.at || '') + '</span>';
+    box.appendChild(div);
+  });
+  if (!box.children.length){
+    box.innerHTML = '<div class="live-chat-empty" data-text="live.chat.empty">'
+      + t('live.chat.empty') + '</div>';
+  } else if (atBottom || replace){
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+async function pollLiveChat(){
+  try {
+    const r = await fetch(`${API_URL}/live/chat?since_id=${chatLastId}`);
+    const d = await r.json();
+    if (d && d.found){
+      if ((d.messages || []).length){
+        renderChatMessages(d.messages, chatLastId === 0);
+        chatLastId = d.last_id || chatLastId;
+      } else if (chatLastId === 0){
+        renderChatMessages([], true);
+      }
+      const note = document.getElementById('live-chat-note');
+      const form = document.getElementById('live-chat-form');
+      if (!d.chat_open){
+        note.textContent = t('live.chat.closed');
+        form.style.display = 'none';
+      } else {
+        form.style.display = 'flex';
+        note.textContent = d.slow_sec
+          ? 'Медленный режим: одно сообщение раз в ' + d.slow_sec + ' с'
+          : '';
+      }
+    }
+  } catch (e) {
+    console.warn('[чат] не смог обновить:', e);
+  }
+}
+
+function startLiveChat(){
+  chatLastId = 0;
+  renderChatMessages([], true);
+  pollLiveChat();
+  clearInterval(chatTimer);
+  chatTimer = setInterval(pollLiveChat, CHAT_POLL_MS);
+}
+
+function stopLiveChat(){
+  clearInterval(chatTimer);
+  chatTimer = null;
+}
+
+async function sendLiveChat(){
+  if (chatSending) return;
+  const input = document.getElementById('live-chat-input');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  if (!telegramId){
+    document.getElementById('live-chat-note').textContent = t('live.chat.needlogin');
+    return;
+  }
+  chatSending = true;
+  input.value = '';
+  try {
+    const r = await fetch(`${API_URL}/live/chat`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, text })
+    });
+    const d = await r.json();
+    if (!d.ok){
+      document.getElementById('live-chat-note').textContent = d.error || 'Не отправилось';
+      input.value = text;   // возвращаем текст, чтобы не набирать заново
+    } else {
+      document.getElementById('live-chat-note').textContent = '';
+      pollLiveChat();       // своё сообщение видим сразу, не через паузу
+    }
+  } catch (e) {
+    document.getElementById('live-chat-note').textContent = 'Нет связи';
+    input.value = text;
+  }
+  chatSending = false;
+}
+
+/* Плеер иногда падает прямо посреди эфира */
 function reloadLivePlayer(){
   if (liveFullOpen){
     const ff = document.getElementById('live-full-frame');
@@ -10068,6 +10216,7 @@ function expandLiveFull(){
     (liveNow && liveNow.link) ? 'flex' : 'none';
   document.getElementById('live-full-frame').src = url;
   document.getElementById('live-full').style.display = 'flex';
+  startLiveChat();
   // Маленький плеер на это время замолкает — два потока разом не нужны
   const host = liveHostEl();
   if (host) host.style.display = 'none';
@@ -10080,6 +10229,7 @@ function expandLiveFull(){
 
 function collapseLiveFull(){
   liveFullOpen = false;
+  stopLiveChat();
   document.getElementById('live-full').style.display = 'none';
   const ff = document.getElementById('live-full-frame');
   if (ff) ff.removeAttribute('src');   // иначе звук продолжит идти из закрытой страницы
@@ -10234,13 +10384,37 @@ async function loadLiveNow(){
   }
 }
 
+let liveWatchTimer = null;
+let liveLastSeenAt = 0;      // когда последний раз видели эфир
+
+/* Пауза до следующего запроса — по тому, что знаем прямо сейчас */
+function liveNextDelay(){
+  if (liveNow && liveNow.found) return LIVE_POLL_SOON_MS;          // идёт или вот-вот
+  if (liveLastSeenAt && Date.now() - liveLastSeenAt < 10 * 60000) return LIVE_POLL_TAIL_MS;
+  return LIVE_POLL_IDLE_MS;
+}
+
+function scheduleLiveWatch(){
+  clearTimeout(liveWatchTimer);
+  liveWatchTimer = setTimeout(async function(){
+    await loadLiveNow();
+    if (liveNow && liveNow.found) liveLastSeenAt = Date.now();
+    scheduleLiveWatch();
+  }, liveNextDelay());
+}
+
 function startLiveWatch(){
-  loadLiveNow();
-  setInterval(loadLiveNow, LIVE_POLL_MS);
+  loadLiveNow().then(function(){
+    if (liveNow && liveNow.found) liveLastSeenAt = Date.now();
+    scheduleLiveWatch();
+  });
   window.addEventListener('scroll', positionLiveHost, { passive: true });
   window.addEventListener('resize', positionLiveHost);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') loadLiveNow();
+    if (document.visibilityState === 'visible'){
+      loadLiveNow();
+      scheduleLiveWatch();   // вернулись — пересобираем расписание опроса
+    }
   });
 }
 
@@ -13934,9 +14108,18 @@ async function sendQuizCardToBot(){
        проставляется в expandLiveFull. Внутри мини-аппа их кнопка не просто
        не срабатывала, а роняла весь плеер с ошибкой (Denis поймал 08.08) -->
   <iframe id="live-full-frame" allow="autoplay; fullscreen; clipboard-write" allowfullscreen frameborder="0"></iframe>
-  <div class="live-full-foot" id="live-full-foot">
-    <button class="live-btn" id="live-full-practice" onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
-    <div class="live-full-hint" id="live-full-hint" data-text="live.fullhint">Если страница не открылась, эфир можно смотреть в блоке на главной.</div>
+
+  <!-- ЧАТ. Свой, а не встроенный у Kinescope: человек здесь уже опознан и
+       входить повторно на каждом устройстве не надо -->
+  <div class="live-chat" id="live-chat">
+    <div class="live-chat-list" id="live-chat-list"></div>
+    <div class="live-chat-note" id="live-chat-note"></div>
+    <div class="live-chat-form" id="live-chat-form">
+      <input class="live-chat-input" id="live-chat-input" type="text" maxlength="500"
+             placeholder="Спросить или сказать" onkeydown="if(event.key==='Enter') sendLiveChat()">
+      <button class="live-chat-send" onclick="sendLiveChat()">→</button>
+    </div>
+    <button class="live-btn" id="live-full-practice" onclick="openLivePractice()" style="display:none;margin-top:8px" data-text="live.practice">Подключиться к практике</button>
   </div>
 </div>
 
