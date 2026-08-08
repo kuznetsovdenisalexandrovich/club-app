@@ -6398,6 +6398,37 @@ const APP_TEXTS = {
     c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
     t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
+  'live.chat.slow': {
+    c:'Эфиры', l:'Медленный режим (подставляется {n} — секунды)', w:'Чат эфира', i:true,
+    t:'Медленный режим: одно сообщение раз в {n} с' },
+  'live.chat.failed': {
+    c:'Эфиры', l:'Сообщение не ушло', w:'Чат эфира', i:true,
+    t:'Не отправилось' },
+  'live.chat.offline': {
+    c:'Эфиры', l:'Нет связи в чате', w:'Чат эфира', i:true,
+    t:'Нет связи' },
+  'live.chat.someone': {
+    c:'Эфиры', l:'Имя по умолчанию в чате', w:'Чат эфира', i:true,
+    t:'Участник' },
+  'live.badge.on': {
+    c:'Эфиры', l:'Значок «идёт эфир»', w:'Блок эфира и полный экран', i:true,
+    t:'В ЭФИРЕ' },
+  'live.badge.soon': {
+    c:'Эфиры', l:'Значок «эфир скоро»', w:'Блок эфира и полный экран', i:true,
+    t:'СКОРО НАЧНЁМ' },
+  'live.title.default': {
+    c:'Эфиры', l:'Название эфира по умолчанию', w:'Везде, где эфир без названия', i:true,
+    t:'Прямой эфир' },
+  'live.record.when': {
+    c:'Эфиры', l:'Дата записи (подставляется {date})', w:'Попап записи эфира', i:true,
+    t:'Эфир от {date}.' },
+  'live.record.left': {
+    c:'Эфиры', l:'Сколько живёт запись (подставляется {n} — дни)', w:'Попап записи эфира', i:true,
+    t:'Запись будет доступна ещё {n} дн.' },
+  'live.record.soon': {
+    c:'Эфиры', l:'Запись вот-вот пропадёт', w:'Попап записи эфира', i:true,
+    t:'Запись скоро пропадёт.' },
+
   'live.chat.join': {
     c:'Эфиры', l:'Кнопка пейвола в чате', w:'Чат эфира, гость', i:true,
     t:'Чат — для участников клуба' },
@@ -6543,6 +6574,22 @@ function t(key){
   if (appTextOverrides[key]) return appTextOverrides[key];
   const rec = APP_TEXTS[key];
   return rec ? rec.t : '';
+}
+
+/* Текст С ПОДСТАНОВКОЙ: `tf('live.record.left', {n: 4})` возьмёт из реестра
+   строку с `{n}` и подставит число.
+
+   ЗАЧЕМ. Тексты, которые собираются в коде из кусков («осталось 4 дня»,
+   «раз в 30 с»), до сих пор оставались зашитыми — их нельзя было ни
+   посмотреть, ни поправить из дашборда. Это давняя незакрытая дыра в реестре,
+   и закрывается она вот так: в самой строке стоят метки в фигурных скобках,
+   а Denis правит всё вокруг них как обычный текст. */
+function tf(key, vars){
+  let out = t(key) || '';
+  Object.keys(vars || {}).forEach(function(k){
+    out = out.split('{' + k + '}').join(String(vars[k]));
+  });
+  return out;
 }
 
 /* Раскладываем тексты по элементам с data-text="ключ" — так в разметке можно
@@ -10100,7 +10147,7 @@ function renderChatMessages(items, replace){
   (items || []).forEach(function(m){
     const div = document.createElement('div');
     div.className = 'live-chat-msg' + (m.from_admin ? ' from-admin' : '');
-    div.innerHTML = '<span class="live-chat-who">' + escapeHtml(m.name || 'Участник') + '</span>'
+    div.innerHTML = '<span class="live-chat-who">' + escapeHtml(m.name || t('live.chat.someone')) + '</span>'
       + escapeHtml(m.text || '')
       + '<span class="live-chat-time">' + escapeHtml(m.at || '') + '</span>';
     box.appendChild(div);
@@ -10140,9 +10187,7 @@ async function pollLiveChat(){
       } else {
         form.style.display = 'flex';
         wall.style.display = 'none';
-        note.textContent = d.slow_sec
-          ? 'Медленный режим: одно сообщение раз в ' + d.slow_sec + ' с'
-          : '';
+        note.textContent = d.slow_sec ? tf('live.chat.slow', { n: d.slow_sec }) : '';
       }
     }
   } catch (e) {
@@ -10181,14 +10226,14 @@ async function sendLiveChat(){
     });
     const d = await r.json();
     if (!d.ok){
-      document.getElementById('live-chat-note').textContent = d.error || 'Не отправилось';
+      document.getElementById('live-chat-note').textContent = d.error || t('live.chat.failed');
       input.value = text;   // возвращаем текст, чтобы не набирать заново
     } else {
       document.getElementById('live-chat-note').textContent = '';
       pollLiveChat();       // своё сообщение видим сразу, не через паузу
     }
   } catch (e) {
-    document.getElementById('live-chat-note').textContent = 'Нет связи';
+    document.getElementById('live-chat-note').textContent = t('live.chat.offline');
     input.value = text;
   }
   chatSending = false;
@@ -10229,9 +10274,9 @@ function expandLiveFull(){
       : 'autoplay; fullscreen; picture-in-picture; clipboard-write');
   }
   document.getElementById('live-full-title').textContent =
-    (liveNow && liveNow.title) || 'Прямой эфир';
+    (liveNow && liveNow.title) || t('live.title.default');
   const badge = document.getElementById('live-full-badge');
-  badge.textContent = (liveNow && liveNow.started) ? 'В ЭФИРЕ' : 'СКОРО НАЧНЁМ';
+  badge.textContent = (liveNow && liveNow.started) ? t('live.badge.on') : t('live.badge.soon');
   badge.classList.toggle('live-badge-soon', !(liveNow && liveNow.started));
   document.getElementById('live-full-practice').style.display =
     (liveNow && liveNow.link) ? 'flex' : 'none';
@@ -10300,9 +10345,9 @@ function renderLiveBlock(){
   slot.style.display = 'block';
   host.style.display = 'block';
 
-  document.getElementById('live-title').textContent = liveNow.title || 'Прямой эфир';
+  document.getElementById('live-title').textContent = liveNow.title || t('live.title.default');
   const badge = document.getElementById('live-badge');
-  badge.textContent = liveNow.started ? 'В ЭФИРЕ' : 'СКОРО НАЧНЁМ';
+  badge.textContent = liveNow.started ? t('live.badge.on') : t('live.badge.soon');
   badge.classList.toggle('live-badge-soon', !liveNow.started);
 
   const practiceBtn = document.getElementById('live-practice-btn');
@@ -10364,11 +10409,11 @@ function closeLiveEntryPopup(){
 }
 
 function openLiveRecord(d){
-  document.getElementById('live-entry-title').textContent = d.title || 'Прямой эфир';
+  document.getElementById('live-entry-title').textContent = d.title || t('live.title.default');
   const days = d.days_left || 0;
   document.getElementById('live-entry-text').textContent =
-    (d.finished_at ? `Эфир от ${d.finished_at}. ` : '') +
-    (days > 0 ? `Запись будет доступна ещё ${days} дн.` : 'Запись скоро пропадёт.');
+    (d.finished_at ? tf('live.record.when', { date: d.finished_at }) + ' ' : '') +
+    (days > 0 ? tf('live.record.left', { n: days }) : t('live.record.soon'));
   document.getElementById('live-record-wrap').style.display = 'block';
   document.getElementById('live-entry-library-btn').style.display = 'none';
   document.getElementById('live-record-frame').src = d.embed_link || '';
