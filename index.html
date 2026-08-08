@@ -6398,6 +6398,13 @@ const APP_TEXTS = {
     c:'Библиотека и расписание', l:'Это видео находится в закрытой группе ВК — с…', w:'', i:true,
     t:'Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.' },
 
+  'live.chat.join': {
+    c:'Эфиры', l:'Кнопка пейвола в чате', w:'Чат эфира, гость', i:true,
+    t:'Чат — для участников клуба' },
+  'live.chat.guest': {
+    c:'Эфиры', l:'Подпись гостю в чате', w:'Чат эфира, гость', i:true,
+    t:'Смотреть можно, писать — участникам. Вопросы Денис читает здесь в первую очередь.' },
+
   'live.chat.empty': {
     c:'Эфиры', l:'Пустой чат', w:'Чат эфира', i:true,
     t:'Пока тихо. Задай вопрос — Денис читает чат здесь в первую очередь.' },
@@ -7613,6 +7620,11 @@ const DEEPLINKS = {
   // ЭФИР — одна ссылка навсегда. Куда она приведёт, решает бэкенд в момент
   // клика: идёт эфир → плеер, недавно прошёл → запись, иначе → в библиотеку.
   // Уникальные ссылки под каждое занятие сознательно НЕ заводим
+  // Ссылка «получить доступ в ВК» — Denis кидает её в чат, чтобы не объяснять
+  // каждому путь. Гостю показываем пейвол: доступ в закрытую группу это и есть
+  // то, за что платят
+  'vk':          { go: () => openVkAccessFlow(),          guests: false },
+  'vkaccess':    { go: () => openVkAccessFlow(),          guests: false },
   'live':        { go: () => openLiveEntry(),             guests: true  },
   'efir':        { go: () => openLiveEntry(),             guests: true  },
   'club':        { go: () => switchView('club-info'),     guests: true  },
@@ -10114,11 +10126,20 @@ async function pollLiveChat(){
       }
       const note = document.getElementById('live-chat-note');
       const form = document.getElementById('live-chat-form');
-      if (!d.chat_open){
+      const wall = document.getElementById('live-chat-paywall');
+      if (!isMember){
+        // Гость эфир СМОТРИТ (пока бесплатная часть открыта), но не пишет:
+        // чат — это то, за что платят, и объявляем это заранее
+        form.style.display = 'none';
+        wall.style.display = 'flex';
+        note.textContent = t('live.chat.guest');
+      } else if (!d.chat_open){
         note.textContent = t('live.chat.closed');
         form.style.display = 'none';
+        wall.style.display = 'none';
       } else {
         form.style.display = 'flex';
+        wall.style.display = 'none';
         note.textContent = d.slow_sec
           ? 'Медленный режим: одно сообщение раз в ' + d.slow_sec + ' с'
           : '';
@@ -10418,21 +10439,52 @@ function startLiveWatch(){
   });
 }
 
-function openVkAccessGate(index, src){
+/* СВЕРЯЕМСЯ С СЕРВЕРОМ ПЕРЕД ПОКАЗОМ ВОРОТ.
+   Denis поймал живьём: доступ в ВК уже выдан, а приложение продолжало
+   требовать «сначала получи доступ» — и отпускало только после полного
+   перезапуска. Причина: отметка `vkAccessGranted` живёт в памяти вкладки с
+   момента запуска, а одобрение заявки приходит позже и совсем другим путём.
+   Спрашивать сервер в момент показа ворот — самое дешёвое место: один запрос
+   ровно тогда, когда ответ на него и нужен. */
+async function vkAccessFresh(){
+  if (!telegramId) return vkAccessGranted;
+  try {
+    const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}`);
+    const d = await r.json();
+    if (d && d.found) vkAccessGranted = !!d.in_group;
+  } catch (e) {}
+  return vkAccessGranted;
+}
+
+async function openVkAccessGate(index, src){
   pendingVkOpenIndex = index;
   pendingVkOpenSrc = src || 'lib';
   pendingVkOpenUrl = null;
+  // Может оказаться, что доступ уже есть — тогда ворота не нужны вовсе
+  if (await vkAccessFresh()){ proceedAfterVkAccess(); return; }
   document.getElementById('vk-access-overlay').classList.add('open');
 }
 
 // Те же ворота, но человек шёл не в лекцию, а по кнопке «Канал ВК» / «Чат ВК»
-function openVkGateForUrl(url){
+async function openVkGateForUrl(url){
   pendingVkOpenIndex = null;
   pendingVkOpenUrl = url;
+  if (await vkAccessFresh()){ proceedAfterVkAccess(); return; }
   document.getElementById('vk-access-overlay').classList.add('open');
 }
 
 // Единая точка входа для любых ссылок в ВК: сначала участие, потом доступ
+/* Точка входа по ссылке: сразу ведём человека получать доступ, а если он уже
+   есть — говорим об этом и открываем группу, а не гоняем по кругу */
+async function openVkAccessFlow(){
+  switchView('portal');
+  if (await vkAccessFresh()){
+    openUrl(VK_GROUP_LINK);
+    return;
+  }
+  grantVkAccessAndJoin();
+}
+
 function openVkLink(url){
   if (!isMember) { openPaywall(); return; }
   if (!vkAccessGranted) { openVkGateForUrl(url); return; }
@@ -14119,6 +14171,11 @@ async function sendQuizCardToBot(){
              placeholder="Спросить или сказать" onkeydown="if(event.key==='Enter') sendLiveChat()">
       <button class="live-chat-send" onclick="sendLiveChat()">→</button>
     </div>
+    <!-- Гостю поля ввода не показываем вовсе. Отказ ПОСЛЕ набранного текста
+         обиднее, чем честная стена до него -->
+    <button class="live-btn live-btn-main" id="live-chat-paywall" style="display:none"
+            onclick="closeLiveEntryPopup();collapseLiveFull();openPaywall()"
+            data-text="live.chat.join">Чат — для участников клуба</button>
     <button class="live-btn" id="live-full-practice" onclick="openLivePractice()" style="display:none;margin-top:8px" data-text="live.practice">Подключиться к практике</button>
   </div>
 </div>
