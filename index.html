@@ -7374,6 +7374,29 @@ function openBonusPopup(key){
       : (b.has_free ? t('bonus.guest_note') : t('bonus.members_only'));
   renderBonusItems();
   document.getElementById('bonus-popup-overlay').classList.add('open');
+
+  // И СРАЗУ ОБНОВЛЯЕМ. Раньше попап рисовался только из того, что загрузилось
+  // при первом запуске приложения, и больше никогда не перезапрашивалось.
+  // Участница держала мини-апп открытым с момента, когда у Модуля 3 ещё не было
+  // ссылки, — и видела «скоро», хотя сервер ссылку уже отдавал. Открытие
+  // попапа это ровно тот момент, когда свежесть важнее экономии запроса.
+  refreshBonusPopup(key);
+}
+
+async function refreshBonusPopup(key){
+  try {
+    await loadBonuses();
+  } catch (e) { return; }
+  // За время запроса человек мог закрыть попап или открыть другой набор —
+  // перерисовываем только если он всё ещё смотрит на тот же
+  if (bonusOpenKey !== key) return;
+  const b = findBonus(key);
+  if (!b) return;
+  document.getElementById('bonus-popup-title').textContent = b.title || 'Бонус';
+  document.getElementById('bonus-popup-sub').textContent =
+    b.available ? (b.subtitle || '')
+      : (b.has_free ? t('bonus.guest_note') : t('bonus.members_only'));
+  renderBonusItems();
 }
 
 function closeBonusPopup(){
