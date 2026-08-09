@@ -367,6 +367,43 @@
 /* Сигил тоже на своём слое: он статичен между вскрытиями */
 .pr-coinSigil{transform:translate(-50%,-50%) translateZ(0)}
 
+/* ⚠️⚠️ СНИМАЮ СВОЮ ЖЕ CSS-МАСКУ С КОНТЕЙНЕРА СИГИЛА (09.08.2026).
+   Я поставил её в v110, чтобы орнамент не лез на заголовок. Замер Denis'а:
+   без слоёв под маской экран всё равно шёл 7 кадров — потому что маска на
+   КОНТЕЙНЕРЕ работает всегда, независимо от волны, и складывает буфер
+   размером во весь сигил на каждом кадре.
+   Вместо маски просто ДЕЛАЕМ СИГИЛ МЕНЬШЕ и держим его вокруг карты: до
+   шапки он теперь не достаёт, а мягкая кромка на прозрачности 2.4% всё
+   равно была неразличима. */
+.pr-coinSigil{
+  mask:none;-webkit-mask:none;
+  width:min(86vw,560px);height:min(86vw,560px);
+}
+
+/* ── ВОЛНА ЛЕНТОЙ ЗАРАНЕЕ ОТРИСОВАННЫХ КАДРОВ ─────────────────────────────
+   24 кадра сеткой 6×4 в одной картинке с прозрачностью, 99 КБ на всех богов.
+   Листаются сдвигом фона: ни масок, ни перерисовки содержимого — композитор
+   двигает готовую текстуру. Два шага по строкам и столбцам сразу нельзя,
+   поэтому две анимации: по столбцам вчетверо быстрее и четыре повтора,
+   по строкам — один проход. */
+.pr-waveSheet{
+  position:absolute;left:50%;top:calc(50% + 66px);
+  width:min(96vw,620px);height:min(96vw,620px);
+  transform:translate(-50%,-50%);
+  z-index:4;pointer-events:none;opacity:0;
+  background-image:url('images/reveal/wave-ring.webp');
+  background-size:600% 400%;
+  background-position:0% 0%;
+}
+.pr-waveSheet.pr-playing{
+  animation:pr-waveCols .33s steps(6) 4 both, pr-waveRows 1.32s steps(4) 1 both,
+            pr-waveShow 1.32s linear 1 both;
+}
+@keyframes pr-waveCols{from{background-position-x:0%}to{background-position-x:100%}}
+@keyframes pr-waveRows{from{background-position-y:0%}to{background-position-y:100%}}
+@keyframes pr-waveShow{0%{opacity:0}6%{opacity:.85}80%{opacity:.85}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.pr-waveSheet{display:none}}
+
 /* ⚠️⚠️ ЭТОТ БЛОК ДОЛЖЕН ОСТАВАТЬСЯ ПОСЛЕДНИМ СРЕДИ ПРАВИЛ ЭКРАНА.
    Второй раз подряд положил его выше и получил, что правила концепта
    перебивают его обратно. Ниже — только общие правила приложения.
@@ -410,6 +447,7 @@
         <div class="pr-ring" aria-hidden="true"></div>
         <div class="pr-flash" aria-hidden="true"></div>
         <div class="pr-coinSigil"><svg id="pr-sigil-svg" viewBox="0 0 1000 1000" aria-hidden="true"></svg></div>
+        <div class="pr-waveSheet" id="pr-wave-sheet" aria-hidden="true"></div>
         <div class="pr-heroSky" aria-hidden="true"></div>
         <div class="pr-heroBeams" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
         <div class="pr-heroPedestal" aria-hidden="true"></div>
@@ -466,9 +504,10 @@
     <div class="lab-env" id="lab-env"></div>
     <div class="lab-note">
       Строки со «└» относятся к сигилу и действуют, только пока включён
-      «Сигил: рисовать». Если сигил роняет кадры одинаково и картинкой, и
-      вектором — виновата МАСКА, а не содержимое: снимай «ВОЛНА (слои под
-      маской)» и смотри, вернулись ли кадры. Потом пробуй ползунок размера.
+      «Сигил: рисовать». Замер 09.08 показал: с волной под маской 1 кадр,
+      без неё 7 — виновата маска. Поэтому волна теперь по умолчанию идёт
+      ЛЕНТОЙ заранее отрисованных кадров. Сними «волна ЛЕНТОЙ», чтобы
+      вернуть прежний способ и сравнить числа на одном паке.
       Кадры считаются постоянно; в скобках — худшее значение за последнее вскрытие.
       Выключай по одному сверху вниз и смотри, где худшее число подскакивает —
       это и есть виновник. «Запекание сигила» выключено = маска едет по живому
@@ -824,7 +863,7 @@ function prRenderSigil(god, mood){
   const stage = prEl('pr-stage');
   const appearance = (mood && mood.appearance) || stage.getAttribute('data-pr-theme') || 'dark';
   const cacheKey = key + ':' + appearance + ':' + (PR_FX.bake ? 'b' : 'v')
-    + ':' + (PR_FX.aura ? 'a' : '-') + ':' + (PR_FX.wave ? 'w' : '-');
+    + ':' + (PR_FX.aura ? 'a' : '-') + ':' + (PR_FX.wave ? 'w' : '-') + ':' + (PR_FX.waveSheet ? 's' : '-');
   if (PR_SIGIL_CACHE[cacheKey]){ svg.innerHTML = PR_SIGIL_CACHE[cacheKey]; return; }
   const isLight = appearance === 'light';
   const gold = isLight ? '#9f6e1d' : '#f0c977';
@@ -897,8 +936,8 @@ function prRenderSigil(god, mood){
     // Слои ПОД МАСКОЙ — самое дорогое, что тут есть: маска заставляет браузер
     // рисовать содержимое в отдельный буфер и складывать его каждый кадр,
     // и размер этого буфера считается в физических пикселях экрана
-    + (PR_FX.wave && wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
-    + (PR_FX.wave ? pic('pr-coinWaveGroup', waveSrc, true) : '');
+    + (PR_FX.wave && !PR_FX.waveSheet && wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
+    + (PR_FX.wave && !PR_FX.waveSheet ? pic('pr-coinWaveGroup', waveSrc, true) : '');
 
   PR_SIGIL_CACHE[cacheKey] = svg.innerHTML;
 
@@ -956,7 +995,11 @@ function openRevealLab(){
 /* Выключатели дорогих эффектов. В приложении всё включено; их щёлкает
    лаборатория (lab.html), чтобы искать виновника падения кадров НА ЖИВОМ КОДЕ,
    а не на копии. Ничего не стоят: четыре проверки за вскрытие */
-const PR_FX = { sigil:true, bake:true, aura:true, wave:true, particles:true, ambient:true };
+/* waveSheet: волна лентой заранее отрисованных кадров (дёшево — композитор
+   двигает готовую картинку) вместо слоёв под SVG-маской (дорого — маска
+   заставляет перерисовывать содержимое в отдельный буфер каждый кадр) */
+const PR_FX = { sigil:true, bake:true, aura:true, wave:true, waveSheet:true,
+                particles:true, ambient:true };
 
 const PR_POS = [[-86,-34,-9],[0,-56,0],[86,-34,9]];   // раскладка стопки из концепта
 
@@ -1176,6 +1219,7 @@ async function prOpenCard(id){
 
   setTimeout(function(){
     scene.classList.remove('pr-phase-charge'); scene.classList.add('pr-phase-impact');
+    prPlayWaveSheet();
     el.classList.remove('pr-phase-charge');    el.classList.add('pr-phase-impact','pr-open');
     prImpact(el, prMood(card));
   }, 460);
@@ -1198,6 +1242,19 @@ async function prOpenCard(id){
    следующую карту — задумка «вскрытие должно оставаться действием человека»
    на деле читалась как сломанная кнопка: написано «Открой следующую», нажимаешь
    и ничего не происходит. Denis прав, открываем */
+/* Волна лентой кадров. Перезапуск — снятием и возвратом класса с
+   принудительной перерисовкой между ними, иначе браузер схлопывает два
+   состояния в одно и со второй карточки волны не видно */
+function prPlayWaveSheet(){
+  const el = prEl('pr-wave-sheet');
+  if (!el) return;
+  el.classList.remove('pr-playing');
+  if (!(PR_FX.sigil && PR_FX.wave && PR_FX.waveSheet)) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  void el.offsetWidth;
+  el.classList.add('pr-playing');
+}
+
 function prCta(){
   if (PR.busy) return;
   if (PR.opened.length >= PR.ids.length){ closePackReveal(); return; }
@@ -1427,7 +1484,7 @@ const LAB_SWITCHES = [
   { id:'bake',      name:'└ картинкой (иначе вектором)', fx:'bake', dep:'sigil' },
   { id:'wave',      name:'└ ВОЛНА (слои под маской)',    fx:'wave', dep:'sigil' },
   { id:'aura',      name:'└ вторая копия волны (аура)',   fx:'aura', dep:'sigil' },
-  { id:'sigmask',   name:'└ маска верхней кромки',        css:'.pr-coinSigil{mask:none!important;-webkit-mask:none!important}' },
+  { id:'waveSheet', name:'└ волна ЛЕНТОЙ (иначе маской)', fx:'waveSheet', dep:'sigil' },
   { id:'particles', name:'Частицы удара',        fx:'particles' },
   { id:'ambient',   name:'Живой фон (искры)',    fx:'ambient' },
   { id:'beams',     name:'Лучи из-под карты',    css:'.pr-heroBeams{display:none}' },
