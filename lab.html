@@ -332,16 +332,15 @@
    стоимость кадра не зависит от того, насколько сложная там картинка —
    ровно то, чего мы не могли добиться от рисованного орнамента.
 
-   ⚠️ У mp4 НЕТ ПРОЗРАЧНОСТИ. Поэтому запись должна быть НА ЧЁРНОМ фоне, а
-   слой складывается по «экрану»: чёрное становится невидимым, светлое —
-   свечением. Это единственный режим наложения, который здесь оставлен: он
-   применяется к одному видеослою, а не к сотням фигур. */
+   ⚠️ ЭТО АНИМИРОВАННЫЙ WebP С НАСТОЯЩЕЙ ПРОЗРАЧНОСТЬЮ, а не видео. У видео
+   в mp4 альфы нет вовсе, а в webm её не понимает Safari — то есть в мини-аппе
+   она бы просто не работала. Поэтому режим наложения здесь НЕ нужен: слой
+   ложится поверх сцены своей прозрачностью, как обычная картинка. */
 .pr-fxVideo{
   position:absolute;left:50%;top:calc(50% + 66px);
   width:min(120vw,760px);height:min(120vw,760px);
   transform:translate(-50%,-50%);
-  object-fit:cover;pointer-events:none;z-index:4;
-  mix-blend-mode:screen;opacity:.9;
+  object-fit:contain;pointer-events:none;z-index:4;opacity:.95;
 }
 @media (prefers-reduced-motion:reduce){.pr-fxVideo{display:none}}
 
@@ -387,10 +386,8 @@
         <div class="pr-aura" id="pr-aura"></div>
         <div class="pr-ring" aria-hidden="true"></div>
         <div class="pr-flash" aria-hidden="true"></div>
-        <video class="pr-fxVideo" id="pr-fx-video" muted playsinline preload="auto"
-               aria-hidden="true" onerror="this.style.display='none'">
-          <source src="images/reveal/reveal-fx.mp4" type="video/mp4">
-        </video>
+        <img class="pr-fxVideo" id="pr-fx-video" alt="" aria-hidden="true"
+             data-nofade onerror="this.style.display='none'">
         <div class="pr-heroSky" aria-hidden="true"></div>
         <div class="pr-heroBeams" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
         <div class="pr-heroPedestal" aria-hidden="true"></div>
@@ -766,15 +763,25 @@ async function prOpenCard(id){
 
    Файл кладётся в images/reveal/reveal-fx.mp4 и НЕ ОБЯЗАТЕЛЕН: если его нет
    или браузер его не принял, слой прячется и вскрытие идёт без фона. */
+/* Файл на оформление, а НЕ на бога: одна пара на все 19 персонажей.
+   Иначе 19 × 2 × ~1 МБ = тридцать с лишним мегабайт в репозитории навсегда */
+const PR_FX_SRC = { dark: 'images/reveal/reveal-gold.webp',
+                    light: 'images/reveal/reveal-holo.webp' };
+
+/* ⚠️ АНИМИРОВАННУЮ КАРТИНКУ НЕЛЬЗЯ «ПЕРЕМОТАТЬ» — у неё нет currentTime.
+   Единственный надёжный способ проиграть заново: сбросить адрес и поставить
+   обратно. Файл уже в кэше, сеть при этом не дёргается. */
 function prPlayFxVideo(){
-  const v = prEl('pr-fx-video');
-  if (!v || !PR_FX.fxVideo) return;
+  const el = prEl('pr-fx-video');
+  if (!el || !PR_FX.fxVideo) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  try {
-    v.currentTime = 0;
-    const p = v.play();
-    if (p && p.catch) p.catch(function(){});   // автозапуск могли запретить — не беда
-  } catch(e){}
+  const stage = prEl('pr-stage');
+  const theme = (stage && stage.getAttribute('data-pr-theme')) === 'light' ? 'light' : 'dark';
+  const src = PR_FX_SRC[theme];
+  el.style.display = '';
+  el.src = '';
+  void el.offsetWidth;
+  el.src = src;
 }
 
 function prCta(){
