@@ -476,6 +476,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
 .reveal-overlay.open{display:flex}
 
+/* ═══ PR-CSS-START ═══ метка для стенда pack-lab.html, НЕ УДАЛЯТЬ ═══ */
 /* ── ЭКРАН РАСКРЫТИЯ ПАКА (09.08.2026) ─────────────────────────────────────
    Стили перенесены ИЗ КОНЦЕПТА ОДИН В ОДИН — Denis собирал их целый день, и
    переделывать здесь нечего. Изменено ровно три вещи, все вынужденные:
@@ -804,6 +805,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage[data-pr-theme="dark"]  .pr-face.pr-back .pr-backImg.pr-dark{opacity:1}
 /* Тема ещё не проставлена (самый первый кадр экрана) — показываем тёмную */
 #pr-stage:not([data-pr-theme="light"]) .pr-face.pr-back .pr-backImg.pr-dark{opacity:1}
+/* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
@@ -4079,6 +4081,7 @@ img.img-fade.is-instant{opacity:1;transition:none}
   <div class="quiz-inner" id="quiz-inner"></div>
 </div>
 
+<!-- ═══ PR-HTML-START ═══ метка для стенда pack-lab.html, НЕ УДАЛЯТЬ ═══ -->
 <div id="pr-stage" data-pr-theme="neutral">
   <main class="pr-stage">
     <section class="pr-shell">
@@ -4129,6 +4132,7 @@ img.img-fade.is-instant{opacity:1;transition:none}
     </section>
   </main>
 </div>
+<!-- ═══ PR-HTML-END ═══ -->
 
 <!-- ВИТРИНА АЛЬБОМА. Раньше этот же оверлей работал и экраном вскрытия —
      с 09.08.2026 вскрытие переехало в #pr-stage, а здесь осталась только
@@ -13145,6 +13149,7 @@ function debugPackReveal(){
   openPackReveal(three);
 }
 
+/* ═══ PR-JS-START ═══ метка для стенда pack-lab.html, НЕ УДАЛЯТЬ ═══ */
 /* ══ ЭКРАН РАСКРЫТИЯ ПАКА ═══════════════════════════════════════════════════
    Перенос концепта Denis'а (`pack-reveal-v6-3`) целиком: стопка → вылет героя
    → заряд, удар, подпись → полочка из оставшихся. Хореография, тайминги и
@@ -13496,6 +13501,24 @@ function prCta(){
   if (next != null) prOpenCard(next);
 }
 
+/* ⚠️ ЭТА ФУНКЦИЯ ВЫЗЫВАЛАСЬ, НО НИГДЕ НЕ БЫЛА ОПРЕДЕЛЕНА (найдено 09.08.2026).
+   prImpact падал с ReferenceError на каждом вскрытии, ровно на строке подсчёта
+   частиц — то есть взрыв частиц не показывался ВООБЩЕ, молча, потому что
+   бросок происходил внутри setTimeout и до консоли приложения не доходил.
+   Судя по соседнему комментарию, потерялась она при вырезании сигилов.
+
+   Смысл: на слабом устройстве частиц вдвое меньше. Спрашиваем не «телефон ли
+   это» (в мини-аппе всегда телефон), а что железо о себе сообщает. Чего нет —
+   то не учитываем: Safari, например, не отдаёт deviceMemory вовсе. */
+function prHeavyEffectsAllowed(){
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  const mem = navigator.deviceMemory || 0;
+  const cpu = navigator.hardwareConcurrency || 0;
+  if (mem && mem < 4) return false;
+  if (cpu && cpu < 6) return false;
+  return true;
+}
+
 /* Взрыв частиц из-под карты. Частицы удаляют себя сами: иначе за три вскрытия
    в разметке остаётся полторы сотни мёртвых элементов */
 function prImpact(el, mood){
@@ -13542,6 +13565,7 @@ function prSeedAmbient(a, b){
     scene.appendChild(s);
   }
 }
+/* ═══ PR-JS-END ═══ */
 
 /* ── КНОПКИ ДЕЙСТВИЙ КАРТОЧКИ — ОДНА ФУНКЦИЯ НА ДВА ЭКРАНА ────────────────
    «Посмотреть», «Забрать» и «Поделиться» нужны и на вскрытии, и в витрине
