@@ -476,37 +476,167 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
 .reveal-overlay.open{display:flex}
 
-/* ── ЗАПЕЧЁННЫЕ СЛОИ ВСКРЫТИЯ (09.08.2026) ────────────────────────────────
-   Текстура и рамка — готовые картинки в images/reveal/, а не градиенты: то же
-   на глаз, но рисуется мгновенно и не зависит от поддержки фильтров.
-   ⚠️ ТЕМУ ДЕРЖИМ НА СВОЁМ АТРИБУТЕ `data-reveal-theme`, а НЕ на `data-theme`:
-   в приложении есть правила вида [data-theme="light"] БЕЗ имени элемента —
-   они сматчились бы на этот оверлей и перекрасили интерфейс вокруг. */
-.reveal-tex,.reveal-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  pointer-events:none;opacity:0;transition:opacity .5s ease}
-.reveal-tex{z-index:0}
-.reveal-frame{z-index:1;object-fit:fill}
-.reveal-overlay[data-reveal-theme="dark"] .reveal-tex.dark,
-.reveal-overlay[data-reveal-theme="dark"] .reveal-frame.dark{opacity:1}
-.reveal-overlay[data-reveal-theme="light"] .reveal-tex.light{opacity:.9}
-.reveal-overlay[data-reveal-theme="light"] .reveal-frame.light{opacity:1}
-.reveal-overlay > *:not(.reveal-tex):not(.reveal-frame){position:relative;z-index:2}
+/* ── ЭКРАН РАСКРЫТИЯ ПАКА (09.08.2026) ─────────────────────────────────────
+   Стили перенесены ИЗ КОНЦЕПТА ОДИН В ОДИН — Denis собирал их целый день, и
+   переделывать здесь нечего. Изменено ровно три вещи, все вынужденные:
+     1) все классы получили префикс `pr-` — иначе `.card`, `.open`, `.shell`
+        и `.light` столкнулись бы с приложением (`.shell` там главная оболочка);
+     2) имена анимаций тоже с префиксом — `float`, `fly`, `glint`, `blob`
+        слишком общие, чтобы жить в общем файле;
+     3) тема переехала с `body[data-theme]` на `#pr-stage[data-pr-theme]` —
+        в приложении есть правила `[data-theme="..."]` БЕЗ имени элемента,
+        они перекрасили бы интерфейс вокруг.
+   Больше ничего не трогать: цифры, тени и тайминги — авторские. */
 
-/* Сигил бога — под карточками, крупно и приглушённо. Не перехватывает нажатия */
-.reveal-sigil{position:absolute;left:50%;top:50%;width:min(150vw,720px);height:min(150vw,720px);
-  transform:translate(-50%,-50%);pointer-events:none;z-index:0;opacity:0;transition:opacity .6s ease}
-.reveal-sigil.on{opacity:.22}
-.reveal-sigil svg{width:100%;height:100%;display:block}
-.reveal-sigil .sig-disc{r:18}
-.reveal-sigil.wave .sig-wave{animation:sig-wave-show 1.5s ease-out}
-.reveal-sigil.wave .sig-disc{animation:sig-wave-grow 1.5s ease-out}
-@keyframes sig-wave-show{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
-@keyframes sig-wave-grow{0%{r:18}100%{r:520}}
+#pr-stage{position:fixed;inset:0;z-index:900;display:none;overflow-y:auto;
+  font-family:var(--sans);color:#eee;background:#070912;
+  transition:background 1s ease,color .6s ease}
+#pr-stage.on{display:block}
+/* Кнопки действий («Посмотреть», «Забрать», «Поделиться») — та же кнопка
+   концепта, но внутри панели: без внешних отступов и пониже ростом */
+.pr-cta-inline{width:100%;margin:10px 0 0;height:46px}
+#pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
+#pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
 
-/* Хореография вскрытия: короткий вдох перед переворотом и подсветка после */
-.reveal-row.phase-charge .reveal-card:not(.flipped){filter:brightness(1.12)}
-.reveal-row.phase-impact{animation:reveal-impact .42s ease-out}
-@keyframes reveal-impact{0%{transform:scale(1)}35%{transform:scale(1.045)}100%{transform:scale(1)}}
+#pr-stage{
+  --ease:cubic-bezier(.16,1,.3,1);
+  --panel-w:min(440px,calc(100vw - 24px));
+  --serif: Georgia,"Times New Roman",serif;
+  --sans: Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+#pr-stage *{box-sizing:border-box}
+#pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
+#pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
+#pr-stage::before,#pr-stage::after{
+  content:"";position:fixed;pointer-events:none;filter:blur(70px);opacity:.55;transition:background 1s ease,opacity 1s ease,transform 10s ease;
+  animation:pr-blob 12s ease-in-out infinite alternate;
+}
+#pr-stage::before{width:340px;height:340px;left:-90px;top:12vh;background:rgba(223,181,113,.16)}
+#pr-stage::after{width:390px;height:390px;right:-100px;bottom:3vh;background:rgba(152,126,215,.13);animation-direction:alternate-reverse}
+#pr-stage[data-pr-theme="light"]::before{background:rgba(255,236,204,.58);opacity:.8}
+#pr-stage[data-pr-theme="light"]::after{background:rgba(199,173,133,.28);opacity:.5}
+#pr-stage[data-pr-theme="dark"]::before{background:rgba(217,171,93,.12)}
+#pr-stage[data-pr-theme="dark"]::after{background:rgba(121,96,190,.13)}
+@keyframes pr-blob{from{transform:translate3d(-12px,-8px,0) scale(.94)}to{transform:translate3d(18px,14px,0) scale(1.12)}}
+
+.pr-stage{min-height:100vh;padding:20px 12px 72px;display:grid;place-items:center;position:relative}
+.pr-shell{
+  width:var(--panel-w);min-height:760px;position:relative;overflow:hidden;border-radius:34px;
+  box-shadow:0 35px 110px rgba(0,0,0,.48);isolation:isolate;
+  transition:box-shadow .8s ease;
+}
+#pr-stage[data-pr-theme="light"] .pr-shell{box-shadow:0 34px 95px rgba(73,55,35,.30),0 0 34px rgba(255,239,213,.18)}
+#pr-stage[data-pr-theme="dark"] .pr-shell{box-shadow:0 40px 120px rgba(0,0,0,.72),0 0 30px rgba(207,165,92,.08)}
+.pr-tex,.pr-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;transition:opacity .8s ease}
+.pr-tex{z-index:-4}.pr-frame{z-index:30}
+.pr-tex.pr-light,.pr-frame.pr-light{opacity:0}.pr-tex.pr-dark,.pr-frame.pr-dark{opacity:0}
+#pr-stage[data-pr-theme="light"] .pr-tex.pr-light,#pr-stage[data-pr-theme="light"] .pr-frame.pr-light{opacity:1}
+#pr-stage[data-pr-theme="dark"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="dark"] .pr-frame.pr-dark{opacity:1}
+#pr-stage[data-pr-theme="neutral"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="neutral"] .pr-frame.pr-dark{opacity:1}
+.pr-shell::before{
+  content:"";position:absolute;inset:0;z-index:-3;pointer-events:none;
+  background:radial-gradient(circle at 50% 38%,rgba(235,190,110,.10),transparent 36%),linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22));
+}
+#pr-stage[data-pr-theme="light"] .pr-shell::before{background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.28),transparent 35%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(119,88,50,.06))}
+
+.pr-head{position:relative;z-index:10;text-align:center;padding:36px 54px 0}
+.pr-eyebrow{font:600 10px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;opacity:.58;margin-bottom:10px}
+.pr-title{font:500 clamp(30px,8vw,42px)/1 var(--serif);letter-spacing:-.025em;margin:0;text-shadow:0 2px 18px rgba(0,0,0,.18)}
+.pr-sub{font-size:13px;line-height:1.4;margin:10px auto 0;opacity:.63;max-width:260px}
+.pr-close{position:absolute;right:18px;top:17px;width:38px;height:38px;border-radius:50%;border:1px solid currentColor;background:rgba(255,255,255,.025);color:inherit;opacity:.55;font-size:22px;cursor:pointer;z-index:35}
+
+.pr-scene{height:510px;position:relative;margin-top:8px;z-index:5;perspective:1400px;overflow:visible}
+.pr-motif{position:absolute;left:50%;top:52%;width:390px;height:390px;transform:translate(-50%,-50%);object-fit:contain;opacity:.58;pointer-events:none;z-index:1;filter:drop-shadow(0 0 18px rgba(218,175,101,.14));transition:opacity .5s ease,filter .7s ease}
+#pr-stage[data-pr-theme="light"] .pr-motif{opacity:.47}
+#pr-stage[data-pr-theme="dark"] .pr-motif{opacity:.68}
+.pr-aura{position:absolute;left:50%;top:54%;width:330px;height:330px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:0;filter:blur(27px);opacity:.35;transition:background .7s ease,opacity .7s ease,transform .8s var(--ease)}
+.pr-scene.pr-revealing .pr-aura{opacity:.84;transform:translate(-50%,-50%) scale(1.18)}
+
+.pr-card{
+  --x:0px;--y:0px;--r:0deg;--s:1;
+  position:absolute;left:50%;top:50%;width:174px;aspect-ratio:.70;border:0;background:none;padding:0;
+  transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--r)) scale(var(--s));
+  transition:transform 1s var(--ease),opacity .55s ease,filter .55s ease;transform-origin:50% 65%;cursor:pointer;
+}
+.pr-card.pr-shelf{z-index:3;filter:brightness(.84);opacity:.9}
+.pr-card.pr-shelf:hover{filter:brightness(1.05);transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) - 4px)) rotate(var(--r)) scale(calc(var(--s) * 1.02))}
+.pr-card.pr-hero{z-index:10;width:286px;cursor:default;filter:drop-shadow(0 28px 36px rgba(0,0,0,.34))}
+.pr-flip{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .92s var(--ease)}
+.pr-card.pr-open .pr-flip{transform:rotateY(180deg)}
+.pr-face{position:absolute;inset:0;border-radius:19px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pr-face.pr-back{box-shadow:0 18px 36px rgba(0,0,0,.34)}
+.pr-face.pr-front{transform:rotateY(180deg);background:#111;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 45px rgba(0,0,0,.34)}
+.pr-face img{display:block;width:100%;height:100%;object-fit:cover}
+.pr-card.pr-hero .pr-face{border-radius:20px}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::after{
+  content:"";position:absolute;inset:-25%;background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.35) 48%,rgba(255,232,181,.16) 53%,transparent 65%);transform:translateX(-75%);animation:pr-glint 1.2s .46s ease-out both;pointer-events:none
+}
+@keyframes pr-glint{0%{opacity:0;transform:translateX(-75%)}20%{opacity:.85}100%{opacity:0;transform:translateX(75%)}}
+
+.pr-fx{position:absolute;z-index:40;pointer-events:none;mix-blend-mode:screen}
+.pr-fx.pr-dot{width:var(--sz);height:var(--sz);border-radius:50%;background:var(--c);box-shadow:0 0 11px var(--c);animation:pr-fly var(--dur) var(--ease) both}
+.pr-fx.pr-star{width:var(--sz);height:var(--sz);background:transparent;animation:pr-fly var(--dur) var(--ease) both}
+.pr-fx.pr-star::before,.pr-fx.pr-star::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--c);border-radius:99px;box-shadow:0 0 8px var(--c)}
+.pr-fx.pr-star::before{width:1.5px;height:100%}.pr-fx.pr-star::after{width:100%;height:1.5px}
+@keyframes pr-fly{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}16%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.05)}}
+.pr-ambient{position:absolute;z-index:2;width:3px;height:3px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);opacity:.45;pointer-events:none;animation:pr-float var(--d) ease-in-out infinite alternate}
+@keyframes pr-float{from{transform:translate3d(0,8px,0) scale(.7);opacity:.15}to{transform:translate3d(var(--mx),-14px,0) scale(1.15);opacity:.65}}
+
+.pr-details{position:relative;z-index:9;margin:-18px 22px 0;opacity:0;transform:translate3d(0,15px,0);transition:opacity .55s ease,transform .65s var(--ease);will-change:opacity,transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pr-details.pr-on{opacity:1;transform:translate3d(0,0,0)}
+.pr-stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid rgba(255,255,255,.10);border-radius:19px;background:linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.030));box-shadow:inset 0 1px rgba(255,255,255,.055),0 14px 35px rgba(0,0,0,.11);overflow:hidden;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+#pr-stage[data-pr-theme="light"] .pr-stats{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(247,238,222,.24));border-color:rgba(108,82,49,.16);box-shadow:inset 0 1px rgba(255,255,255,.58),0 13px 30px rgba(74,55,33,.08)}
+.pr-stat{text-align:left;padding:13px 11px;min-width:0}.pr-stat+.pr-stat{border-left:1px solid rgba(255,255,255,.08)}#pr-stage[data-pr-theme="light"] .pr-stat+.pr-stat{border-left-color:rgba(95,72,44,.12)}
+.pr-label{font-size:8px;letter-spacing:.11em;text-transform:uppercase;opacity:.50}.pr-value{font:500 13px/1.2 var(--sans);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-ability{display:flex;align-items:center;gap:12px;padding:14px 6px 2px}.pr-ability-icon{width:42px;height:42px;flex:none;display:grid;place-items:center;border:1px solid rgba(218,177,105,.33);border-radius:50%;font-size:18px;color:var(--accent)}
+
+.pr-details .pr-stats,.pr-details .pr-ability{transform:translateZ(0);}
+.pr-ability strong{font-size:13px;font-weight:600}.pr-ability p{font-size:11.5px;line-height:1.42;margin:3px 0 0;opacity:.57}
+.pr-cta{width:calc(100% - 44px);margin:15px 22px 24px;height:52px;border-radius:18px;border:1px solid rgba(221,181,105,.42);background:rgba(8,9,14,.18);color:inherit;font:500 15px/1 var(--sans);letter-spacing:.01em;cursor:pointer;position:relative;z-index:31;box-shadow:inset 0 1px rgba(255,255,255,.07),0 9px 24px rgba(0,0,0,.14);transition:transform .25s var(--ease),background .4s ease,box-shadow .4s ease}
+#pr-stage[data-pr-theme="light"] .pr-cta{background:rgba(255,248,235,.34);border-color:rgba(151,112,64,.28);box-shadow:inset 0 1px rgba(255,255,255,.6),0 10px 25px rgba(96,67,36,.10)}
+.pr-cta:hover{transform:translateY(-2px);box-shadow:inset 0 1px rgba(255,255,255,.1),0 14px 30px rgba(0,0,0,.18),0 0 18px color-mix(in srgb,var(--accent) 18%,transparent)}
+
+.pr-ring,.pr-flash{position:absolute;left:50%;top:53%;pointer-events:none;z-index:20;opacity:0;transform:translate(-50%,-50%)}
+.pr-ring{width:420px;height:420px;border-radius:50%;border:1px solid rgba(255,235,190,.36);box-shadow:0 0 56px rgba(255,220,176,.18), inset 0 0 28px rgba(255,255,255,.08)}
+.pr-flash{width:760px;height:760px;border-radius:50%;filter:blur(36px);background:radial-gradient(circle,rgba(255,255,255,.88) 0%,rgba(255,233,186,.40) 16%,rgba(178,151,242,.24) 42%,rgba(126,235,255,.14) 56%,transparent 76%)}
+.pr-scene.pr-phase-charge .pr-aura{opacity:.90;transform:translate(-50%,-50%) scale(1.34)}
+.pr-scene.pr-phase-impact .pr-flash{animation:pr-flashPulse .54s ease-out both}
+.pr-scene.pr-phase-impact .pr-ring{animation:pr-ringShock .92s ease-out both}
+.pr-scene.pr-phase-signature .pr-motif{transform:translate(-50%,-50%) scale(1.03)}
+@keyframes pr-flashPulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.18)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.58)}}
+@keyframes pr-ringShock{0%{opacity:0;transform:translate(-50%,-50%) scale(.26)}18%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(2.02)}}
+.pr-card.pr-hero.pr-phase-anticipation{transform:translate(-50%,-50%) translate(0px,66px) rotate(0deg) scale(.985)}
+.pr-card.pr-hero.pr-phase-charge{animation:pr-heroCharge .42s ease-out both}
+.pr-card.pr-hero.pr-phase-impact{animation:pr-heroImpact .52s var(--ease) both}
+@keyframes pr-heroCharge{0%{transform:translate(-50%,-50%) translate(0px,66px) scale(.985)}100%{transform:translate(-50%,-50%) translate(0px,62px) scale(1.01)}}
+@keyframes pr-heroImpact{0%{transform:translate(-50%,-50%) translate(0px,62px) scale(1.01)}40%{transform:translate(-50%,-50%) translate(0px,66px) scale(1.03)}100%{transform:translate(-50%,-50%) translate(0px,72px) scale(1)}}
+.pr-card.pr-hero .pr-face.pr-front::before{content:"";position:absolute;inset:-20%;pointer-events:none;opacity:0;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 22%,rgba(255,205,231,.18) 34%,rgba(189,238,255,.24) 42%,rgba(255,243,188,.20) 50%,rgba(203,178,255,.24) 58%,transparent 74%)}
+.pr-card.pr-hero .pr-face.pr-front::after{content:"";position:absolute;inset:-25%;background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.52) 48%,rgba(255,231,182,.24) 54%,transparent 68%);transform:translateX(-75%);pointer-events:none;opacity:0}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::before{animation:pr-holoWash 1.45s .22s ease-out both}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::after{animation:pr-heroGlint 1.15s .34s ease-out both}
+@keyframes pr-heroGlint{0%{opacity:0;transform:translateX(-72%)}18%{opacity:1}100%{opacity:0;transform:translateX(76%)}}
+@keyframes pr-holoWash{0%{opacity:0;transform:translateX(-36%) rotate(-8deg) scale(1.1)}18%{opacity:.82}55%{opacity:.68}100%{opacity:0;transform:translateX(34%) rotate(8deg) scale(1.24)}}
+.pr-coinSigil{position:absolute;left:50%;top:53%;width:900px;height:900px;transform:translate(-50%,-50%);z-index:2;pointer-events:none;overflow:visible;opacity:1}
+.pr-coinSigil svg{display:block;width:100%;height:100%;overflow:visible}
+.pr-coinBase{opacity:.022}
+.pr-coinWaveAura,.pr-coinWaveGroup{opacity:0;will-change:opacity;mix-blend-mode:screen}
+#pr-stage[data-pr-theme="light"] .pr-coinBase{opacity:.078}
+#pr-stage[data-pr-theme="light"] .pr-scene.pr-phase-signature .pr-coinBase{opacity:.11}
+#pr-stage[data-pr-theme="light"] .pr-coinWaveAura{mix-blend-mode:normal}
+#pr-stage[data-pr-theme="light"] .pr-coinWaveGroup{mix-blend-mode:normal}
+#pr-stage[data-pr-theme="dark"] .pr-coinBase{opacity:.024}
+.pr-scene.pr-phase-impact .pr-coinWaveAura{animation:pr-coinWaveAuraFade 1320ms ease-out both}
+.pr-scene.pr-phase-impact .pr-coinWaveGroup{animation:pr-coinWaveGroupFade 1320ms ease-out both}
+.pr-scene.pr-phase-impact .pr-coinWaveMaskDisc{animation:pr-coinMaskTravel 1320ms cubic-bezier(.14,.80,.18,1) both}
+.pr-scene.pr-phase-signature .pr-coinBase{opacity:.028}
+@keyframes pr-coinWaveAuraFade{0%{opacity:0}10%{opacity:.16}22%{opacity:.92}70%{opacity:.94}100%{opacity:0}}
+@keyframes pr-coinWaveGroupFade{0%{opacity:0}12%{opacity:.28}24%{opacity:1}72%{opacity:1}100%{opacity:0}}
+@keyframes pr-coinMaskTravel{0%{r:26px;opacity:0}10%{opacity:1}100%{r:760px;opacity:0}}
+
+
+@media (max-width:390px){.pr-shell{min-height:730px}.pr-scene{height:485px}.pr-card.pr-hero{width:270px}.pr-details{margin-top:-24px}.pr-head{padding-top:32px}.pr-coinSigil{width:780px;height:780px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
 .reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
 .reveal-sub{font-size:12px;color:rgba(241,234,224,.6);margin-bottom:22px;text-align:center}
 /* ── Вскрытие пака ─────────────────────────────────────────────────────────
@@ -2209,6 +2339,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetPlan()">Сбросить план</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugShowLevelFlag()">Флаг поздравления</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetLevelFlag()">Сбросить флаг</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugPackReveal()">Экран пака</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:6px">
           <input id="debug-cmd-input" placeholder="JS выражение..." style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
@@ -3777,17 +3908,54 @@ img.img-fade.is-instant{opacity:1;transition:none}
   <div class="quiz-inner" id="quiz-inner"></div>
 </div>
 
+<div id="pr-stage" data-pr-theme="neutral">
+  <main class="pr-stage">
+    <section class="pr-shell">
+      <img class="pr-tex pr-light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true">
+      <img class="pr-tex pr-dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true">
+      <img class="pr-frame pr-light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true">
+      <img class="pr-frame pr-dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true">
+      <button class="pr-close" aria-label="Закрыть" onclick="closePackReveal()">&times;</button>
+      <header class="pr-head">
+        <div class="pr-eyebrow">Пантеон · подарок</div>
+        <h1 class="pr-title">Твой пак</h1>
+        <p class="pr-sub" id="pr-sub">Открой карту, чтобы узнать награду</p>
+      </header>
+      <div class="pr-scene" id="pr-scene">
+        <div class="pr-aura" id="pr-aura"></div>
+        <div class="pr-ring" aria-hidden="true"></div>
+        <div class="pr-flash" aria-hidden="true"></div>
+        <div class="pr-coinSigil"><svg id="pr-sigil-svg" viewBox="0 0 1000 1000" aria-hidden="true"></svg></div>
+        <div id="pr-pack"></div>
+      </div>
+      <div class="pr-details" id="pr-details">
+        <div class="pr-stats">
+          <div class="pr-stat"><div class="pr-label">Бог</div><div class="pr-value" id="pr-god">—</div></div>
+          <div class="pr-stat"><div class="pr-label">Редкость</div><div class="pr-value" id="pr-rarity">—</div></div>
+          <div class="pr-stat"><div class="pr-label">Награда</div><div class="pr-value" id="pr-gain">—</div></div>
+        </div>
+        <div class="pr-ability">
+          <div class="pr-ability-icon">&#10022;</div>
+          <div><strong id="pr-ability-title">—</strong><p id="pr-ability-text">—</p></div>
+        </div>
+        <div id="pr-actions"></div>
+      </div>
+      <button class="pr-cta" id="pr-cta" onclick="prCta()">Открой карту</button>
+    </section>
+  </main>
+</div>
+
+<!-- ВИТРИНА АЛЬБОМА. Раньше этот же оверлей работал и экраном вскрытия —
+     с 09.08.2026 вскрытие переехало в #pr-stage, а здесь осталась только
+     витрина: карточка крупно, свайп между своими, кнопки действий.
+     Слоёв из концепта тут быть не должно: их стили уехали вместе с экраном -->
 <div class="reveal-overlay" id="reveal-overlay">
-  <img class="reveal-tex light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true">
-  <img class="reveal-tex dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true">
-  <img class="reveal-frame light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true">
-  <img class="reveal-frame dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true">
   <div class="reveal-title" id="reveal-title">Твой пак</div>
   <div class="reveal-sub" id="reveal-sub" data-text="cards.a7">Нажми на карточку, чтобы открыть</div>
-  <div class="reveal-row" id="reveal-row"><div class="reveal-sigil" id="reveal-sigil"></div><div class="reveal-ring" id="reveal-ring"></div></div>
+  <div class="reveal-row" id="reveal-row"><div class="reveal-ring" id="reveal-ring"></div></div>
   <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
-  <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px;max-width:280px;width:auto;align-self:center;padding-left:32px;padding-right:32px" onclick="closePackReveal()">Готово</button>
+  <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px;max-width:280px;width:auto;align-self:center;padding-left:32px;padding-right:32px" onclick="closeShowcase()">Готово</button>
 </div>
 
 <div class="center-modal-overlay" id="bug-popup-overlay" onclick="if(event.target===this) closeBugPopup()">
@@ -12889,16 +13057,15 @@ function sigilLayer(key, stroke, soft){
 
 /* Рисуем сигил под карточками. Если бога не знаем — не рисуем ничего: пустой
    круг из заглушки выглядит как недогруженная картинка */
-function renderSigil(god){
-  const host = document.getElementById('reveal-sigil');
-  if (!host) return;
+function prRenderSigil(god){
+  const svg = document.getElementById('pr-sigil-svg');
+  if (!svg) return;
   const key = sigilKey(god);
-  if (!key){ host.innerHTML = ''; host.classList.remove('on'); return; }
+  if (!key){ svg.innerHTML = ''; return; }
 
   const gold = '#f0c977', pale = '#ffe7b0', bright = '#fff6da';
-  host.innerHTML =
-      '<svg viewBox="0 0 1000 1000" aria-hidden="true">'
-    + '<defs><radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
+  svg.innerHTML =
+      '<defs><radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
     + '<stop offset="0%" stop-color="black" stop-opacity="0"/><stop offset="38%" stop-color="white" stop-opacity=".02"/>'
     + '<stop offset="48%" stop-color="white" stop-opacity=".18"/><stop offset="56%" stop-color="white" stop-opacity="1"/>'
     + '<stop offset="64%" stop-color="white" stop-opacity=".62"/><stop offset="74%" stop-color="white" stop-opacity=".18"/>'
@@ -12907,220 +13074,338 @@ function renderSigil(god){
     + '<stop offset="0%" stop-color="#ff4bd2"/><stop offset="28%" stop-color="#fff35d"/>'
     + '<stop offset="58%" stop-color="#32dbff"/><stop offset="100%" stop-color="#ff72b4"/></linearGradient>'
     + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
-    + '<circle class="sig-disc" cx="500" cy="500" r="18" fill="url(#sigWave)"/></mask></defs>'
-    + '<g class="sig-base">' + sigilLayer(key, gold, pale) + '</g>'
-    + '<g class="sig-wave" mask="url(#sigMask)" opacity="0"><g stroke="url(#sigHolo)" fill="none">'
-    + sigilLayer(key, 'url(#sigHolo)', bright) + '</g></g></svg>';
-  host.classList.add('on');
+    + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="26" fill="url(#sigWave)"/></mask></defs>'
+    + '<g class="pr-coinBase">' + sigilLayer(key, gold, pale) + '</g>'
+    + '<g class="pr-coinWaveGroup" mask="url(#sigMask)"><g stroke="url(#sigHolo)" fill="none">'
+    + sigilLayer(key, 'url(#sigHolo)', bright) + '</g></g>';
 }
 
-/* Волна прогоняется один раз на вскрытие карточки. Перезапуск — снятием и
-   возвратом класса с принудительной перерисовкой между ними, иначе браузер
-   схлопывает два состояния в одно и со второй карточки волны не видно */
-function playSigilWave(){
-  const host = document.getElementById('reveal-sigil');
-  if (!host || !host.classList.contains('on')) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  host.classList.remove('wave');
-  void host.offsetWidth;
-  host.classList.add('wave');
-}
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
 
-/* НАСТРОЕНИЕ ЭКРАНА БЕРЁМ ИЗ РЕДКОСТИ, а не храним на карточке (решение
-   09.08.2026). Так редкая карта отличается атмосферой сама по себе, и Denis'у
-   не приходится заводить руками цвет у каждой из будущих двух сотен карточек. */
-const REVEAL_MOOD = {
-  common:   { theme: 'dark',  accent: '#d9b97a' },
-  uncommon: { theme: 'dark',  accent: '#9fd2c0' },
-  rare:     { theme: 'dark',  accent: '#9fb4f2' },
-  epic:     { theme: 'light', accent: '#c8a2f0' },
-  legendary:{ theme: 'light', accent: '#f0c977' }
+
+/* Отладка: показать экран раскрытия на трёх своих последних карточках, не
+   выдавая себе настоящий пак. Ничего не начисляет и на сервер не ходит —
+   ровно поэтому его можно жать сколько угодно раз подряд */
+function debugPackReveal(){
+  const owned = ownedMap();
+  const mine = (cardCatalog || []).filter(function(c){ return owned[c.key]; });
+  // Если своих ещё нет — берём любые из каталога: экран важнее достоверности
+  const pool = mine.length ? mine : (cardCatalog || []);
+  const three = pool.slice(-3);
+  if (!three.length){
+    showToast('Каталог карточек пуст — нечего показать');
+    return;
+  }
+  openPackReveal(three);
+}
+
+/* ══ ЭКРАН РАСКРЫТИЯ ПАКА ═══════════════════════════════════════════════════
+   Перенос концепта Denis'а (`pack-reveal-v6-3`) целиком: стопка → вылет героя
+   → заряд, удар, подпись → полочка из оставшихся. Хореография, тайминги и
+   раскладка — авторские, менять их здесь незачем.
+
+   ⚠️ ПОЧЕМУ ОТДЕЛЬНЫЙ ЭКРАН, А НЕ ДОРАБОТКА СТАРОГО: первая попытка нарастить
+   `#reveal-overlay` сохранила НАШУ раскладку и налепила сверху чужие картинки —
+   вышла та самая жалкая копия. Старый оверлей остаётся жить под ВИТРИНУ
+   альбома (её рисует showCardDetail), а вскрытие переезжает сюда.
+
+   ЕДИНСТВЕННОЕ, ЧТО ИЗМЕНЕНО ПО СМЫСЛУ: три пилюли и блок способности взяты
+   как есть, у них поменялись только НАДПИСИ — «Фракция/Тип/Сила» на наши
+   «Бог/Редкость/Награда». Кнопки действий тоже в стиле `pr-cta`. */
+
+const PR_POS = [[-86,-34,-9],[0,-56,0],[86,-34,9]];   // раскладка стопки из концепта
+
+/* Настроение по редкости: на карточке ничего не храним, иначе Denis'у пришлось
+   бы заводить цвет руками каждой из будущих двух сотен карточек */
+const PR_MOOD = {
+  common:    { appearance:'dark',  accent:'#d9b97a', secondary:'#9f8ad2' },
+  uncommon:  { appearance:'dark',  accent:'#9fd2c0', secondary:'#7fb4d8' },
+  rare:      { appearance:'dark',  accent:'#9fb4f2', secondary:'#c0a6ef' },
+  epic:      { appearance:'light', accent:'#c8a2f0', secondary:'#e0b7d8' },
+  legendary: { appearance:'light', accent:'#f0c977', secondary:'#e5b45f' }
 };
+function prMood(card){ return PR_MOOD[(card && card.rarity) || ''] || PR_MOOD.common; }
 
-function revealMood(card){
-  return REVEAL_MOOD[(card && card.rarity) || ''] || REVEAL_MOOD.common;
-}
+const PR = { ids: [], opened: [], hero: null, busy: false, cards: {}, extra: {} };
 
-function setRevealTheme(theme, accent){
-  const ov = document.getElementById('reveal-overlay');
-  if (!ov) return;
-  ov.setAttribute('data-reveal-theme', theme || 'dark');
-  if (accent) ov.style.setProperty('--reveal-accent', accent);
-}
+function prEl(id){ return document.getElementById(id); }
 
-/* Рубашка своя у светлого и тёмного оформления. Пак ещё не открыт, настроения
-   нет — до первой карточки показываем тёмную */
-function revealBackSrc(){
-  const ov = document.getElementById('reveal-overlay');
-  const theme = (ov && ov.getAttribute('data-reveal-theme')) || 'dark';
-  return 'images/reveal/back-' + (theme === 'light' ? 'light' : 'dark') + '.webp';
-}
+function openPackReveal(demoCards){
+  let ids;
+  if (demoCards && demoCards.length){
+    // Отладочный прогон: идентификаторы отрицательные, чтобы никогда не совпасть
+    // с настоящими карточками, даже если что-то утечёт в общий код
+    ids = demoCards.map(function(_, i){ return -(i + 1); });
+  } else {
+    const packs = (myCards && myCards.unopened_packs) || [];
+    if (!packs.length) return;
+    ids = packs[packs.length - 1].card_ids.slice();   // самый старый: он же первым уйдёт на автовскрытие
+  }
+  PR.ids = ids;
+  PR.opened = []; PR.hero = null; PR.busy = false; PR.cards = {}; PR.extra = {};
+  PR.demo = !!(demoCards && demoCards.length);
+  if (PR.demo) ids.forEach(function(id, i){ PR.cards[id] = demoCards[i]; });
 
-function openPackReveal(){
-  const packs = (myCards && myCards.unopened_packs) || [];
-  if (!packs.length) return;
-  // Самый старый пак — он же первым и уйдёт на автовскрытие, если накопится
-  const pack = packs[packs.length - 1];
-  revealQueue  = pack.card_ids.slice();
-  revealOpened = 0;
+  const stage = prEl('pr-stage');
+  stage.setAttribute('data-pr-theme', 'neutral');
+  stage.style.removeProperty('--accent');
+  prEl('pr-sub').textContent = 'Открой карту, чтобы узнать награду';
+  prEl('pr-cta').textContent = 'Открой карту';
+  prEl('pr-details').classList.remove('on');
+  prEl('pr-sigil-svg').innerHTML = '';
+  prEl('pr-aura').style.background =
+    'radial-gradient(circle, rgba(217,185,122,.22) 0%, rgba(159,138,210,.14) 38%, transparent 72%)';
 
-  document.getElementById('reveal-title').textContent = 'Твой пак';
-  document.getElementById('reveal-sub').textContent = 'Нажми на карточку, чтобы открыть';
-  document.getElementById('reveal-detail').innerHTML = '';
-  const bigEl = document.getElementById('reveal-big');
-  if (bigEl){ bigEl.innerHTML = ''; bigEl.classList.remove('on'); }
-  document.getElementById('reveal-done').style.display = 'none';
-
-  // Кольцо-вспышку и сигил рисуем первыми и отдельно: они живут внутри ряда,
-  // но не должны попасть в раскладку карточек — поэтому позиции карт на классах
-  document.getElementById('reveal-row').innerHTML =
-    '<div class="reveal-sigil" id="reveal-sigil"></div>'
-    + '<div class="reveal-ring" id="reveal-ring"></div>'
-    + revealQueue.map(function(id, i){
-    return '<div class="reveal-card pos-' + (i + 1) + '" id="reveal-card-' + id + '" onclick="revealCard(' + id + ')">'
-      + '<div class="reveal-face reveal-back"><img src="' + revealBackSrc() + '" alt=""></div>'
-      + '<div class="reveal-face reveal-front" id="reveal-front-' + id + '"></div>'
-      + '</div>';
+  prEl('pr-pack').innerHTML = PR.ids.map(function(id){
+    return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
+      + '<span class="pr-flip">'
+      + '<span class="pr-face pr-back"><img src="images/reveal/back-dark.webp" alt=""></span>'
+      + '<span class="pr-face pr-front"><img alt=""></span>'
+      + '</span></button>';
   }).join('');
 
-  // До первой открытой карточки настроения ещё нет — держим тёмное оформление
-  setRevealTheme('dark');
-
-  const ov = document.getElementById('reveal-overlay');
-  ov.classList.remove('showcase');
-  ov.classList.remove('all-open');
-  const row = document.getElementById('reveal-row');
-  if (row) row.classList.remove('all-done');
-  ov.classList.add('compact');   // пока есть рубашки — арт поменьше
-  ov.classList.add('open');
+  prClearPhase();
+  prLayout();
+  prSeedAmbient('#d9b97a', '#9f8ad2');
+  stage.classList.add('on');
+  document.body.style.overflow = 'hidden';
 }
 
 function closePackReveal(){
-  document.getElementById('reveal-overlay').classList.remove('open');
-  // Перечитываем: пак ушёл из закрытых, баллы могли начислиться
-  loadCards();
+  prEl('pr-stage').classList.remove('on');
+  document.body.style.overflow = '';
+  prSeedAmbient(null);                 // таймеры мерцания не должны жить после закрытия
+  if (PR.demo){ PR.demo = false; return; }
+  loadCards();                         // пак ушёл из закрытых, баллы могли начислиться
   loadProfile();
 }
 
-/* Вспышка в момент переворота: кольцо плюс горсть частиц из-под карточки.
-   Частицы удаляют себя сами по окончании анимации — иначе за три вскрытия
-   в разметке накапливается несколько десятков мёртвых элементов.
-   Для редких карточек искр больше: это единственное отличие, которое человек
-   замечает раньше, чем прочитает слово «легендарная» */
-function packRevealBurst(cardEl, card){
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const row = document.getElementById('reveal-row');
-  if (!row) return;
+function prClearPhase(){
+  const scene = prEl('pr-scene');
+  scene.classList.remove('pr-revealing','pr-phase-anticipation','pr-phase-charge','pr-phase-impact','pr-phase-signature');
+  scene.querySelectorAll('.pr-card').forEach(function(el){
+    el.classList.remove('pr-phase-anticipation','pr-phase-charge','pr-phase-impact');
+  });
+  scene.querySelectorAll('.pr-fx').forEach(function(el){ el.remove(); });
+}
 
-  const ring = document.getElementById('reveal-ring');
-  if (ring){
-    ring.classList.remove('burst');
-    void ring.offsetWidth;          // перезапуск анимации: без этого второй клик не даёт вспышки
-    ring.classList.add('burst');
+/* Раскладка: пока героя нет — стопка веером; как только карта выбрана, она
+   уезжает в центр крупно, а остальные встают полочкой сверху */
+function prLayout(){
+  PR.ids.forEach(function(id, i){
+    const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
+    if (!el) return;
+    const set = function(x,y,r,s){
+      el.style.setProperty('--x', x + 'px'); el.style.setProperty('--y', y + 'px');
+      el.style.setProperty('--r', r + 'deg'); el.style.setProperty('--s', s);
+    };
+    if (PR.hero === null){
+      const p = PR_POS[i] || [0,0,0];
+      el.className = 'pr-card'; el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+      set(p[0], p[1], p[2], '1');
+      return;
+    }
+    if (PR.hero === id){
+      el.className = 'pr-card pr-hero' + (PR.opened.indexOf(id) >= 0 ? ' pr-open' : '');
+      el.style.opacity = '1'; el.style.pointerEvents = 'none';
+      set(0, 66, 0, '1');
+      return;
+    }
+    if (PR.opened.indexOf(id) >= 0){ el.style.opacity = '0'; el.style.pointerEvents = 'none'; return; }
+    const rem = PR.ids.filter(function(x){ return x !== PR.hero && PR.opened.indexOf(x) < 0; });
+    const idx = rem.indexOf(id), n = Math.max(rem.length, 1);
+    el.className = 'pr-card pr-shelf'; el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+    set((idx - (n - 1) / 2) * 92, -88, (idx - (n - 1) / 2) * 8, '.92');
+  });
+}
+
+function prApplyTheme(card){
+  const mood = prMood(card);
+  const stage = prEl('pr-stage');
+  stage.setAttribute('data-pr-theme', mood.appearance);
+  stage.style.setProperty('--accent', mood.accent);
+  prEl('pr-aura').style.background =
+    'radial-gradient(circle,' + mood.accent + '66 0%,' + mood.secondary + '33 34%,transparent 70%)';
+  prRenderSigil(card.god || '');
+  prEl('pr-pack').querySelectorAll('.pr-face.pr-back img').forEach(function(img){
+    img.src = 'images/reveal/back-' + mood.appearance + '.webp';
+  });
+  prSeedAmbient(mood.accent, mood.secondary);
+}
+
+/* Пилюли и блок способности — стили концепта, надписи наши */
+function prFillDetails(card, pointsAwarded, cardId, claimed){
+  prEl('pr-god').textContent     = card.god || '—';
+  prEl('pr-rarity').textContent  = CARD_RARITY_LABELS[card.rarity] || card.rarity || '—';
+  prEl('pr-gain').textContent    = cardGainLabel(card, pointsAwarded);
+  prEl('pr-ability-title').textContent = card.title || '';
+  prEl('pr-ability-text').textContent  = card.description || '';
+  prEl('pr-actions').innerHTML = cardActionsHtml(card, cardId, claimed, 0, 'pr-cta pr-cta-inline');
+}
+
+async function prOpenCard(id){
+  if (PR.busy || PR.opened.indexOf(id) >= 0) return;
+  PR.busy = true;
+
+  let data = null;
+  if (PR.demo){
+    // Отладочный прогон: карточки уже известны, на сервер не ходим и ничего
+    // не начисляем — иначе каждая примерка экрана меняла бы реальные данные
+    const c = PR.cards[id] || {};
+    data = { card: c, points_awarded: c.effect_points || 0, claimed: false };
+  } else {
+    try {
+      data = await apiRequest(`${API_URL}/cards/open`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: telegramId, card_id: id })
+      }, 15000);
+    } catch(e){
+      PR.busy = false;
+      const msg = e.message || 'Не получилось открыть карточку';
+      showToast(msg);
+      prEl('pr-sub').textContent = msg;   // подсказка живёт полторы секунды, а человек стоит перед рубашкой
+      return;
+    }
   }
 
-  const rare = card && (card.rarity === 'legendary' || card.rarity === 'epic');
-  const count = rare ? 22 : 12;
-  const palette = rare
-    ? ['#f3d59d', '#d6b06d', '#e8614a']
-    : ['rgba(241,234,224,.8)', '#d6b06d'];
+  const card = (data && data.card) || {};
+  PR.cards[id] = card;
+  PR.extra[id] = data;
 
-  const rowRect = row.getBoundingClientRect();
-  const cardRect = cardEl.getBoundingClientRect();
-  const cx = cardRect.left - rowRect.left + cardRect.width / 2;
-  const cy = cardRect.top - rowRect.top + cardRect.height / 2;
+  const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
+  const front = el.querySelector('.pr-face.pr-front img');
+  if (front && card.image_url) front.src = card.image_url;
 
+  PR.hero = id;
+  prApplyTheme(card);
+  prLayout();
+  prEl('pr-details').classList.remove('on');
+  prClearPhase();
+
+  const scene = prEl('pr-scene');
+  const name = card.title || 'Карта';
+  scene.classList.add('pr-revealing','pr-phase-anticipation');
+  el.classList.add('pr-phase-anticipation');
+  prEl('pr-sub').textContent = name + ': энергия собирается…';
+
+  setTimeout(function(){
+    scene.classList.remove('pr-phase-anticipation'); scene.classList.add('pr-phase-charge');
+    el.classList.remove('pr-phase-anticipation');    el.classList.add('pr-phase-charge');
+    prEl('pr-sub').textContent = name + ': раскрытие начинается…';
+  }, 180);
+
+  setTimeout(function(){
+    scene.classList.remove('pr-phase-charge'); scene.classList.add('pr-phase-impact');
+    el.classList.remove('pr-phase-charge');    el.classList.add('pr-phase-impact','pr-open');
+    prImpact(el, prMood(card));
+  }, 460);
+
+  setTimeout(function(){
+    scene.classList.remove('pr-phase-impact','pr-revealing'); scene.classList.add('pr-phase-signature');
+    el.classList.remove('pr-phase-impact');
+    PR.opened.push(id);
+    prFillDetails(card, data ? data.points_awarded : 0, PR.demo ? null : id, data ? data.claimed : false);
+    prEl('pr-details').classList.add('on');
+    const left = PR.ids.length - PR.opened.length;
+    prEl('pr-sub').textContent = left ? ('Осталось карт: ' + left) : 'Пак открыт';
+    prEl('pr-cta').textContent = left ? 'Открой следующую' : 'Продолжить';
+    prLayout();
+    PR.busy = false;
+  }, 1380);
+}
+
+function prCta(){
+  if (PR.opened.length >= PR.ids.length){ closePackReveal(); return; }
+  // Ещё есть закрытые — подсказываем, куда нажать, а не открываем за человека:
+  // вскрытие карты должно оставаться его действием
+  const next = PR.ids.filter(function(x){ return PR.opened.indexOf(x) < 0; })[0];
+  const el = next && prEl('pr-pack').querySelector('[data-id="' + next + '"]');
+  if (el){ el.classList.remove('pr-nudge'); void el.offsetWidth; el.classList.add('pr-nudge'); }
+}
+
+/* Взрыв частиц из-под карты. Частицы удаляют себя сами: иначе за три вскрытия
+   в разметке остаётся полторы сотни мёртвых элементов */
+function prImpact(el, mood){
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const scene = prEl('pr-scene');
+  const sr = scene.getBoundingClientRect(), cr = el.getBoundingClientRect();
+  const cx = cr.left - sr.left + cr.width / 2, cy = cr.top - sr.top + cr.height / 2;
+  const palette = [mood.accent, mood.secondary, '#fff4dc'];
+  const count = mood.appearance === 'light' ? 68 : 58;
   for (let i = 0; i < count; i++){
     const p = document.createElement('span');
-    p.className = 'reveal-particle';
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 40 + Math.random() * 70;
-    p.style.left = cx + 'px';
-    p.style.top = cy + 'px';
-    p.style.setProperty('--px', Math.cos(angle) * dist + 'px');
-    p.style.setProperty('--py', Math.sin(angle) * dist + 'px');
-    p.style.background = palette[i % palette.length];
-    p.style.animationDelay = (Math.random() * 90) + 'ms';
+    const a = Math.random() * Math.PI * 2, d = 72 + Math.random() * 190;
+    p.className = 'pr-fx ' + (i % 5 === 0 ? 'pr-star' : 'pr-dot');
+    p.style.left = cx + 'px'; p.style.top = cy + 'px';
+    p.style.setProperty('--dx', Math.cos(a) * d + 'px');
+    p.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    p.style.setProperty('--sz', (2 + Math.random() * 5) + 'px');
+    p.style.setProperty('--c', palette[i % palette.length]);
+    p.style.setProperty('--dur', (620 + Math.random() * 620) + 'ms');
     p.addEventListener('animationend', function(){ p.remove(); }, { once: true });
-    row.appendChild(p);
+    scene.appendChild(p);
   }
 }
 
-async function revealCard(cardId){
-  const el = document.getElementById('reveal-card-' + cardId);
-  if (!el || el.classList.contains('flipped')) return;
+function prSeedAmbient(a, b){
+  const scene = prEl('pr-scene');
+  if (!scene) return;
+  scene.querySelectorAll('.pr-ambient').forEach(function(x){ x.remove(); });
+  if (!a) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < 18; i++){
+    const s = document.createElement('span');
+    s.className = 'pr-ambient';
+    s.style.left = (12 + Math.random() * 76) + '%';
+    s.style.top  = (24 + Math.random() * 62) + '%';
+    s.style.setProperty('--c', i % 3 === 0 ? b : a);
+    s.style.setProperty('--d', (3 + Math.random() * 5) + 's');
+    s.style.setProperty('--mx', (Math.random() * 18 - 9) + 'px');
+    s.style.animationDelay = (-Math.random() * 5) + 's';
+    scene.appendChild(s);
+  }
+}
 
-  let data = null;
-  try {
-    data = await apiRequest(`${API_URL}/cards/open`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, card_id: cardId })
-    }, 15000);
-  } catch(e){
-    const msg = e.message || 'Не получилось открыть карточку';
-    showToast(msg);
-    // Дублируем в подзаголовок экрана: подсказка живёт полторы секунды, а
-    // человек стоит перед рубашкой и думает, что карточка просто не нажимается
-    const sub = document.getElementById('reveal-sub');
-    if (sub) sub.textContent = msg;
-    return;
+/* ── КНОПКИ ДЕЙСТВИЙ КАРТОЧКИ — ОДНА ФУНКЦИЯ НА ДВА ЭКРАНА ────────────────
+   «Посмотреть», «Забрать» и «Поделиться» нужны и на вскрытии, и в витрине
+   альбома. Раньше они жили внутри showCardDetail, и из-за этого экран вскрытия
+   нельзя было переписать, не потеряв их. Теперь класс кнопки приходит
+   параметром: витрина просит свой, экран раскрытия — стиль из концепта. */
+function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass){
+  if (!card) return '';
+  const cls = btnClass || 'lec-link-btn access-btn';
+  let out = '';
+
+  if (card.media_url){
+    out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
+        + 'onclick="openUrl(' + jsArg(card.media_url) + ')">Посмотреть</button></div>';
   }
 
-  const card = data && data.card;
-  const front = document.getElementById('reveal-front-' + cardId);
-  if (front && card){
-    front.innerHTML = (card.image_url
-        ? '<img src="' + card.image_url + '" alt="">'
-        : '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--warm);opacity:.6">◆</div>')
-      + '<div class="reveal-front-name">' + (card.title || '') + '</div>';
-  }
-  // Настроение и сигил ставим ДО переворота: карта открывается уже в своей
-  // атмосфере, а не перекрашивается через мгновение после
-  if (card){
-    const mood = revealMood(card);
-    setRevealTheme(mood.theme, mood.accent);
-    renderSigil(card.god || '');
+  // Карточки, награда которых требует действия вне карточки, при перевороте
+  // ничего не применяют — человек должен сам нажать «Забрать»
+  if (card.needs_claim && cardId){
+    out += alreadyClaimed
+      ? '<div class="reveal-detail-gain">Забрано — Денис свяжется</div>'
+      : '<div style="margin-top:14px"><button class="' + cls + '" style="width:100%" '
+        + 'id="claim-btn-' + cardId + '" onclick="claimCard(' + cardId + ')">Забрать</button>'
+        + '<div style="font-size:12px;opacity:.55;margin-top:7px;line-height:1.4">'
+        + (card.effect_type === 'unlock_reward'
+            ? 'Награда появится в списке заявок, Денис её выдаст'
+            : 'Денис увидит, что ты этого хочешь, и свяжется') + '</div></div>';
   }
 
-  const row = document.getElementById('reveal-row');
-  if (row){
-    row.classList.remove('phase-charge','phase-impact');
-    void row.offsetWidth;
-    row.classList.add('phase-charge');
-    setTimeout(function(){
-      row.classList.remove('phase-charge');
-      row.classList.add('phase-impact');
-    }, 160);
-    setTimeout(function(){ row.classList.remove('phase-impact'); }, 620);
+  // Шеринг — только для СВОИХ карточек и только когда есть картинка.
+  // НА ДУБЛЕ КНОПКУ ПРЯЧЕМ: предложение похвастаться третьей одинаковой картой
+  // читается издевательством, а не поводом для гордости
+  const isDupe = (copies || 0) > 1;
+  if (telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
+    const label = (card.card_class === 'badge') ? t('share.badge') : t('share.card');
+    out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
+        + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
+        + escapeHtml(label) + '</button></div>';
   }
-
-  el.classList.add('flipped');
-  revealOpened++;
-  packRevealBurst(el, card);
-  playSigilWave();
-
-  showCardDetail(card, data ? data.points_awarded : 0, cardId, data ? data.claimed : false);
-
-  const allOpen = revealOpened >= revealQueue.length;
-  if (allOpen){
-    document.getElementById('reveal-sub').textContent = 'Пак открыт';
-    document.getElementById('reveal-done').style.display = '';
-  }
-
-  // Даём перевороту доиграть, потом сворачиваем рубашку в точку — иначе одна и
-  // та же картинка висит и в ряду, и крупно ниже
-  setTimeout(function(){
-    el.classList.add('collapsed');
-    if (allOpen){
-      const row = document.getElementById('reveal-row');
-      if (row) row.classList.add('all-done');
-      const ov = document.getElementById('reveal-overlay');
-      if (ov) ov.classList.add('all-open');   // ряда нет — арт на всю ширину
-    }
-  }, 480);
+  return out;
 }
 
 /* Что даёт карточка — третьей плашкой рядом с богом и редкостью. Человек
@@ -13167,39 +13452,7 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   let gain = '';
   if (pointsAwarded) gain = '+' + pointsAwarded + ' баллов';
 
-  let media = '';
-  if (card.media_url){
-    media = '<div style="margin-top:12px"><button class="lec-link-btn access-btn" style="width:100%" '
-          + 'onclick="openUrl(' + jsArg(card.media_url) + ')">Посмотреть</button></div>';
-  }
-
-  // Карточки, награда которых требует действия вне карточки, при перевороте
-  // ничего не применяют — человек должен сам нажать «Забрать»
-  let claim = '';
-  if (card.needs_claim && cardId){
-    claim = alreadyClaimed
-      ? '<div class="reveal-detail-gain">Забрано — Денис свяжется</div>'
-      : '<div style="margin-top:14px"><button class="lec-link-btn access-btn" style="width:100%" '
-        + 'id="claim-btn-' + cardId + '" onclick="claimCard(' + cardId + ')">Забрать</button>'
-        + '<div style="font-size:12px;color:rgba(241,234,224,.55);margin-top:7px;line-height:1.4">'
-        + (card.effect_type === 'unlock_reward'
-            ? 'Награда появится в списке заявок, Денис её выдаст'
-            : 'Денис увидит, что ты этого хочешь, и свяжется') + '</div></div>';
-  }
-
-  // Кнопка шеринга — только для СВОИХ карточек (в витрине чужих не бывает) и
-  // только когда есть картинка: делиться нечем, если её ещё не собрали.
-  // НА ДУБЛЕ КНОПКУ ПРЯЧЕМ: предложение похвастаться третьей одинаковой картой
-  // читается издевательством, а не поводом для гордости
-  let share = '';
-  const isDupe = (copies || 0) > 1;
-  if (telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
-    const isBadge = (card.card_class === 'badge');
-    const label = isBadge ? t('share.badge') : t('share.card');
-    share = '<div style="margin-top:12px"><button class="lec-link-btn" style="width:100%" '
-          + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
-          + escapeHtml(label) + '</button></div>';
-  }
+  const actions = cardActionsHtml(card, cardId, alreadyClaimed, copies, 'lec-link-btn access-btn');
 
   // Три плашки из концепта вместо строки «бог · редкость»: та же информация,
   // плюс награда. Всё остальное — крупный арт, описание, кнопки — наше
@@ -13217,7 +13470,7 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
       statHtml
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
-    + media + claim + share;
+    + actions;
 }
 
 /* Бот присылает карточку в чат, откуда её пересылают дальше. ССЫЛКА В ПОДПИСИ, а
@@ -13550,6 +13803,14 @@ function openAlbumCard(key){
   renderBrowseCard();
   ov.classList.add('open');
   wireBrowseSwipe();
+}
+
+/* У витрины своя кнопка закрытия. Раньше она звала closePackReveal, но та
+   с 09.08.2026 закрывает экран вскрытия — витрина осталась бы открытой */
+function closeShowcase(){
+  const ov = document.getElementById('reveal-overlay');
+  if (ov){ ov.classList.remove('open','showcase'); }
+  loadCards();
 }
 
 // Отрисовывает карточку по текущему cardBrowseIndex — вызывается и при открытии,
