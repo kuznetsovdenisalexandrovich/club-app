@@ -475,6 +475,38 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .reveal-overlay{position:fixed;inset:0;z-index:800;background:rgba(12,10,21,.94);backdrop-filter:blur(8px);
   display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
 .reveal-overlay.open{display:flex}
+
+/* ── ЗАПЕЧЁННЫЕ СЛОИ ВСКРЫТИЯ (09.08.2026) ────────────────────────────────
+   Текстура и рамка — готовые картинки в images/reveal/, а не градиенты: то же
+   на глаз, но рисуется мгновенно и не зависит от поддержки фильтров.
+   ⚠️ ТЕМУ ДЕРЖИМ НА СВОЁМ АТРИБУТЕ `data-reveal-theme`, а НЕ на `data-theme`:
+   в приложении есть правила вида [data-theme="light"] БЕЗ имени элемента —
+   они сматчились бы на этот оверлей и перекрасили интерфейс вокруг. */
+.reveal-tex,.reveal-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  pointer-events:none;opacity:0;transition:opacity .5s ease}
+.reveal-tex{z-index:0}
+.reveal-frame{z-index:1;object-fit:fill}
+.reveal-overlay[data-reveal-theme="dark"] .reveal-tex.dark,
+.reveal-overlay[data-reveal-theme="dark"] .reveal-frame.dark{opacity:1}
+.reveal-overlay[data-reveal-theme="light"] .reveal-tex.light{opacity:.9}
+.reveal-overlay[data-reveal-theme="light"] .reveal-frame.light{opacity:1}
+.reveal-overlay > *:not(.reveal-tex):not(.reveal-frame){position:relative;z-index:2}
+
+/* Сигил бога — под карточками, крупно и приглушённо. Не перехватывает нажатия */
+.reveal-sigil{position:absolute;left:50%;top:50%;width:min(150vw,720px);height:min(150vw,720px);
+  transform:translate(-50%,-50%);pointer-events:none;z-index:0;opacity:0;transition:opacity .6s ease}
+.reveal-sigil.on{opacity:.22}
+.reveal-sigil svg{width:100%;height:100%;display:block}
+.reveal-sigil .sig-disc{r:18}
+.reveal-sigil.wave .sig-wave{animation:sig-wave-show 1.5s ease-out}
+.reveal-sigil.wave .sig-disc{animation:sig-wave-grow 1.5s ease-out}
+@keyframes sig-wave-show{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+@keyframes sig-wave-grow{0%{r:18}100%{r:520}}
+
+/* Хореография вскрытия: короткий вдох перед переворотом и подсветка после */
+.reveal-row.phase-charge .reveal-card:not(.flipped){filter:brightness(1.12)}
+.reveal-row.phase-impact{animation:reveal-impact .42s ease-out}
+@keyframes reveal-impact{0%{transform:scale(1)}35%{transform:scale(1.045)}100%{transform:scale(1)}}
 .reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
 .reveal-sub{font-size:12px;color:rgba(241,234,224,.6);margin-bottom:22px;text-align:center}
 /* ── Вскрытие пака ─────────────────────────────────────────────────────────
@@ -523,8 +555,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 }
 .reveal-card.flipped{transform:rotateY(180deg)}
 .reveal-face{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;overflow:hidden}
+/* Рубашка — ЗАПЕЧЁННАЯ КАРТИНКА (09.08.2026). Она одна на всю колоду и не
+   меняется от карты к карте, поэтому рисовать её кодом незачем. Фон-градиент
+   оставлен под картинкой: пока файл грузится, видно не пустоту */
 .reveal-back{background:linear-gradient(150deg,#2A2433,#4A3A52);border:1.5px solid rgba(241,234,224,.25);
   display:flex;align-items:center;justify-content:center;font-size:26px;color:rgba(241,234,224,.45)}
+.reveal-back img{width:100%;height:100%;object-fit:cover;display:block;border-radius:11px}
 .reveal-front{transform:rotateY(180deg);background:var(--card-bg);border:1.5px solid var(--warm);
   display:flex;flex-direction:column}
 .reveal-front img{width:100%;flex:1;object-fit:cover;display:block;min-height:0}
@@ -3742,9 +3778,13 @@ img.img-fade.is-instant{opacity:1;transition:none}
 </div>
 
 <div class="reveal-overlay" id="reveal-overlay">
+  <img class="reveal-tex light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true">
+  <img class="reveal-tex dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true">
+  <img class="reveal-frame light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true">
+  <img class="reveal-frame dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true">
   <div class="reveal-title" id="reveal-title">Твой пак</div>
   <div class="reveal-sub" id="reveal-sub" data-text="cards.a7">Нажми на карточку, чтобы открыть</div>
-  <div class="reveal-row" id="reveal-row"><div class="reveal-ring" id="reveal-ring"></div></div>
+  <div class="reveal-row" id="reveal-row"><div class="reveal-sigil" id="reveal-sigil"></div><div class="reveal-ring" id="reveal-ring"></div></div>
   <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
   <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px;max-width:280px;width:auto;align-self:center;padding-left:32px;padding-right:32px" onclick="closePackReveal()">Готово</button>
@@ -12699,7 +12739,224 @@ function renderPackBanner(){
   el.style.display = 'none';
 }
 
+
+/* Пути сигилов, по два на персонажа: центральный символ и повторяемый глиф.
+   Отданы GPT по нашему заданию и проверены рендером всех девятнадцати.
+   ⚠️ ЦВЕТ И ТОЛЩИНУ ЗДЕСЬ НЕ ЗАДАЁМ — их подставляет код, иначе не сработает
+   голографическая волна (те же пути перерисовываются цветным штрихом) */
+const SIGIL_SYMBOLS = {
+  zeus: '<path d="M500 388 L540 458 L504 454 L534 530 L474 470 L506 474 Z"/><path d="M458 422 C474 406 490 398 500 396"/><path d="M542 422 C526 406 510 398 500 396"/>',
+  hera: '<path d="M500 404 C554 438 554 522 500 556 C446 522 446 438 500 404 Z"/><circle cx="500" cy="480" r="24"/><path d="M500 520 L500 578"/><path d="M470 432 C486 416 514 416 530 432"/>',
+  poseidon: '<path d="M500 392 L500 578"/><path d="M470 422 L500 392 L530 422"/><path d="M486 408 L486 468"/><path d="M514 408 L514 468"/><path d="M450 548 C470 528 490 568 510 548 C530 528 550 568 570 548"/>',
+  hades: '<ellipse cx="500" cy="488" rx="66" ry="84"/><path d="M458 452 C470 430 490 418 500 418 C510 418 530 430 542 452"/><path d="M478 520 C492 538 508 538 522 520"/><path d="M470 566 C486 546 514 546 530 566"/><path d="M446 454 C430 470 422 492 424 516"/><path d="M554 454 C570 470 578 492 576 516"/>',
+  athena: '<path d="M500 402 L560 520 L500 490 L440 520 Z"/><path d="M500 492 L500 590"/><path d="M468 382 H532"/><path d="M484 364 H516"/><path d="M472 560 C490 542 510 542 528 560"/>',
+  apollo: '<circle cx="500" cy="476" r="58"/><path d="M500 390 L500 350 M500 602 L500 562 M412 476 L372 476 M628 476 L588 476 M438 414 L410 386 M562 414 L590 386 M438 538 L410 566 M562 538 L590 566"/><path d="M468 456 C488 434 512 434 532 456"/>',
+  artemis: '<path d="M536 422 C512 404 480 410 468 438 C454 470 468 520 504 548 C470 536 444 504 442 468 C440 430 468 396 510 394 C520 394 530 398 536 422 Z"/><path d="M436 548 L564 420"/><path d="M548 420 L564 420 L564 436"/><circle cx="592" cy="404" r="10"/>',
+  aphrodite: '<path d="M430 514 C446 444 484 412 500 412 C516 412 554 444 570 514"/><path d="M452 514 C470 484 486 470 500 470 C514 470 530 484 548 514"/><path d="M470 548 C482 560 492 566 500 566 C508 566 518 560 530 548"/><circle cx="500" cy="442" r="18"/>',
+  ares: '<circle cx="500" cy="490" r="62"/><path d="M500 392 L500 430 M466 414 L534 414"/><path d="M440 556 L560 424"/><path d="M560 424 L556 452 M560 424 L532 428"/><path d="M560 556 L440 424"/><path d="M440 424 L444 452 M440 424 L468 428"/>',
+  demeter: '<path d="M500 430 L500 580"/><path d="M500 450 C540 430 548 480 500 490"/><path d="M500 490 C455 472 450 530 500 542"/><path d="M468 432 C448 448 444 476 462 494"/><path d="M532 432 C552 448 556 476 538 494"/><circle cx="500" cy="390" r="22"/>',
+  hermes: '<path d="M500 402 L500 580"/><path d="M470 430 C486 414 514 414 530 430"/><path d="M468 468 C486 484 514 484 532 468"/><path d="M456 414 C438 412 426 400 420 386"/><path d="M544 414 C562 412 574 400 580 386"/><path d="M470 548 C486 562 514 562 530 548"/>',
+  dionysus: '<path d="M500 418 C532 418 556 448 556 480 C556 518 530 550 500 566 C470 550 444 518 444 480 C444 448 468 418 500 418 Z"/><circle cx="480" cy="458" r="12"/><circle cx="520" cy="458" r="12"/><circle cx="468" cy="492" r="12"/><circle cx="500" cy="496" r="12"/><circle cx="532" cy="492" r="12"/><path d="M500 418 C500 398 514 386 532 382"/>',
+  hephaestus: '<path d="M446 540 L548 540 L566 492 L474 492 Z"/><path d="M474 492 L500 424 L528 492"/><path d="M430 430 L490 430 L490 462"/><path d="M560 418 L582 440 L542 480"/><path d="M560 418 L578 400"/>',
+  plutus: '<circle cx="500" cy="482" r="82"/><path d="M500 438 V526"/><path d="M466 458 C480 438 520 438 534 458 C546 474 540 496 520 504 C506 510 494 512 480 524"/><path d="M458 542 C474 556 492 562 510 562 C532 562 548 552 556 538"/><circle cx="500" cy="482" r="22"/>',
+  prometheus: '<path d="M500 398 L500 582"/><path d="M468 442 C470 416 486 398 500 398 C514 398 530 416 532 442"/><path d="M500 402 C528 420 542 452 526 474 C516 488 500 492 500 520 C500 492 484 488 474 474 C458 452 472 420 500 402 Z"/>',
+  momus: '<path d="M450 452 C466 426 494 412 524 418 C548 424 564 446 564 472 C564 498 548 518 524 530 C498 542 474 544 454 562"/><path d="M460 456 C484 468 512 468 536 456"/><path d="M468 522 C488 512 510 510 534 514"/><circle cx="482" cy="446" r="6"/><circle cx="530" cy="442" r="6"/><path d="M478 392 L542 392 L510 424 Z"/>',
+  heracles: '<path d="M448 560 C440 498 450 446 476 414 C488 400 500 396 512 414 C538 446 556 498 552 560"/><path d="M474 430 C490 444 510 444 526 430"/><path d="M472 480 C490 492 510 492 528 480"/><path d="M486 528 C496 536 504 536 514 528"/><path d="M444 456 C428 442 420 426 420 408"/><path d="M556 456 C572 442 580 426 580 408"/>',
+  theseus: '<path d="M500 400 L562 434 L562 522 L500 560 L438 522 L438 434 Z"/><path d="M470 448 L530 448"/><path d="M500 448 L500 560"/><path d="M456 520 L544 520"/><path d="M470 400 L470 372 L530 372 L530 400"/>',
+  perseus: '<path d="M500 404 L542 444 L500 484 L458 444 Z"/><path d="M500 484 L500 572"/><path d="M478 572 H522"/><path d="M442 454 C426 438 418 420 418 400"/><path d="M558 454 C574 438 582 420 582 400"/><path d="M470 420 C488 408 512 408 530 420"/>',
+};
+
+const SIGIL_GLYPHS = {
+  zeus: '<path d="M0 -18 L10 -4 L2 -4 L10 12 L-6 -2 L2 -2 Z"/>',
+  hera: '<path d="M0 -16 C11 -5 10 11 0 17 C-10 11 -11 -5 0 -16 Z M0 -2 a4 4 0 1 0 .1 0"/>',
+  poseidon: '<path d="M0 -18 L0 14 M-8 -8 L0 -18 L8 -8 M-6 0 L-6 10 M6 0 L6 10"/>',
+  hades: '<path d="M0 -16 C10 -12 14 -2 14 8 C14 16 8 22 0 24 C-8 22 -14 16 -14 8 C-14 -2 -10 -12 0 -16 Z"/><path d="M-8 0 C-4 -4 4 -4 8 0"/><path d="M-6 10 C-2 14 2 14 6 10"/>',
+  athena: '<path d="M0 -17 L8 1 L0 -4 L-8 1 Z M0 -4 L0 15"/>',
+  apollo: '<circle cx="0" cy="0" r="8"/><path d="M0 -18 L0 -10 M0 10 L0 18 M-18 0 L-10 0 M10 0 L18 0 M-13 -13 L-8 -8 M13 -13 L8 -8 M-13 13 L-8 8 M13 13 L8 8"/>',
+  artemis: '<path d="M6 -15 C-4 -16 -11 -6 -11 4 C-11 11 -6 17 0 17 C-5 13 -7 5 -5 -3 C-3 -11 1 -14 6 -15 Z"/><path d="M-14 12 L12 -14 M5 -14 H12 V-7"/>',
+  aphrodite: '<path d="M0 -16 C10 -6 13 2 0 16 C-13 2 -10 -6 0 -16 Z"/><path d="M-12 4 C-6 0 -2 0 0 4 C2 0 6 0 12 4"/>',
+  ares: '<path d="M0 -17 L9 -3 L0 -6 L-9 -3 Z"/><circle cx="0" cy="7" r="8"/>',
+  demeter: '<path d="M0 -16 L0 16 M0 -8 C10 -13 12 -2 0 2 M0 2 C-10 -3 -12 8 0 12"/>',
+  hermes: '<path d="M0 -16 L0 14 M-10 -2 C-16 -4 -18 -10 -20 -14 M10 -2 C16 -4 18 -10 20 -14 M-8 2 C-3 8 3 8 8 2"/>',
+  dionysus: '<circle cx="-5" cy="-4" r="4"/><circle cx="5" cy="-4" r="4"/><circle cx="-8" cy="5" r="4"/><circle cx="0" cy="8" r="4"/><circle cx="8" cy="5" r="4"/><path d="M0 -14 C0 -20 5 -24 10 -24"/>',
+  hephaestus: '<path d="M-12 8 H10 L14 -2 H-8 Z"/><path d="M2 -16 L14 -4 L8 2"/>',
+  plutus: '<circle cx="0" cy="0" r="10"/><path d="M0 -6 V6"/><path d="M-8 -2 C-4 -8 4 -8 8 -2 C10 2 6 6 0 8 C-6 10 -8 14 -8 18"/>',
+  prometheus: '<path d="M0 -14 C8 -8 10 -1 5 4 C2 7 0 8 0 12 C0 8 -2 7 -5 4 C-10 -1 -8 -8 0 -14 Z"/>',
+  momus: '<path d="M-10 -8 C-5 -14 5 -14 10 -8 C6 -2 2 -1 -2 1 C-6 3 -8 6 -10 10"/><circle cx="-3" cy="-6" r="2.2"/><circle cx="4" cy="-6" r="2.2"/><path d="M-12 -16 H12 L6 -10 H-6 Z"/>',
+  heracles: '<path d="M-10 14 C-14 0 -10 -12 -2 -18 C2 -22 6 -22 10 -18 C18 -12 22 0 18 14"/><path d="M-6 -4 C-2 0 2 0 6 -4"/>',
+  theseus: '<path d="M0 -16 L14 -8 L14 8 L0 16 L-14 8 L-14 -8 Z"/><path d="M-6 -4 H6 M0 -4 V16"/>',
+  perseus: '<path d="M0 -16 L12 -4 L0 8 L-12 -4 Z"/><path d="M0 8 V18 M-6 18 H6"/><path d="M-14 -6 C-18 -10 -20 -14 -20 -18 M14 -6 C18 -10 20 -14 20 -18"/>',
+};
+
+/* ── СИГИЛ БОГА НА ФОНЕ ВСКРЫТИЯ (09.08.2026) ──────────────────────────────
+   Монета-сигил из концепта: кольца греческого орнамента, повторяемый глиф и
+   центральный символ. На вскрытии по ней проходит голографическая волна.
+
+   ⚠️ ПОЧЕМУ ЭТО ВЕКТОР, А НЕ КАРТИНКА (не «оптимизировать» в png): волна
+   работает перерисовкой ТЕХ ЖЕ путей цветным штрихом под круглой маской,
+   которая расходится от центра. С растром так нельзя. Рубашки и текстуры мы
+   как раз запекли — а сигил обязан остаться живым.
+
+   Ключи латиницей, потому что в базе бог хранится русским именем: сопоставление
+   в GOD_SIGIL_KEYS. Незнакомый бог получает нейтральный символ, а не пустоту. */
+
+const GOD_SIGIL_KEYS = {
+  'Зевс':'zeus', 'Гера':'hera', 'Посейдон':'poseidon', 'Аид':'hades',
+  'Афина':'athena', 'Аполлон':'apollo', 'Артемида':'artemis', 'Афродита':'aphrodite',
+  'Арес':'ares', 'Деметра':'demeter', 'Гермес':'hermes', 'Дионис':'dionysus',
+  'Гефест':'hephaestus', 'Плутос':'plutus', 'Прометей':'prometheus', 'Мом':'momus',
+  'Геракл':'heracles', 'Тесей':'theseus', 'Персей':'perseus'
+};
+
+function sigilKey(god){
+  return GOD_SIGIL_KEYS[(god || '').trim()] || '';
+}
+
+function sigilSymbol(key, stroke){
+  const wrap = inner => '<g stroke="' + stroke + '" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
+  const S = SIGIL_SYMBOLS[key];
+  return wrap(S || '<circle cx="500" cy="500" r="82"/><path d="M500 418 L500 582"/>');
+}
+
+function sigilGlyph(key){
+  return SIGIL_GLYPHS[key] || '<circle cx="0" cy="0" r="8"/>';
+}
+
+/* Сколько глифов на каждом кольце, на каком радиусе и в каком масштабе.
+   ⚠️ ЧИСЛА, А НЕ РИСУНОК: у широких глифов колец должно быть МЕНЬШЕ, иначе
+   они налезают друг на друга и кольцо превращается в грязь. Именно этим
+   лечился Гермес — его глиф самый широкий из всех */
+const SIGIL_RINGS = {
+  zeus:[[20,352,.94],[30,306,.78],[40,242,.58]],
+  hera:[[24,350,.92],[36,302,.76],[44,238,.58]],
+  poseidon:[[18,352,.96],[27,306,.78],[36,242,.60]],
+  hades:[[18,350,.92],[27,302,.76],[36,240,.58]],
+  athena:[[24,350,.92],[36,302,.76],[44,238,.58]],
+  apollo:[[24,350,.92],[32,300,.72],[40,236,.56]],
+  artemis:[[22,352,.94],[34,304,.76],[42,240,.58]],
+  aphrodite:[[22,350,.92],[32,302,.74],[40,238,.56]],
+  ares:[[20,350,.92],[30,302,.74],[38,238,.56]],
+  demeter:[[24,350,.92],[36,302,.76],[44,238,.58]],
+  hermes:[[16,352,.88],[24,304,.72],[30,240,.54]],
+  dionysus:[[18,352,.94],[27,304,.76],[36,240,.58]],
+  hephaestus:[[20,350,.92],[30,302,.74],[40,238,.56]],
+  plutus:[[22,352,.94],[32,304,.76],[40,240,.58]],
+  prometheus:[[20,350,.92],[30,302,.74],[38,238,.56]],
+  momus:[[22,350,.92],[32,302,.74],[40,238,.56]],
+  heracles:[[18,352,.94],[27,304,.76],[36,240,.58]],
+  theseus:[[22,350,.92],[32,302,.74],[40,238,.56]],
+  perseus:[[20,352,.94],[30,304,.76],[38,240,.58]]
+};
+
+function sigilRing(key, stroke, n, radius, scale){
+  const mark = sigilGlyph(key);
+  let out = '';
+  for (let i = 0; i < n; i++){
+    out += '<g transform="translate(500 500) rotate(' + (i * 360 / n) + ') translate(0 -' + radius + ') scale(' + scale + ')"'
+        + ' stroke="' + stroke + '" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">'
+        + mark + '</g>';
+  }
+  return out;
+}
+
+function sigilGlyphRings(key, stroke){
+  return (SIGIL_RINGS[key] || SIGIL_RINGS.hera)
+    .map(function(r){ return sigilRing(key, stroke, r[0], r[1], r[2]); }).join('');
+}
+
+function sigilBands(stroke, soft){
+  let ticks = '';
+  for (let i = 0; i < 54; i++){
+    const a = i * (360 / 54), long = (i % 3 === 0);
+    ticks += '<g transform="translate(500 500) rotate(' + a + ')"><path d="M0 -412 L0 -'
+          + (long ? 392 : 400) + ' M-' + (long ? 7 : 5) + ' -402 L' + (long ? 7 : 5) + ' -402"'
+          + ' stroke="' + soft + '" stroke-width="' + (long ? 2.2 : 1.7) + '" opacity="' + (long ? '.50' : '.34') + '"/></g>';
+  }
+  const circles = [[422,stroke,2.1,'.72',''],[406,soft,1.6,'.46','2 6'],[388,stroke,2,'.7','12 4 2 4'],
+    [364,soft,1.7,'.42','2 5'],[338,stroke,2,'.68',''],[320,soft,1.6,'.4','8 6 2 6'],
+    [292,stroke,1.95,'.66',''],[274,soft,1.55,'.38','2 5'],[246,stroke,1.9,'.64',''],
+    [224,soft,1.5,'.36','7 5'],[196,stroke,1.85,'.62',''],[174,soft,1.45,'.34','2 5'],
+    [144,stroke,1.8,'.6',''],[122,soft,1.4,'.32','6 5'],[98,stroke,1.7,'.58',''],[78,soft,1.35,'.30','2 4']];
+  return circles.map(function(c){
+    return '<circle cx="500" cy="500" r="' + c[0] + '" fill="none" stroke="' + c[1] + '" stroke-width="' + c[2]
+      + '" opacity="' + c[3] + '"' + (c[4] ? ' stroke-dasharray="' + c[4] + '"' : '') + '/>';
+  }).join('') + ticks;
+}
+
+function sigilLayer(key, stroke, soft){
+  return sigilBands(stroke, soft) + sigilGlyphRings(key, stroke) + sigilSymbol(key, soft);
+}
+
+/* Рисуем сигил под карточками. Если бога не знаем — не рисуем ничего: пустой
+   круг из заглушки выглядит как недогруженная картинка */
+function renderSigil(god){
+  const host = document.getElementById('reveal-sigil');
+  if (!host) return;
+  const key = sigilKey(god);
+  if (!key){ host.innerHTML = ''; host.classList.remove('on'); return; }
+
+  const gold = '#f0c977', pale = '#ffe7b0', bright = '#fff6da';
+  host.innerHTML =
+      '<svg viewBox="0 0 1000 1000" aria-hidden="true">'
+    + '<defs><radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
+    + '<stop offset="0%" stop-color="black" stop-opacity="0"/><stop offset="38%" stop-color="white" stop-opacity=".02"/>'
+    + '<stop offset="48%" stop-color="white" stop-opacity=".18"/><stop offset="56%" stop-color="white" stop-opacity="1"/>'
+    + '<stop offset="64%" stop-color="white" stop-opacity=".62"/><stop offset="74%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="100%" stop-color="black" stop-opacity="0"/></radialGradient>'
+    + '<linearGradient id="sigHolo" x1="0%" y1="0%" x2="100%" y2="100%">'
+    + '<stop offset="0%" stop-color="#ff4bd2"/><stop offset="28%" stop-color="#fff35d"/>'
+    + '<stop offset="58%" stop-color="#32dbff"/><stop offset="100%" stop-color="#ff72b4"/></linearGradient>'
+    + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
+    + '<circle class="sig-disc" cx="500" cy="500" r="18" fill="url(#sigWave)"/></mask></defs>'
+    + '<g class="sig-base">' + sigilLayer(key, gold, pale) + '</g>'
+    + '<g class="sig-wave" mask="url(#sigMask)" opacity="0"><g stroke="url(#sigHolo)" fill="none">'
+    + sigilLayer(key, 'url(#sigHolo)', bright) + '</g></g></svg>';
+  host.classList.add('on');
+}
+
+/* Волна прогоняется один раз на вскрытие карточки. Перезапуск — снятием и
+   возвратом класса с принудительной перерисовкой между ними, иначе браузер
+   схлопывает два состояния в одно и со второй карточки волны не видно */
+function playSigilWave(){
+  const host = document.getElementById('reveal-sigil');
+  if (!host || !host.classList.contains('on')) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  host.classList.remove('wave');
+  void host.offsetWidth;
+  host.classList.add('wave');
+}
+
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
+
+/* НАСТРОЕНИЕ ЭКРАНА БЕРЁМ ИЗ РЕДКОСТИ, а не храним на карточке (решение
+   09.08.2026). Так редкая карта отличается атмосферой сама по себе, и Denis'у
+   не приходится заводить руками цвет у каждой из будущих двух сотен карточек. */
+const REVEAL_MOOD = {
+  common:   { theme: 'dark',  accent: '#d9b97a' },
+  uncommon: { theme: 'dark',  accent: '#9fd2c0' },
+  rare:     { theme: 'dark',  accent: '#9fb4f2' },
+  epic:     { theme: 'light', accent: '#c8a2f0' },
+  legendary:{ theme: 'light', accent: '#f0c977' }
+};
+
+function revealMood(card){
+  return REVEAL_MOOD[(card && card.rarity) || ''] || REVEAL_MOOD.common;
+}
+
+function setRevealTheme(theme, accent){
+  const ov = document.getElementById('reveal-overlay');
+  if (!ov) return;
+  ov.setAttribute('data-reveal-theme', theme || 'dark');
+  if (accent) ov.style.setProperty('--reveal-accent', accent);
+}
+
+/* Рубашка своя у светлого и тёмного оформления. Пак ещё не открыт, настроения
+   нет — до первой карточки показываем тёмную */
+function revealBackSrc(){
+  const ov = document.getElementById('reveal-overlay');
+  const theme = (ov && ov.getAttribute('data-reveal-theme')) || 'dark';
+  return 'images/reveal/back-' + (theme === 'light' ? 'light' : 'dark') + '.webp';
+}
 
 function openPackReveal(){
   const packs = (myCards && myCards.unopened_packs) || [];
@@ -12716,16 +12973,20 @@ function openPackReveal(){
   if (bigEl){ bigEl.innerHTML = ''; bigEl.classList.remove('on'); }
   document.getElementById('reveal-done').style.display = 'none';
 
-  // Кольцо-вспышку рисуем первым и отдельно: оно живёт внутри ряда, но не
-  // должно попасть в раскладку карточек — поэтому позиции карт на классах
+  // Кольцо-вспышку и сигил рисуем первыми и отдельно: они живут внутри ряда,
+  // но не должны попасть в раскладку карточек — поэтому позиции карт на классах
   document.getElementById('reveal-row').innerHTML =
-    '<div class="reveal-ring" id="reveal-ring"></div>'
+    '<div class="reveal-sigil" id="reveal-sigil"></div>'
+    + '<div class="reveal-ring" id="reveal-ring"></div>'
     + revealQueue.map(function(id, i){
     return '<div class="reveal-card pos-' + (i + 1) + '" id="reveal-card-' + id + '" onclick="revealCard(' + id + ')">'
-      + '<div class="reveal-face reveal-back">◆</div>'
+      + '<div class="reveal-face reveal-back"><img src="' + revealBackSrc() + '" alt=""></div>'
       + '<div class="reveal-face reveal-front" id="reveal-front-' + id + '"></div>'
       + '</div>';
   }).join('');
+
+  // До первой открытой карточки настроения ещё нет — держим тёмное оформление
+  setRevealTheme('dark');
 
   const ov = document.getElementById('reveal-overlay');
   ov.classList.remove('showcase');
@@ -12816,9 +13077,30 @@ async function revealCard(cardId){
         : '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--warm);opacity:.6">◆</div>')
       + '<div class="reveal-front-name">' + (card.title || '') + '</div>';
   }
+  // Настроение и сигил ставим ДО переворота: карта открывается уже в своей
+  // атмосфере, а не перекрашивается через мгновение после
+  if (card){
+    const mood = revealMood(card);
+    setRevealTheme(mood.theme, mood.accent);
+    renderSigil(card.god || '');
+  }
+
+  const row = document.getElementById('reveal-row');
+  if (row){
+    row.classList.remove('phase-charge','phase-impact');
+    void row.offsetWidth;
+    row.classList.add('phase-charge');
+    setTimeout(function(){
+      row.classList.remove('phase-charge');
+      row.classList.add('phase-impact');
+    }, 160);
+    setTimeout(function(){ row.classList.remove('phase-impact'); }, 620);
+  }
+
   el.classList.add('flipped');
   revealOpened++;
   packRevealBurst(el, card);
+  playSigilWave();
 
   showCardDetail(card, data ? data.points_awarded : 0, cardId, data ? data.claimed : false);
 
@@ -12839,6 +13121,19 @@ async function revealCard(cardId){
       if (ov) ov.classList.add('all-open');   // ряда нет — арт на всю ширину
     }
   }, 480);
+}
+
+/* Что даёт карточка — третьей плашкой рядом с богом и редкостью. Человек
+   вскрывает карту именно ради этого, поэтому строка не должна пропадать, когда
+   баллов нет: у контентных и наградных карточек тоже есть что сказать */
+function cardGainLabel(card, pointsAwarded){
+  if (pointsAwarded) return '+' + pointsAwarded;
+  if (!card) return '—';
+  if (card.effect_type === 'content')       return 'Видео';
+  if (card.effect_type === 'unlock_reward') return 'Награда';
+  if (card.personal)                        return 'Лично';
+  if (card.effect_points)                   return '+' + card.effect_points;
+  return '—';
 }
 
 function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
@@ -12910,14 +13205,12 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   // плюс награда. Всё остальное — крупный арт, описание, кнопки — наше
   const statHtml =
       '<div class="reveal-stats">'
-    + '<div class="reveal-stat"><div class="reveal-stat-label">Фракция</div>'
+    + '<div class="reveal-stat"><div class="reveal-stat-label">Бог</div>'
     + '<div class="reveal-stat-value">' + (godNameHtml(card.god || '') || '—') + '</div></div>'
     + '<div class="reveal-stat"><div class="reveal-stat-label">Редкость</div>'
     + '<div class="reveal-stat-value">' + escapeHtml(CARD_RARITY_LABELS[card.rarity] || card.rarity || '—') + '</div></div>'
-    + (pointsAwarded
-        ? '<div class="reveal-stat"><div class="reveal-stat-label">Награда</div>'
-          + '<div class="reveal-stat-value">+' + pointsAwarded + '</div></div>'
-        : '')
+    + '<div class="reveal-stat"><div class="reveal-stat-label">Награда</div>'
+    + '<div class="reveal-stat-value">' + escapeHtml(cardGainLabel(card, pointsAwarded)) + '</div></div>'
     + '</div>';
 
   el.innerHTML =
