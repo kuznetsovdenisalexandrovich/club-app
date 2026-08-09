@@ -2912,6 +2912,134 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 <div class="toast" id="toast"></div>
 
+
+<!-- ══ ПОДКАСТ-ПЛЕЕР ══════════════════════════════════════════════════════════
+     Лежит ВНЕ .shell и вне переключаемых экранов: один <audio> на всё
+     приложение, иначе при переходе между вкладками звук обрывался бы.
+     Иконки — SVG, не эмодзи (жёсткое правило по интерфейсу аппа). -->
+
+<audio id="player-audio" preload="metadata"></audio>
+
+<div class="mini-player" id="mini-player">
+  <button class="mp-close" id="mp-close-btn" aria-label="Закрыть плеер">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+  </button>
+
+  <div class="mp-top" id="mp-open-full">
+    <div class="mp-cover" id="mp-cover"></div>
+    <div class="mp-meta">
+      <div class="mp-t" id="mp-title">—</div>
+      <div class="mp-s" id="mp-sub">—</div>
+    </div>
+  </div>
+
+  <div class="mp-progress-row">
+    <div class="mp-time" id="mp-cur">0:00</div>
+    <div class="mp-bar" id="mp-bar">
+      <div class="mp-buffered" id="mp-buffered"></div>
+      <div class="mp-bar-fill" id="mp-fill"></div>
+      <div class="mp-markers" id="mp-markers"></div>
+    </div>
+    <div class="mp-time" id="mp-dur">0:00</div>
+  </div>
+
+  <div class="mp-controls-row">
+    <button class="mp-side left" id="mp-clapper" aria-label="Видео и материалы">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2.6" y="9.4" width="18.8" height="11.4" rx="1.9" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M2.9 9.4 4.5 4.6a1 1 0 0 1 1.2-.68l13.6 2.9a1 1 0 0 1 .77 1.2l-.3 1.38" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M8.7 4.8 6.6 9.4M13.6 5.85 11.5 9.4M18.5 6.9l-2.1 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="mp-controls">
+      <button class="mp-btn" id="mp-prev" aria-label="Предыдущее занятие">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5.5a1 1 0 0 1 2 0v13a1 1 0 0 1-2 0zM19.2 5.9v12.2c0 .8-.9 1.3-1.6.85l-9.1-6.1a1 1 0 0 1 0-1.7l9.1-6.1c.7-.45 1.6.05 1.6.85z"/></svg>
+      </button>
+      <button class="mp-btn skip" id="mp-back15" aria-label="Назад 15 секунд">&minus;15</button>
+      <button class="mp-btn big" id="mp-play" aria-label="Слушать">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4c0-.8.9-1.3 1.6-.86l9.4 6.6a1 1 0 0 1 0 1.72l-9.4 6.6c-.7.45-1.6-.05-1.6-.86z"/></svg>
+      </button>
+      <button class="mp-btn skip" id="mp-fwd15" aria-label="Вперёд 15 секунд">+15</button>
+      <button class="mp-btn" id="mp-next" aria-label="Следующее занятие">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17 5.5a1 1 0 0 0-2 0v13a1 1 0 0 0 2 0zM4.8 5.9v12.2c0 .8.9 1.3 1.6.85l9.1-6.1a1 1 0 0 0 0-1.7L6.4 5.05c-.7-.45-1.6.05-1.6.85z"/></svg>
+      </button>
+    </div>
+    <button class="mp-speed" id="mp-speed">1&times;</button>
+  </div>
+</div>
+
+<div class="fp-overlay" id="fp-overlay">
+  <div class="fp-sheet" id="fp-sheet">
+    <div class="fp-handle"></div>
+    <div class="fp-head">
+      <div style="width:36px;flex:0 0 36px"></div>
+      <div class="fp-head-label" id="fp-source">—</div>
+      <button class="icon-btn" id="fp-close" aria-label="Свернуть плеер">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="fp-cover" id="fp-cover"></div>
+    <div class="fp-title" id="fp-title">—</div>
+    <div class="fp-sub" id="fp-sub">—</div>
+
+    <div class="fp-progress">
+      <div class="mp-bar" id="fp-bar">
+        <div class="mp-buffered" id="fp-buffered"></div>
+        <div class="mp-bar-fill" id="fp-fill"></div>
+        <div class="mp-markers" id="fp-markers"></div>
+      </div>
+      <div class="fp-times">
+        <span id="fp-cur">0:00</span>
+        <span id="fp-dur">0:00</span>
+      </div>
+    </div>
+
+    <div class="mp-controls-row fp-controls-row">
+      <button class="mp-side left" id="fp-clapper" aria-label="Видео и материалы">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2.6" y="9.4" width="18.8" height="11.4" rx="1.9" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M2.9 9.4 4.5 4.6a1 1 0 0 1 1.2-.68l13.6 2.9a1 1 0 0 1 .77 1.2l-.3 1.38" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="M8.7 4.8 6.6 9.4M13.6 5.85 11.5 9.4M18.5 6.9l-2.1 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="mp-controls">
+        <button class="mp-btn" id="fp-prev" aria-label="Предыдущее занятие">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5.5a1 1 0 0 1 2 0v13a1 1 0 0 1-2 0zM19.2 5.9v12.2c0 .8-.9 1.3-1.6.85l-9.1-6.1a1 1 0 0 1 0-1.7l9.1-6.1c.7-.45 1.6.05 1.6.85z"/></svg>
+        </button>
+        <button class="mp-btn skip" id="fp-back15" aria-label="Назад 15 секунд">&minus;15</button>
+        <button class="mp-btn big" id="fp-play" aria-label="Слушать">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4c0-.8.9-1.3 1.6-.86l9.4 6.6a1 1 0 0 1 0 1.72l-9.4 6.6c-.7.45-1.6-.05-1.6-.86z"/></svg>
+        </button>
+        <button class="mp-btn skip" id="fp-fwd15" aria-label="Вперёд 15 секунд">+15</button>
+        <button class="mp-btn" id="fp-next" aria-label="Следующее занятие">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17 5.5a1 1 0 0 0-2 0v13a1 1 0 0 0 2 0zM4.8 5.9v12.2c0 .8.9 1.3 1.6.85l9.1-6.1a1 1 0 0 0 0-1.7L6.4 5.05c-.7-.45-1.6.05-1.6.85z"/></svg>
+        </button>
+      </div>
+      <button class="mp-speed" id="fp-speed">1&times;</button>
+    </div>
+
+    <div class="fp-tabs">
+      <div class="fp-tab fp-tab-on" id="fp-tab-queue" data-text="player.tab_queue">Очередь</div>
+      <div class="fp-tab" id="fp-tab-marks" data-text="player.tab_marks">Таймкоды</div>
+    </div>
+    <div class="fp-list" id="fp-list"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="player-video-overlay">
+  <div class="center-modal" style="text-align:left">
+    <div class="center-modal-header" style="justify-content:space-between;align-items:center">
+      <div class="center-modal-title" style="margin:0;font-size:15px" data-text="player.video_title">Посмотреть занятие</div>
+      <button class="icon-btn" id="player-video-close" aria-label="Закрыть">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin:6px 0 14px" data-text="player.video_lead">Слушаешь аудио — а вот то же занятие целиком, с картинкой.</div>
+    <div id="player-video-links"></div>
+  </div>
+</div>
+
 <div class="scroll-fade"></div>
 
 <div class="tabbar" id="tabbar" style="display:none">
@@ -3927,6 +4055,199 @@ img.img-fade.is-instant{opacity:1;transition:none}
   img.img-fade{opacity:1;transition:none}
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ПОДКАСТ-ПЛЕЕР (09.08.2026)
+
+   Плашка живёт ВНЕ переключаемых экранов, рядом с таббаром — один <audio> на
+   всё приложение. Иначе при переходе между вкладками SPA элемент пересоздался
+   бы и звук оборвался на середине.
+
+   z-index: таббар 50, плашка 55 (над ним по вертикали она выше), шторка
+   полного плеера 210 (как sched-popup 200, но выше — открывается поверх),
+   попап видео 600 (как center-modal — он поверх шторки). Тост 1000, выше всех:
+   урок с экраном раскрытия, где ошибку не было видно именно под оверлеем.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mini-player{
+  position:fixed;left:16px;right:16px;
+  bottom:calc(88px + env(safe-area-inset-bottom));
+  max-width:488px;margin:0 auto;z-index:55;
+  background:var(--card);border:1px solid var(--border);border-radius:22px;
+  box-shadow:0 14px 32px -10px rgba(0,0,0,.35);
+  padding:12px 14px 14px;display:none;flex-direction:column;gap:10px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transform:translateY(160%);opacity:0;
+  transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .28s;
+}
+.mini-player.mounted{display:flex}
+.mini-player.show{transform:translateY(0);opacity:1}
+[data-theme="light"] .mini-player{
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.32),rgba(255,255,255,.03)),
+    var(--paper-noise),rgba(233,225,216,.92);
+  background-blend-mode:soft-light,multiply,normal;
+  border:1px solid rgba(255,255,255,.66);
+  box-shadow:12px 16px 30px rgba(75,57,43,.2),-2px -2px 7px rgba(255,255,255,.78),inset 0 1px 0 rgba(255,255,255,.7);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+/* Пока плеер на экране, нижней ленте и затуханию нужно больше воздуха, иначе
+   плашка ложится на последнюю карточку списка */
+body.player-open .scroll-fade{height:190px}
+
+.mp-close{
+  position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:50%;
+  border:none;background:var(--card2);color:var(--text-faint);
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+  cursor:pointer;z-index:2;padding:0;line-height:1;
+}
+.mp-top{display:flex;align-items:center;gap:11px;cursor:pointer;padding-right:22px}
+.mp-cover{
+  width:44px;height:44px;border-radius:12px;flex:0 0 44px;overflow:hidden;
+  background:linear-gradient(135deg,var(--warm),var(--lav));
+  display:flex;align-items:center;justify-content:center;color:#fff;
+}
+.mp-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.mp-meta{flex:1;min-width:0}
+.mp-meta .mp-t{
+  font-family:var(--disp);font-weight:700;font-size:13px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mp-meta .mp-s{font-size:11px;color:var(--text-dim);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.mp-progress-row{display:flex;align-items:center;gap:8px}
+.mp-time{font-size:10px;color:var(--text-faint);width:34px;text-align:center;flex:0 0 34px;
+  font-variant-numeric:tabular-nums}
+.mp-bar{flex:1;height:5px;border-radius:3px;background:var(--card2);position:relative;cursor:pointer}
+[data-theme="light"] .mp-bar{background:var(--card2);box-shadow:var(--sh-is)}
+.mp-bar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;
+  background:linear-gradient(90deg,var(--warm),var(--amber));width:0%}
+.mp-buffered{position:absolute;left:0;top:0;bottom:0;border-radius:3px;
+  background:var(--text-faint);opacity:.22;width:0%}
+.mp-markers{position:absolute;left:0;right:0;top:0;height:100%;pointer-events:none}
+.mp-marker{
+  position:absolute;top:-3px;width:5px;height:11px;margin-left:-2.5px;border-radius:2px;
+  background:var(--warm);opacity:.9;pointer-events:auto;cursor:pointer;
+}
+.mp-marker:active{transform:scale(.85)}
+
+.mp-controls-row{display:flex;align-items:center;justify-content:center;position:relative;min-height:52px}
+.mp-controls{display:flex;align-items:center;justify-content:center;gap:9px}
+.mp-btn{
+  width:34px;height:34px;border-radius:50%;border:none;background:var(--card2);
+  color:var(--text);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;flex-shrink:0;padding:0;font-family:inherit;
+  transition:transform .12s;
+}
+.mp-btn.skip{width:44px;height:44px;font-size:10.5px;font-weight:700;color:var(--text-dim);
+  font-variant-numeric:tabular-nums}
+.mp-btn.big{
+  width:52px;height:52px;font-size:17px;color:#fff;
+  background:linear-gradient(135deg,var(--warm),var(--warm-deep));
+  box-shadow:0 4px 14px -3px rgba(232,97,74,.55);
+}
+.mp-btn:active{transform:scale(.9)}
+.mp-btn[disabled]{opacity:.35;pointer-events:none}
+.mp-side{
+  position:absolute;width:34px;height:34px;border-radius:50%;
+  background:var(--card2);border:1px solid var(--border);color:var(--text-dim);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+}
+[data-theme="light"] .mp-side{background:rgba(232,224,214,.84);border:1px solid rgba(255,255,255,.56);box-shadow:var(--sh-sm)}
+.mp-side:active{transform:scale(.9)}
+.mp-side.left{left:0}
+.mp-speed{
+  position:absolute;right:0;border:1px solid var(--border);background:var(--card2);
+  border-radius:14px;padding:5px 11px;font-size:11px;font-weight:700;
+  color:var(--text-dim);cursor:pointer;font-family:inherit;
+  font-variant-numeric:tabular-nums;
+}
+[data-theme="light"] .mp-speed{background:rgba(232,224,214,.84);border:1px solid rgba(255,255,255,.56)}
+.mp-speed:active{transform:scale(.94)}
+
+/* ── Полный плеер: шторка снизу, скроллится ЦЕЛИКОМ одним скроллом ── */
+.fp-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  z-index:210;display:none;align-items:flex-end;justify-content:center;
+}
+.fp-overlay.open{display:flex;animation:overlayFadeIn .22s ease forwards}
+.fp-sheet{
+  background:var(--bg2);border-radius:26px 26px 0 0;width:100%;max-width:520px;
+  max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 22px calc(26px + env(safe-area-inset-bottom));
+}
+.fp-overlay.open .fp-sheet{animation:popupSlideUp .4s cubic-bezier(0.34,1.56,0.64,1) forwards}
+[data-theme="light"] .fp-sheet{
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.28),rgba(255,255,255,.025)),
+    var(--paper-noise),#e7dfd5;
+  background-blend-mode:soft-light,multiply,normal;
+  border:1px solid rgba(255,255,255,.58);
+}
+.fp-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 6px}
+.fp-head{display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;gap:10px}
+.fp-head-label{
+  font-size:11px;font-weight:700;color:var(--text-faint);
+  text-transform:uppercase;letter-spacing:.06em;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;
+}
+.fp-cover{
+  width:min(52vw,210px);aspect-ratio:1;border-radius:24px;margin:16px auto 18px;
+  overflow:hidden;background:linear-gradient(135deg,var(--warm),var(--lav));
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 20px 44px -16px rgba(0,0,0,.4);
+}
+.fp-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.fp-title{font-family:var(--disp);font-weight:700;font-size:17px;line-height:1.35;text-align:center;padding:0 6px}
+.fp-sub{font-size:12px;color:var(--text-dim);text-align:center;margin-top:6px}
+.fp-progress{margin:20px 0 4px}
+.fp-progress .mp-bar{height:6px}
+.fp-progress .mp-marker{top:-4px;width:7px;height:14px;margin-left:-3.5px;border-radius:3px}
+.fp-times{display:flex;justify-content:space-between;font-size:11px;color:var(--text-faint);margin-top:7px;
+  font-variant-numeric:tabular-nums}
+.fp-controls-row{margin:14px 0 18px;min-height:64px}
+.fp-controls-row .mp-controls{gap:13px}
+.fp-controls-row .mp-btn{width:38px;height:38px;font-size:13px}
+.fp-controls-row .mp-btn.skip{width:44px;height:44px;font-size:10.5px}
+.fp-controls-row .mp-btn.big{width:62px;height:62px;font-size:21px}
+.fp-controls-row .mp-side{width:40px;height:40px}
+
+.fp-tabs{display:flex;gap:8px;margin:2px 0 12px}
+.fp-tab{
+  flex:1;text-align:center;padding:9px 10px;border-radius:14px;
+  background:var(--card2);border:1px solid var(--border);
+  font-size:12.5px;font-weight:700;color:var(--text-dim);cursor:pointer;
+}
+.fp-tab.fp-tab-on{background:var(--warm-deep);border-color:transparent;color:#fff}
+.fp-list{padding-bottom:4px}
+
+.pq-row{display:flex;align-items:center;gap:11px;padding:10px 6px;border-radius:14px;cursor:pointer}
+.pq-row.pq-now{background:var(--card2)}
+.pq-row.pq-now .pq-title{color:var(--warm)}
+.pq-num{width:20px;flex:0 0 20px;text-align:center;font-size:12px;color:var(--text-faint);
+  font-variant-numeric:tabular-nums}
+.pq-eq{display:flex;gap:2px;align-items:flex-end;height:12px;width:20px;flex:0 0 20px;justify-content:center}
+.pq-eq span{width:2px;background:var(--warm);height:3px;animation:pqEq 1s ease-in-out infinite}
+.pq-eq span:nth-child(2){animation-delay:.2s}
+.pq-eq span:nth-child(3){animation-delay:.4s}
+@keyframes pqEq{0%,100%{height:3px}50%{height:11px}}
+@media (prefers-reduced-motion:reduce){ .pq-eq span{animation:none;height:7px} }
+.pq-cover{width:38px;height:38px;border-radius:10px;flex:0 0 38px;overflow:hidden;
+  background:linear-gradient(135deg,var(--warm),var(--lav))}
+.pq-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.pq-title{font-size:13.5px;font-weight:600;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.ptc-row{display:flex;align-items:flex-start;gap:11px;padding:10px 6px;border-radius:14px;cursor:pointer}
+.ptc-row.ptc-now{background:var(--card2)}
+.ptc-row.ptc-now .ptc-text{color:var(--warm)}
+.ptc-time{font-size:11px;font-weight:700;color:var(--text-faint);flex:0 0 40px;padding-top:2px;
+  font-variant-numeric:tabular-nums}
+.ptc-row.ptc-now .ptc-time{color:var(--warm)}
+.ptc-text{font-size:13px;line-height:1.45;flex:1}
+.fp-empty{text-align:center;padding:28px 16px;color:var(--text-faint);font-size:13px;line-height:1.5}
 </style>
 
 <div id="cardentry-overlay">
@@ -6867,6 +7188,30 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'player.tab_queue': {
+    c:'Плеер', l:'Вкладка со списком занятий', w:'Плеер — вкладки', i:true,
+    t:'Очередь' },
+  'player.tab_marks': {
+    c:'Плеер', l:'Вкладка с таймкодами', w:'Плеер — вкладки', i:true,
+    t:'Таймкоды' },
+  'player.marks_empty': {
+    c:'Плеер', l:'Когда у занятия нет размеченных мыслей', w:'Плеер — вкладка «Таймкоды»', i:false,
+    t:'У этого занятия пока нет отмеченных мыслей' },
+  'player.src_library': {
+    c:'Плеер', l:'Подпись источника: библиотека', w:'Плеер — под названием', i:false,
+    t:'Библиотека' },
+  'player.src_saved': {
+    c:'Плеер', l:'Подпись источника: сохранённое', w:'Плеер — под названием', i:false,
+    t:'Смотреть позже' },
+  'player.src_plan': {
+    c:'Плеер', l:'Подпись источника: личный план', w:'Плеер — под названием', i:false,
+    t:'Личный план' },
+  'player.video_title': {
+    c:'Плеер', l:'Заголовок попапа с видео', w:'Плеер — кнопка с хлопушкой', i:true,
+    t:'Посмотреть занятие' },
+  'player.video_lead': {
+    c:'Плеер', l:'Подводка в попапе с видео', w:'Плеер — кнопка с хлопушкой', i:true,
+    t:'Слушаешь аудио — а вот то же занятие целиком, с картинкой.' },
   'invite.header': {
     c:'Приглашения', l:'Шапка экрана приглашений', w:'Пригласить друга', i:true,
     t:'Приведи друга — получишь баллы, когда он оформит подписку.' },
@@ -8749,11 +9094,17 @@ let planCardItems  = [];
 function cardList(src){
   if (src === 'saved') return savedCardItems;
   if (src === 'plan')  return planCardItems;
+  // Очередь плеера — свой список: из попапа под хлопушкой видео и выжимка
+  // открываются тем же путём, что с карточки, а индекс там от СВОЕГО списка
+  if (src === 'player') return (typeof playerCardItems !== 'undefined' ? playerCardItems : []);
   return renderedItems;
 }
 let savedSlugs = new Set();
 
 const SAVE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+// Наушники для кнопки «Слушать». SVG, а не эмодзи — как и все иконки аппа
+const LISTEN_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px"><path d="M4 14v-2a8 8 0 0 1 16 0v2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><rect x="2.6" y="13.4" width="4.6" height="7.2" rx="2.3" stroke="currentColor" stroke-width="1.9"/><rect x="16.8" y="13.4" width="4.6" height="7.2" rx="2.3" stroke="currentColor" stroke-width="1.9"/></svg>';
 
 function lecCardHtml(l, i, src){
   src = src || 'lib';
@@ -8777,6 +9128,11 @@ function lecCardHtml(l, i, src){
   const insightsClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i},${jsArg(src)})`);
+  // Аудиоверсия есть не у всех занятий — кнопки просто нет, если файла нет
+  const hasAudio = !!((l.audio_url || '').trim());
+  const listenClick = tourLocked
+    ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
+    : `playLecture(${i},${jsArg(src)})`;
   return `
     <div class="lec-card fade-rise">
       <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
@@ -8787,6 +9143,7 @@ function lecCardHtml(l, i, src){
       <div class="lec-desc">${l.description || ''}</div>
       <div class="lec-tags">${(l.tags||[]).slice(0,4).map(t=>`<span class="lec-tag">#${t}</span>`).join('')}</div>
       <div class="lec-links">
+        ${hasAudio ? `<button class="lec-link-btn listen-btn${lockCls}" onclick="event.stopPropagation();${listenClick}">${lockIcon}${LISTEN_ICON} Слушать</button>` : ''}
         ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${insightsLockCls}" onclick="event.stopPropagation();${insightsClick}">${insightsLockIcon}Главные идеи</button>` : ''}
         ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
@@ -15207,6 +15564,495 @@ async function sendQuizCardToBot(){
   }
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ПОДКАСТ-ПЛЕЕР (09.08.2026)
+
+   Плейлист НЕ хранится отдельно: он собирается из того же списка, что уже
+   нарисован на экране (cardList(src) — библиотека/поток/сохранённое/план),
+   отфильтрованного по наличию audio_url. Поэтому «слушать» работает разом во
+   всех четырёх местах, и порядок в очереди совпадает с тем, что человек видит.
+
+   Засечки на полосе — это key_insights лекции, те же, что в «Главных идеях».
+   Отдельной разметки под плеер нет и не нужно.
+
+   ⚠️ ОГРАНИЧЕНИЕ, о котором сказано Denis'у: это WebView, а не нативный
+   плеер. Пока приложение открыто — играет; свернул Telegram или погасил
+   экран — на части устройств звук встанет. Настоящее фоновое прослушивание
+   даёт только личный подкаст-фид, это отдельная задача.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var plQueue = [];          // массив лекций (только с audio_url)
+var plIndex = 0;
+var plSourceLabel = '';
+var plTab = 'queue';
+var plSpeeds = [1, 1.25, 1.5, 2];
+var plSpeedIdx = 0;
+var plAudio = null;
+
+// Позиция прослушивания живёт на устройстве. Серверная синхронизация между
+// телефоном и компьютером — следующий шаг, ей нужен отдельный эндпоинт
+var PL_POS_KEY = 'club_audio_pos';
+
+function plEl(id){ return document.getElementById(id); }
+
+function plPositions(){
+  try { return JSON.parse(localStorage.getItem(PL_POS_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function plSavePosition(slug, sec){
+  if (!slug || !isFinite(sec)) return;
+  try {
+    var all = plPositions();
+    // Начало и самый хвост не запоминаем: «дослушал» должно начинаться заново,
+    // а первые секунды — не прогресс
+    if (sec < 20 || (plAudio && plAudio.duration && sec > plAudio.duration - 25)) delete all[slug];
+    else all[slug] = Math.floor(sec);
+    localStorage.setItem(PL_POS_KEY, JSON.stringify(all));
+  } catch(e){}
+}
+
+/* Таймкод в key_insights — строка вида "12:47" или "1:02:30". Пустые и
+   неразобранные молча отбрасываем: лучше меньше засечек, чем засечка в нуле */
+function plTimecodeToSeconds(tc){
+  if (!tc) return null;
+  var parts = String(tc).trim().split(':').map(function(x){ return parseInt(x, 10); });
+  if (!parts.length || parts.some(function(n){ return isNaN(n); })) return null;
+  var sec = 0;
+  parts.forEach(function(n){ sec = sec * 60 + n; });
+  return sec > 0 ? sec : null;
+}
+
+function plMarksOf(lec){
+  if (!lec) return [];
+  // Длительность известна не сразу — пока метаданных нет, отдаём всё, иначе
+  // список таймкодов был бы пустым первые мгновения после открытия
+  var dur = (plAudio && isFinite(plAudio.duration)) ? plAudio.duration : 0;
+  return (lec.key_insights || []).map(function(ins){
+    var sec = plTimecodeToSeconds(ins.timecode);
+    return sec === null ? null : { t: sec, text: ins.insight || '' };
+  }).filter(function(mk){
+    if (!mk) return false;
+    // Таймкод за концом записи означает, что аудиоверсия короче видео, с
+    // которого снималась разметка. Прыгать туда некуда — прячем и в списке,
+    // и на полосе, чтобы два вида не расходились
+    return !dur || mk.t < dur;
+  }).sort(function(a, b){ return a.t - b.t; });
+}
+
+function plFmt(t){
+  if (!isFinite(t) || t < 0) return '0:00';
+  var h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = Math.floor(t % 60);
+  var mm = (h && m < 10 ? '0' : '') + m;
+  return (h ? h + ':' : '') + mm + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function plCoverHtml(lec){
+  if (!lec) return '';
+  // Тот же путь по соглашению об имени, что у карточек лекций. Файла может не
+  // быть — тогда картинка убирает себя и остаётся градиентная подложка
+  return '<img src="images/lectures/' + lec.slug + '.jpg" alt="" loading="lazy" onerror="this.remove()">';
+}
+
+/* ── Запуск ─────────────────────────────────────────────────────────────── */
+
+function plHasAudio(lec){ return !!(lec && (lec.audio_url || '').trim()); }
+
+/* Главная точка входа: жмут «Слушать» на карточке. Очередь — весь список, где
+   человек нажал, но только те занятия, у которых аудио есть */
+function playLecture(index, src){
+  if (!isMember) { openPaywall(); return; }
+  var list = cardList(src) || [];
+  var clicked = list[index];
+  if (!plHasAudio(clicked)) { showToast('У этого занятия пока нет аудиоверсии'); return; }
+
+  var withAudio = list.filter(plHasAudio);
+  var pos = withAudio.findIndex(function(x){ return x.slug === clicked.slug; });
+
+  plQueue = withAudio;
+  plIndex = pos < 0 ? 0 : pos;
+  plSourceLabel = plSourceTitle(src);
+  plMount();
+  plLoadCurrent(true);
+}
+
+/* Запуск всего потока/списка с первого занятия — для кнопки на странице потока */
+function playAllFrom(src){
+  if (!isMember) { openPaywall(); return; }
+  var withAudio = (cardList(src) || []).filter(plHasAudio);
+  if (!withAudio.length) { showToast('В этом списке пока нет аудиоверсий'); return; }
+  plQueue = withAudio;
+  plIndex = 0;
+  plSourceLabel = plSourceTitle(src);
+  plMount();
+  plLoadCurrent(true);
+}
+
+function plSourceTitle(src){
+  if (src === 'saved') return t('player.src_saved');
+  if (src === 'plan')  return t('player.src_plan');
+  var st = document.getElementById('stream-title');
+  var onStream = document.getElementById('view-stream');
+  if (onStream && onStream.classList.contains('active') && st && st.textContent) return st.textContent;
+  return t('player.src_library');
+}
+
+function plMount(){
+  var box = plEl('mini-player');
+  if (!box) return;
+  box.classList.add('mounted');
+  document.body.classList.add('player-open');
+  // Появление отдельным кадром: класс show, поставленный в том же кадре, что и
+  // display, не даёт перехода — браузер не увидит смены состояния
+  requestAnimationFrame(function(){ box.classList.add('show'); });
+}
+
+function plLoadCurrent(autoplay){
+  var lec = plQueue[plIndex];
+  if (!lec || !plAudio) return;
+
+  plAudio.src = lec.audio_url;
+  plAudio.playbackRate = plSpeeds[plSpeedIdx];
+
+  var sub = plSourceLabel + ' · ' + (plIndex + 1) + '/' + plQueue.length;
+  plEl('mp-title').textContent = lec.title || '';
+  plEl('mp-sub').textContent   = sub;
+  plEl('fp-title').textContent = lec.title || '';
+  plEl('fp-sub').textContent   = sub;
+  plEl('fp-source').textContent = plSourceLabel;
+  plEl('mp-cover').innerHTML = plCoverHtml(lec);
+  plEl('fp-cover').innerHTML = plCoverHtml(lec);
+
+  // Продолжаем с того места, где остановились в прошлый раз
+  var saved = plPositions()[lec.slug];
+  if (saved) {
+    var jump = function(){ try { plAudio.currentTime = saved; } catch(e){} };
+    if (plAudio.readyState >= 1) jump();
+    else plAudio.addEventListener('loadedmetadata', jump, { once: true });
+  }
+
+  plUpdateNavButtons();
+  plRenderList();
+  plRenderMarkers();
+  rememberLastLecture(lec);
+
+  if (autoplay !== false) plPlay();
+}
+
+function plPlay(){
+  if (!plAudio || !plQueue.length) return;
+  var p = plAudio.play();
+  // На iOS play() может отвергнуться, если жеста не было — тогда честно
+  // показываем паузу, а не врём иконкой
+  if (p && p.catch) p.catch(function(){ plSetPlayIcon(false); });
+  plSetPlayIcon(true);
+}
+
+function plTogglePlay(){
+  if (!plAudio || !plQueue.length) return;
+  if (plAudio.paused) plPlay();
+  else { plAudio.pause(); plSetPlayIcon(false); }
+}
+
+var PL_ICON_PLAY  = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4c0-.8.9-1.3 1.6-.86l9.4 6.6a1 1 0 0 1 0 1.72l-9.4 6.6c-.7.45-1.6-.05-1.6-.86z"/></svg>';
+var PL_ICON_PAUSE = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="4.6" width="3.9" height="14.8" rx="1.3"/><rect x="13.6" y="4.6" width="3.9" height="14.8" rx="1.3"/></svg>';
+
+function plSetPlayIcon(playing){
+  var mp = plEl('mp-play'), fp = plEl('fp-play');
+  var html = playing ? PL_ICON_PAUSE : PL_ICON_PLAY;
+  var label = playing ? 'Пауза' : 'Слушать';
+  if (mp){ mp.innerHTML = html; mp.setAttribute('aria-label', label); }
+  if (fp){ fp.innerHTML = html.replace(/17/g, '21'); fp.setAttribute('aria-label', label); }
+}
+
+function plNext(){
+  if (plIndex < plQueue.length - 1){ plIndex++; plLoadCurrent(true); }
+}
+function plPrev(){
+  // Как в подкаст-плеерах: в начале трека — на предыдущий, дальше — к началу
+  if (plAudio && plAudio.currentTime > 3) { plAudio.currentTime = 0; return; }
+  if (plIndex > 0){ plIndex--; plLoadCurrent(true); }
+  else if (plAudio) plAudio.currentTime = 0;
+}
+function plSkip(sec){
+  if (!plAudio || !plQueue.length) return;
+  var dur = plAudio.duration || 0;
+  plAudio.currentTime = Math.max(0, Math.min(dur || plAudio.currentTime + sec, plAudio.currentTime + sec));
+}
+function plUpdateNavButtons(){
+  var first = plIndex <= 0, last = plIndex >= plQueue.length - 1;
+  ['mp-next','fp-next'].forEach(function(id){ var b = plEl(id); if (b) b.disabled = last; });
+  ['mp-prev','fp-prev'].forEach(function(id){ var b = plEl(id); if (b) b.disabled = first && !(plAudio && plAudio.currentTime > 3); });
+}
+
+function plSeekFromEvent(e, barId){
+  if (!plAudio || !plAudio.duration) return;
+  var bar = plEl(barId);
+  if (!bar) return;
+  var r = bar.getBoundingClientRect();
+  var x = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left;
+  var ratio = Math.max(0, Math.min(1, x / r.width));
+  plAudio.currentTime = ratio * plAudio.duration;
+}
+
+function plCycleSpeed(){
+  plSpeedIdx = (plSpeedIdx + 1) % plSpeeds.length;
+  if (plAudio) plAudio.playbackRate = plSpeeds[plSpeedIdx];
+  var label = plSpeeds[plSpeedIdx] + '×';
+  ['mp-speed','fp-speed'].forEach(function(id){ var b = plEl(id); if (b) b.textContent = label; });
+}
+
+function plClose(){
+  if (plAudio){
+    var lec = plQueue[plIndex];
+    if (lec) plSavePosition(lec.slug, plAudio.currentTime);
+    plAudio.pause();
+    plAudio.removeAttribute('src');
+    plAudio.load();
+  }
+  var box = plEl('mini-player');
+  if (box){ box.classList.remove('show'); setTimeout(function(){ box.classList.remove('mounted'); }, 320); }
+  document.body.classList.remove('player-open');
+  plCloseFull();
+  plQueue = []; plIndex = 0;
+}
+
+/* ── Полный плеер ───────────────────────────────────────────────────────── */
+
+function plOpenFull(){
+  if (!plQueue.length) return;
+  var ov = plEl('fp-overlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  plRenderList();
+  plRenderMarkers();
+}
+function plCloseFull(){
+  var ov = plEl('fp-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+function plSetTab(tab){
+  plTab = tab;
+  var q = plEl('fp-tab-queue'), m = plEl('fp-tab-marks');
+  if (q) q.classList.toggle('fp-tab-on', tab === 'queue');
+  if (m) m.classList.toggle('fp-tab-on', tab === 'marks');
+  plRenderList();
+}
+
+function plRenderList(){
+  var wrap = plEl('fp-list');
+  if (!wrap || !plQueue.length) return;
+  if (plTab === 'queue') plRenderQueue(wrap); else plRenderMarks(wrap);
+}
+
+function plRenderQueue(wrap){
+  wrap.innerHTML = '';
+  plQueue.forEach(function(lec, i){
+    var row = document.createElement('div');
+    row.className = 'pq-row' + (i === plIndex ? ' pq-now' : '');
+    row.innerHTML =
+      (i === plIndex
+        ? '<div class="pq-eq"><span></span><span></span><span></span></div>'
+        : '<div class="pq-num">' + (i + 1) + '</div>')
+      + '<div class="pq-cover">' + plCoverHtml(lec) + '</div>'
+      + '<div class="pq-title"></div>';
+    // Название через textContent, не через строку разметки: в заголовках лекций
+    // встречаются кавычки и угловые скобки
+    row.querySelector('.pq-title').textContent = lec.title || '';
+    row.onclick = function(){ if (i !== plIndex){ plIndex = i; plLoadCurrent(true); } };
+    wrap.appendChild(row);
+  });
+}
+
+function plRenderMarks(wrap){
+  var marks = plMarksOf(plQueue[plIndex]);
+  wrap.innerHTML = '';
+  if (!marks.length){
+    var e = document.createElement('div');
+    e.className = 'fp-empty';
+    e.textContent = t('player.marks_empty');
+    wrap.appendChild(e);
+    return;
+  }
+  marks.forEach(function(mk){
+    var row = document.createElement('div');
+    row.className = 'ptc-row';
+    row.dataset.t = mk.t;
+    row.innerHTML = '<div class="ptc-time">' + plFmt(mk.t) + '</div><div class="ptc-text"></div>';
+    row.querySelector('.ptc-text').textContent = mk.text;
+    row.onclick = function(){
+      if (!plAudio) return;
+      plAudio.currentTime = mk.t;
+      if (plAudio.paused) plPlay();
+    };
+    wrap.appendChild(row);
+  });
+  plHighlightMark();
+}
+
+function plHighlightMark(){
+  if (plTab !== 'marks' || !plAudio) return;
+  var rows = document.querySelectorAll('#fp-list .ptc-row');
+  if (!rows.length) return;
+  var cur = plAudio.currentTime, active = -1;
+  rows.forEach(function(r, i){ if (parseFloat(r.dataset.t) <= cur) active = i; });
+  rows.forEach(function(r, i){ r.classList.toggle('ptc-now', i === active); });
+}
+
+/* Засечки рисуются в ОБА плеера сразу — одни и те же данные, разный размер
+   задаётся стилями, а не кодом */
+function plRenderMarkers(){
+  var marks = plMarksOf(plQueue[plIndex]);
+  var dur = plAudio && plAudio.duration;
+  ['mp-markers','fp-markers'].forEach(function(id){
+    var wrap = plEl(id);
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    if (!dur || !isFinite(dur)) return;   // до загрузки метаданных ставить некуда
+    marks.forEach(function(mk){
+      var el = document.createElement('div');
+      el.className = 'mp-marker';
+      el.style.left = (mk.t / dur * 100) + '%';
+      el.title = mk.text;
+      el.onclick = function(e){
+        e.stopPropagation();
+        plAudio.currentTime = mk.t;
+        if (plAudio.paused) plPlay();
+        showToast(mk.text.length > 90 ? mk.text.slice(0, 88) + '…' : mk.text);
+      };
+      wrap.appendChild(el);
+    });
+  });
+}
+
+/* ── Попап «посмотреть видео» под хлопушкой ─────────────────────────────── */
+
+function plOpenVideoOptions(){
+  var lec = plQueue[plIndex];
+  if (!lec) return;
+  var box = plEl('player-video-links');
+  if (!box) return;
+  var h = '';
+  if (lec.link)    h += '<button class="lec-link-btn access-btn" onclick="plGoVideo(\'tg\')">Смотреть в ТГ</button>';
+  if (lec.link_vk) h += '<button class="lec-link-btn access-btn" onclick="plGoVideo(\'vk\')">Смотреть в VK</button>';
+  if ((lec.key_insights || []).length)
+    h += '<button class="lec-link-btn access-btn" onclick="plGoInsights()">Главные идеи</button>';
+  if (!h) h = '<div class="fp-empty">У этого занятия нет видеоверсии</div>';
+  box.innerHTML = h;
+  var ov = plEl('player-video-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function plCloseVideoOptions(){
+  var ov = plEl('player-video-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* Ссылки открываем ТЕМ ЖЕ путём, что карточки лекций — через openLectureLink:
+   он и просмотр засчитает, и ворота доступа в ВК покажет. Для этого лекция
+   должна лежать в списке, который видит cardList — кладём очередь в свой */
+var playerCardItems = [];
+function plGoVideo(platform){
+  var lec = plQueue[plIndex];
+  if (!lec) return;
+  playerCardItems = plQueue;
+  plCloseVideoOptions();
+  openLectureLink(plIndex, platform, 'player');
+}
+function plGoInsights(){
+  if (!plQueue[plIndex]) return;
+  playerCardItems = plQueue;
+  plCloseVideoOptions();
+  plCloseFull();
+  openInsightsModal(plIndex, 'player');
+}
+
+/* ── Подключение обработчиков ───────────────────────────────────────────── */
+
+function plInit(){
+  plAudio = plEl('player-audio');
+  if (!plAudio) return;
+
+  var on = function(id, ev, fn){ var el = plEl(id); if (el) el.addEventListener(ev, fn); };
+
+  on('mp-open-full','click', plOpenFull);
+  on('mp-close-btn','click', function(e){ e.stopPropagation(); plClose(); });
+  on('mp-play','click', function(e){ e.stopPropagation(); plTogglePlay(); });
+  on('mp-prev','click', function(e){ e.stopPropagation(); plPrev(); });
+  on('mp-next','click', function(e){ e.stopPropagation(); plNext(); });
+  on('mp-back15','click', function(e){ e.stopPropagation(); plSkip(-15); });
+  on('mp-fwd15','click', function(e){ e.stopPropagation(); plSkip(15); });
+  on('mp-speed','click', function(e){ e.stopPropagation(); plCycleSpeed(); });
+  on('mp-clapper','click', function(e){ e.stopPropagation(); plOpenVideoOptions(); });
+  on('mp-bar','click', function(e){ e.stopPropagation(); plSeekFromEvent(e, 'mp-bar'); });
+
+  on('fp-play','click', plTogglePlay);
+  on('fp-prev','click', plPrev);
+  on('fp-next','click', plNext);
+  on('fp-back15','click', function(){ plSkip(-15); });
+  on('fp-fwd15','click', function(){ plSkip(15); });
+  on('fp-speed','click', plCycleSpeed);
+  on('fp-clapper','click', plOpenVideoOptions);
+  on('fp-close','click', plCloseFull);
+  on('fp-bar','click', function(e){ plSeekFromEvent(e, 'fp-bar'); });
+  on('fp-tab-queue','click', function(){ plSetTab('queue'); });
+  on('fp-tab-marks','click', function(){ plSetTab('marks'); });
+
+  var ov = plEl('fp-overlay');
+  if (ov) ov.addEventListener('click', function(e){ if (e.target === ov) plCloseFull(); });
+  var vov = plEl('player-video-overlay');
+  if (vov) vov.addEventListener('click', function(e){ if (e.target === vov) plCloseVideoOptions(); });
+  on('player-video-close','click', plCloseVideoOptions);
+
+  plAudio.addEventListener('loadedmetadata', function(){
+    plEl('mp-dur').textContent = plFmt(plAudio.duration);
+    plEl('fp-dur').textContent = plFmt(plAudio.duration);
+    plRenderMarkers();           // до метаданных длительности нет — ставить засечки некуда
+  });
+  plAudio.addEventListener('timeupdate', function(){
+    var cur = plFmt(plAudio.currentTime);
+    var pct = (plAudio.duration ? plAudio.currentTime / plAudio.duration * 100 : 0) + '%';
+    plEl('mp-cur').textContent = cur;
+    plEl('fp-cur').textContent = cur;
+    plEl('mp-fill').style.width = pct;
+    plEl('fp-fill').style.width = pct;
+    plHighlightMark();
+  });
+  plAudio.addEventListener('progress', function(){
+    if (!plAudio.buffered || !plAudio.buffered.length || !plAudio.duration) return;
+    var end = plAudio.buffered.end(plAudio.buffered.length - 1);
+    var pct = (end / plAudio.duration * 100) + '%';
+    var a = plEl('mp-buffered'), b = plEl('fp-buffered');
+    if (a) a.style.width = pct;
+    if (b) b.style.width = pct;
+  });
+  plAudio.addEventListener('play',  function(){ plSetPlayIcon(true); });
+  plAudio.addEventListener('pause', function(){
+    plSetPlayIcon(false);
+    var lec = plQueue[plIndex];
+    if (lec) plSavePosition(lec.slug, plAudio.currentTime);
+  });
+  plAudio.addEventListener('ended', function(){
+    var lec = plQueue[plIndex];
+    if (lec) plSavePosition(lec.slug, 0);
+    if (plIndex < plQueue.length - 1) plNext();
+    else plSetPlayIcon(false);
+  });
+  plAudio.addEventListener('error', function(){
+    if (!plAudio.src) return;   // сброс при закрытии — не ошибка
+    showToast('Не удалось загрузить аудио');
+    plSetPlayIcon(false);
+  });
+  // Уходя со страницы, дописываем позицию: событие pause при закрытии вкладки
+  // приходит не всегда
+  window.addEventListener('pagehide', function(){
+    var lec = plQueue[plIndex];
+    if (lec && plAudio) plSavePosition(lec.slug, plAudio.currentTime);
+  });
+}
+
+plInit();
 </script>
 <!-- ПЛЕЕР ЭФИРА. Лежит вне переключаемых экранов и НИКОГДА не переезжает
      по документу: перенос узла с iframe перезагружает поток. Меняются
