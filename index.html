@@ -13088,19 +13088,40 @@ function openRevealLab(){
   location.href = 'lab.html';
 }
 
-/* Отладка: показать экран раскрытия на трёх своих последних карточках, не
-   выдавая себе настоящий пак. Ничего не начисляет и на сервер не ходит —
-   ровно поэтому его можно жать сколько угодно раз подряд */
+/* Отладка: показать экран раскрытия на трёх карточках, не выдавая себе
+   настоящий пак. Ничего не начисляет и на сервер не ходит — ровно поэтому его
+   можно жать сколько угодно раз подряд.
+
+   ⚠️ РАНЬШЕ БЫЛО slice(-3) — три ПОСЛЕДНИЕ карточки каталога, то есть одна и
+   та же тройка от нажатия к нажатию. Теперь тасуем и стараемся взять трёх
+   РАЗНЫХ богов: бог определяет фон, редкость — тему экрана, так что разные
+   боги дают разное вскрытие, а не тот же самый прогон в третий раз. */
 function debugPackReveal(){
   const owned = ownedMap();
   const mine = (cardCatalog || []).filter(function(c){ return owned[c.key]; });
   // Если своих ещё нет — берём любые из каталога: экран важнее достоверности
   const pool = mine.length ? mine : (cardCatalog || []);
-  const three = pool.slice(-3);
-  if (!three.length){
+  if (!pool.length){
     showToast('Каталог карточек пуст — нечего показать');
     return;
   }
+
+  const bag = pool.slice();
+  for (let i = bag.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+  }
+
+  const three = [], seenGod = {};
+  bag.forEach(function(c){
+    const g = c.god || '';
+    if (three.length < 3 && !seenGod[g]){ seenGod[g] = 1; three.push(c); }
+  });
+  // Разных богов может оказаться меньше трёх — добираем чем есть
+  bag.forEach(function(c){
+    if (three.length < 3 && three.indexOf(c) < 0) three.push(c);
+  });
+
   openPackReveal(three);
 }
 
