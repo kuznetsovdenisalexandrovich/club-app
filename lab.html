@@ -28,6 +28,7 @@
   .lab-sw{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:8px;background:#151928;font-size:12.5px}
   .lab-sw input{width:16px;height:16px;accent-color:#6c5ce0}
   .lab-sw.off{opacity:.45}
+  .lab-sw.dead{opacity:.28;text-decoration:line-through}
   .lab-note{font-size:11.5px;opacity:.55;margin-top:8px;line-height:1.5}
   .lab-god{font-size:12px;opacity:.7;margin-left:auto}
   .lab-env{margin-top:8px;font:12px/1.5 ui-monospace,monospace;opacity:.7}
@@ -446,6 +447,12 @@
   <div class="lab-body">
     <div class="lab-grid" id="lab-switches"></div>
     <div class="lab-row">
+      <span>Размер сигила</span>
+      <input type="range" id="lab-sig-size" min="200" max="900" step="20" value="900"
+             oninput="labSigSize(this.value)">
+      <b id="lab-sig-size-val">900px</b>
+    </div>
+    <div class="lab-row">
       <span>Яркость сигила</span>
       <input type="range" id="lab-sig-op" min="0" max="100" value="0"
              oninput="labSigOpacity(this.value)">
@@ -458,6 +465,10 @@
     <div class="lab-diag" id="lab-diag"></div>
     <div class="lab-env" id="lab-env"></div>
     <div class="lab-note">
+      Строки со «└» относятся к сигилу и действуют, только пока включён
+      «Сигил: рисовать». Если сигил роняет кадры одинаково и картинкой, и
+      вектором — виновата МАСКА, а не содержимое: снимай «ВОЛНА (слои под
+      маской)» и смотри, вернулись ли кадры. Потом пробуй ползунок размера.
       Кадры считаются постоянно; в скобках — худшее значение за последнее вскрытие.
       Выключай по одному сверху вниз и смотри, где худшее число подскакивает —
       это и есть виновник. «Запекание сигила» выключено = маска едет по живому
@@ -812,7 +823,8 @@ function prRenderSigil(god, mood){
 
   const stage = prEl('pr-stage');
   const appearance = (mood && mood.appearance) || stage.getAttribute('data-pr-theme') || 'dark';
-  const cacheKey = key + ':' + appearance + ':' + (PR_FX.bake ? 'b' : 'v') + ':' + (PR_FX.aura ? 'a' : '-');
+  const cacheKey = key + ':' + appearance + ':' + (PR_FX.bake ? 'b' : 'v')
+    + ':' + (PR_FX.aura ? 'a' : '-') + ':' + (PR_FX.wave ? 'w' : '-');
   if (PR_SIGIL_CACHE[cacheKey]){ svg.innerHTML = PR_SIGIL_CACHE[cacheKey]; return; }
   const isLight = appearance === 'light';
   const gold = isLight ? '#9f6e1d' : '#f0c977';
@@ -882,8 +894,11 @@ function prRenderSigil(god, mood){
     + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="100" fill="url(#sigWave)"/></mask>'
     + '</defs>'
     + pic('pr-coinBase', baseSrc, false)
-    + (wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
-    + pic('pr-coinWaveGroup', waveSrc, true);
+    // Слои ПОД МАСКОЙ — самое дорогое, что тут есть: маска заставляет браузер
+    // рисовать содержимое в отдельный буфер и складывать его каждый кадр,
+    // и размер этого буфера считается в физических пикселях экрана
+    + (PR_FX.wave && wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
+    + (PR_FX.wave ? pic('pr-coinWaveGroup', waveSrc, true) : '');
 
   PR_SIGIL_CACHE[cacheKey] = svg.innerHTML;
 
@@ -941,7 +956,7 @@ function openRevealLab(){
 /* Выключатели дорогих эффектов. В приложении всё включено; их щёлкает
    лаборатория (lab.html), чтобы искать виновника падения кадров НА ЖИВОМ КОДЕ,
    а не на копии. Ничего не стоят: четыре проверки за вскрытие */
-const PR_FX = { sigil:true, bake:true, aura:true, particles:true, ambient:true };
+const PR_FX = { sigil:true, bake:true, aura:true, wave:true, particles:true, ambient:true };
 
 const PR_POS = [[-86,-34,-9],[0,-56,0],[86,-34,9]];   // раскладка стопки из концепта
 
@@ -1403,10 +1418,16 @@ function labReplay(){
 /* ── Выключатели ──────────────────────────────────────────────────────── */
 /* Часть щёлкает PR_FX внутри живого кода экрана, часть гасит эффекты
    правилами поверх — так видно вклад каждого приёма отдельно */
+/* ⚠️ ПОДПИСИ ПЕРЕДЕЛАНЫ 09.08.2026: прежние «Сигил целиком» и «Запекание сигила»
+   читались как две независимые фичи. На деле второй — это СПОСОБ отрисовки
+   первого: включено → картинкой, выключено → живым вектором. Denis снял главный
+   и мерил «запекание», которое в этот момент вообще ничего не делало. */
 const LAB_SWITCHES = [
-  { id:'sigil',     name:'Сигил целиком',        fx:'sigil' },
-  { id:'bake',      name:'Запекание сигила',     fx:'bake' },
-  { id:'aura',      name:'Аура сигила',          fx:'aura' },
+  { id:'sigil',     name:'Сигил: рисовать',      fx:'sigil' },
+  { id:'bake',      name:'└ картинкой (иначе вектором)', fx:'bake', dep:'sigil' },
+  { id:'wave',      name:'└ ВОЛНА (слои под маской)',    fx:'wave', dep:'sigil' },
+  { id:'aura',      name:'└ вторая копия волны (аура)',   fx:'aura', dep:'sigil' },
+  { id:'sigmask',   name:'└ маска верхней кромки',        css:'.pr-coinSigil{mask:none!important;-webkit-mask:none!important}' },
   { id:'particles', name:'Частицы удара',        fx:'particles' },
   { id:'ambient',   name:'Живой фон (искры)',    fx:'ambient' },
   { id:'beams',     name:'Лучи из-под карты',    css:'.pr-heroBeams{display:none}' },
@@ -1434,6 +1455,23 @@ function labSet(id, on){
   const row = document.getElementById('sw-' + id);
   if (row) row.classList.toggle('off', !on);
   labApplyCss();
+  labSyncDeps();
+}
+
+/* Подчинённые выключатели гасим и блокируем, когда снят их главный: иначе
+   человек щёлкает то, что в этот момент ничего не делает, и меряет пустоту */
+function labSyncDeps(){
+  LAB_SWITCHES.forEach(function(s){
+    if (!s.dep) return;
+    const alive = labState[s.dep];
+    const box = document.getElementById('cb-' + s.id);
+    const row = document.getElementById('sw-' + s.id);
+    if (box) box.disabled = !alive;
+    if (row){
+      row.classList.toggle('dead', !alive);
+      row.title = alive ? '' : 'не действует: снят «Сигил: рисовать»';
+    }
+  });
 }
 function labAll(on){
   LAB_SWITCHES.forEach(function(s){
@@ -1445,6 +1483,7 @@ function labAll(on){
     if (row) row.classList.toggle('off', !on);
   });
   labApplyCss();
+  labSyncDeps();
 }
 (function labBuildSwitches(){
   document.getElementById('lab-switches').innerHTML = LAB_SWITCHES.map(function(s){
@@ -1453,6 +1492,7 @@ function labAll(on){
       + '<input type="checkbox" id="cb-' + s.id + '" checked '
       + 'onchange="labSet(\'' + s.id + '\', this.checked)"> ' + s.name + '</label>';
   }).join('');
+  labSyncDeps();
 })();
 
 /* ── Панель ───────────────────────────────────────────────────────────── */
@@ -1539,6 +1579,18 @@ setInterval(function(){
   const p = document.getElementById('lab-panel');
   if (p && !p.classList.contains('min')) labSigilDiag();
 }, 900);
+
+/* ── Размер сигила ────────────────────────────────────────────────────── */
+/* Маска заставляет браузер рисовать содержимое в отдельный буфер, а его размер
+   считается в ФИЗИЧЕСКИХ пикселях: 900 логических на экране с тройной
+   плотностью — это 2700×2700, семь мегапикселей на слой, и так каждый кадр.
+   Ползунок показывает, насколько всё упирается именно в размер */
+function labSigSize(v){
+  let el = document.getElementById('lab-sig-size-css');
+  if (!el){ el = document.createElement('style'); el.id = 'lab-sig-size-css'; document.head.appendChild(el); }
+  document.getElementById('lab-sig-size-val').textContent = v + 'px';
+  el.textContent = '.pr-coinSigil{width:' + v + 'px!important;height:' + v + 'px!important}';
+}
 
 /* ── Яркость сигила ───────────────────────────────────────────────────── */
 /* В дизайне спокойный слой сигила стоит на 2.4% прозрачности в тёмной теме —

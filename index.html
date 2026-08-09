@@ -13385,7 +13385,8 @@ function prRenderSigil(god, mood){
 
   const stage = prEl('pr-stage');
   const appearance = (mood && mood.appearance) || stage.getAttribute('data-pr-theme') || 'dark';
-  const cacheKey = key + ':' + appearance + ':' + (PR_FX.bake ? 'b' : 'v') + ':' + (PR_FX.aura ? 'a' : '-');
+  const cacheKey = key + ':' + appearance + ':' + (PR_FX.bake ? 'b' : 'v')
+    + ':' + (PR_FX.aura ? 'a' : '-') + ':' + (PR_FX.wave ? 'w' : '-');
   if (PR_SIGIL_CACHE[cacheKey]){ svg.innerHTML = PR_SIGIL_CACHE[cacheKey]; return; }
   const isLight = appearance === 'light';
   const gold = isLight ? '#9f6e1d' : '#f0c977';
@@ -13455,8 +13456,11 @@ function prRenderSigil(god, mood){
     + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="100" fill="url(#sigWave)"/></mask>'
     + '</defs>'
     + pic('pr-coinBase', baseSrc, false)
-    + (wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
-    + pic('pr-coinWaveGroup', waveSrc, true);
+    // Слои ПОД МАСКОЙ — самое дорогое, что тут есть: маска заставляет браузер
+    // рисовать содержимое в отдельный буфер и складывать его каждый кадр,
+    // и размер этого буфера считается в физических пикселях экрана
+    + (PR_FX.wave && wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
+    + (PR_FX.wave ? pic('pr-coinWaveGroup', waveSrc, true) : '');
 
   PR_SIGIL_CACHE[cacheKey] = svg.innerHTML;
 
@@ -13526,7 +13530,7 @@ function debugPackReveal(){
 /* Выключатели дорогих эффектов. В приложении всё включено; их щёлкает
    лаборатория (lab.html), чтобы искать виновника падения кадров НА ЖИВОМ КОДЕ,
    а не на копии. Ничего не стоят: четыре проверки за вскрытие */
-const PR_FX = { sigil:true, bake:true, aura:true, particles:true, ambient:true };
+const PR_FX = { sigil:true, bake:true, aura:true, wave:true, particles:true, ambient:true };
 
 const PR_POS = [[-86,-34,-9],[0,-56,0],[86,-34,9]];   // раскладка стопки из концепта
 
