@@ -500,6 +500,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   --panel-w:min(440px,calc(100vw - 24px));
   --serif: Georgia,"Times New Roman",serif;
   --sans: Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --accent:#c9a765;
+  --accent-2:#c8bee1;
 }
 #pr-stage *{box-sizing:border-box}
 #pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
@@ -537,8 +539,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage[data-pr-theme="light"] .pr-shell::before{background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.28),transparent 35%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(119,88,50,.06))}
 
 .pr-head{position:relative;z-index:10;text-align:center;padding:36px 54px 0}
-.pr-eyebrow{font:600 10px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;opacity:.58;margin-bottom:10px}
-.pr-title{font:500 clamp(30px,8vw,42px)/1 var(--serif);letter-spacing:-.025em;margin:0;text-shadow:0 2px 18px rgba(0,0,0,.18)}
+.pr-eyebrow{font:600 10px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;opacity:.76;margin-bottom:10px;color:color-mix(in srgb,var(--accent) 58%,currentColor)}
+.pr-title{font:500 clamp(30px,8vw,42px)/1 var(--serif);letter-spacing:-.025em;margin:0;text-shadow:0 2px 18px rgba(0,0,0,.18),0 0 18px rgba(255,225,171,.06);color:color-mix(in srgb,var(--accent) 26%,currentColor)}
 .pr-sub{font-size:13px;line-height:1.4;margin:10px auto 0;opacity:.63;max-width:260px}
 .pr-close{position:absolute;right:18px;top:17px;width:38px;height:38px;border-radius:50%;border:1px solid currentColor;background:rgba(255,255,255,.025);color:inherit;opacity:.55;font-size:22px;cursor:pointer;z-index:35}
 
@@ -648,10 +650,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    ограничиваем по высоте вида и гасим верхнюю кромку, чтобы шапка
    оставалась чистой при любой высоте экрана */
 .pr-coinSigil{
-  width:min(115vh,900px);height:min(115vh,900px);
+  width:min(210vw,900px);height:min(210vw,900px);
   top:calc(50% + 66px);
-  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 16%,#000 100%);
-  mask-image:linear-gradient(to bottom,transparent 0,#000 16%,#000 100%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 100%);
+  transform:translate3d(-50%,-50%,0);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
 }
 
 /* ── «ГЕРОИЧЕСКИЙ» СЛОЙ (концепт v6-4, 09.08.2026) ────────────────────────
@@ -661,7 +665,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    настроение по редкости работает и здесь. */
 .pr-heroSky{position:absolute;inset:2% 0 10%;pointer-events:none;z-index:0;opacity:.95;background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--accent) 15%, rgba(255,247,229,.20)) 0%,transparent 34%),radial-gradient(circle at 50% 85%,rgba(255,228,182,.08) 0%,transparent 26%),linear-gradient(180deg,rgba(255,255,255,.02),transparent 22%,rgba(255,228,182,.03) 78%,rgba(0,0,0,.08) 100%)}
 .pr-heroBeams{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:visible}
-.pr-heroBeams span{position:absolute;left:50%;top:51%;width:120px;height:430px;transform:translate(-50%,-8%) rotate(var(--rot)) scaleY(.3) scaleX(.76);transform-origin:50% 100%;border-radius:120px 120px 0 0;opacity:0;filter:blur(12px);mix-blend-mode:screen;background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,color-mix(in srgb,var(--accent) 65%, white 35%) 26%,color-mix(in srgb,var(--accent-2) 35%, transparent) 56%,transparent 100%)}
+.pr-heroBeams span{position:absolute;left:50%;top:51%;width:120px;height:430px;transform:translate(-50%,-8%) rotate(var(--rot)) scaleY(.3) scaleX(.76);transform-origin:50% 100%;border-radius:120px 120px 0 0;opacity:0;filter:blur(8px);mix-blend-mode:screen;will-change:opacity,transform;background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,color-mix(in srgb,var(--accent) 65%, white 35%) 26%,color-mix(in srgb,var(--accent-2) 35%, transparent) 56%,transparent 100%)}
 .pr-heroBeams span:nth-child(1){--rot:-26deg;margin-left:-124px}
 .pr-heroBeams span:nth-child(2){--rot:-12deg;margin-left:-60px}
 .pr-heroBeams span:nth-child(3){--rot:0deg;margin-left:0px}
@@ -677,13 +681,6 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage[data-pr-theme="light"] .pr-heroBeams span{mix-blend-mode:hard-light;background:linear-gradient(180deg,rgba(255,255,255,.18) 0%,color-mix(in srgb,var(--accent) 30%, white 70%) 22%,color-mix(in srgb,var(--accent-2) 78%, white 22%) 52%,transparent 100%)}
 #pr-stage[data-pr-theme="light"] .pr-heroPedestal{box-shadow:0 0 0 1px rgba(148,113,57,.12),0 16px 38px rgba(118,89,42,.12),inset 0 10px 20px rgba(255,255,255,.2)}
 @keyframes pr-beamRise{0%{opacity:0;transform:translate(-50%,4%) rotate(var(--rot)) scaleY(.24) scaleX(.72)}16%{opacity:.16}42%{opacity:.56}100%{opacity:.14;transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1)}}
-
-.pr-card{
-  --x:0px;--y:0px;--r:0deg;--s:1;
-  position:absolute;left:50%;top:50%;width:174px;aspect-ratio:.70;border:0;background:none;padding:0;
-  transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--r)) scale(var(--s));
-  transition:transform 1s var(--ease),opacity .55s ease,filter .55s ease;transform-origin:50% 65%;cursor:pointer;
-}
 
 /* ── ПОСАДКА КОНЦЕПТА В ПРИЛОЖЕНИЕ (09.08.2026) ──────────────────────────
    Концепт был МАКЕТОМ НА СТРАНИЦЕ: панель 440×760 лежала по центру белого
@@ -722,25 +719,31 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    ровно 440px, и 174/286px читались правильно. В приложении ширина любая:
    на широком экране те же пиксели выглядели крошечными посреди пустоты.
    Карта занимает долю ширины панели и упирается в потолок по высоте сцены */
-.pr-card{width:min(38vw,190px)}
-.pr-card.pr-hero{width:min(64vw,330px)}
+.pr-card{width:clamp(150px,38vw,190px)}
+.pr-card.pr-hero{width:clamp(270px,64vw,330px)}
 @media (min-width:560px){
-  .pr-card{width:170px}
-  .pr-card.pr-hero{width:290px}
+  .pr-card{width:174px}
+  .pr-card.pr-hero{width:300px}
 }
-/* На невысоких экранах герой со смещением вниз на 66px не помещается рядом
-   с панелью характеристик — ужимаем по высоте вида */
+/* На низких экранах сначала ужимаем воздух, а не саму главную карту. */
 @media (max-height:760px){
-  .pr-card{width:min(32vw,150px)}
-  .pr-card.pr-hero{width:min(54vw,236px)}
-  .pr-scene{--pr-scene-min:290px}
-  .pr-head{padding-top:22px}
+  .pr-card{width:clamp(138px,33vw,158px)}
+  .pr-card.pr-hero{width:clamp(250px,58vw,286px)}
+  .pr-scene{--pr-scene-min:305px}
+  .pr-head{padding-top:20px}
+  .pr-details{margin-top:-22px}
 }
 @media (max-height:640px){
-  .pr-card{width:min(28vw,128px)}
-  .pr-card.pr-hero{width:min(46vw,200px)}
-  .pr-scene{--pr-scene-min:250px}
-  .pr-title{font-size:26px}
+  .pr-card{width:clamp(126px,31vw,145px)}
+  .pr-card.pr-hero{width:clamp(228px,54vw,254px)}
+  .pr-scene{--pr-scene-min:270px}
+  .pr-head{padding-top:16px}
+  .pr-title{font-size:28px}
+  .pr-sub{margin-top:7px}
+}
+@media (max-width:360px), (max-height:600px){
+  .pr-heroBeams span{filter:blur(6px)}
+  .pr-flash{filter:blur(28px)}
 }
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -13146,7 +13149,47 @@ function sigilGlyphRings(key, stroke){
     .map(function(r){ return sigilRing(key, stroke, r[0], r[1], r[2]); }).join('');
 }
 
-function sigilBands(stroke, soft){
+function sigilDeityDetail(key, stroke, soft){
+  const rep = function(n, radius, markup, sw, op){
+    sw = sw == null ? 2.4 : sw; op = op == null ? .7 : op;
+    return Array.from({length:n}, function(_,i){
+      return '<g transform="translate(500 500) rotate(' + ((360/n)*i) + ') translate(0 -' + radius + ')"'
+        + ' stroke="' + stroke + '" stroke-width="' + sw + '" opacity="' + op + '" fill="none"'
+        + ' stroke-linecap="round" stroke-linejoin="round">' + markup + '</g>';
+    }).join('');
+  };
+  const dots = function(n, radius, r, op){
+    op = op == null ? .45 : op;
+    return Array.from({length:n}, function(_,i){
+      const a=(Math.PI*2*i)/n-Math.PI/2, x=500+Math.cos(a)*radius, y=500+Math.sin(a)*radius;
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r + '" fill="' + soft + '" opacity="' + op + '"/>';
+    }).join('');
+  };
+  switch(key){
+    case 'zeus': return rep(8,336,'<path d="M0 -14 L8 0 L0 0 L8 14 L-6 -2 L0 -2 Z"/>',2.1,.58)+dots(16,188,3,.28);
+    case 'poseidon': return rep(12,334,'<path d="M-10 4 C-5 -2 0 -2 5 4 C10 10 15 10 20 4"/>',2,.52)+rep(6,188,'<path d="M0 -12 L0 12 M-7 -3 L0 -12 L7 -3"/>',1.8,.38);
+    case 'hades': return rep(10,332,'<path d="M0 -14 C9 -10 13 -2 13 7 C13 14 8 20 0 22 C-8 20 -13 14 -13 7 C-13 -2 -9 -10 0 -14 Z"/><path d="M-7 2 C-3 -2 3 -2 7 2"/>',1.8,.5)+rep(8,188,'<path d="M-9 10 C-4 4 4 4 9 10"/>',1.7,.3)+dots(14,146,2.2,.22);
+    case 'apollo': return rep(16,340,'<path d="M0 -16 L3 -6 L13 -3 L3 0 L0 10 L-3 0 L-13 -3 L-3 -6 Z"/>',1.8,.56)+dots(24,196,2.8,.28);
+    case 'artemis': return rep(12,336,'<path d="M5 -12 C-3 -12 -8 -5 -8 2 C-8 8 -3 13 2 13 C-2 10 -3 4 -2 -1 C-1 -7 1 -10 5 -12 Z"/><circle cx="13" cy="-10" r="2"/>',1.8,.52)+dots(18,194,2.4,.24);
+    case 'aphrodite': return rep(12,332,'<path d="M0 -12 C8 -4 10 0 0 12 C-10 0 -8 -4 0 -12 Z"/>',1.9,.52)+dots(24,194,3,.32);
+    case 'ares': return rep(12,334,'<path d="M0 -14 L7 -2 L0 -5 L-7 -2 Z"/><circle cx="0" cy="8" r="6"/>',1.8,.5)+rep(6,190,'<path d="M-10 0 H10"/>',1.8,.28);
+    case 'demeter': return rep(12,336,'<path d="M0 -14 L0 14 M0 -6 C8 -10 9 -2 0 2 M0 2 C-8 -1 -9 8 0 12"/>',1.8,.52)+dots(18,192,2.4,.24);
+    case 'hermes': return rep(14,336,'<path d="M0 -10 L0 10 M-10 -2 C-14 -4 -16 -8 -18 -12 M10 -2 C14 -4 16 -8 18 -12"/>',1.8,.5)+dots(20,196,2.2,.26);
+    case 'dionysus': return rep(12,334,'<circle cx="-4" cy="-4" r="3.5"/><circle cx="4" cy="-4" r="3.5"/><circle cx="0" cy="4" r="3.5"/><path d="M0 -12 C0 -18 5 -20 8 -20"/>',1.7,.5)+rep(8,190,'<path d="M-8 6 C-2 -2 2 -2 8 6"/>',1.7,.3);
+    case 'hephaestus': return rep(10,334,'<path d="M-8 6 H7 L10 -2 H-5 Z"/><path d="M0 -14 L10 -4 L5 1"/>',1.8,.52)+dots(20,194,2.2,.24);
+    case 'plutus': return rep(12,336,'<circle cx="0" cy="0" r="8"/><path d="M0 -4 V4"/><path d="M-6 -1 C-3 -5 3 -5 6 -1 C8 2 5 5 0 7"/>',1.8,.5)+rep(8,194,'<path d="M-9 6 C-3 0 3 0 9 6"/>',1.7,.28)+dots(16,150,2.4,.24);
+    case 'prometheus': return rep(12,334,'<path d="M0 -14 C8 -8 10 -1 5 4 C2 7 0 8 0 12 C0 8 -2 7 -5 4 C-10 -1 -8 -8 0 -14 Z"/>',1.8,.52)+dots(16,196,2.4,.24);
+    case 'momus': return rep(12,334,'<path d="M-8 -6 C-4 -12 4 -12 8 -6 C5 0 1 1 -2 3 C-5 5 -7 7 -8 10"/><circle cx="-2" cy="-5" r="1.8"/><circle cx="4" cy="-5" r="1.8"/><path d="M-10 -14 H10"/>',1.7,.5)+dots(18,192,2.2,.22);
+    case 'athena': return rep(12,336,'<path d="M0 -14 L7 -1 L0 -4 L-7 -1 Z"/><path d="M0 -4 L0 12"/>',1.8,.52)+rep(8,192,'<path d="M-8 6 C-2 -2 2 -2 8 6"/>',1.7,.3);
+    case 'heracles': return rep(10,334,'<path d="M-8 10 C-11 -2 -8 -12 -2 -16 C1 -18 4 -18 8 -16 C14 -12 16 -2 12 10"/><path d="M-4 -4 C-1 -1 1 -1 4 -4"/>',1.8,.5)+rep(8,188,'<path d="M-8 8 C-3 2 3 2 8 8"/>',1.7,.28)+dots(14,146,2.2,.22);
+    case 'theseus': return rep(12,334,'<path d="M0 -12 L10 -6 L10 6 L0 12 L-10 6 L-10 -6 Z"/><path d="M-4 -2 H4 M0 -2 V12"/>',1.8,.52)+rep(6,190,'<path d="M-10 0 H10"/>',1.7,.28)+dots(18,194,2.2,.22);
+    case 'perseus': return rep(12,336,'<path d="M0 -12 L9 -3 L0 6 L-9 -3 Z"/><path d="M0 6 V14 M-4 14 H4"/><path d="M-12 -4 C-14 -7 -15 -10 -15 -12 M12 -4 C14 -7 15 -10 15 -12"/>',1.7,.52)+dots(18,194,2.2,.22);
+    case 'hera':
+    default: return rep(12,336,'<path d="M0 -14 C9 -4 9 8 0 14 C-9 8 -9 -4 0 -14 Z"/><circle cx="0" cy="0" r="4"/>',1.8,.52)+dots(18,192,2.4,.24);
+  }
+}
+
+function sigilBands(stroke, soft, key){
   let ticks = '';
   for (let i = 0; i < 54; i++){
     const a = i * (360 / 54), long = (i % 3 === 0);
@@ -13162,36 +13205,69 @@ function sigilBands(stroke, soft){
   return circles.map(function(c){
     return '<circle cx="500" cy="500" r="' + c[0] + '" fill="none" stroke="' + c[1] + '" stroke-width="' + c[2]
       + '" opacity="' + c[3] + '"' + (c[4] ? ' stroke-dasharray="' + c[4] + '"' : '') + '/>';
-  }).join('') + ticks;
+  }).join('') + ticks + sigilDeityDetail(key || 'hera', stroke, soft);
 }
 
 function sigilLayer(key, stroke, soft){
-  return sigilBands(stroke, soft) + sigilGlyphRings(key, stroke) + sigilSymbol(key, soft);
+  return sigilBands(stroke, soft, key) + sigilGlyphRings(key, stroke) + sigilSymbol(key, soft);
 }
 
-/* Рисуем сигил под карточками. Если бога не знаем — не рисуем ничего: пустой
-   круг из заглушки выглядит как недогруженная картинка */
-function prRenderSigil(god){
+/* Полная версия v8: gold-wave в dark и rainbow/holographic-wave в light.
+   Геометрия одна и та же для base/aura/wave, поэтому цвет буквально проходит
+   по тем же бороздкам, а не лежит отдельным пятном поверх сцены. */
+function prRenderSigil(god, mood){
   const svg = document.getElementById('pr-sigil-svg');
   if (!svg) return;
   const key = sigilKey(god);
   if (!key){ svg.innerHTML = ''; return; }
 
-  const gold = '#f0c977', pale = '#ffe7b0', bright = '#fff6da';
+  const stage = prEl('pr-stage');
+  const appearance = (mood && mood.appearance) || stage.getAttribute('data-pr-theme') || 'dark';
+  const isLight = appearance === 'light';
+  const gold = isLight ? '#9f6e1d' : '#f0c977';
+  const pale = isLight ? '#c28d34' : '#ffe7b0';
+  const bright = isLight ? '#f0bf5a' : '#fff6da';
+  const waveStroke = isLight ? 'url(#sigHoloStroke)' : bright;
+  const waveSoft = isLight ? 'url(#sigHoloSoft)' : pale;
+  const auraStroke = isLight ? 'url(#sigHoloAura)' : bright;
+
   svg.innerHTML =
-      '<defs><radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
-    + '<stop offset="0%" stop-color="black" stop-opacity="0"/><stop offset="38%" stop-color="white" stop-opacity=".02"/>'
-    + '<stop offset="48%" stop-color="white" stop-opacity=".18"/><stop offset="56%" stop-color="white" stop-opacity="1"/>'
-    + '<stop offset="64%" stop-color="white" stop-opacity=".62"/><stop offset="74%" stop-color="white" stop-opacity=".18"/>'
-    + '<stop offset="100%" stop-color="black" stop-opacity="0"/></radialGradient>'
-    + '<linearGradient id="sigHolo" x1="0%" y1="0%" x2="100%" y2="100%">'
-    + '<stop offset="0%" stop-color="#ff4bd2"/><stop offset="28%" stop-color="#fff35d"/>'
-    + '<stop offset="58%" stop-color="#32dbff"/><stop offset="100%" stop-color="#ff72b4"/></linearGradient>'
+      '<defs>'
+    + '<radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
+    + '<stop offset="0%" stop-color="black" stop-opacity="0"/>'
+    + '<stop offset="24%" stop-color="black" stop-opacity="0"/>'
+    + '<stop offset="38%" stop-color="white" stop-opacity=".02"/>'
+    + '<stop offset="48%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="56%" stop-color="white" stop-opacity="1"/>'
+    + '<stop offset="64%" stop-color="white" stop-opacity=".62"/>'
+    + '<stop offset="74%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="86%" stop-color="white" stop-opacity=".04"/>'
+    + '<stop offset="100%" stop-color="black" stop-opacity="0"/>'
+    + '</radialGradient>'
+    + '<linearGradient id="sigHoloStroke" x1="0%" y1="0%" x2="100%" y2="100%">'
+    + '<stop offset="0%" stop-color="#ff4bd2"/><stop offset="14%" stop-color="#ff8b44"/>'
+    + '<stop offset="28%" stop-color="#fff35d"/><stop offset="42%" stop-color="#7cff6f"/>'
+    + '<stop offset="58%" stop-color="#32dbff"/><stop offset="74%" stop-color="#6e8dff"/>'
+    + '<stop offset="88%" stop-color="#bf78ff"/><stop offset="100%" stop-color="#ff72b4"/>'
+    + '</linearGradient>'
+    + '<linearGradient id="sigHoloSoft" x1="100%" y1="0%" x2="0%" y2="100%">'
+    + '<stop offset="0%" stop-color="#ffd3f1"/><stop offset="18%" stop-color="#ffd8b1"/>'
+    + '<stop offset="36%" stop-color="#fff3b5"/><stop offset="54%" stop-color="#b7ffbd"/>'
+    + '<stop offset="72%" stop-color="#b8f2ff"/><stop offset="88%" stop-color="#d2c7ff"/>'
+    + '<stop offset="100%" stop-color="#ffc4df"/></linearGradient>'
+    + '<linearGradient id="sigHoloAura" x1="0%" y1="100%" x2="100%" y2="0%">'
+    + '<stop offset="0%" stop-color="#ff39c6"/><stop offset="16%" stop-color="#ff8a31"/>'
+    + '<stop offset="32%" stop-color="#ffec4d"/><stop offset="48%" stop-color="#64ff70"/>'
+    + '<stop offset="64%" stop-color="#14d7ff"/><stop offset="82%" stop-color="#7c86ff"/>'
+    + '<stop offset="100%" stop-color="#cf72ff"/></linearGradient>'
     + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
-    + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="26" fill="url(#sigWave)"/></mask></defs>'
+    + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="18" fill="url(#sigWave)"/></mask>'
+    + '</defs>'
     + '<g class="pr-coinBase">' + sigilLayer(key, gold, pale) + '</g>'
-    + '<g class="pr-coinWaveGroup" mask="url(#sigMask)"><g stroke="url(#sigHolo)" fill="none">'
-    + sigilLayer(key, 'url(#sigHolo)', bright) + '</g></g>';
+    + '<g class="pr-coinWaveAura" mask="url(#sigMask)" opacity="0">'
+    + sigilLayer(key, auraStroke, waveSoft) + '</g>'
+    + '<g class="pr-coinWaveGroup" mask="url(#sigMask)" opacity="0">'
+    + sigilLayer(key, waveStroke, waveSoft) + '</g>';
 }
 
 
@@ -13275,8 +13351,8 @@ function openPackReveal(demoCards){
   prEl('pr-pack').innerHTML = PR.ids.map(function(id){
     return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
       + '<span class="pr-flip">'
-      + '<span class="pr-face pr-back"><img src="images/reveal/back-dark.webp" alt=""></span>'
-      + '<span class="pr-face pr-front"><img alt=""></span>'
+      + '<span class="pr-face pr-back"><img src="images/reveal/back-dark.webp" alt="" decoding="async"></span>'
+      + '<span class="pr-face pr-front"><img alt="" decoding="async"></span>'
       + '</span></button>';
   }).join('');
 
@@ -13345,7 +13421,7 @@ function prApplyTheme(card){
   stage.style.setProperty('--accent-2', mood.secondary);
   prEl('pr-aura').style.background =
     'radial-gradient(circle,' + mood.accent + '66 0%,' + mood.secondary + '33 34%,transparent 70%)';
-  prRenderSigil(card.god || '');
+  prRenderSigil(card.god || '', mood);
   prEl('pr-pack').querySelectorAll('.pr-face.pr-back img').forEach(function(img){
     img.src = 'images/reveal/back-' + mood.appearance + '.webp';
   });
@@ -13360,6 +13436,32 @@ function prFillDetails(card, pointsAwarded, cardId, claimed){
   prEl('pr-ability-title').textContent = card.title || '';
   prEl('pr-ability-text').textContent  = card.description || '';
   prEl('pr-actions').innerHTML = cardActionsHtml(card, cardId, claimed, 0, 'pr-cta pr-cta-inline');
+}
+
+async function prPrepareFrontImage(img, src){
+  if (!img || !src) return;
+  img.decoding = 'async';
+  img.loading = 'eager';
+  img.src = src;
+
+  // decode() убирает белый/пустой кадр в момент переворота. Но сеть не должна
+  // задерживать весь reveal бесконечно, поэтому ждём максимум 650 мс.
+  try {
+    if (typeof img.decode === 'function') {
+      await Promise.race([
+        img.decode(),
+        new Promise(function(resolve){ setTimeout(resolve, 650); })
+      ]);
+    } else if (!img.complete) {
+      await Promise.race([
+        new Promise(function(resolve){
+          img.addEventListener('load', resolve, { once:true });
+          img.addEventListener('error', resolve, { once:true });
+        }),
+        new Promise(function(resolve){ setTimeout(resolve, 650); })
+      ]);
+    }
+  } catch(e){}
 }
 
 async function prOpenCard(id){
@@ -13393,7 +13495,7 @@ async function prOpenCard(id){
 
   const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
   const front = el.querySelector('.pr-face.pr-front img');
-  if (front && card.image_url) front.src = card.image_url;
+  if (front && card.image_url) await prPrepareFrontImage(front, card.image_url);
 
   PR.hero = id;
   prApplyTheme(card);
