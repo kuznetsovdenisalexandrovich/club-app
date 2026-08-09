@@ -492,7 +492,6 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   font-family:var(--sans);color:#eee;background:#070912;
   transition:background 1s ease,color .6s ease}
 #pr-stage.on{display:block}
-}
 #pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
 #pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
 
@@ -671,19 +670,31 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    выше и ниже. Резервируем две строки и больше не двигаемся */
 .pr-sub{min-height:2.8em;display:flex;align-items:center;justify-content:center}
 
-/* Карты уменьшаем на невысоких экранах — 286px героя плюс смещение вниз на
-   66px не помещаются рядом с панелью характеристик */
+/* ⚠️ РАЗМЕР КАРТ — ОТ ЭКРАНА, А НЕ ЖЁСТКИЕ ПИКСЕЛИ. В концепте панель была
+   ровно 440px, и 174/286px читались правильно. В приложении ширина любая:
+   на широком экране те же пиксели выглядели крошечными посреди пустоты.
+   Карта занимает долю ширины панели и упирается в потолок по высоте сцены */
+.pr-card{width:min(38vw,190px)}
+.pr-card.pr-hero{width:min(64vw,330px)}
+@media (min-width:560px){
+  .pr-card{width:170px}
+  .pr-card.pr-hero{width:290px}
+}
+/* На невысоких экранах герой со смещением вниз на 66px не помещается рядом
+   с панелью характеристик — ужимаем по высоте вида */
 @media (max-height:760px){
-  .pr-card{width:150px}
-  .pr-card.pr-hero{width:236px}
+  .pr-card{width:min(32vw,150px)}
+  .pr-card.pr-hero{width:min(54vw,236px)}
   .pr-scene{--pr-scene-min:290px}
   .pr-head{padding-top:22px}
 }
 @media (max-height:640px){
-  .pr-card{width:128px}
-  .pr-card.pr-hero{width:200px}
+  .pr-card{width:min(28vw,128px)}
+  .pr-card.pr-hero{width:min(46vw,200px)}
   .pr-scene{--pr-scene-min:250px}
   .pr-title{font-size:26px}
+}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
 .reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
@@ -3965,11 +3976,14 @@ img.img-fade.is-instant{opacity:1;transition:none}
       <img class="pr-frame pr-light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true">
       <img class="pr-frame pr-dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true">
       <button class="pr-close" aria-label="Закрыть" onclick="closePackReveal()">&times;</button>
-      <header class="pr-head">
+      <!-- ⚠️ НЕ <header>: в приложении есть глобальное правило
+           header{display:flex;justify-content:space-between} — оно раскладывало
+           надпись, заголовок и подпись в ОДНУ СТРОКУ. Здесь простой div -->
+      <div class="pr-head">
         <div class="pr-eyebrow">Пантеон · подарок</div>
-        <h1 class="pr-title">Твой пак</h1>
-        <p class="pr-sub" id="pr-sub">Открой карту, чтобы узнать награду</p>
-      </header>
+        <div class="pr-title">Твой пак</div>
+        <div class="pr-sub" id="pr-sub">Открой карту, чтобы узнать награду</div>
+      </div>
       <div class="pr-scene" id="pr-scene">
         <div class="pr-aura" id="pr-aura"></div>
         <div class="pr-ring" aria-hidden="true"></div>
