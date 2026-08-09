@@ -746,6 +746,22 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   .pr-flash{filter:blur(28px)}
 }
 
+/* ⚠️⚠️ ЭТОТ БЛОК ДОЛЖЕН ОСТАВАТЬСЯ ПОСЛЕДНИМ СРЕДИ ПРАВИЛ ЭКРАНА.
+   Второй раз подряд положил его выше и получил, что правила концепта
+   перебивают его обратно. Ниже — только общие правила приложения.
+
+   ⚠️ НАСТОЯЩАЯ ПРИЧИНА НАЛОЖЕНИЯ — СЦЕНЕ БЫЛА ЗАДАНА МИНИМАЛЬНАЯ ВЫСОТА.
+   `min-height:330px` не давал ей сжиматься, и когда внизу появилась вторая
+   кнопка («Похвастаться картой»), колонка перестала помещаться: панель лезла
+   на карту, а главная кнопка уезжала ниже видимой части — «пропадала».
+   Сцена ОБЯЗАНА уступать место панели и кнопке, поэтому `min-height:0`.
+   (Попытка привязать размер карты к высоте сцены была неверной: карта тогда
+   зависела от того, сколько места осталось, и размеры прыгали. Откачено.) */
+.pr-scene{min-height:0;flex:1 1 auto}
+.pr-details{margin-top:0}
+/* Кнопке нужен свой воздух, а не «всё оставшееся место» */
+.pr-cta{margin-top:12px}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
 .reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
@@ -13093,12 +13109,19 @@ const GOD_SIGIL_KEYS = {
   'Геракл':'heracles', 'Тесей':'theseus', 'Персей':'perseus'
 };
 
+/* Тяжёлые эффекты (вторая маскированная копия орнамента, полный залп частиц)
+   оставляем там, где есть запас — на широком экране. На телефоне режем: там
+   всё это перерисовывается каждый кадр и заметно роняет плавность */
+function prHeavyEffectsAllowed(){
+  try { return window.matchMedia('(min-width:560px)').matches; } catch(e){ return false; }
+}
+
 function sigilKey(god){
   return GOD_SIGIL_KEYS[(god || '').trim()] || '';
 }
 
 function sigilSymbol(key, stroke){
-  const wrap = inner => '<g stroke="' + stroke + '" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
+  const wrap = inner => '<g style="stroke:' + stroke + '" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
   const S = SIGIL_SYMBOLS[key];
   return wrap(S || '<circle cx="500" cy="500" r="82"/><path d="M500 418 L500 582"/>');
 }
@@ -13138,15 +13161,38 @@ function sigilRing(key, stroke, n, radius, scale){
   let out = '';
   for (let i = 0; i < n; i++){
     out += '<g transform="translate(500 500) rotate(' + (i * 360 / n) + ') translate(0 -' + radius + ') scale(' + scale + ')"'
-        + ' stroke="' + stroke + '" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">'
+        + ' style="stroke:' + stroke + '" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">'
         + mark + '</g>';
   }
   return out;
 }
 
+/* Сколько фигур в одном повторяемом глифе. У Диониса это гроздь из десятка
+   кружков, у Зевса — одна молния: при одинаковом числе глифов на кольце
+   разница в весе получается кратная */
+const SIGIL_GLYPH_COST = {};
+function sigilGlyphCost(key){
+  if (SIGIL_GLYPH_COST[key] == null){
+    SIGIL_GLYPH_COST[key] = ((sigilGlyph(key) || '').match(/<(?:path|circle|ellipse|rect|line)\b/g) || []).length || 1;
+  }
+  return SIGIL_GLYPH_COST[key];
+}
+
+/* ⚠️ ПЛОТНОСТЬ КОЛЕЦ — ПО ВЕСУ ГЛИФА (09.08.2026, лечение тормозов).
+   Число глифов на кольце задано в SIGIL_RINGS одинаково для всех, но у сложных
+   глифов это давало кратно больше фигур: у Диониса орнамент выходил вдвое
+   тяжелее среднего, и экран заметно тормозил на телефоне. Держим БЮДЖЕТ ФИГУР
+   на кольцо: у простого глифа всё как было, у сложного колец столько же, но
+   глифов в них меньше. Внешне это ровно та же плотность рисунка — у сложного
+   глифа фигуры и так сливались (та же болезнь, что чинили Гермесу руками). */
+const SIGIL_RING_BUDGET = 90;
 function sigilGlyphRings(key, stroke){
+  const cost = sigilGlyphCost(key);
   return (SIGIL_RINGS[key] || SIGIL_RINGS.hera)
-    .map(function(r){ return sigilRing(key, stroke, r[0], r[1], r[2]); }).join('');
+    .map(function(r){
+      const n = Math.max(8, Math.min(r[0], Math.round(SIGIL_RING_BUDGET / cost)));
+      return sigilRing(key, stroke, n, r[1], r[2]);
+    }).join('');
 }
 
 function sigilDeityDetail(key, stroke, soft){
@@ -13154,7 +13200,7 @@ function sigilDeityDetail(key, stroke, soft){
     sw = sw == null ? 2.4 : sw; op = op == null ? .7 : op;
     return Array.from({length:n}, function(_,i){
       return '<g transform="translate(500 500) rotate(' + ((360/n)*i) + ') translate(0 -' + radius + ')"'
-        + ' stroke="' + stroke + '" stroke-width="' + sw + '" opacity="' + op + '" fill="none"'
+        + ' style="stroke:' + stroke + '" stroke-width="' + sw + '" opacity="' + op + '" fill="none"'
         + ' stroke-linecap="round" stroke-linejoin="round">' + markup + '</g>';
     }).join('');
   };
@@ -13195,7 +13241,7 @@ function sigilBands(stroke, soft, key){
     const a = i * (360 / 54), long = (i % 3 === 0);
     ticks += '<g transform="translate(500 500) rotate(' + a + ')"><path d="M0 -412 L0 -'
           + (long ? 392 : 400) + ' M-' + (long ? 7 : 5) + ' -402 L' + (long ? 7 : 5) + ' -402"'
-          + ' stroke="' + soft + '" stroke-width="' + (long ? 2.2 : 1.7) + '" opacity="' + (long ? '.50' : '.34') + '"/></g>';
+          + ' style="stroke:' + soft + '" stroke-width="' + (long ? 2.2 : 1.7) + '" opacity="' + (long ? '.50' : '.34') + '"/></g>';
   }
   const circles = [[422,stroke,2.1,'.72',''],[406,soft,1.6,'.46','2 6'],[388,stroke,2,'.7','12 4 2 4'],
     [364,soft,1.7,'.42','2 5'],[338,stroke,2,'.68',''],[320,soft,1.6,'.4','8 6 2 6'],
@@ -13203,7 +13249,7 @@ function sigilBands(stroke, soft, key){
     [224,soft,1.5,'.36','7 5'],[196,stroke,1.85,'.62',''],[174,soft,1.45,'.34','2 5'],
     [144,stroke,1.8,'.6',''],[122,soft,1.4,'.32','6 5'],[98,stroke,1.7,'.58',''],[78,soft,1.35,'.30','2 4']];
   return circles.map(function(c){
-    return '<circle cx="500" cy="500" r="' + c[0] + '" fill="none" stroke="' + c[1] + '" stroke-width="' + c[2]
+    return '<circle cx="500" cy="500" r="' + c[0] + '" fill="none" style="stroke:' + c[1] + '" stroke-width="' + c[2]
       + '" opacity="' + c[3] + '"' + (c[4] ? ' stroke-dasharray="' + c[4] + '"' : '') + '/>';
   }).join('') + ticks + sigilDeityDetail(key || 'hera', stroke, soft);
 }
@@ -13263,11 +13309,24 @@ function prRenderSigil(god, mood){
     + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
     + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="18" fill="url(#sigWave)"/></mask>'
     + '</defs>'
-    + '<g class="pr-coinBase">' + sigilLayer(key, gold, pale) + '</g>'
-    + '<g class="pr-coinWaveAura" mask="url(#sigMask)" opacity="0">'
-    + sigilLayer(key, auraStroke, waveSoft) + '</g>'
-    + '<g class="pr-coinWaveGroup" mask="url(#sigMask)" opacity="0">'
-    + sigilLayer(key, waveStroke, waveSoft) + '</g>';
+    // ⚠️ ГЕОМЕТРИЯ СТРОИТСЯ ОДИН РАЗ (09.08.2026, лечение тормозов на Дионисе).
+    // Раньше один и тот же орнамент выкладывался в разметку ТРИЖДЫ — основа,
+    // аура и волна. У Диониса это 2367 узлов, вдвое больше среднего, и две из
+    // трёх копий ещё и живут под движущейся маской. Теперь копии — это <use>
+    // на общий шаблон, а цвет приходит переменными, поэтому выглядит один в один.
+    + '<defs><g id="prSigGeom">' + sigilLayer(key, 'var(--sig-line)', 'var(--sig-soft)') + '</g></defs>'
+    + '<use href="#prSigGeom" class="pr-coinBase" style="--sig-line:' + gold + ';--sig-soft:' + pale + '"/>'
+    // ⚠️ НА ТЕЛЕФОНЕ АУРУ НЕ РИСУЕМ (09.08.2026). Дедупликация разметки тормоза
+    // не убрала — значит дело не в числе узлов, а в ЗАКРАСКЕ: две копии всего
+    // орнамента живут под движущейся маской и перерисовываются каждый кадр.
+    // Аура — это подсветка того же рисунка; на широком экране оставляем, на
+    // телефоне убираем и получаем ровно вдвое меньше работы на кадр.
+    + (prHeavyEffectsAllowed()
+        ? '<use href="#prSigGeom" class="pr-coinWaveAura" mask="url(#sigMask)" opacity="0"'
+          + ' style="--sig-line:' + auraStroke + ';--sig-soft:' + waveSoft + '"/>'
+        : '')
+    + '<use href="#prSigGeom" class="pr-coinWaveGroup" mask="url(#sigMask)" opacity="0"'
+    + ' style="--sig-line:' + waveStroke + ';--sig-soft:' + waveSoft + '"/>';
 }
 
 
@@ -13535,13 +13594,15 @@ async function prOpenCard(id){
   }, 1380);
 }
 
+/* Кнопка делает ровно то, что на ней написано. Раньше она только подсвечивала
+   следующую карту — задумка «вскрытие должно оставаться действием человека»
+   на деле читалась как сломанная кнопка: написано «Открой следующую», нажимаешь
+   и ничего не происходит. Denis прав, открываем */
 function prCta(){
+  if (PR.busy) return;
   if (PR.opened.length >= PR.ids.length){ closePackReveal(); return; }
-  // Ещё есть закрытые — подсказываем, куда нажать, а не открываем за человека:
-  // вскрытие карты должно оставаться его действием
   const next = PR.ids.filter(function(x){ return PR.opened.indexOf(x) < 0; })[0];
-  const el = next && prEl('pr-pack').querySelector('[data-id="' + next + '"]');
-  if (el){ el.classList.remove('pr-nudge'); void el.offsetWidth; el.classList.add('pr-nudge'); }
+  if (next != null) prOpenCard(next);
 }
 
 /* Взрыв частиц из-под карты. Частицы удаляют себя сами: иначе за три вскрытия
@@ -13552,7 +13613,10 @@ function prImpact(el, mood){
   const sr = scene.getBoundingClientRect(), cr = el.getBoundingClientRect();
   const cx = cr.left - sr.left + cr.width / 2, cy = cr.top - sr.top + cr.height / 2;
   const palette = [mood.accent, mood.secondary, '#fff4dc'];
-  const count = mood.appearance === 'light' ? 68 : 58;
+  // На телефоне частиц вдвое меньше: каждая это отдельный анимируемый элемент
+  // со свечением и режимом наложения
+  const full = mood.appearance === 'light' ? 68 : 58;
+  const count = prHeavyEffectsAllowed() ? full : Math.round(full / 2);
   for (let i = 0; i < count; i++){
     const p = document.createElement('span');
     const a = Math.random() * Math.PI * 2, d = 72 + Math.random() * 190;
