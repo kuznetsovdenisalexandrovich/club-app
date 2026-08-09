@@ -2501,6 +2501,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugShowLevelFlag()">Флаг поздравления</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetLevelFlag()">Сбросить флаг</button>
           <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugPackReveal()">Экран пака</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="openRevealLab()">Лаборатория экрана</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:6px">
           <input id="debug-cmd-input" placeholder="JS выражение..." style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
@@ -13404,6 +13405,14 @@ function prRenderSigil(god, mood){
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
 
+
+/* Лаборатория экрана пака (lab.html) — открывается ПЕРЕХОДОМ В ТОМ ЖЕ ОКНЕ,
+   а не новой вкладкой. Смысл именно в этом: внутри Телеграма замер должен идти
+   в его собственном окне, с его безопасной зоной и его движком, иначе цифры
+   кадров не про то. Обратно — кнопка «В приложение» в самой лаборатории */
+function openRevealLab(){
+  location.href = 'lab.html';
+}
 
 /* Отладка: показать экран раскрытия на трёх своих последних карточках, не
    выдавая себе настоящий пак. Ничего не начисляет и на сервер не ходит —
