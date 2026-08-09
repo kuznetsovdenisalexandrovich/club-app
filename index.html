@@ -13309,6 +13309,7 @@ async function prOpenCard(id){
   const card = (data && data.card) || {};
   PR.cards[id] = card;
   PR.extra[id] = data;
+  prPrefetchFx(card);   // раньше всего остального: у файла всего 640 мс форы
 
   const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
   const front = el.querySelector('.pr-face.pr-front img');
@@ -13368,10 +13369,55 @@ async function prOpenCard(id){
 
    Файл кладётся в images/reveal/reveal-fx.mp4 и НЕ ОБЯЗАТЕЛЕН: если его нет
    или браузер его не принял, слой прячется и вскрытие идёт без фона. */
-/* Файл на оформление, а НЕ на бога: одна пара на все 19 персонажей.
-   Иначе 19 × 2 × ~1 МБ = тридцать с лишним мегабайт в репозитории навсегда */
+/* ФОН СВОЙ У КАЖДОГО БОГА (09.08.2026). Тридцать восемь файлов по ~865 КБ:
+   участник никогда не качает всю пачку — только того бога, которого вскрыл,
+   и дальше файл живёт в кэше. Пара reveal-gold / reveal-holo осталась
+   ЗАПАСНЫМ фоном, см. prPlayFxVideo. */
 const PR_FX_SRC = { dark: 'images/reveal/reveal-gold.webp',
                     light: 'images/reveal/reveal-holo.webp' };
+
+/* ⚠️ У богов НЕТ латинского ключа: первичный ключ в базе — русское имя, и
+   card.god приходит строкой «Афина». Поэтому таблица соответствия живёт
+   здесь. Имя, которого в ней нет (новый бог, заведённый в дашборде), просто
+   уходит на запасной фон — экран от этого не ломается. */
+const PR_FX_GODS = {
+  'Зевс':'zeus',        'Гера':'hera',           'Посейдон':'poseidon',
+  'Аид':'hades',        'Афина':'athena',        'Аполлон':'apollo',
+  'Артемида':'artemis', 'Афродита':'aphrodite',  'Арес':'ares',
+  'Деметра':'demeter',  'Гермес':'hermes',       'Дионис':'dionysus',
+  'Гефест':'hephaestus','Плутос':'plutus',       'Прометей':'prometheus',
+  'Мом':'momus',        'Геракл':'heracles',     'Тесей':'theseus',
+  'Персей':'perseus'
+};
+
+/* Что уже доехало: 'ok' — файл в кэше, 'fail' — нет файла или не открылся,
+   больше не пробуем. Пока ключа нет вовсе, файл считается «в пути». */
+const PR_FX_LOADED = {};
+
+/* ⚠️ ТЕМУ БЕРЁМ ИЗ САМОЙ КАРТЫ, А НЕ ИЗ АТРИБУТА НА ЭКРАНЕ. Предзагрузка
+   стартует ДО prApplyTheme, и в этот момент на #pr-stage ещё висит тема
+   ПРЕДЫДУЩЕЙ карты — по ней качался бы не тот файл. */
+function prFxTheme(card){ return prMood(card).appearance === 'light' ? 'light' : 'dark'; }
+
+function prFxGodSrc(card, theme){
+  const slug = PR_FX_GODS[(card && card.god) || ''];
+  return slug ? ('images/reveal/' + slug + '-' + theme + '.webp') : null;
+}
+
+/* ⚠️ ГЛАВНОЕ ПРО ВРЕМЯ: бог известен ТОЛЬКО после ответа сервера — до этого
+   он и не должен быть известен, в этом суть вскрытия. От ответа до вспышки
+   проходит 640 мс хореографии, и 865 КБ на слабой мобильной сети за это
+   время приезжают не всегда. Поэтому загрузку пинаем в ту же миллисекунду,
+   когда пришли данные карты, а если к вспышке файл не готов — играем общий,
+   он уже в кэше. Человек в худшем случае увидит то же, что видел раньше. */
+function prPrefetchFx(card){
+  const src = prFxGodSrc(card, prFxTheme(card));
+  if (!src || PR_FX_LOADED[src]) return;
+  const img = new Image();
+  img.onload  = function(){ PR_FX_LOADED[src] = 'ok'; };
+  img.onerror = function(){ PR_FX_LOADED[src] = 'fail'; };
+  img.src = src;
+}
 
 /* ⚠️ АНИМИРОВАННУЮ КАРТИНКУ НЕЛЬЗЯ «ПЕРЕМОТАТЬ» — у неё нет currentTime.
    Единственный надёжный способ проиграть заново: сбросить адрес и поставить
@@ -13380,9 +13426,12 @@ function prPlayFxVideo(){
   const el = prEl('pr-fx-video');
   if (!el || !PR_FX.fxVideo) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const stage = prEl('pr-stage');
-  const theme = (stage && stage.getAttribute('data-pr-theme')) === 'light' ? 'light' : 'dark';
-  const src = PR_FX_SRC[theme];
+  const card  = PR.cards[PR.hero] || null;
+  const theme = prFxTheme(card);
+  const god   = prFxGodSrc(card, theme);
+  // Файл бога берём, ТОЛЬКО если он точно доехал: иначе тег будет ждать сеть
+  // с пустым кадром ровно в тот момент, ради которого всё и затевалось
+  const src = (god && PR_FX_LOADED[god] === 'ok') ? god : PR_FX_SRC[theme];
   el.style.display = '';
   el.src = '';
   void el.offsetWidth;
