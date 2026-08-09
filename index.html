@@ -492,9 +492,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   font-family:var(--sans);color:#eee;background:#070912;
   transition:background 1s ease,color .6s ease}
 #pr-stage.on{display:block}
-/* Кнопки действий («Посмотреть», «Забрать», «Поделиться») — та же кнопка
-   концепта, но внутри панели: без внешних отступов и пониже ростом */
-.pr-cta-inline{width:100%;margin:10px 0 0;height:46px}
+}
 #pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
 #pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
 
@@ -635,6 +633,57 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 
 @media (max-width:390px){.pr-shell{min-height:730px}.pr-scene{height:485px}.pr-card.pr-hero{width:270px}.pr-details{margin-top:-24px}.pr-head{padding-top:32px}.pr-coinSigil{width:780px;height:780px}}
+
+/* Кнопки действий («Посмотреть», «Забрать», «Поделиться») — та же кнопка
+   концепта, но внутри панели: без внешних отступов и пониже ростом */
+.pr-cta-inline{width:100%;margin:10px 0 0;height:46px}
+
+/* ── ПОСАДКА КОНЦЕПТА В ПРИЛОЖЕНИЕ (09.08.2026) ──────────────────────────
+   Концепт был МАКЕТОМ НА СТРАНИЦЕ: панель 440×760 лежала по центру белого
+   поля, вокруг оставался воздух. Внутри приложения экран сам себе страница —
+   поэтому панель растягивается на весь вид, а не висит узкой колонкой.
+   Пропорции и внутренние отступы концепта при этом не трогаем. */
+.pr-stage{min-height:100vh;min-height:100dvh;padding:0;display:block}
+.pr-shell{
+  width:100%;max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;border-radius:0;
+  display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (min-width:560px){
+  /* На широком экране панель снова становится панелью — но по высоте
+     тянется во весь вид, иначе низ обрезается на ноутбуках */
+  .pr-stage{padding:16px 12px;display:grid;place-items:start center}
+  .pr-shell{border-radius:34px;min-height:calc(100vh - 32px);min-height:calc(100dvh - 32px)}
+}
+
+/* Сцена забирает остаток высоты вместо жёстких 510px: иначе на телефоне
+   голова + сцена + панель + кнопка не помещаются и экран уезжает в прокрутку */
+.pr-scene{height:auto;flex:1 1 auto;min-height:var(--pr-scene-min,330px);
+  display:flex;align-items:center;justify-content:center}
+.pr-head{flex:none}
+.pr-details{flex:none}
+.pr-cta{flex:none;margin-top:auto}
+
+/* ⚠️ ПОДЗАГОЛОВОК ДЁРГАЛ ВСЮ ШАПКУ. Он меняется по ходу вскрытия
+   («энергия собирается…» → «раскрытие начинается…» → «Осталось карт: 2»), и
+   строка то в одну, то в две — высота скакала, а вместе с ней прыгало всё
+   выше и ниже. Резервируем две строки и больше не двигаемся */
+.pr-sub{min-height:2.8em;display:flex;align-items:center;justify-content:center}
+
+/* Карты уменьшаем на невысоких экранах — 286px героя плюс смещение вниз на
+   66px не помещаются рядом с панелью характеристик */
+@media (max-height:760px){
+  .pr-card{width:150px}
+  .pr-card.pr-hero{width:236px}
+  .pr-scene{--pr-scene-min:290px}
+  .pr-head{padding-top:22px}
+}
+@media (max-height:640px){
+  .pr-card{width:128px}
+  .pr-card.pr-hero{width:200px}
+  .pr-scene{--pr-scene-min:250px}
+  .pr-title{font-size:26px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
 .reveal-title{font-size:15px;font-weight:700;color:#F1EAE0;margin-bottom:4px;text-align:center}
