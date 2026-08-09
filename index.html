@@ -780,6 +780,25 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    кнопки Telegram, поэтому отсчитываем от безопасной зоны, а не от нуля */
 .pr-close{top:calc(env(safe-area-inset-top,0px) + var(--safe-top,0px) + 34px)}
 
+/* ── ПО ЗАМЕРАМ DENIS'А В ЛАБОРАТОРИИ, 09.08.2026 ─────────────────────────
+
+   ТЕНЬ ГЕРОЯ роняла кадры до 24. Причина: `filter:drop-shadow` считает тень по
+   ФОРМЕ элемента, и делает это заново на каждом кадре, пока карта движется и
+   поворачивается. `box-shadow` считается по прямоугольнику и уезжает на слой
+   композитора. Карта прямоугольная со скруглением — форма та же, вид тот же,
+   а работы на порядок меньше. Тень вешаем на ГРАНЬ (у неё и радиус скругления),
+   а не на карту: на самой карте живёт трёхмерный переворот.
+
+   ТЕКСТУРА И РАМКА роняли до 35-40. Они статичны, но лежат под движущейся
+   сценой и попадают в каждую перерисовку. `translateZ(0)` выносит их на
+   отдельный слой — дальше они просто лежат готовой картинкой. */
+.pr-card.pr-hero{filter:none}
+.pr-card.pr-hero .pr-face{box-shadow:0 28px 36px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.14)}
+.pr-tex,.pr-frame{transform:translateZ(0);backface-visibility:hidden}
+
+/* Сигил тоже на своём слое: он статичен между вскрытиями */
+.pr-coinSigil{transform:translate(-50%,-50%) translateZ(0)}
+
 /* ⚠️⚠️ ЭТОТ БЛОК ДОЛЖЕН ОСТАВАТЬСЯ ПОСЛЕДНИМ СРЕДИ ПРАВИЛ ЭКРАНА.
    Второй раз подряд положил его выше и получил, что правила концепта
    перебивают его обратно. Ниже — только общие правила приложения.
@@ -13317,10 +13336,41 @@ function sigilLayer(key, stroke, soft){
    ⚠️ Цвета в адресе обязаны быть закодированы (`#` в data-URL начинает якорь),
    поэтому `encodeURIComponent` на весь документ. */
 
+/* ⚠️ РАСТРИМ В 560, А ПОКАЗЫВАЕМ В 900 (09.08.2026). Сигил живёт на 2-3%
+   непрозрачности — разглядеть в нём отдельный штрих невозможно, а пикселей
+   при 1000×1000 втрое больше, чем при 560×560. Растеризация — это тот самый
+   рывок, который счётчик ловит как провал до единиц кадров. */
+const PR_SIGIL_RASTER = 560;
+
 function prSigilImage(inner, defs){
-  const doc = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">'
+  const doc = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="'
+            + PR_SIGIL_RASTER + '" height="' + PR_SIGIL_RASTER + '">'
             + (defs || '') + inner + '</svg>';
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(doc);
+}
+
+/* Собранный сигил кэшируем по богу и оформлению: за одно вскрытие пака он
+   строится трижды, а при повторном заходе — заново. Строка стоит ничего,
+   а сборка 60 КБ разметки и её растеризация — как раз то, что мы и лечим */
+const PR_SIGIL_CACHE = {};
+
+/* Просим браузер растрировать картинки ЗАРАНЕЕ, пока идёт ожидание арта
+   карточки. Иначе он делает это в первый кадр анимации — ровно там, где
+   рывок виден. Молчим на ошибках: сигил не стоит того, чтобы ронять вскрытие */
+function prWarmSigil(){
+  const svg = document.getElementById('pr-sigil-svg');
+  if (!svg) return Promise.resolve();
+  const jobs = Array.prototype.map.call(svg.querySelectorAll('image'), function(im){
+    const src = im.getAttribute('href');
+    if (!src) return Promise.resolve();
+    const probe = new Image();
+    probe.src = src;
+    return (probe.decode ? probe.decode() : Promise.resolve()).catch(function(){});
+  });
+  return Promise.race([
+    Promise.all(jobs),
+    new Promise(function(r){ setTimeout(r, 400); })
+  ]);
 }
 
 function prRenderSigil(god, mood){
@@ -13331,6 +13381,8 @@ function prRenderSigil(god, mood){
 
   const stage = prEl('pr-stage');
   const appearance = (mood && mood.appearance) || stage.getAttribute('data-pr-theme') || 'dark';
+  const cacheKey = key + ':' + appearance + ':' + (PR_FX.bake ? 'b' : 'v') + ':' + (PR_FX.aura ? 'a' : '-');
+  if (PR_SIGIL_CACHE[cacheKey]){ svg.innerHTML = PR_SIGIL_CACHE[cacheKey]; return; }
   const isLight = appearance === 'light';
   const gold = isLight ? '#9f6e1d' : '#f0c977';
   const pale = isLight ? '#c28d34' : '#ffe7b0';
@@ -13401,6 +13453,8 @@ function prRenderSigil(god, mood){
     + pic('pr-coinBase', baseSrc, false)
     + (wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
     + pic('pr-coinWaveGroup', waveSrc, true);
+
+  PR_SIGIL_CACHE[cacheKey] = svg.innerHTML;
 }
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
@@ -13640,10 +13694,15 @@ async function prOpenCard(id){
 
   const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
   const front = el.querySelector('.pr-face.pr-front img');
-  if (front && card.image_url) await prPrepareFrontImage(front, card.image_url);
+  // Сигил собираем и растрируем ЗДЕСЬ, вместе с ожиданием арта: эта пауза уже
+  // есть, и рывок прячется в ней, а не в первом кадре анимации
+  prApplyTheme(card);
+  await Promise.all([
+    (front && card.image_url) ? prPrepareFrontImage(front, card.image_url) : Promise.resolve(),
+    prWarmSigil()
+  ]);
 
   PR.hero = id;
-  prApplyTheme(card);
   prLayout();
   prEl('pr-details').classList.remove('pr-on');
   prClearPhase();
