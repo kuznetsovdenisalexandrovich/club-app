@@ -1392,7 +1392,6 @@ function labOpen(){
     labPack.map(function(x){ return x.card.god + ' · ' + (CARD_RARITY_LABELS[x.card.rarity]||''); }).join(' / ');
   labResetFps();
   openPackReveal();
-  setTimeout(labSigilDiag, 2600);
 }
 function labReplay(){
   if (!labPack){ labOpen(); return; }
@@ -1484,6 +1483,11 @@ function labSigilProbeOff(){
   if (el) el.textContent = '';
 }
 
+/* ⚠️ СИГИЛ РОЖДАЕТСЯ ТОЛЬКО ПРИ ВСКРЫТИИ КАРТЫ (prApplyTheme вызывает
+   prRenderSigil), а не при раздаче пака. Первая версия диагностики печатала
+   состояние сразу после «Другой пак» — то есть ДО вскрытия — и честно
+   показывала нули. Из-за этого решили, что сигила нет вовсе.
+   Теперь строка обновляется сама и объясняет, что происходит. */
 function labSigilDiag(){
   const box = document.getElementById('lab-diag');
   const svg = document.getElementById('pr-sigil-svg');
@@ -1491,7 +1495,17 @@ function labSigilDiag(){
   const layers = svg.querySelectorAll('image');
   const vectors = svg.querySelectorAll('path,circle').length;
   const lines = [];
-  lines.push('слоёв-картинок: ' + layers.length + ' · фигур вектором: ' + vectors);
+  if (!PR_FX.sigil){
+    box.innerHTML = '<span class="bad">выключатель «Сигил целиком» снят — рисовать нечего</span>';
+    return;
+  }
+  if (!layers.length && !vectors){
+    box.innerHTML = 'сигила пока нет: он появляется ПРИ ВСКРЫТИИ карты, а не при раздаче пака.'
+      + '<br>Нажми на рубашку и смотри сюда снова.';
+    return;
+  }
+  lines.push('слоёв-картинок: ' + layers.length + ' · фигур вектором: ' + vectors
+    + ' · запекание ' + (PR_FX.bake ? 'вкл' : 'выкл'));
   if (typeof PR_SIGIL_BAKE_BROKEN !== 'undefined' && PR_SIGIL_BAKE_BROKEN){
     lines.push('<span class="bad">браузер НЕ принял запечённую картинку — включён запасной вектор</span>');
   }
@@ -1518,6 +1532,13 @@ function labSigilDiag(){
   }
   box.innerHTML = lines.join('<br>');
 }
+
+/* Обновляем строку сама по себе: состояние меняется по ходу вскрытия, а ловить
+   момент руками неудобно. Только когда панель развёрнута — иначе лишняя работа */
+setInterval(function(){
+  const p = document.getElementById('lab-panel');
+  if (p && !p.classList.contains('min')) labSigilDiag();
+}, 900);
 
 /* ── Яркость сигила ───────────────────────────────────────────────────── */
 /* В дизайне спокойный слой сигила стоит на 2.4% прозрачности в тёмной теме —
