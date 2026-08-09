@@ -1,0 +1,1328 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Лаборатория экрана пака</title>
+<!--
+  СОБРАНО АВТОМАТИЧЕСКИ из index.html (node make_lab.js).
+  Руками не править — правки затрутся при следующей сборке.
+  Стили, разметка и код экрана здесь ТЕ ЖЕ, что в приложении.
+-->
+<style>
+  html,body{margin:0;background:#0b0d14;color:#eae6f5;font:14px/1.45 -apple-system,system-ui,sans-serif}
+  #lab-panel{position:fixed;left:0;right:0;bottom:0;z-index:100000;background:rgba(10,12,20,.93);
+    backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.12);
+    padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);max-height:52vh;overflow:auto}
+  #lab-panel.min{max-height:none;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+  #lab-panel.min .lab-body{display:none}
+  .lab-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .lab-fps{font:700 13px/1 ui-monospace,monospace;padding:5px 9px;border-radius:8px;background:#1a1f30}
+  .lab-fps b{font-size:16px}
+  .lab-fps.bad{background:#4a1620;color:#ffb4c0}
+  .lab-fps.ok{background:#14331f;color:#9df0bd}
+  .lab-btn{border:1px solid rgba(255,255,255,.2);background:#171b29;color:inherit;border-radius:9px;
+    padding:7px 12px;font-size:13px;cursor:pointer}
+  .lab-btn.primary{background:#6c5ce0;border-color:transparent;font-weight:600}
+  .lab-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:5px;margin-top:9px}
+  .lab-sw{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:8px;background:#151928;font-size:12.5px}
+  .lab-sw input{width:16px;height:16px;accent-color:#6c5ce0}
+  .lab-sw.off{opacity:.45}
+  .lab-note{font-size:11.5px;opacity:.55;margin-top:8px;line-height:1.5}
+  .lab-god{font-size:12px;opacity:.7;margin-left:auto}
+</style>
+<style id="lab-reveal-css">
+/* ── ЭКРАН РАСКРЫТИЯ ПАКА (09.08.2026) ─────────────────────────────────────
+   Стили перенесены ИЗ КОНЦЕПТА ОДИН В ОДИН — Denis собирал их целый день, и
+   переделывать здесь нечего. Изменено ровно три вещи, все вынужденные:
+     1) все классы получили префикс `pr-` — иначе `.card`, `.open`, `.shell`
+        и `.light` столкнулись бы с приложением (`.shell` там главная оболочка);
+     2) имена анимаций тоже с префиксом — `float`, `fly`, `glint`, `blob`
+        слишком общие, чтобы жить в общем файле;
+     3) тема переехала с `body[data-theme]` на `#pr-stage[data-pr-theme]` —
+        в приложении есть правила `[data-theme="..."]` БЕЗ имени элемента,
+        они перекрасили бы интерфейс вокруг.
+   Больше ничего не трогать: цифры, тени и тайминги — авторские. */
+
+#pr-stage{position:fixed;inset:0;z-index:900;display:none;overflow-y:auto;
+  font-family:var(--sans);color:#eee;background:#070912;
+  transition:background 1s ease,color .6s ease}
+#pr-stage.pr-shown{display:block}
+#pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
+#pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
+
+#pr-stage{
+  --ease:cubic-bezier(.16,1,.3,1);
+  --panel-w:min(440px,calc(100vw - 24px));
+  --serif: Georgia,"Times New Roman",serif;
+  --sans: Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --accent:#c9a765;
+  --accent-2:#c8bee1;
+}
+#pr-stage *{box-sizing:border-box}
+#pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
+#pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
+#pr-stage::before,#pr-stage::after{
+  content:"";position:fixed;pointer-events:none;filter:blur(70px);opacity:.55;transition:background 1s ease,opacity 1s ease,transform 10s ease;
+  animation:pr-blob 12s ease-in-out infinite alternate;
+}
+#pr-stage::before{width:340px;height:340px;left:-90px;top:12vh;background:rgba(223,181,113,.16)}
+#pr-stage::after{width:390px;height:390px;right:-100px;bottom:3vh;background:rgba(152,126,215,.13);animation-direction:alternate-reverse}
+#pr-stage[data-pr-theme="light"]::before{background:rgba(255,236,204,.58);opacity:.8}
+#pr-stage[data-pr-theme="light"]::after{background:rgba(199,173,133,.28);opacity:.5}
+#pr-stage[data-pr-theme="dark"]::before{background:rgba(217,171,93,.12)}
+#pr-stage[data-pr-theme="dark"]::after{background:rgba(121,96,190,.13)}
+@keyframes pr-blob{from{transform:translate3d(-12px,-8px,0) scale(.94)}to{transform:translate3d(18px,14px,0) scale(1.12)}}
+
+.pr-stage{min-height:100vh;padding:20px 12px 72px;display:grid;place-items:center;position:relative}
+.pr-shell{
+  width:var(--panel-w);min-height:760px;position:relative;overflow:hidden;border-radius:34px;
+  box-shadow:0 35px 110px rgba(0,0,0,.48);isolation:isolate;
+  transition:box-shadow .8s ease;
+}
+#pr-stage[data-pr-theme="light"] .pr-shell{box-shadow:0 34px 95px rgba(73,55,35,.30),0 0 34px rgba(255,239,213,.18)}
+#pr-stage[data-pr-theme="dark"] .pr-shell{box-shadow:0 40px 120px rgba(0,0,0,.72),0 0 30px rgba(207,165,92,.08)}
+.pr-tex,.pr-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;transition:opacity .8s ease}
+.pr-tex{z-index:-4}.pr-frame{z-index:30}
+.pr-tex.pr-light,.pr-frame.pr-light{opacity:0}.pr-tex.pr-dark,.pr-frame.pr-dark{opacity:0}
+#pr-stage[data-pr-theme="light"] .pr-tex.pr-light,#pr-stage[data-pr-theme="light"] .pr-frame.pr-light{opacity:1}
+#pr-stage[data-pr-theme="dark"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="dark"] .pr-frame.pr-dark{opacity:1}
+#pr-stage[data-pr-theme="neutral"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="neutral"] .pr-frame.pr-dark{opacity:1}
+.pr-shell::before{
+  content:"";position:absolute;inset:0;z-index:-3;pointer-events:none;
+  background:radial-gradient(circle at 50% 38%,rgba(235,190,110,.10),transparent 36%),linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22));
+}
+#pr-stage[data-pr-theme="light"] .pr-shell::before{background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.28),transparent 35%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(119,88,50,.06))}
+
+.pr-head{position:relative;z-index:10;text-align:center;padding:36px 54px 0}
+.pr-eyebrow{font:600 10px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;opacity:.76;margin-bottom:10px;color:color-mix(in srgb,var(--accent) 58%,currentColor)}
+.pr-title{font:500 clamp(30px,8vw,42px)/1 var(--serif);letter-spacing:-.025em;margin:0;text-shadow:0 2px 18px rgba(0,0,0,.18),0 0 18px rgba(255,225,171,.06);color:color-mix(in srgb,var(--accent) 26%,currentColor)}
+.pr-sub{font-size:13px;line-height:1.4;margin:10px auto 0;opacity:.63;max-width:260px}
+.pr-close{position:absolute;right:18px;top:17px;width:38px;height:38px;border-radius:50%;border:1px solid currentColor;background:rgba(255,255,255,.025);color:inherit;opacity:.55;font-size:22px;cursor:pointer;z-index:35}
+
+.pr-scene{height:510px;position:relative;margin-top:8px;z-index:5;perspective:1400px;overflow:visible}
+.pr-motif{position:absolute;left:50%;top:52%;width:390px;height:390px;transform:translate(-50%,-50%);object-fit:contain;opacity:.58;pointer-events:none;z-index:1;filter:drop-shadow(0 0 18px rgba(218,175,101,.14));transition:opacity .5s ease,filter .7s ease}
+#pr-stage[data-pr-theme="light"] .pr-motif{opacity:.47}
+#pr-stage[data-pr-theme="dark"] .pr-motif{opacity:.68}
+.pr-aura{position:absolute;left:50%;top:54%;width:330px;height:330px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:0;filter:blur(27px);opacity:.35;transition:background .7s ease,opacity .7s ease,transform .8s var(--ease)}
+.pr-scene.pr-revealing .pr-aura{opacity:.84;transform:translate(-50%,-50%) scale(1.18)}
+
+.pr-card{
+  --x:0px;--y:0px;--r:0deg;--s:1;
+  position:absolute;left:50%;top:50%;width:174px;aspect-ratio:.70;border:0;background:none;padding:0;
+  transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--r)) scale(var(--s));
+  transition:transform 1s var(--ease),opacity .55s ease,filter .55s ease;transform-origin:50% 65%;cursor:pointer;
+}
+.pr-card.pr-shelf{z-index:3;filter:brightness(.84);opacity:.9}
+.pr-card.pr-shelf:hover{filter:brightness(1.05);transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) - 4px)) rotate(var(--r)) scale(calc(var(--s) * 1.02))}
+.pr-card.pr-hero{z-index:10;width:286px;cursor:default;filter:drop-shadow(0 28px 36px rgba(0,0,0,.34))}
+.pr-flip{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .92s var(--ease)}
+.pr-card.pr-open .pr-flip{transform:rotateY(180deg)}
+.pr-face{position:absolute;inset:0;border-radius:19px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pr-face.pr-back{box-shadow:0 18px 36px rgba(0,0,0,.34)}
+.pr-face.pr-front{transform:rotateY(180deg);background:#111;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 45px rgba(0,0,0,.34)}
+.pr-face img{display:block;width:100%;height:100%;object-fit:cover}
+.pr-card.pr-hero .pr-face{border-radius:20px}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::after{
+  content:"";position:absolute;inset:-25%;background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.35) 48%,rgba(255,232,181,.16) 53%,transparent 65%);transform:translateX(-75%);animation:pr-glint 1.2s .46s ease-out both;pointer-events:none
+}
+@keyframes pr-glint{0%{opacity:0;transform:translateX(-75%)}20%{opacity:.85}100%{opacity:0;transform:translateX(75%)}}
+
+.pr-fx{position:absolute;z-index:40;pointer-events:none;mix-blend-mode:screen}
+.pr-fx.pr-dot{width:var(--sz);height:var(--sz);border-radius:50%;background:var(--c);box-shadow:0 0 11px var(--c);animation:pr-fly var(--dur) var(--ease) both}
+.pr-fx.pr-star{width:var(--sz);height:var(--sz);background:transparent;animation:pr-fly var(--dur) var(--ease) both}
+.pr-fx.pr-star::before,.pr-fx.pr-star::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--c);border-radius:99px;box-shadow:0 0 8px var(--c)}
+.pr-fx.pr-star::before{width:1.5px;height:100%}.pr-fx.pr-star::after{width:100%;height:1.5px}
+@keyframes pr-fly{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}16%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.05)}}
+.pr-ambient{position:absolute;z-index:2;width:3px;height:3px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);opacity:.45;pointer-events:none;animation:pr-float var(--d) ease-in-out infinite alternate}
+@keyframes pr-float{from{transform:translate3d(0,8px,0) scale(.7);opacity:.15}to{transform:translate3d(var(--mx),-14px,0) scale(1.15);opacity:.65}}
+
+.pr-details{position:relative;z-index:9;margin:-18px 22px 0;opacity:0;transform:translate3d(0,15px,0);transition:opacity .55s ease,transform .65s var(--ease);will-change:opacity,transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pr-details.pr-on{opacity:1;transform:translate3d(0,0,0)}
+.pr-stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid rgba(255,255,255,.10);border-radius:19px;background:linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.030));box-shadow:inset 0 1px rgba(255,255,255,.055),0 14px 35px rgba(0,0,0,.11);overflow:hidden;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+#pr-stage[data-pr-theme="light"] .pr-stats{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(247,238,222,.24));border-color:rgba(108,82,49,.16);box-shadow:inset 0 1px rgba(255,255,255,.58),0 13px 30px rgba(74,55,33,.08)}
+.pr-stat{text-align:left;padding:13px 11px;min-width:0}.pr-stat+.pr-stat{border-left:1px solid rgba(255,255,255,.08)}#pr-stage[data-pr-theme="light"] .pr-stat+.pr-stat{border-left-color:rgba(95,72,44,.12)}
+.pr-label{font-size:8px;letter-spacing:.11em;text-transform:uppercase;opacity:.50}.pr-value{font:500 13px/1.2 var(--sans);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-ability{display:flex;align-items:center;gap:12px;padding:14px 6px 2px}.pr-ability-icon{width:42px;height:42px;flex:none;display:grid;place-items:center;border:1px solid rgba(218,177,105,.33);border-radius:50%;font-size:18px;color:var(--accent)}
+
+.pr-details .pr-stats,.pr-details .pr-ability{transform:translateZ(0);}
+.pr-ability strong{font-size:13px;font-weight:600}.pr-ability p{font-size:11.5px;line-height:1.42;margin:3px 0 0;opacity:.57}
+.pr-cta{width:calc(100% - 44px);margin:15px 22px 24px;height:52px;border-radius:18px;border:1px solid rgba(221,181,105,.42);background:rgba(8,9,14,.18);color:inherit;font:500 15px/1 var(--sans);letter-spacing:.01em;cursor:pointer;position:relative;z-index:31;box-shadow:inset 0 1px rgba(255,255,255,.07),0 9px 24px rgba(0,0,0,.14);transition:transform .25s var(--ease),background .4s ease,box-shadow .4s ease}
+#pr-stage[data-pr-theme="light"] .pr-cta{background:rgba(255,248,235,.34);border-color:rgba(151,112,64,.28);box-shadow:inset 0 1px rgba(255,255,255,.6),0 10px 25px rgba(96,67,36,.10)}
+.pr-cta:hover{transform:translateY(-2px);box-shadow:inset 0 1px rgba(255,255,255,.1),0 14px 30px rgba(0,0,0,.18),0 0 18px color-mix(in srgb,var(--accent) 18%,transparent)}
+
+.pr-ring,.pr-flash{position:absolute;left:50%;top:53%;pointer-events:none;z-index:20;opacity:0;transform:translate(-50%,-50%)}
+.pr-ring{width:420px;height:420px;border-radius:50%;border:1px solid rgba(255,235,190,.36);box-shadow:0 0 56px rgba(255,220,176,.18), inset 0 0 28px rgba(255,255,255,.08)}
+.pr-flash{width:760px;height:760px;border-radius:50%;filter:blur(36px);background:radial-gradient(circle,rgba(255,255,255,.88) 0%,rgba(255,233,186,.40) 16%,rgba(178,151,242,.24) 42%,rgba(126,235,255,.14) 56%,transparent 76%)}
+.pr-scene.pr-phase-charge .pr-aura{opacity:.90;transform:translate(-50%,-50%) scale(1.34)}
+.pr-scene.pr-phase-impact .pr-flash{animation:pr-flashPulse .54s ease-out both}
+.pr-scene.pr-phase-impact .pr-ring{animation:pr-ringShock .92s ease-out both}
+.pr-scene.pr-phase-signature .pr-motif{transform:translate(-50%,-50%) scale(1.03)}
+@keyframes pr-flashPulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.18)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.58)}}
+@keyframes pr-ringShock{0%{opacity:0;transform:translate(-50%,-50%) scale(.26)}18%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(2.02)}}
+.pr-card.pr-hero.pr-phase-anticipation{transform:translate(-50%,-50%) translate(0px,66px) rotate(0deg) scale(.985)}
+.pr-card.pr-hero.pr-phase-charge{animation:pr-heroCharge .42s ease-out both}
+.pr-card.pr-hero.pr-phase-impact{animation:pr-heroImpact .52s var(--ease) both}
+@keyframes pr-heroCharge{0%{transform:translate(-50%,-50%) translate(0px,66px) scale(.985)}100%{transform:translate(-50%,-50%) translate(0px,62px) scale(1.01)}}
+@keyframes pr-heroImpact{0%{transform:translate(-50%,-50%) translate(0px,62px) scale(1.01)}40%{transform:translate(-50%,-50%) translate(0px,66px) scale(1.03)}100%{transform:translate(-50%,-50%) translate(0px,72px) scale(1)}}
+.pr-card.pr-hero .pr-face.pr-front::before{content:"";position:absolute;inset:-20%;pointer-events:none;opacity:0;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 22%,rgba(255,205,231,.18) 34%,rgba(189,238,255,.24) 42%,rgba(255,243,188,.20) 50%,rgba(203,178,255,.24) 58%,transparent 74%)}
+.pr-card.pr-hero .pr-face.pr-front::after{content:"";position:absolute;inset:-25%;background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.52) 48%,rgba(255,231,182,.24) 54%,transparent 68%);transform:translateX(-75%);pointer-events:none;opacity:0}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::before{animation:pr-holoWash 1.45s .22s ease-out both}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::after{animation:pr-heroGlint 1.15s .34s ease-out both}
+@keyframes pr-heroGlint{0%{opacity:0;transform:translateX(-72%)}18%{opacity:1}100%{opacity:0;transform:translateX(76%)}}
+@keyframes pr-holoWash{0%{opacity:0;transform:translateX(-36%) rotate(-8deg) scale(1.1)}18%{opacity:.82}55%{opacity:.68}100%{opacity:0;transform:translateX(34%) rotate(8deg) scale(1.24)}}
+.pr-coinSigil{position:absolute;left:50%;top:53%;width:900px;height:900px;transform:translate(-50%,-50%);z-index:2;pointer-events:none;overflow:visible;opacity:1}
+.pr-coinSigil svg{display:block;width:100%;height:100%;overflow:visible}
+.pr-coinBase{opacity:.022}
+.pr-coinWaveAura,.pr-coinWaveGroup{opacity:0;will-change:opacity;mix-blend-mode:screen}
+#pr-stage[data-pr-theme="light"] .pr-coinBase{opacity:.078}
+#pr-stage[data-pr-theme="light"] .pr-scene.pr-phase-signature .pr-coinBase{opacity:.11}
+#pr-stage[data-pr-theme="light"] .pr-coinWaveAura{mix-blend-mode:normal}
+#pr-stage[data-pr-theme="light"] .pr-coinWaveGroup{mix-blend-mode:normal}
+#pr-stage[data-pr-theme="dark"] .pr-coinBase{opacity:.024}
+.pr-scene.pr-phase-impact .pr-coinWaveAura{animation:pr-coinWaveAuraFade 1320ms ease-out both}
+.pr-scene.pr-phase-impact .pr-coinWaveGroup{animation:pr-coinWaveGroupFade 1320ms ease-out both}
+/* заменено на pr-coinMaskScale ниже по файлу — анимация радиуса рвала кадры */
+.pr-scene.pr-phase-signature .pr-coinBase{opacity:.028}
+@keyframes pr-coinWaveAuraFade{0%{opacity:0}10%{opacity:.16}22%{opacity:.92}70%{opacity:.94}100%{opacity:0}}
+@keyframes pr-coinWaveGroupFade{0%{opacity:0}12%{opacity:.28}24%{opacity:1}72%{opacity:1}100%{opacity:0}}
+/* pr-coinMaskTravel удалён: анимация радиуса (геометрии) заново растрировала
+   весь замаскированный орнамент на каждом кадре. Замена — pr-coinMaskScale */
+
+
+@media (max-width:390px){.pr-shell{min-height:730px}.pr-scene{height:485px}.pr-card.pr-hero{width:270px}.pr-details{margin-top:-24px}.pr-head{padding-top:32px}.pr-coinSigil{width:780px;height:780px}}
+
+/* Кнопки действий («Посмотреть», «Забрать», «Поделиться») — та же кнопка
+   концепта, но внутри панели: без внешних отступов и пониже ростом */
+.pr-cta-inline{width:100%;margin:10px 0 0;height:46px}
+
+/* Подсветка следующей закрытой карты по кнопке — код её звал, а правила не было */
+.pr-nudge{animation:pr-nudge-pulse .7s ease-out 2}
+@keyframes pr-nudge-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35)}}
+
+/* ⚠️ СИГИЛ ЛЕЗ В ШАПКУ. В концепте сцена была ровно 510px, и круг 900px
+   вылезал вверх ровно настолько, чтобы остаться за картой. У нас сцена
+   тянется на весь остаток экрана — центр круга уехал вверх, и орнамент
+   наполз на заголовок. Привязываем круг к КАРТЕ (она смещена на 66px вниз),
+   ограничиваем по высоте вида и гасим верхнюю кромку, чтобы шапка
+   оставалась чистой при любой высоте экрана */
+.pr-coinSigil{
+  width:min(210vw,900px);height:min(210vw,900px);
+  top:calc(50% + 66px);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 100%);
+  transform:translate3d(-50%,-50%,0);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+}
+
+/* ── «ГЕРОИЧЕСКИЙ» СЛОЙ (концепт v6-4, 09.08.2026) ────────────────────────
+   Три чисто декоративных слоя: свет за героем, пять лучей и световой
+   постамент под картой. Ни одной новой функции — всё живёт на тех же фазах
+   сцены, что уже есть. Цвета берут `--accent` и `--accent-2`, поэтому
+   настроение по редкости работает и здесь. */
+.pr-heroSky{position:absolute;inset:2% 0 10%;pointer-events:none;z-index:0;opacity:.95;background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--accent) 15%, rgba(255,247,229,.20)) 0%,transparent 34%),radial-gradient(circle at 50% 85%,rgba(255,228,182,.08) 0%,transparent 26%),linear-gradient(180deg,rgba(255,255,255,.02),transparent 22%,rgba(255,228,182,.03) 78%,rgba(0,0,0,.08) 100%)}
+.pr-heroBeams{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:visible}
+.pr-heroBeams span{position:absolute;left:50%;top:51%;width:120px;height:430px;transform:translate(-50%,-8%) rotate(var(--rot)) scaleY(.3) scaleX(.76);transform-origin:50% 100%;border-radius:120px 120px 0 0;opacity:0;filter:blur(8px);mix-blend-mode:screen;will-change:opacity,transform;background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,color-mix(in srgb,var(--accent) 65%, white 35%) 26%,color-mix(in srgb,var(--accent-2) 35%, transparent) 56%,transparent 100%)}
+.pr-heroBeams span:nth-child(1){--rot:-26deg;margin-left:-124px}
+.pr-heroBeams span:nth-child(2){--rot:-12deg;margin-left:-60px}
+.pr-heroBeams span:nth-child(3){--rot:0deg;margin-left:0px}
+.pr-heroBeams span:nth-child(4){--rot:12deg;margin-left:60px}
+.pr-heroBeams span:nth-child(5){--rot:26deg;margin-left:124px}
+.pr-scene.pr-revealing .pr-heroBeams span{animation:pr-beamRise 1220ms ease-out both}
+.pr-scene.pr-revealing .pr-heroBeams span:nth-child(2),.pr-scene.pr-revealing .pr-heroBeams span:nth-child(4){animation-delay:70ms}
+.pr-scene.pr-revealing .pr-heroBeams span:nth-child(3){animation-delay:120ms}
+.pr-scene.pr-phase-signature .pr-heroBeams span{opacity:.14;transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1)}
+.pr-heroPedestal{position:absolute;left:50%;bottom:34px;width:340px;height:100px;transform:translateX(-50%);pointer-events:none;z-index:2;border-radius:50%;opacity:.72;background:radial-gradient(ellipse at center,rgba(255,249,240,.18) 0%,color-mix(in srgb,var(--accent) 34%, transparent) 34%,rgba(255,219,161,.08) 48%,transparent 74%);box-shadow:0 0 0 1px rgba(255,226,176,.08),0 18px 44px rgba(0,0,0,.22),inset 0 10px 20px rgba(255,255,255,.06);transition:opacity .7s ease,transform .7s var(--ease)}
+.pr-scene.pr-revealing .pr-heroPedestal{opacity:.92;transform:translateX(-50%) scale(1.05)}
+.pr-scene.pr-phase-signature .pr-heroPedestal{opacity:.98;transform:translateX(-50%) scale(1.08)}
+#pr-stage[data-pr-theme="light"] .pr-heroBeams span{mix-blend-mode:hard-light;background:linear-gradient(180deg,rgba(255,255,255,.18) 0%,color-mix(in srgb,var(--accent) 30%, white 70%) 22%,color-mix(in srgb,var(--accent-2) 78%, white 22%) 52%,transparent 100%)}
+#pr-stage[data-pr-theme="light"] .pr-heroPedestal{box-shadow:0 0 0 1px rgba(148,113,57,.12),0 16px 38px rgba(118,89,42,.12),inset 0 10px 20px rgba(255,255,255,.2)}
+@keyframes pr-beamRise{0%{opacity:0;transform:translate(-50%,4%) rotate(var(--rot)) scaleY(.24) scaleX(.72)}16%{opacity:.16}42%{opacity:.56}100%{opacity:.14;transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1)}}
+
+/* ── ПОСАДКА КОНЦЕПТА В ПРИЛОЖЕНИЕ (09.08.2026) ──────────────────────────
+   Концепт был МАКЕТОМ НА СТРАНИЦЕ: панель 440×760 лежала по центру белого
+   поля, вокруг оставался воздух. Внутри приложения экран сам себе страница —
+   поэтому панель растягивается на весь вид, а не висит узкой колонкой.
+   Пропорции и внутренние отступы концепта при этом не трогаем. */
+.pr-stage{min-height:100vh;min-height:100dvh;padding:0;display:block}
+.pr-shell{
+  width:100%;max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;border-radius:0;
+  display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (min-width:560px){
+  /* На широком экране панель снова становится панелью — но по высоте
+     тянется во весь вид, иначе низ обрезается на ноутбуках */
+  .pr-stage{padding:16px 12px;display:grid;place-items:start center}
+  .pr-shell{border-radius:34px;min-height:calc(100vh - 32px);min-height:calc(100dvh - 32px)}
+}
+
+/* Сцена забирает остаток высоты вместо жёстких 510px: иначе на телефоне
+   голова + сцена + панель + кнопка не помещаются и экран уезжает в прокрутку */
+.pr-scene{height:auto;flex:1 1 auto;min-height:var(--pr-scene-min,330px);
+  display:flex;align-items:center;justify-content:center}
+.pr-head{flex:none}
+.pr-details{flex:none}
+.pr-cta{flex:none;margin-top:auto}
+
+/* ⚠️ ПОДЗАГОЛОВОК ДЁРГАЛ ВСЮ ШАПКУ. Он меняется по ходу вскрытия
+   («энергия собирается…» → «раскрытие начинается…» → «Осталось карт: 2»), и
+   строка то в одну, то в две — высота скакала, а вместе с ней прыгало всё
+   выше и ниже. Резервируем две строки и больше не двигаемся */
+.pr-sub{min-height:2.8em;display:flex;align-items:center;justify-content:center}
+
+/* ⚠️ РАЗМЕР КАРТ — ОТ ЭКРАНА, А НЕ ЖЁСТКИЕ ПИКСЕЛИ. В концепте панель была
+   ровно 440px, и 174/286px читались правильно. В приложении ширина любая:
+   на широком экране те же пиксели выглядели крошечными посреди пустоты.
+   Карта занимает долю ширины панели и упирается в потолок по высоте сцены */
+.pr-card{width:clamp(150px,38vw,190px)}
+.pr-card.pr-hero{width:clamp(270px,64vw,330px)}
+@media (min-width:560px){
+  .pr-card{width:174px}
+  .pr-card.pr-hero{width:300px}
+}
+/* На низких экранах сначала ужимаем воздух, а не саму главную карту. */
+@media (max-height:760px){
+  .pr-card{width:clamp(138px,33vw,158px)}
+  .pr-card.pr-hero{width:clamp(250px,58vw,286px)}
+  .pr-scene{--pr-scene-min:305px}
+  .pr-head{padding-top:20px}
+  .pr-details{margin-top:-22px}
+}
+@media (max-height:640px){
+  .pr-card{width:clamp(126px,31vw,145px)}
+  .pr-card.pr-hero{width:clamp(228px,54vw,254px)}
+  .pr-scene{--pr-scene-min:270px}
+  .pr-head{padding-top:16px}
+  .pr-title{font-size:28px}
+  .pr-sub{margin-top:7px}
+}
+@media (max-width:360px), (max-height:600px){
+  .pr-heroBeams span{filter:blur(6px)}
+  .pr-flash{filter:blur(28px)}
+}
+
+/* ⚠️⚠️ ГЛАВНАЯ ПРИЧИНА 1-2 КАДРОВ В СЕКУНДУ НА ДИОНИСЕ (09.08.2026).
+   Волна шла анимацией АТРИБУТА `r` у круга внутри SVG-маски. Радиус — это
+   ГЕОМЕТРИЯ: на каждом кадре браузер заново считает форму маски и заново
+   растрирует ВЕСЬ замаскированный орнамент (у Диониса это сотни обведённых
+   путей). Отсюда и падение до слайд-шоу — при этом число узлов почти ни при
+   чём, что и объясняет, почему прошлые две оптимизации не помогли.
+   ЛЕЧЕНИЕ: радиус фиксированный, а растёт круг ПРЕОБРАЗОВАНИЕМ. Масштаб не
+   меняет геометрию — его умеет композитор, растрировать заново нечего.
+   Выглядит один в один: 100 × 0.26 = 26 и 100 × 7.6 = 760, ровно прежние
+   крайние значения. `transform-box:fill-box` заставляет отсчитывать
+   преобразование от самой фигуры, иначе центр уедет. */
+.pr-coinWaveMaskDisc{transform-box:fill-box;transform-origin:50% 50%}
+.pr-scene.pr-phase-impact .pr-coinWaveMaskDisc{animation:pr-coinMaskScale 1320ms cubic-bezier(.14,.80,.18,1) both}
+@keyframes pr-coinMaskScale{0%{transform:scale(.26);opacity:0}10%{opacity:1}100%{transform:scale(7.6);opacity:0}}
+
+/* Слои волны заранее выносим на свой слой композитора */
+.pr-coinWaveGroup,.pr-coinWaveAura{will-change:opacity,transform}
+
+/* ⚠️ РЕЖИМ НАЛОЖЕНИЯ И РАЗМЫТИЕ — ВТОРАЯ ПО СТОИМОСТИ ВЕЩЬ НА ТЕЛЕФОНЕ.
+   `mix-blend-mode` заставляет браузер смешивать слой с тем, что под ним,
+   на каждом кадре, а `blur` пересчитывает пиксели. На узком экране гасим:
+   сцена и так плотная, потеря почти не читается, а кадры возвращаются */
+@media (max-width:559px){
+  .pr-coinWaveGroup{mix-blend-mode:normal}
+  .pr-fx{mix-blend-mode:normal}
+  .pr-heroBeams span{mix-blend-mode:normal;filter:blur(6px)}
+  .pr-flash{filter:blur(22px)}
+}
+
+/* Кнопка закрытия ниже: в мини-аппе на неё сверху налезают часы и собственные
+   кнопки Telegram, поэтому отсчитываем от безопасной зоны, а не от нуля */
+.pr-close{top:calc(env(safe-area-inset-top,0px) + var(--safe-top,0px) + 34px)}
+
+/* ⚠️⚠️ ЭТОТ БЛОК ДОЛЖЕН ОСТАВАТЬСЯ ПОСЛЕДНИМ СРЕДИ ПРАВИЛ ЭКРАНА.
+   Второй раз подряд положил его выше и получил, что правила концепта
+   перебивают его обратно. Ниже — только общие правила приложения.
+
+   ⚠️ НАСТОЯЩАЯ ПРИЧИНА НАЛОЖЕНИЯ — СЦЕНЕ БЫЛА ЗАДАНА МИНИМАЛЬНАЯ ВЫСОТА.
+   `min-height:330px` не давал ей сжиматься, и когда внизу появилась вторая
+   кнопка («Похвастаться картой»), колонка перестала помещаться: панель лезла
+   на карту, а главная кнопка уезжала ниже видимой части — «пропадала».
+   Сцена ОБЯЗАНА уступать место панели и кнопке, поэтому `min-height:0`.
+   (Попытка привязать размер карты к высоте сцены была неверной: карта тогда
+   зависела от того, сколько места осталось, и размеры прыгали. Откачено.) */
+.pr-scene{min-height:0;flex:1 1 auto}
+.pr-details{margin-top:0}
+/* Кнопке нужен свой воздух, а не «всё оставшееся место» */
+.pr-cta{margin-top:12px}
+
+
+</style>
+<style id="lab-fx-css"></style>
+</head>
+<body>
+
+<div id="pr-stage" data-pr-theme="neutral">
+  <main class="pr-stage">
+    <section class="pr-shell">
+      <img class="pr-tex pr-light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true">
+      <img class="pr-tex pr-dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true">
+      <img class="pr-frame pr-light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true">
+      <img class="pr-frame pr-dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true">
+      <button class="pr-close" aria-label="Закрыть" onclick="closePackReveal()">&times;</button>
+      <!-- ⚠️ НЕ <header>: в приложении есть глобальное правило
+           header{display:flex;justify-content:space-between} — оно раскладывало
+           надпись, заголовок и подпись в ОДНУ СТРОКУ. Здесь простой div -->
+      <div class="pr-head">
+        <div class="pr-eyebrow">Пантеон · подарок</div>
+        <div class="pr-title">Твой пак</div>
+        <div class="pr-sub" id="pr-sub">Открой карту, чтобы узнать награду</div>
+      </div>
+      <div class="pr-scene" id="pr-scene">
+        <div class="pr-aura" id="pr-aura"></div>
+        <div class="pr-ring" aria-hidden="true"></div>
+        <div class="pr-flash" aria-hidden="true"></div>
+        <div class="pr-coinSigil"><svg id="pr-sigil-svg" viewBox="0 0 1000 1000" aria-hidden="true"></svg></div>
+        <div class="pr-heroSky" aria-hidden="true"></div>
+        <div class="pr-heroBeams" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="pr-heroPedestal" aria-hidden="true"></div>
+        <div id="pr-pack"></div>
+      </div>
+      <div class="pr-details" id="pr-details">
+        <div class="pr-stats">
+          <div class="pr-stat"><div class="pr-label">Бог</div><div class="pr-value" id="pr-god">—</div></div>
+          <div class="pr-stat"><div class="pr-label">Редкость</div><div class="pr-value" id="pr-rarity">—</div></div>
+          <div class="pr-stat"><div class="pr-label">Награда</div><div class="pr-value" id="pr-gain">—</div></div>
+        </div>
+        <div class="pr-ability">
+          <div class="pr-ability-icon">&#10022;</div>
+          <div><strong id="pr-ability-title">—</strong><p id="pr-ability-text">—</p></div>
+        </div>
+        <div id="pr-actions"></div>
+      </div>
+      <button class="pr-cta" id="pr-cta" onclick="prCta()">Открой карту</button>
+    </section>
+  </main>
+</div>
+
+
+<div id="lab-panel">
+  <div class="lab-head">
+    <div class="lab-fps" id="lab-fps">кадры <b>—</b></div>
+    <button class="lab-btn primary" onclick="labOpen()">Другой пак</button>
+    <button class="lab-btn" onclick="labReplay()">Ещё раз</button>
+    <button class="lab-btn" onclick="labAll(true)">Всё вкл</button>
+    <button class="lab-btn" onclick="labAll(false)">Всё выкл</button>
+    <button class="lab-btn" onclick="document.getElementById('lab-panel').classList.toggle('min')">Свернуть</button>
+    <span class="lab-god" id="lab-god"></span>
+  </div>
+  <div class="lab-body">
+    <div class="lab-grid" id="lab-switches"></div>
+    <div class="lab-note">
+      Кадры считаются постоянно; в скобках — худшее значение за последнее вскрытие.
+      Выключай по одному сверху вниз и смотри, где худшее число подскакивает —
+      это и есть виновник. «Запекание сигила» выключено = маска едет по живому
+      вектору, как было до починки: удобно убедиться, что дело именно в нём.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Заглушки того, чем экран пользуется из приложения ─────────────────── */
+const API_URL = '';
+let telegramId = 1;
+const CARD_RARITY_LABELS = {common:'Обычная',uncommon:'Необычная',rare:'Редкая',epic:'Эпическая',legendary:'Легендарная'};
+function escapeHtml(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function jsArg(v){ return JSON.stringify(String(v)); }
+function t(k){ return k === 'share.badge' ? 'Похвастаться знаком' : 'Похвастаться картой'; }
+function showToast(m){ console.log('toast:', m); }
+function openUrl(u){ console.log('открыть:', u); }
+function claimCard(){ console.log('забрать'); }
+function shareCollectionCard(){ console.log('поделиться'); }
+function loadCards(){}
+function loadProfile(){}
+function ownedMap(){ return {}; }
+let cardCatalog = [];
+let myCards = { unopened_packs: [] };
+
+/* Сервер здесь не нужен: карта уже известна, отдаём её как есть */
+async function apiRequest(url, opt){
+  const id = JSON.parse(opt.body).card_id;
+  const card = LAB_BY_ID[id];
+  return { card: card, points_awarded: card.effect_points || 0, claimed: false };
+}
+
+const SIGIL_SYMBOLS = {
+  zeus: '<path d="M500 388 L540 458 L504 454 L534 530 L474 470 L506 474 Z"/><path d="M458 422 C474 406 490 398 500 396"/><path d="M542 422 C526 406 510 398 500 396"/>',
+  hera: '<path d="M500 404 C554 438 554 522 500 556 C446 522 446 438 500 404 Z"/><circle cx="500" cy="480" r="24"/><path d="M500 520 L500 578"/><path d="M470 432 C486 416 514 416 530 432"/>',
+  poseidon: '<path d="M500 392 L500 578"/><path d="M470 422 L500 392 L530 422"/><path d="M486 408 L486 468"/><path d="M514 408 L514 468"/><path d="M450 548 C470 528 490 568 510 548 C530 528 550 568 570 548"/>',
+  hades: '<ellipse cx="500" cy="488" rx="66" ry="84"/><path d="M458 452 C470 430 490 418 500 418 C510 418 530 430 542 452"/><path d="M478 520 C492 538 508 538 522 520"/><path d="M470 566 C486 546 514 546 530 566"/><path d="M446 454 C430 470 422 492 424 516"/><path d="M554 454 C570 470 578 492 576 516"/>',
+  athena: '<path d="M500 402 L560 520 L500 490 L440 520 Z"/><path d="M500 492 L500 590"/><path d="M468 382 H532"/><path d="M484 364 H516"/><path d="M472 560 C490 542 510 542 528 560"/>',
+  apollo: '<circle cx="500" cy="476" r="58"/><path d="M500 390 L500 350 M500 602 L500 562 M412 476 L372 476 M628 476 L588 476 M438 414 L410 386 M562 414 L590 386 M438 538 L410 566 M562 538 L590 566"/><path d="M468 456 C488 434 512 434 532 456"/>',
+  artemis: '<path d="M536 422 C512 404 480 410 468 438 C454 470 468 520 504 548 C470 536 444 504 442 468 C440 430 468 396 510 394 C520 394 530 398 536 422 Z"/><path d="M436 548 L564 420"/><path d="M548 420 L564 420 L564 436"/><circle cx="592" cy="404" r="10"/>',
+  aphrodite: '<path d="M430 514 C446 444 484 412 500 412 C516 412 554 444 570 514"/><path d="M452 514 C470 484 486 470 500 470 C514 470 530 484 548 514"/><path d="M470 548 C482 560 492 566 500 566 C508 566 518 560 530 548"/><circle cx="500" cy="442" r="18"/>',
+  ares: '<circle cx="500" cy="490" r="62"/><path d="M500 392 L500 430 M466 414 L534 414"/><path d="M440 556 L560 424"/><path d="M560 424 L556 452 M560 424 L532 428"/><path d="M560 556 L440 424"/><path d="M440 424 L444 452 M440 424 L468 428"/>',
+  demeter: '<path d="M500 430 L500 580"/><path d="M500 450 C540 430 548 480 500 490"/><path d="M500 490 C455 472 450 530 500 542"/><path d="M468 432 C448 448 444 476 462 494"/><path d="M532 432 C552 448 556 476 538 494"/><circle cx="500" cy="390" r="22"/>',
+  hermes: '<path d="M500 402 L500 580"/><path d="M470 430 C486 414 514 414 530 430"/><path d="M468 468 C486 484 514 484 532 468"/><path d="M456 414 C438 412 426 400 420 386"/><path d="M544 414 C562 412 574 400 580 386"/><path d="M470 548 C486 562 514 562 530 548"/>',
+  dionysus: '<path d="M500 418 C532 418 556 448 556 480 C556 518 530 550 500 566 C470 550 444 518 444 480 C444 448 468 418 500 418 Z"/><circle cx="480" cy="458" r="12"/><circle cx="520" cy="458" r="12"/><circle cx="468" cy="492" r="12"/><circle cx="500" cy="496" r="12"/><circle cx="532" cy="492" r="12"/><path d="M500 418 C500 398 514 386 532 382"/>',
+  hephaestus: '<path d="M446 540 L548 540 L566 492 L474 492 Z"/><path d="M474 492 L500 424 L528 492"/><path d="M430 430 L490 430 L490 462"/><path d="M560 418 L582 440 L542 480"/><path d="M560 418 L578 400"/>',
+  plutus: '<circle cx="500" cy="482" r="82"/><path d="M500 438 V526"/><path d="M466 458 C480 438 520 438 534 458 C546 474 540 496 520 504 C506 510 494 512 480 524"/><path d="M458 542 C474 556 492 562 510 562 C532 562 548 552 556 538"/><circle cx="500" cy="482" r="22"/>',
+  prometheus: '<path d="M500 398 L500 582"/><path d="M468 442 C470 416 486 398 500 398 C514 398 530 416 532 442"/><path d="M500 402 C528 420 542 452 526 474 C516 488 500 492 500 520 C500 492 484 488 474 474 C458 452 472 420 500 402 Z"/>',
+  momus: '<path d="M450 452 C466 426 494 412 524 418 C548 424 564 446 564 472 C564 498 548 518 524 530 C498 542 474 544 454 562"/><path d="M460 456 C484 468 512 468 536 456"/><path d="M468 522 C488 512 510 510 534 514"/><circle cx="482" cy="446" r="6"/><circle cx="530" cy="442" r="6"/><path d="M478 392 L542 392 L510 424 Z"/>',
+  heracles: '<path d="M448 560 C440 498 450 446 476 414 C488 400 500 396 512 414 C538 446 556 498 552 560"/><path d="M474 430 C490 444 510 444 526 430"/><path d="M472 480 C490 492 510 492 528 480"/><path d="M486 528 C496 536 504 536 514 528"/><path d="M444 456 C428 442 420 426 420 408"/><path d="M556 456 C572 442 580 426 580 408"/>',
+  theseus: '<path d="M500 400 L562 434 L562 522 L500 560 L438 522 L438 434 Z"/><path d="M470 448 L530 448"/><path d="M500 448 L500 560"/><path d="M456 520 L544 520"/><path d="M470 400 L470 372 L530 372 L530 400"/>',
+  perseus: '<path d="M500 404 L542 444 L500 484 L458 444 Z"/><path d="M500 484 L500 572"/><path d="M478 572 H522"/><path d="M442 454 C426 438 418 420 418 400"/><path d="M558 454 C574 438 582 420 582 400"/><path d="M470 420 C488 408 512 408 530 420"/>',
+};
+
+const SIGIL_GLYPHS = {
+  zeus: '<path d="M0 -18 L10 -4 L2 -4 L10 12 L-6 -2 L2 -2 Z"/>',
+  hera: '<path d="M0 -16 C11 -5 10 11 0 17 C-10 11 -11 -5 0 -16 Z M0 -2 a4 4 0 1 0 .1 0"/>',
+  poseidon: '<path d="M0 -18 L0 14 M-8 -8 L0 -18 L8 -8 M-6 0 L-6 10 M6 0 L6 10"/>',
+  hades: '<path d="M0 -16 C10 -12 14 -2 14 8 C14 16 8 22 0 24 C-8 22 -14 16 -14 8 C-14 -2 -10 -12 0 -16 Z"/><path d="M-8 0 C-4 -4 4 -4 8 0"/><path d="M-6 10 C-2 14 2 14 6 10"/>',
+  athena: '<path d="M0 -17 L8 1 L0 -4 L-8 1 Z M0 -4 L0 15"/>',
+  apollo: '<circle cx="0" cy="0" r="8"/><path d="M0 -18 L0 -10 M0 10 L0 18 M-18 0 L-10 0 M10 0 L18 0 M-13 -13 L-8 -8 M13 -13 L8 -8 M-13 13 L-8 8 M13 13 L8 8"/>',
+  artemis: '<path d="M6 -15 C-4 -16 -11 -6 -11 4 C-11 11 -6 17 0 17 C-5 13 -7 5 -5 -3 C-3 -11 1 -14 6 -15 Z"/><path d="M-14 12 L12 -14 M5 -14 H12 V-7"/>',
+  aphrodite: '<path d="M0 -16 C10 -6 13 2 0 16 C-13 2 -10 -6 0 -16 Z"/><path d="M-12 4 C-6 0 -2 0 0 4 C2 0 6 0 12 4"/>',
+  ares: '<path d="M0 -17 L9 -3 L0 -6 L-9 -3 Z"/><circle cx="0" cy="7" r="8"/>',
+  demeter: '<path d="M0 -16 L0 16 M0 -8 C10 -13 12 -2 0 2 M0 2 C-10 -3 -12 8 0 12"/>',
+  hermes: '<path d="M0 -16 L0 14 M-10 -2 C-16 -4 -18 -10 -20 -14 M10 -2 C16 -4 18 -10 20 -14 M-8 2 C-3 8 3 8 8 2"/>',
+  dionysus: '<circle cx="-5" cy="-4" r="4"/><circle cx="5" cy="-4" r="4"/><circle cx="-8" cy="5" r="4"/><circle cx="0" cy="8" r="4"/><circle cx="8" cy="5" r="4"/><path d="M0 -14 C0 -20 5 -24 10 -24"/>',
+  hephaestus: '<path d="M-12 8 H10 L14 -2 H-8 Z"/><path d="M2 -16 L14 -4 L8 2"/>',
+  plutus: '<circle cx="0" cy="0" r="10"/><path d="M0 -6 V6"/><path d="M-8 -2 C-4 -8 4 -8 8 -2 C10 2 6 6 0 8 C-6 10 -8 14 -8 18"/>',
+  prometheus: '<path d="M0 -14 C8 -8 10 -1 5 4 C2 7 0 8 0 12 C0 8 -2 7 -5 4 C-10 -1 -8 -8 0 -14 Z"/>',
+  momus: '<path d="M-10 -8 C-5 -14 5 -14 10 -8 C6 -2 2 -1 -2 1 C-6 3 -8 6 -10 10"/><circle cx="-3" cy="-6" r="2.2"/><circle cx="4" cy="-6" r="2.2"/><path d="M-12 -16 H12 L6 -10 H-6 Z"/>',
+  heracles: '<path d="M-10 14 C-14 0 -10 -12 -2 -18 C2 -22 6 -22 10 -18 C18 -12 22 0 18 14"/><path d="M-6 -4 C-2 0 2 0 6 -4"/>',
+  theseus: '<path d="M0 -16 L14 -8 L14 8 L0 16 L-14 8 L-14 -8 Z"/><path d="M-6 -4 H6 M0 -4 V16"/>',
+  perseus: '<path d="M0 -16 L12 -4 L0 8 L-12 -4 Z"/><path d="M0 8 V18 M-6 18 H6"/><path d="M-14 -6 C-18 -10 -20 -14 -20 -18 M14 -6 C18 -10 20 -14 20 -18"/>',
+};
+
+/* ── СИГИЛ БОГА НА ФОНЕ ВСКРЫТИЯ (09.08.2026) ──────────────────────────────
+   Монета-сигил из концепта: кольца греческого орнамента, повторяемый глиф и
+   центральный символ. На вскрытии по ней проходит голографическая волна.
+
+   ⚠️ ПОЧЕМУ ЭТО ВЕКТОР, А НЕ КАРТИНКА (не «оптимизировать» в png): волна
+   работает перерисовкой ТЕХ ЖЕ путей цветным штрихом под круглой маской,
+   которая расходится от центра. С растром так нельзя. Рубашки и текстуры мы
+   как раз запекли — а сигил обязан остаться живым.
+
+   Ключи латиницей, потому что в базе бог хранится русским именем: сопоставление
+   в GOD_SIGIL_KEYS. Незнакомый бог получает нейтральный символ, а не пустоту. */
+
+
+const GOD_SIGIL_KEYS = {
+  'Зевс':'zeus', 'Гера':'hera', 'Посейдон':'poseidon', 'Аид':'hades',
+  'Афина':'athena', 'Аполлон':'apollo', 'Артемида':'artemis', 'Афродита':'aphrodite',
+  'Арес':'ares', 'Деметра':'demeter', 'Гермес':'hermes', 'Дионис':'dionysus',
+  'Гефест':'hephaestus', 'Плутос':'plutus', 'Прометей':'prometheus', 'Мом':'momus',
+  'Геракл':'heracles', 'Тесей':'theseus', 'Персей':'perseus'
+};
+
+/* Тяжёлые эффекты (вторая маскированная копия орнамента, полный залп частиц)
+   оставляем там, где есть запас — на широком экране. На телефоне режем: там
+   всё это перерисовывается каждый кадр и заметно роняет плавность */
+function prHeavyEffectsAllowed(){
+  try { return window.matchMedia('(min-width:560px)').matches; } catch(e){ return false; }
+}
+
+function sigilKey(god){
+  return GOD_SIGIL_KEYS[(god || '').trim()] || '';
+}
+
+function sigilSymbol(key, stroke){
+  const wrap = inner => '<g style="stroke:' + stroke + '" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
+  const S = SIGIL_SYMBOLS[key];
+  return wrap(S || '<circle cx="500" cy="500" r="82"/><path d="M500 418 L500 582"/>');
+}
+
+function sigilGlyph(key){
+  return SIGIL_GLYPHS[key] || '<circle cx="0" cy="0" r="8"/>';
+}
+
+/* Сколько глифов на каждом кольце, на каком радиусе и в каком масштабе.
+   ⚠️ ЧИСЛА, А НЕ РИСУНОК: у широких глифов колец должно быть МЕНЬШЕ, иначе
+   они налезают друг на друга и кольцо превращается в грязь. Именно этим
+   лечился Гермес — его глиф самый широкий из всех */
+const SIGIL_RINGS = {
+  zeus:[[20,352,.94],[30,306,.78],[40,242,.58]],
+  hera:[[24,350,.92],[36,302,.76],[44,238,.58]],
+  poseidon:[[18,352,.96],[27,306,.78],[36,242,.60]],
+  hades:[[18,350,.92],[27,302,.76],[36,240,.58]],
+  athena:[[24,350,.92],[36,302,.76],[44,238,.58]],
+  apollo:[[24,350,.92],[32,300,.72],[40,236,.56]],
+  artemis:[[22,352,.94],[34,304,.76],[42,240,.58]],
+  aphrodite:[[22,350,.92],[32,302,.74],[40,238,.56]],
+  ares:[[20,350,.92],[30,302,.74],[38,238,.56]],
+  demeter:[[24,350,.92],[36,302,.76],[44,238,.58]],
+  hermes:[[16,352,.88],[24,304,.72],[30,240,.54]],
+  dionysus:[[18,352,.94],[27,304,.76],[36,240,.58]],
+  hephaestus:[[20,350,.92],[30,302,.74],[40,238,.56]],
+  plutus:[[22,352,.94],[32,304,.76],[40,240,.58]],
+  prometheus:[[20,350,.92],[30,302,.74],[38,238,.56]],
+  momus:[[22,350,.92],[32,302,.74],[40,238,.56]],
+  heracles:[[18,352,.94],[27,304,.76],[36,240,.58]],
+  theseus:[[22,350,.92],[32,302,.74],[40,238,.56]],
+  perseus:[[20,352,.94],[30,304,.76],[38,240,.58]]
+};
+
+function sigilRing(key, stroke, n, radius, scale){
+  const mark = sigilGlyph(key);
+  let out = '';
+  for (let i = 0; i < n; i++){
+    out += '<g transform="translate(500 500) rotate(' + (i * 360 / n) + ') translate(0 -' + radius + ') scale(' + scale + ')"'
+        + ' style="stroke:' + stroke + '" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">'
+        + mark + '</g>';
+  }
+  return out;
+}
+
+/* Сколько фигур в одном повторяемом глифе. У Диониса это гроздь из десятка
+   кружков, у Зевса — одна молния: при одинаковом числе глифов на кольце
+   разница в весе получается кратная */
+const SIGIL_GLYPH_COST = {};
+function sigilGlyphCost(key){
+  if (SIGIL_GLYPH_COST[key] == null){
+    SIGIL_GLYPH_COST[key] = ((sigilGlyph(key) || '').match(/<(?:path|circle|ellipse|rect|line)\b/g) || []).length || 1;
+  }
+  return SIGIL_GLYPH_COST[key];
+}
+
+/* ⚠️ ПЛОТНОСТЬ КОЛЕЦ — ПО ВЕСУ ГЛИФА (09.08.2026, лечение тормозов).
+   Число глифов на кольце задано в SIGIL_RINGS одинаково для всех, но у сложных
+   глифов это давало кратно больше фигур: у Диониса орнамент выходил вдвое
+   тяжелее среднего, и экран заметно тормозил на телефоне. Держим БЮДЖЕТ ФИГУР
+   на кольцо: у простого глифа всё как было, у сложного колец столько же, но
+   глифов в них меньше. Внешне это ровно та же плотность рисунка — у сложного
+   глифа фигуры и так сливались (та же болезнь, что чинили Гермесу руками). */
+const SIGIL_RING_BUDGET = 90;
+function sigilGlyphRings(key, stroke){
+  const cost = sigilGlyphCost(key);
+  return (SIGIL_RINGS[key] || SIGIL_RINGS.hera)
+    .map(function(r){
+      const n = Math.max(8, Math.min(r[0], Math.round(SIGIL_RING_BUDGET / cost)));
+      return sigilRing(key, stroke, n, r[1], r[2]);
+    }).join('');
+}
+
+function sigilDeityDetail(key, stroke, soft){
+  const rep = function(n, radius, markup, sw, op){
+    sw = sw == null ? 2.4 : sw; op = op == null ? .7 : op;
+    return Array.from({length:n}, function(_,i){
+      return '<g transform="translate(500 500) rotate(' + ((360/n)*i) + ') translate(0 -' + radius + ')"'
+        + ' style="stroke:' + stroke + '" stroke-width="' + sw + '" opacity="' + op + '" fill="none"'
+        + ' stroke-linecap="round" stroke-linejoin="round">' + markup + '</g>';
+    }).join('');
+  };
+  const dots = function(n, radius, r, op){
+    op = op == null ? .45 : op;
+    return Array.from({length:n}, function(_,i){
+      const a=(Math.PI*2*i)/n-Math.PI/2, x=500+Math.cos(a)*radius, y=500+Math.sin(a)*radius;
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r + '" fill="' + soft + '" opacity="' + op + '"/>';
+    }).join('');
+  };
+  switch(key){
+    case 'zeus': return rep(8,336,'<path d="M0 -14 L8 0 L0 0 L8 14 L-6 -2 L0 -2 Z"/>',2.1,.58)+dots(16,188,3,.28);
+    case 'poseidon': return rep(12,334,'<path d="M-10 4 C-5 -2 0 -2 5 4 C10 10 15 10 20 4"/>',2,.52)+rep(6,188,'<path d="M0 -12 L0 12 M-7 -3 L0 -12 L7 -3"/>',1.8,.38);
+    case 'hades': return rep(10,332,'<path d="M0 -14 C9 -10 13 -2 13 7 C13 14 8 20 0 22 C-8 20 -13 14 -13 7 C-13 -2 -9 -10 0 -14 Z"/><path d="M-7 2 C-3 -2 3 -2 7 2"/>',1.8,.5)+rep(8,188,'<path d="M-9 10 C-4 4 4 4 9 10"/>',1.7,.3)+dots(14,146,2.2,.22);
+    case 'apollo': return rep(16,340,'<path d="M0 -16 L3 -6 L13 -3 L3 0 L0 10 L-3 0 L-13 -3 L-3 -6 Z"/>',1.8,.56)+dots(24,196,2.8,.28);
+    case 'artemis': return rep(12,336,'<path d="M5 -12 C-3 -12 -8 -5 -8 2 C-8 8 -3 13 2 13 C-2 10 -3 4 -2 -1 C-1 -7 1 -10 5 -12 Z"/><circle cx="13" cy="-10" r="2"/>',1.8,.52)+dots(18,194,2.4,.24);
+    case 'aphrodite': return rep(12,332,'<path d="M0 -12 C8 -4 10 0 0 12 C-10 0 -8 -4 0 -12 Z"/>',1.9,.52)+dots(24,194,3,.32);
+    case 'ares': return rep(12,334,'<path d="M0 -14 L7 -2 L0 -5 L-7 -2 Z"/><circle cx="0" cy="8" r="6"/>',1.8,.5)+rep(6,190,'<path d="M-10 0 H10"/>',1.8,.28);
+    case 'demeter': return rep(12,336,'<path d="M0 -14 L0 14 M0 -6 C8 -10 9 -2 0 2 M0 2 C-8 -1 -9 8 0 12"/>',1.8,.52)+dots(18,192,2.4,.24);
+    case 'hermes': return rep(14,336,'<path d="M0 -10 L0 10 M-10 -2 C-14 -4 -16 -8 -18 -12 M10 -2 C14 -4 16 -8 18 -12"/>',1.8,.5)+dots(20,196,2.2,.26);
+    case 'dionysus': return rep(12,334,'<circle cx="-4" cy="-4" r="3.5"/><circle cx="4" cy="-4" r="3.5"/><circle cx="0" cy="4" r="3.5"/><path d="M0 -12 C0 -18 5 -20 8 -20"/>',1.7,.5)+rep(8,190,'<path d="M-8 6 C-2 -2 2 -2 8 6"/>',1.7,.3);
+    case 'hephaestus': return rep(10,334,'<path d="M-8 6 H7 L10 -2 H-5 Z"/><path d="M0 -14 L10 -4 L5 1"/>',1.8,.52)+dots(20,194,2.2,.24);
+    case 'plutus': return rep(12,336,'<circle cx="0" cy="0" r="8"/><path d="M0 -4 V4"/><path d="M-6 -1 C-3 -5 3 -5 6 -1 C8 2 5 5 0 7"/>',1.8,.5)+rep(8,194,'<path d="M-9 6 C-3 0 3 0 9 6"/>',1.7,.28)+dots(16,150,2.4,.24);
+    case 'prometheus': return rep(12,334,'<path d="M0 -14 C8 -8 10 -1 5 4 C2 7 0 8 0 12 C0 8 -2 7 -5 4 C-10 -1 -8 -8 0 -14 Z"/>',1.8,.52)+dots(16,196,2.4,.24);
+    case 'momus': return rep(12,334,'<path d="M-8 -6 C-4 -12 4 -12 8 -6 C5 0 1 1 -2 3 C-5 5 -7 7 -8 10"/><circle cx="-2" cy="-5" r="1.8"/><circle cx="4" cy="-5" r="1.8"/><path d="M-10 -14 H10"/>',1.7,.5)+dots(18,192,2.2,.22);
+    case 'athena': return rep(12,336,'<path d="M0 -14 L7 -1 L0 -4 L-7 -1 Z"/><path d="M0 -4 L0 12"/>',1.8,.52)+rep(8,192,'<path d="M-8 6 C-2 -2 2 -2 8 6"/>',1.7,.3);
+    case 'heracles': return rep(10,334,'<path d="M-8 10 C-11 -2 -8 -12 -2 -16 C1 -18 4 -18 8 -16 C14 -12 16 -2 12 10"/><path d="M-4 -4 C-1 -1 1 -1 4 -4"/>',1.8,.5)+rep(8,188,'<path d="M-8 8 C-3 2 3 2 8 8"/>',1.7,.28)+dots(14,146,2.2,.22);
+    case 'theseus': return rep(12,334,'<path d="M0 -12 L10 -6 L10 6 L0 12 L-10 6 L-10 -6 Z"/><path d="M-4 -2 H4 M0 -2 V12"/>',1.8,.52)+rep(6,190,'<path d="M-10 0 H10"/>',1.7,.28)+dots(18,194,2.2,.22);
+    case 'perseus': return rep(12,336,'<path d="M0 -12 L9 -3 L0 6 L-9 -3 Z"/><path d="M0 6 V14 M-4 14 H4"/><path d="M-12 -4 C-14 -7 -15 -10 -15 -12 M12 -4 C14 -7 15 -10 15 -12"/>',1.7,.52)+dots(18,194,2.2,.22);
+    case 'hera':
+    default: return rep(12,336,'<path d="M0 -14 C9 -4 9 8 0 14 C-9 8 -9 -4 0 -14 Z"/><circle cx="0" cy="0" r="4"/>',1.8,.52)+dots(18,192,2.4,.24);
+  }
+}
+
+function sigilBands(stroke, soft, key){
+  let ticks = '';
+  for (let i = 0; i < 54; i++){
+    const a = i * (360 / 54), long = (i % 3 === 0);
+    ticks += '<g transform="translate(500 500) rotate(' + a + ')"><path d="M0 -412 L0 -'
+          + (long ? 392 : 400) + ' M-' + (long ? 7 : 5) + ' -402 L' + (long ? 7 : 5) + ' -402"'
+          + ' style="stroke:' + soft + '" stroke-width="' + (long ? 2.2 : 1.7) + '" opacity="' + (long ? '.50' : '.34') + '"/></g>';
+  }
+  const circles = [[422,stroke,2.1,'.72',''],[406,soft,1.6,'.46','2 6'],[388,stroke,2,'.7','12 4 2 4'],
+    [364,soft,1.7,'.42','2 5'],[338,stroke,2,'.68',''],[320,soft,1.6,'.4','8 6 2 6'],
+    [292,stroke,1.95,'.66',''],[274,soft,1.55,'.38','2 5'],[246,stroke,1.9,'.64',''],
+    [224,soft,1.5,'.36','7 5'],[196,stroke,1.85,'.62',''],[174,soft,1.45,'.34','2 5'],
+    [144,stroke,1.8,'.6',''],[122,soft,1.4,'.32','6 5'],[98,stroke,1.7,'.58',''],[78,soft,1.35,'.30','2 4']];
+  return circles.map(function(c){
+    return '<circle cx="500" cy="500" r="' + c[0] + '" fill="none" style="stroke:' + c[1] + '" stroke-width="' + c[2]
+      + '" opacity="' + c[3] + '"' + (c[4] ? ' stroke-dasharray="' + c[4] + '"' : '') + '/>';
+  }).join('') + ticks + sigilDeityDetail(key || 'hera', stroke, soft);
+}
+
+function sigilLayer(key, stroke, soft){
+  return sigilBands(stroke, soft, key) + sigilGlyphRings(key, stroke) + sigilSymbol(key, soft);
+}
+
+/* Полная версия v8: gold-wave в dark и rainbow/holographic-wave в light.
+   Геометрия одна и та же для base/aura/wave, поэтому цвет буквально проходит
+   по тем же бороздкам, а не лежит отдельным пятном поверх сцены. */
+/* ⚠️⚠️ СИГИЛ ЗАПЕКАЕТСЯ В КАРТИНКУ ПРЯМО В БРАУЗЕРЕ (09.08.2026).
+
+   ПОЧЕМУ. Волна — это движущаяся маска поверх орнамента. Пока под маской
+   лежал ЖИВОЙ ВЕКТОР (сотни обведённых путей), браузер на каждом кадре
+   растрировал его заново, и на Дионисе экран падал до 1-2 кадров в секунду.
+   Ни дедупликация разметки, ни перевод анимации на масштаб этого не лечили:
+   дорога сама закраска вектора под маской, а не её причина.
+
+   ЧТО ДЕЛАЕМ. Собираем тот же самый рисунок в самостоятельный SVG-документ и
+   отдаём его как КАРТИНКУ (`<image>` с адресом-данными). Браузер растрирует её
+   ОДИН РАЗ и дальше двигает готовую текстуру — маска ездит по битмапу, а это
+   работа композитора. Рисунок при этом ровно тот же: та же функция
+   `sigilLayer`, те же цвета, те же градиенты.
+
+   ПОЧЕМУ НЕ ФАЙЛАМИ В РЕПОЗИТОРИИ. 19 персонажей × 2 слоя × 2 оформления это
+   под восемь десятков картинок и мегабайты навсегда. Здесь картинка живёт
+   ровно столько, сколько открыт экран, и весит ноль.
+
+   ⚠️ Цвета в адресе обязаны быть закодированы (`#` в data-URL начинает якорь),
+   поэтому `encodeURIComponent` на весь документ. */
+
+function prSigilImage(inner, defs){
+  const doc = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">'
+            + (defs || '') + inner + '</svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(doc);
+}
+
+function prRenderSigil(god, mood){
+  const svg = document.getElementById('pr-sigil-svg');
+  if (!svg) return;
+  const key = PR_FX.sigil ? sigilKey(god) : '';
+  if (!key){ svg.innerHTML = ''; return; }
+
+  const stage = prEl('pr-stage');
+  const appearance = (mood && mood.appearance) || stage.getAttribute('data-pr-theme') || 'dark';
+  const isLight = appearance === 'light';
+  const gold = isLight ? '#9f6e1d' : '#f0c977';
+  const pale = isLight ? '#c28d34' : '#ffe7b0';
+  const bright = isLight ? '#f0bf5a' : '#fff6da';
+  const waveStroke = isLight ? 'url(#sigHoloStroke)' : bright;
+  const waveSoft = isLight ? 'url(#sigHoloSoft)' : pale;
+  const auraStroke = isLight ? 'url(#sigHoloAura)' : bright;
+
+  // Градиенты переливов нужны ВНУТРИ запекаемого документа: он самостоятельный
+  // и до внешних определений не дотянется
+  const holoDefs = '<defs>'
+    + '<linearGradient id="sigHoloStroke" x1="0%" y1="0%" x2="100%" y2="100%">'
+    + '<stop offset="0%" stop-color="#ff4bd2"/><stop offset="14%" stop-color="#ff8b44"/>'
+    + '<stop offset="28%" stop-color="#fff35d"/><stop offset="42%" stop-color="#7cff6f"/>'
+    + '<stop offset="58%" stop-color="#32dbff"/><stop offset="74%" stop-color="#6e8dff"/>'
+    + '<stop offset="88%" stop-color="#bf78ff"/><stop offset="100%" stop-color="#ff72b4"/>'
+    + '</linearGradient>'
+    + '<linearGradient id="sigHoloSoft" x1="100%" y1="0%" x2="0%" y2="100%">'
+    + '<stop offset="0%" stop-color="#ffd3f1"/><stop offset="18%" stop-color="#ffd8b1"/>'
+    + '<stop offset="36%" stop-color="#fff3b5"/><stop offset="54%" stop-color="#b7ffbd"/>'
+    + '<stop offset="72%" stop-color="#b8f2ff"/><stop offset="88%" stop-color="#d2c7ff"/>'
+    + '<stop offset="100%" stop-color="#ffc4df"/></linearGradient>'
+    + '<linearGradient id="sigHoloAura" x1="0%" y1="100%" x2="100%" y2="0%">'
+    + '<stop offset="0%" stop-color="#ff39c6"/><stop offset="16%" stop-color="#ff8a31"/>'
+    + '<stop offset="32%" stop-color="#ffec4d"/><stop offset="48%" stop-color="#64ff70"/>'
+    + '<stop offset="64%" stop-color="#14d7ff"/><stop offset="82%" stop-color="#7c86ff"/>'
+    + '<stop offset="100%" stop-color="#cf72ff"/></linearGradient>'
+    + '</defs>';
+
+  // Два запечённых слоя: спокойный золотой и переливающийся
+  const wantAura = PR_FX.aura && prHeavyEffectsAllowed();
+  const baseSrc = PR_FX.bake ? prSigilImage(sigilLayer(key, gold, pale)) : '';
+  const waveSrc = PR_FX.bake ? prSigilImage(sigilLayer(key, waveStroke, waveSoft), holoDefs) : '';
+  const auraSrc = (PR_FX.bake && wantAura)
+    ? prSigilImage(sigilLayer(key, auraStroke, waveSoft), holoDefs) : '';
+
+  // При выключенном запекании кладём ЖИВОЙ вектор — так лаборатория показывает
+  // разницу между «маска ездит по картинке» и «маска ездит по сотням путей»
+  const vec = { 'pr-coinBase': [gold, pale], 'pr-coinWaveAura': [auraStroke, waveSoft],
+                'pr-coinWaveGroup': [waveStroke, waveSoft] };
+  const pic = function(cls, src, masked){
+    if (!PR_FX.bake){
+      const c = vec[cls];
+      return '<g class="' + cls + '"' + (masked ? ' mask="url(#sigMask)" opacity="0"' : '') + '>'
+        + (masked ? holoDefs : '') + sigilLayer(key, c[0], c[1]) + '</g>';
+    }
+    return '<image class="' + cls + '" x="0" y="0" width="1000" height="1000"'
+      + (masked ? ' mask="url(#sigMask)" opacity="0"' : '')
+      + ' href="' + src + '" xlink:href="' + src + '"/>';
+  };
+
+  svg.innerHTML =
+      '<defs>'
+    + '<radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
+    + '<stop offset="0%" stop-color="black" stop-opacity="0"/>'
+    + '<stop offset="24%" stop-color="black" stop-opacity="0"/>'
+    + '<stop offset="38%" stop-color="white" stop-opacity=".02"/>'
+    + '<stop offset="48%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="56%" stop-color="white" stop-opacity="1"/>'
+    + '<stop offset="64%" stop-color="white" stop-opacity=".62"/>'
+    + '<stop offset="74%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="86%" stop-color="white" stop-opacity=".04"/>'
+    + '<stop offset="100%" stop-color="black" stop-opacity="0"/>'
+    + '</radialGradient>'
+    + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
+    + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="100" fill="url(#sigWave)"/></mask>'
+    + '</defs>'
+    + pic('pr-coinBase', baseSrc, false)
+    + (wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
+    + pic('pr-coinWaveGroup', waveSrc, true);
+}
+
+/* ── Вскрытие ───────────────────────────────────────────────────────────── */
+
+
+/* Отладка: показать экран раскрытия на трёх своих последних карточках, не
+   выдавая себе настоящий пак. Ничего не начисляет и на сервер не ходит —
+   ровно поэтому его можно жать сколько угодно раз подряд */
+
+/* ══ ЭКРАН РАСКРЫТИЯ ПАКА ═══════════════════════════════════════════════════
+   Перенос концепта Denis'а (`pack-reveal-v6-3`) целиком: стопка → вылет героя
+   → заряд, удар, подпись → полочка из оставшихся. Хореография, тайминги и
+   раскладка — авторские, менять их здесь незачем.
+
+   ⚠️ ПОЧЕМУ ОТДЕЛЬНЫЙ ЭКРАН, А НЕ ДОРАБОТКА СТАРОГО: первая попытка нарастить
+   `#reveal-overlay` сохранила НАШУ раскладку и налепила сверху чужие картинки —
+   вышла та самая жалкая копия. Старый оверлей остаётся жить под ВИТРИНУ
+   альбома (её рисует showCardDetail), а вскрытие переезжает сюда.
+
+   ЕДИНСТВЕННОЕ, ЧТО ИЗМЕНЕНО ПО СМЫСЛУ: три пилюли и блок способности взяты
+   как есть, у них поменялись только НАДПИСИ — «Фракция/Тип/Сила» на наши
+   «Бог/Редкость/Награда». Кнопки действий тоже в стиле `pr-cta`. */
+
+/* Выключатели дорогих эффектов. В приложении всё включено; их щёлкает
+   лаборатория (lab.html), чтобы искать виновника падения кадров НА ЖИВОМ КОДЕ,
+   а не на копии. Ничего не стоят: четыре проверки за вскрытие */
+const PR_FX = { sigil:true, bake:true, aura:true, particles:true, ambient:true };
+
+const PR_POS = [[-86,-34,-9],[0,-56,0],[86,-34,9]];   // раскладка стопки из концепта
+
+/* Настроение по редкости: на карточке ничего не храним, иначе Denis'у пришлось
+   бы заводить цвет руками каждой из будущих двух сотен карточек */
+const PR_MOOD = {
+  common:    { appearance:'dark',  accent:'#d9b97a', secondary:'#9f8ad2' },
+  uncommon:  { appearance:'dark',  accent:'#9fd2c0', secondary:'#7fb4d8' },
+  rare:      { appearance:'dark',  accent:'#9fb4f2', secondary:'#c0a6ef' },
+  epic:      { appearance:'light', accent:'#c8a2f0', secondary:'#e0b7d8' },
+  legendary: { appearance:'light', accent:'#f0c977', secondary:'#e5b45f' }
+};
+function prMood(card){ return PR_MOOD[(card && card.rarity) || ''] || PR_MOOD.common; }
+
+const PR = { ids: [], opened: [], hero: null, busy: false, cards: {}, extra: {} };
+
+function prEl(id){ return document.getElementById(id); }
+
+function openPackReveal(demoCards){
+  let ids;
+  if (demoCards && demoCards.length){
+    // Отладочный прогон: идентификаторы отрицательные, чтобы никогда не совпасть
+    // с настоящими карточками, даже если что-то утечёт в общий код
+    ids = demoCards.map(function(_, i){ return -(i + 1); });
+  } else {
+    const packs = (myCards && myCards.unopened_packs) || [];
+    if (!packs.length) return;
+    ids = packs[packs.length - 1].card_ids.slice();   // самый старый: он же первым уйдёт на автовскрытие
+  }
+  PR.ids = ids;
+  PR.opened = []; PR.hero = null; PR.busy = false; PR.cards = {}; PR.extra = {};
+  PR.demo = !!(demoCards && demoCards.length);
+  if (PR.demo) ids.forEach(function(id, i){ PR.cards[id] = demoCards[i]; });
+
+  const stage = prEl('pr-stage');
+  stage.setAttribute('data-pr-theme', 'neutral');
+  stage.style.removeProperty('--accent');
+  stage.style.removeProperty('--accent-2');
+  prEl('pr-sub').textContent = 'Открой карту, чтобы узнать награду';
+  prEl('pr-cta').textContent = 'Открой карту';
+  prEl('pr-details').classList.remove('pr-on');
+  prEl('pr-sigil-svg').innerHTML = '';
+  prEl('pr-aura').style.background =
+    'radial-gradient(circle, rgba(217,185,122,.22) 0%, rgba(159,138,210,.14) 38%, transparent 72%)';
+
+  prEl('pr-pack').innerHTML = PR.ids.map(function(id){
+    return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
+      + '<span class="pr-flip">'
+      + '<span class="pr-face pr-back"><img src="images/reveal/back-dark.webp" alt="" decoding="async"></span>'
+      + '<span class="pr-face pr-front"><img alt="" decoding="async"></span>'
+      + '</span></button>';
+  }).join('');
+
+  prClearPhase();
+  prLayout();
+  prSeedAmbient('#d9b97a', '#9f8ad2');
+  stage.classList.add('pr-shown');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePackReveal(){
+  prEl('pr-stage').classList.remove('pr-shown');
+  document.body.style.overflow = '';
+  prSeedAmbient(null);                 // таймеры мерцания не должны жить после закрытия
+  if (PR.demo){ PR.demo = false; return; }
+  loadCards();                         // пак ушёл из закрытых, баллы могли начислиться
+  loadProfile();
+}
+
+function prClearPhase(){
+  const scene = prEl('pr-scene');
+  scene.classList.remove('pr-revealing','pr-phase-anticipation','pr-phase-charge','pr-phase-impact','pr-phase-signature');
+  scene.querySelectorAll('.pr-card').forEach(function(el){
+    el.classList.remove('pr-phase-anticipation','pr-phase-charge','pr-phase-impact');
+  });
+  scene.querySelectorAll('.pr-fx').forEach(function(el){ el.remove(); });
+}
+
+/* Раскладка: пока героя нет — стопка веером; как только карта выбрана, она
+   уезжает в центр крупно, а остальные встают полочкой сверху */
+function prLayout(){
+  PR.ids.forEach(function(id, i){
+    const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
+    if (!el) return;
+    const set = function(x,y,r,s){
+      el.style.setProperty('--x', x + 'px'); el.style.setProperty('--y', y + 'px');
+      el.style.setProperty('--r', r + 'deg'); el.style.setProperty('--s', s);
+    };
+    if (PR.hero === null){
+      const p = PR_POS[i] || [0,0,0];
+      el.className = 'pr-card'; el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+      set(p[0], p[1], p[2], '1');
+      return;
+    }
+    if (PR.hero === id){
+      el.className = 'pr-card pr-hero' + (PR.opened.indexOf(id) >= 0 ? ' pr-open' : '');
+      el.style.opacity = '1'; el.style.pointerEvents = 'none';
+      set(0, 66, 0, '1');
+      return;
+    }
+    if (PR.opened.indexOf(id) >= 0){ el.style.opacity = '0'; el.style.pointerEvents = 'none'; return; }
+    const rem = PR.ids.filter(function(x){ return x !== PR.hero && PR.opened.indexOf(x) < 0; });
+    const idx = rem.indexOf(id), n = Math.max(rem.length, 1);
+    el.className = 'pr-card pr-shelf'; el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+    set((idx - (n - 1) / 2) * 92, -88, (idx - (n - 1) / 2) * 8, '.92');
+  });
+}
+
+function prApplyTheme(card){
+  const mood = prMood(card);
+  const stage = prEl('pr-stage');
+  stage.setAttribute('data-pr-theme', mood.appearance);
+  stage.style.setProperty('--accent', mood.accent);
+  // Лучи и постамент «героического» слоя красятся вторым цветом — без него
+  // color-mix получает пустое значение и слой просто не рисуется
+  stage.style.setProperty('--accent-2', mood.secondary);
+  prEl('pr-aura').style.background =
+    'radial-gradient(circle,' + mood.accent + '66 0%,' + mood.secondary + '33 34%,transparent 70%)';
+  prRenderSigil(card.god || '', mood);
+  prEl('pr-pack').querySelectorAll('.pr-face.pr-back img').forEach(function(img){
+    img.src = 'images/reveal/back-' + mood.appearance + '.webp';
+  });
+  prSeedAmbient(mood.accent, mood.secondary);
+}
+
+/* Пилюли и блок способности — стили концепта, надписи наши */
+function prFillDetails(card, pointsAwarded, cardId, claimed){
+  prEl('pr-god').textContent     = card.god || '—';
+  prEl('pr-rarity').textContent  = CARD_RARITY_LABELS[card.rarity] || card.rarity || '—';
+  prEl('pr-gain').textContent    = cardGainLabel(card, pointsAwarded);
+  prEl('pr-ability-title').textContent = card.title || '';
+  prEl('pr-ability-text').textContent  = card.description || '';
+  prEl('pr-actions').innerHTML = cardActionsHtml(card, cardId, claimed, 0, 'pr-cta pr-cta-inline');
+}
+
+async function prPrepareFrontImage(img, src){
+  if (!img || !src) return;
+  img.decoding = 'async';
+  img.loading = 'eager';
+  img.src = src;
+
+  // decode() убирает белый/пустой кадр в момент переворота. Но сеть не должна
+  // задерживать весь reveal бесконечно, поэтому ждём максимум 650 мс.
+  try {
+    if (typeof img.decode === 'function') {
+      await Promise.race([
+        img.decode(),
+        new Promise(function(resolve){ setTimeout(resolve, 650); })
+      ]);
+    } else if (!img.complete) {
+      await Promise.race([
+        new Promise(function(resolve){
+          img.addEventListener('load', resolve, { once:true });
+          img.addEventListener('error', resolve, { once:true });
+        }),
+        new Promise(function(resolve){ setTimeout(resolve, 650); })
+      ]);
+    }
+  } catch(e){}
+}
+
+async function prOpenCard(id){
+  if (PR.busy || PR.opened.indexOf(id) >= 0) return;
+  PR.busy = true;
+
+  let data = null;
+  if (PR.demo){
+    // Отладочный прогон: карточки уже известны, на сервер не ходим и ничего
+    // не начисляем — иначе каждая примерка экрана меняла бы реальные данные
+    const c = PR.cards[id] || {};
+    data = { card: c, points_awarded: c.effect_points || 0, claimed: false };
+  } else {
+    try {
+      data = await apiRequest(`${API_URL}/cards/open`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: telegramId, card_id: id })
+      }, 15000);
+    } catch(e){
+      PR.busy = false;
+      const msg = e.message || 'Не получилось открыть карточку';
+      showToast(msg);
+      prEl('pr-sub').textContent = msg;   // подсказка живёт полторы секунды, а человек стоит перед рубашкой
+      return;
+    }
+  }
+
+  const card = (data && data.card) || {};
+  PR.cards[id] = card;
+  PR.extra[id] = data;
+
+  const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
+  const front = el.querySelector('.pr-face.pr-front img');
+  if (front && card.image_url) await prPrepareFrontImage(front, card.image_url);
+
+  PR.hero = id;
+  prApplyTheme(card);
+  prLayout();
+  prEl('pr-details').classList.remove('pr-on');
+  prClearPhase();
+
+  const scene = prEl('pr-scene');
+  const name = card.title || 'Карта';
+  scene.classList.add('pr-revealing','pr-phase-anticipation');
+  el.classList.add('pr-phase-anticipation');
+  prEl('pr-sub').textContent = name + ': энергия собирается…';
+
+  setTimeout(function(){
+    scene.classList.remove('pr-phase-anticipation'); scene.classList.add('pr-phase-charge');
+    el.classList.remove('pr-phase-anticipation');    el.classList.add('pr-phase-charge');
+    prEl('pr-sub').textContent = name + ': раскрытие начинается…';
+  }, 180);
+
+  setTimeout(function(){
+    scene.classList.remove('pr-phase-charge'); scene.classList.add('pr-phase-impact');
+    el.classList.remove('pr-phase-charge');    el.classList.add('pr-phase-impact','pr-open');
+    prImpact(el, prMood(card));
+  }, 460);
+
+  setTimeout(function(){
+    scene.classList.remove('pr-phase-impact','pr-revealing'); scene.classList.add('pr-phase-signature');
+    el.classList.remove('pr-phase-impact');
+    PR.opened.push(id);
+    prFillDetails(card, data ? data.points_awarded : 0, PR.demo ? null : id, data ? data.claimed : false);
+    prEl('pr-details').classList.add('pr-on');
+    const left = PR.ids.length - PR.opened.length;
+    prEl('pr-sub').textContent = left ? ('Осталось карт: ' + left) : 'Пак открыт';
+    prEl('pr-cta').textContent = left ? 'Открой следующую' : 'Продолжить';
+    prLayout();
+    PR.busy = false;
+  }, 1380);
+}
+
+/* Кнопка делает ровно то, что на ней написано. Раньше она только подсвечивала
+   следующую карту — задумка «вскрытие должно оставаться действием человека»
+   на деле читалась как сломанная кнопка: написано «Открой следующую», нажимаешь
+   и ничего не происходит. Denis прав, открываем */
+function prCta(){
+  if (PR.busy) return;
+  if (PR.opened.length >= PR.ids.length){ closePackReveal(); return; }
+  const next = PR.ids.filter(function(x){ return PR.opened.indexOf(x) < 0; })[0];
+  if (next != null) prOpenCard(next);
+}
+
+/* Взрыв частиц из-под карты. Частицы удаляют себя сами: иначе за три вскрытия
+   в разметке остаётся полторы сотни мёртвых элементов */
+function prImpact(el, mood){
+  if (!PR_FX.particles) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const scene = prEl('pr-scene');
+  const sr = scene.getBoundingClientRect(), cr = el.getBoundingClientRect();
+  const cx = cr.left - sr.left + cr.width / 2, cy = cr.top - sr.top + cr.height / 2;
+  const palette = [mood.accent, mood.secondary, '#fff4dc'];
+  // На телефоне частиц вдвое меньше: каждая это отдельный анимируемый элемент
+  // со свечением и режимом наложения
+  const full = mood.appearance === 'light' ? 68 : 58;
+  const count = prHeavyEffectsAllowed() ? full : Math.round(full / 2);
+  for (let i = 0; i < count; i++){
+    const p = document.createElement('span');
+    const a = Math.random() * Math.PI * 2, d = 72 + Math.random() * 190;
+    p.className = 'pr-fx ' + (i % 5 === 0 ? 'pr-star' : 'pr-dot');
+    p.style.left = cx + 'px'; p.style.top = cy + 'px';
+    p.style.setProperty('--dx', Math.cos(a) * d + 'px');
+    p.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    p.style.setProperty('--sz', (2 + Math.random() * 5) + 'px');
+    p.style.setProperty('--c', palette[i % palette.length]);
+    p.style.setProperty('--dur', (620 + Math.random() * 620) + 'ms');
+    p.addEventListener('animationend', function(){ p.remove(); }, { once: true });
+    scene.appendChild(p);
+  }
+}
+
+function prSeedAmbient(a, b){
+  const scene = prEl('pr-scene');
+  if (!scene) return;
+  scene.querySelectorAll('.pr-ambient').forEach(function(x){ x.remove(); });
+  if (!a || !PR_FX.ambient) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < 18; i++){
+    const s = document.createElement('span');
+    s.className = 'pr-ambient';
+    s.style.left = (12 + Math.random() * 76) + '%';
+    s.style.top  = (24 + Math.random() * 62) + '%';
+    s.style.setProperty('--c', i % 3 === 0 ? b : a);
+    s.style.setProperty('--d', (3 + Math.random() * 5) + 's');
+    s.style.setProperty('--mx', (Math.random() * 18 - 9) + 'px');
+    s.style.animationDelay = (-Math.random() * 5) + 's';
+    scene.appendChild(s);
+  }
+}
+
+/* ── КНОПКИ ДЕЙСТВИЙ КАРТОЧКИ — ОДНА ФУНКЦИЯ НА ДВА ЭКРАНА ────────────────
+   «Посмотреть», «Забрать» и «Поделиться» нужны и на вскрытии, и в витрине
+   альбома. Раньше они жили внутри showCardDetail, и из-за этого экран вскрытия
+   нельзя было переписать, не потеряв их. Теперь класс кнопки приходит
+   параметром: витрина просит свой, экран раскрытия — стиль из концепта. */
+function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass){
+  if (!card) return '';
+  const cls = btnClass || 'lec-link-btn access-btn';
+  let out = '';
+
+  if (card.media_url){
+    out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
+        + 'onclick="openUrl(' + jsArg(card.media_url) + ')">Посмотреть</button></div>';
+  }
+
+  // Карточки, награда которых требует действия вне карточки, при перевороте
+  // ничего не применяют — человек должен сам нажать «Забрать»
+  if (card.needs_claim && cardId){
+    out += alreadyClaimed
+      ? '<div class="reveal-detail-gain">Забрано — Денис свяжется</div>'
+      : '<div style="margin-top:14px"><button class="' + cls + '" style="width:100%" '
+        + 'id="claim-btn-' + cardId + '" onclick="claimCard(' + cardId + ')">Забрать</button>'
+        + '<div style="font-size:12px;opacity:.55;margin-top:7px;line-height:1.4">'
+        + (card.effect_type === 'unlock_reward'
+            ? 'Награда появится в списке заявок, Денис её выдаст'
+            : 'Денис увидит, что ты этого хочешь, и свяжется') + '</div></div>';
+  }
+
+  // Шеринг — только для СВОИХ карточек и только когда есть картинка.
+  // НА ДУБЛЕ КНОПКУ ПРЯЧЕМ: предложение похвастаться третьей одинаковой картой
+  // читается издевательством, а не поводом для гордости
+  const isDupe = (copies || 0) > 1;
+  if (telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
+    const label = (card.card_class === 'badge') ? t('share.badge') : t('share.card');
+    out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
+        + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
+        + escapeHtml(label) + '</button></div>';
+  }
+  return out;
+}
+
+/* Что даёт карточка — третьей плашкой рядом с богом и редкостью. Человек
+   вскрывает карту именно ради этого, поэтому строка не должна пропадать, когда
+   баллов нет: у контентных и наградных карточек тоже есть что сказать */
+function cardGainLabel(card, pointsAwarded){
+  if (pointsAwarded) return '+' + pointsAwarded;
+  if (!card) return '—';
+  if (card.effect_type === 'content')       return 'Видео';
+  if (card.effect_type === 'unlock_reward') return 'Награда';
+  if (card.personal)                        return 'Лично';
+  if (card.effect_points)                   return '+' + card.effect_points;
+  return '—';
+}
+
+
+function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass){
+  if (!card) return '';
+  const cls = btnClass || 'lec-link-btn access-btn';
+  let out = '';
+
+  if (card.media_url){
+    out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
+        + 'onclick="openUrl(' + jsArg(card.media_url) + ')">Посмотреть</button></div>';
+  }
+
+  // Карточки, награда которых требует действия вне карточки, при перевороте
+  // ничего не применяют — человек должен сам нажать «Забрать»
+  if (card.needs_claim && cardId){
+    out += alreadyClaimed
+      ? '<div class="reveal-detail-gain">Забрано — Денис свяжется</div>'
+      : '<div style="margin-top:14px"><button class="' + cls + '" style="width:100%" '
+        + 'id="claim-btn-' + cardId + '" onclick="claimCard(' + cardId + ')">Забрать</button>'
+        + '<div style="font-size:12px;opacity:.55;margin-top:7px;line-height:1.4">'
+        + (card.effect_type === 'unlock_reward'
+            ? 'Награда появится в списке заявок, Денис её выдаст'
+            : 'Денис увидит, что ты этого хочешь, и свяжется') + '</div></div>';
+  }
+
+  // Шеринг — только для СВОИХ карточек и только когда есть картинка.
+  // НА ДУБЛЕ КНОПКУ ПРЯЧЕМ: предложение похвастаться третьей одинаковой картой
+  // читается издевательством, а не поводом для гордости
+  const isDupe = (copies || 0) > 1;
+  if (telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
+    const label = (card.card_class === 'badge') ? t('share.badge') : t('share.card');
+    out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
+        + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
+        + escapeHtml(label) + '</button></div>';
+  }
+  return out;
+}
+
+/* Что даёт карточка — третьей плашкой рядом с богом и редкостью. Человек
+   вскрывает карту именно ради этого, поэтому строка не должна пропадать, когда
+   баллов нет: у контентных и наградных карточек тоже есть что сказать */
+function cardGainLabel(card, pointsAwarded){
+  if (pointsAwarded) return '+' + pointsAwarded;
+  if (!card) return '—';
+  if (card.effect_type === 'content')       return 'Видео';
+  if (card.effect_type === 'unlock_reward') return 'Награда';
+  if (card.personal)                        return 'Лично';
+  if (card.effect_points)                   return '+' + card.effect_points;
+  return '—';
+}
+
+
+
+/* ── Колода лаборатории: все 19 персонажей и все редкости ─────────────── */
+const LAB_GODS = ['Зевс','Гера','Посейдон','Аид','Афина','Аполлон','Артемида','Афродита','Арес',
+  'Деметра','Гермес','Дионис','Гефест','Плутос','Прометей','Мом','Геракл','Тесей','Персей'];
+const LAB_RARITY = ['common','uncommon','rare','epic','legendary'];
+const LAB_BY_ID = {};
+let labCursor = 0, labSeq = 0;
+
+/* Арт рисуем сами: лаборатория не должна зависеть ни от сети, ни от базы.
+   Картинка та же по весу и размеру, что настоящая, — на кадры влияет так же */
+function labArt(name, i){
+  const hue = (i * 47) % 360;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 1000">'
+    + '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">'
+    + '<stop offset="0%" stop-color="hsl(' + hue + ',55%,32%)"/>'
+    + '<stop offset="100%" stop-color="hsl(' + ((hue+60)%360) + ',45%,12%)"/></linearGradient></defs>'
+    + '<rect width="700" height="1000" fill="url(#g)"/>'
+    + '<circle cx="350" cy="430" r="185" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3"/>'
+    + '<text x="350" y="455" font-family="Georgia,serif" font-size="74" fill="rgba(255,255,255,.9)"'
+    + ' text-anchor="middle">' + name + '</text></svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function labMakePack(){
+  const cards = [];
+  for (let i = 0; i < 3; i++){
+    const god = LAB_GODS[(labCursor + i) % LAB_GODS.length];
+    const id = ++labSeq;
+    const card = {
+      key: 'lab' + id, title: god, god: god,
+      rarity: LAB_RARITY[(labCursor + i) % LAB_RARITY.length],
+      image_url: labArt(god, labCursor + i),
+      description: 'Проверочная карта для замера кадров. Рисунок и вес те же, что у настоящей.',
+      effect_type: 'points', effect_points: 100 * ((labCursor + i) % 5 + 1)
+    };
+    LAB_BY_ID[id] = card;
+    cards.push({ id: id, card: card });
+  }
+  labCursor = (labCursor + 3) % LAB_GODS.length;
+  return cards;
+}
+
+let labPack = null;
+function labOpen(){
+  labPack = labMakePack();
+  myCards = { unopened_packs: [{ card_ids: labPack.map(function(x){ return x.id; }) }] };
+  document.getElementById('lab-god').textContent =
+    labPack.map(function(x){ return x.card.god + ' · ' + (CARD_RARITY_LABELS[x.card.rarity]||''); }).join(' / ');
+  labResetFps();
+  openPackReveal();
+}
+function labReplay(){
+  if (!labPack){ labOpen(); return; }
+  myCards = { unopened_packs: [{ card_ids: labPack.map(function(x){ return x.id; }) }] };
+  labResetFps();
+  openPackReveal();
+}
+
+/* ── Выключатели ──────────────────────────────────────────────────────── */
+/* Часть щёлкает PR_FX внутри живого кода экрана, часть гасит эффекты
+   правилами поверх — так видно вклад каждого приёма отдельно */
+const LAB_SWITCHES = [
+  { id:'sigil',     name:'Сигил целиком',        fx:'sigil' },
+  { id:'bake',      name:'Запекание сигила',     fx:'bake' },
+  { id:'aura',      name:'Аура сигила',          fx:'aura' },
+  { id:'particles', name:'Частицы удара',        fx:'particles' },
+  { id:'ambient',   name:'Живой фон (искры)',    fx:'ambient' },
+  { id:'beams',     name:'Лучи из-под карты',    css:'.pr-heroBeams{display:none}' },
+  { id:'pedestal',  name:'Постамент и свет',     css:'.pr-heroPedestal,.pr-heroSky{display:none}' },
+  { id:'flash',     name:'Вспышка и кольцо',     css:'.pr-flash,.pr-ring{display:none}' },
+  { id:'aura2',     name:'Аура сцены',           css:'.pr-aura{display:none}' },
+  { id:'blur',      name:'Размытия',             css:'.pr-heroBeams span,.pr-flash,.pr-aura,.pr-heroSky{filter:none!important}' },
+  { id:'blend',     name:'Режимы наложения',     css:'.pr-fx,.pr-heroBeams span,.pr-coinWaveGroup,.pr-coinWaveAura{mix-blend-mode:normal!important}' },
+  { id:'shadow',    name:'Тень героя',           css:'.pr-card.pr-hero{filter:none!important}' },
+  { id:'glint',     name:'Блик и перелив карты', css:'.pr-card.pr-hero.pr-open .pr-face.pr-front::before,.pr-card.pr-hero.pr-open .pr-face.pr-front::after{animation:none!important;opacity:0!important}' },
+  { id:'tex',       name:'Текстура и рамка',     css:'.pr-tex,.pr-frame{display:none}' },
+  { id:'blobs',     name:'Пятна на фоне',        css:'#pr-stage::before,#pr-stage::after{display:none}' }
+];
+const labState = {};
+
+function labApplyCss(){
+  document.getElementById('lab-fx-css').textContent =
+    LAB_SWITCHES.filter(function(s){ return s.css && !labState[s.id]; })
+                .map(function(s){ return s.css; }).join('\n');
+}
+function labSet(id, on){
+  labState[id] = on;
+  const s = LAB_SWITCHES.find(function(x){ return x.id === id; });
+  if (s.fx) PR_FX[s.fx] = on;
+  const row = document.getElementById('sw-' + id);
+  if (row) row.classList.toggle('off', !on);
+  labApplyCss();
+}
+function labAll(on){
+  LAB_SWITCHES.forEach(function(s){
+    labState[s.id] = on;
+    if (s.fx) PR_FX[s.fx] = on;
+    const box = document.getElementById('cb-' + s.id);
+    if (box) box.checked = on;
+    const row = document.getElementById('sw-' + s.id);
+    if (row) row.classList.toggle('off', !on);
+  });
+  labApplyCss();
+}
+(function labBuildSwitches(){
+  document.getElementById('lab-switches').innerHTML = LAB_SWITCHES.map(function(s){
+    labState[s.id] = true;
+    return '<label class="lab-sw" id="sw-' + s.id + '">'
+      + '<input type="checkbox" id="cb-' + s.id + '" checked '
+      + 'onchange="labSet(\'' + s.id + '\', this.checked)"> ' + s.name + '</label>';
+  }).join('');
+})();
+
+/* ── Счётчик кадров ───────────────────────────────────────────────────── */
+/* Мгновенное значение обманывает: провал длится доли секунды. Поэтому рядом
+   показываем ХУДШЕЕ за последнее вскрытие — именно оно и есть жалоба */
+let labFrames = 0, labLast = performance.now(), labWorst = null;
+function labResetFps(){ labWorst = null; }
+(function labTick(){
+  labFrames++;
+  const now = performance.now();
+  if (now - labLast >= 500){
+    const fps = Math.round(labFrames * 1000 / (now - labLast));
+    labFrames = 0; labLast = now;
+    if (labWorst === null || fps < labWorst) labWorst = fps;
+    const el = document.getElementById('lab-fps');
+    el.innerHTML = 'кадры <b>' + fps + '</b> (худшее ' + labWorst + ')';
+    el.className = 'lab-fps ' + (labWorst < 25 ? 'bad' : 'ok');
+  }
+  requestAnimationFrame(labTick);
+})();
+
+labOpen();
+</script>
+</body></html>

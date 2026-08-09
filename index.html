@@ -13325,7 +13325,7 @@ function prSigilImage(inner, defs){
 function prRenderSigil(god, mood){
   const svg = document.getElementById('pr-sigil-svg');
   if (!svg) return;
-  const key = sigilKey(god);
+  const key = PR_FX.sigil ? sigilKey(god) : '';
   if (!key){ svg.innerHTML = ''; return; }
 
   const stage = prEl('pr-stage');
@@ -13360,12 +13360,22 @@ function prRenderSigil(god, mood){
     + '</defs>';
 
   // Два запечённых слоя: спокойный золотой и переливающийся
-  const baseSrc = prSigilImage(sigilLayer(key, gold, pale));
-  const waveSrc = prSigilImage(sigilLayer(key, waveStroke, waveSoft), holoDefs);
-  const auraSrc = prHeavyEffectsAllowed()
+  const wantAura = PR_FX.aura && prHeavyEffectsAllowed();
+  const baseSrc = PR_FX.bake ? prSigilImage(sigilLayer(key, gold, pale)) : '';
+  const waveSrc = PR_FX.bake ? prSigilImage(sigilLayer(key, waveStroke, waveSoft), holoDefs) : '';
+  const auraSrc = (PR_FX.bake && wantAura)
     ? prSigilImage(sigilLayer(key, auraStroke, waveSoft), holoDefs) : '';
 
+  // При выключенном запекании кладём ЖИВОЙ вектор — так лаборатория показывает
+  // разницу между «маска ездит по картинке» и «маска ездит по сотням путей»
+  const vec = { 'pr-coinBase': [gold, pale], 'pr-coinWaveAura': [auraStroke, waveSoft],
+                'pr-coinWaveGroup': [waveStroke, waveSoft] };
   const pic = function(cls, src, masked){
+    if (!PR_FX.bake){
+      const c = vec[cls];
+      return '<g class="' + cls + '"' + (masked ? ' mask="url(#sigMask)" opacity="0"' : '') + '>'
+        + (masked ? holoDefs : '') + sigilLayer(key, c[0], c[1]) + '</g>';
+    }
     return '<image class="' + cls + '" x="0" y="0" width="1000" height="1000"'
       + (masked ? ' mask="url(#sigMask)" opacity="0"' : '')
       + ' href="' + src + '" xlink:href="' + src + '"/>';
@@ -13388,7 +13398,7 @@ function prRenderSigil(god, mood){
     + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="100" fill="url(#sigWave)"/></mask>'
     + '</defs>'
     + pic('pr-coinBase', baseSrc, false)
-    + (auraSrc ? pic('pr-coinWaveAura', auraSrc, true) : '')
+    + (wantAura ? pic('pr-coinWaveAura', auraSrc, true) : '')
     + pic('pr-coinWaveGroup', waveSrc, true);
 }
 
@@ -13424,6 +13434,11 @@ function debugPackReveal(){
    ЕДИНСТВЕННОЕ, ЧТО ИЗМЕНЕНО ПО СМЫСЛУ: три пилюли и блок способности взяты
    как есть, у них поменялись только НАДПИСИ — «Фракция/Тип/Сила» на наши
    «Бог/Редкость/Награда». Кнопки действий тоже в стиле `pr-cta`. */
+
+/* Выключатели дорогих эффектов. В приложении всё включено; их щёлкает
+   лаборатория (lab.html), чтобы искать виновника падения кадров НА ЖИВОМ КОДЕ,
+   а не на копии. Ничего не стоят: четыре проверки за вскрытие */
+const PR_FX = { sigil:true, bake:true, aura:true, particles:true, ambient:true };
 
 const PR_POS = [[-86,-34,-9],[0,-56,0],[86,-34,9]];   // раскладка стопки из концепта
 
@@ -13670,6 +13685,7 @@ function prCta(){
 /* Взрыв частиц из-под карты. Частицы удаляют себя сами: иначе за три вскрытия
    в разметке остаётся полторы сотни мёртвых элементов */
 function prImpact(el, mood){
+  if (!PR_FX.particles) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const scene = prEl('pr-scene');
   const sr = scene.getBoundingClientRect(), cr = el.getBoundingClientRect();
@@ -13698,7 +13714,7 @@ function prSeedAmbient(a, b){
   const scene = prEl('pr-scene');
   if (!scene) return;
   scene.querySelectorAll('.pr-ambient').forEach(function(x){ x.remove(); });
-  if (!a) return;
+  if (!a || !PR_FX.ambient) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   for (let i = 0; i < 18; i++){
     const s = document.createElement('span');
