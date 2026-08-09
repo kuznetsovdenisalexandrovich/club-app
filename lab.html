@@ -34,7 +34,13 @@
   .lab-row{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:12.5px}
   .lab-row input[type=range]{flex:1;accent-color:#6c5ce0}
   .lab-row b{font:12px ui-monospace,monospace;min-width:96px;text-align:right}
-  #pr-stage{padding-bottom:96px}
+  /* Панель по умолчанию свёрнута в одну строку: развёрнутая закрывала пол-экрана
+     и смотреть было не на что. Место под неё резервируем ровно под строку */
+  #pr-stage{padding-bottom:60px}
+  body.lab-open #pr-stage{padding-bottom:0}
+  .lab-diag{margin-top:8px;font:12px/1.6 ui-monospace,monospace}
+  .lab-diag .bad{color:#ff9db0}
+  .lab-diag .ok{color:#9df0bd}
 </style>
 <style id="lab-reveal-css">
 /* ── ЭКРАН РАСКРЫТИЯ ПАКА (09.08.2026) ─────────────────────────────────────
@@ -426,14 +432,14 @@
 </div>
 
 
-<div id="lab-panel">
+<div id="lab-panel" class="min">
   <div class="lab-head">
     <div class="lab-fps" id="lab-fps">кадры <b>—</b></div>
     <button class="lab-btn primary" onclick="labOpen()">Другой пак</button>
     <button class="lab-btn" onclick="labReplay()">Ещё раз</button>
     <button class="lab-btn" onclick="labAll(true)">Всё вкл</button>
     <button class="lab-btn" onclick="labAll(false)">Всё выкл</button>
-    <button class="lab-btn" onclick="document.getElementById('lab-panel').classList.toggle('min')">Свернуть</button>
+    <button class="lab-btn" id="lab-toggle" onclick="labTogglePanel()">Настройки</button>
     <button class="lab-btn" onclick="location.href='index.html'">В приложение</button>
     <span class="lab-god" id="lab-god"></span>
   </div>
@@ -445,6 +451,11 @@
              oninput="labSigOpacity(this.value)">
       <b id="lab-sig-val">как в дизайне</b>
     </div>
+    <div class="lab-row">
+      <button class="lab-btn" onclick="labSigilProbe()">Показать сигил в упор</button>
+      <button class="lab-btn" onclick="labSigilProbeOff()">Вернуть как было</button>
+    </div>
+    <div class="lab-diag" id="lab-diag"></div>
     <div class="lab-env" id="lab-env"></div>
     <div class="lab-note">
       Кадры считаются постоянно; в скобках — худшее значение за последнее вскрытие.
@@ -770,6 +781,10 @@ function prSigilImage(inner, defs){
    а сборка 60 КБ разметки и её растеризация — как раз то, что мы и лечим */
 const PR_SIGIL_CACHE = {};
 
+/* Поднимается, если браузер отказался принять запечённую картинку. Читает
+   лаборатория — чтобы «сигила не видно» перестало быть загадкой */
+let PR_SIGIL_BAKE_BROKEN = false;
+
 /* Просим браузер растрировать картинки ЗАРАНЕЕ, пока идёт ожидание арта
    карточки. Иначе он делает это в первый кадр анимации — ровно там, где
    рывок виден. Молчим на ошибках: сигил не стоит того, чтобы ронять вскрытие */
@@ -871,6 +886,27 @@ function prRenderSigil(god, mood){
     + pic('pr-coinWaveGroup', waveSrc, true);
 
   PR_SIGIL_CACHE[cacheKey] = svg.innerHTML;
+
+  /* ⚠️ ЗАПАСНОЙ ПУТЬ. Запечённый слой — это ВНЕШНИЙ документ по адресу-данным.
+     Если браузер его не примет (строгая политика содержимого, старый движок),
+     слой молча не нарисуется — получим пустоту вместо орнамента и никакой
+     подсказки. Ловим ошибку и один раз перерисовываем живым вектором:
+     дороже по кадрам, зато видно. Флаг читает лаборатория. */
+  if (PR_FX.bake){
+    let fell = false;
+    Array.prototype.forEach.call(svg.querySelectorAll('image'), function(im){
+      im.addEventListener('error', function(){
+        if (fell) return;
+        fell = true;
+        PR_SIGIL_BAKE_BROKEN = true;
+        delete PR_SIGIL_CACHE[cacheKey];
+        const was = PR_FX.bake;
+        PR_FX.bake = false;
+        prRenderSigil(god, mood);
+        PR_FX.bake = was;
+      }, { once: true });
+    });
+  }
 }
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
@@ -1356,6 +1392,7 @@ function labOpen(){
     labPack.map(function(x){ return x.card.god + ' · ' + (CARD_RARITY_LABELS[x.card.rarity]||''); }).join(' / ');
   labResetFps();
   openPackReveal();
+  setTimeout(labSigilDiag, 2600);
 }
 function labReplay(){
   if (!labPack){ labOpen(); return; }
@@ -1418,6 +1455,69 @@ function labAll(on){
       + 'onchange="labSet(\'' + s.id + '\', this.checked)"> ' + s.name + '</label>';
   }).join('');
 })();
+
+/* ── Панель ───────────────────────────────────────────────────────────── */
+function labTogglePanel(){
+  const p = document.getElementById('lab-panel');
+  const open = p.classList.toggle('min') === false;
+  document.body.classList.toggle('lab-open', open);
+  document.getElementById('lab-toggle').textContent = open ? 'Свернуть' : 'Настройки';
+}
+
+/* ── Сигил: видно его вообще или нет ──────────────────────────────────── */
+/* «Показать в упор» снимает ВСЁ, что может его прятать: прозрачность, маску
+   верхней кромки, смещение вниз и слой под картами. Если после этого он всё
+   равно не появился — значит браузер не принял запечённую картинку, и это уже
+   другой разговор. Ниже строкой печатается, загрузились слои или нет */
+function labSigilProbe(){
+  let el = document.getElementById('lab-probe-css');
+  if (!el){ el = document.createElement('style'); el.id = 'lab-probe-css'; document.head.appendChild(el); }
+  el.textContent =
+    '.pr-coinSigil{opacity:1!important;z-index:99!important;top:50%!important;'
+    + 'mask:none!important;-webkit-mask:none!important;'
+    + 'width:min(90vw,520px)!important;height:min(90vw,520px)!important}'
+    + '.pr-coinBase{opacity:1!important}';
+  labSigilDiag();
+}
+function labSigilProbeOff(){
+  const el = document.getElementById('lab-probe-css');
+  if (el) el.textContent = '';
+}
+
+function labSigilDiag(){
+  const box = document.getElementById('lab-diag');
+  const svg = document.getElementById('pr-sigil-svg');
+  if (!svg){ box.textContent = 'нет узла сигила'; return; }
+  const layers = svg.querySelectorAll('image');
+  const vectors = svg.querySelectorAll('path,circle').length;
+  const lines = [];
+  lines.push('слоёв-картинок: ' + layers.length + ' · фигур вектором: ' + vectors);
+  if (typeof PR_SIGIL_BAKE_BROKEN !== 'undefined' && PR_SIGIL_BAKE_BROKEN){
+    lines.push('<span class="bad">браузер НЕ принял запечённую картинку — включён запасной вектор</span>');
+  }
+  Array.prototype.forEach.call(layers, function(im, i){
+    const src = im.getAttribute('href') || '';
+    const probe = new Image();
+    probe.onload = function(){
+      lines[i + 2] = '<span class="ok">слой ' + (i+1) + ': загрузился ' + probe.naturalWidth + '×' + probe.naturalHeight + '</span>';
+      box.innerHTML = lines.join('<br>');
+    };
+    probe.onerror = function(){
+      lines[i + 2] = '<span class="bad">слой ' + (i+1) + ': НЕ ЗАГРУЗИЛСЯ (' + Math.round(src.length/1024) + ' КБ)</span>';
+      box.innerHTML = lines.join('<br>');
+    };
+    lines[i + 2] = 'слой ' + (i+1) + ': проверяю…';
+    probe.src = src;
+  });
+  const r = document.querySelector('.pr-coinSigil');
+  if (r){
+    const b = r.getBoundingClientRect();
+    lines[1] = 'место на экране: ' + Math.round(b.width) + '×' + Math.round(b.height)
+      + ' в точке ' + Math.round(b.left) + ',' + Math.round(b.top)
+      + (b.bottom < 0 || b.top > window.innerHeight ? ' — ЗА ЭКРАНОМ' : '');
+  }
+  box.innerHTML = lines.join('<br>');
+}
 
 /* ── Яркость сигила ───────────────────────────────────────────────────── */
 /* В дизайне спокойный слой сигила стоит на 2.4% прозрачности в тёмной теме —

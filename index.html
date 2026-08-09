@@ -13354,6 +13354,10 @@ function prSigilImage(inner, defs){
    а сборка 60 КБ разметки и её растеризация — как раз то, что мы и лечим */
 const PR_SIGIL_CACHE = {};
 
+/* Поднимается, если браузер отказался принять запечённую картинку. Читает
+   лаборатория — чтобы «сигила не видно» перестало быть загадкой */
+let PR_SIGIL_BAKE_BROKEN = false;
+
 /* Просим браузер растрировать картинки ЗАРАНЕЕ, пока идёт ожидание арта
    карточки. Иначе он делает это в первый кадр анимации — ровно там, где
    рывок виден. Молчим на ошибках: сигил не стоит того, чтобы ронять вскрытие */
@@ -13455,6 +13459,27 @@ function prRenderSigil(god, mood){
     + pic('pr-coinWaveGroup', waveSrc, true);
 
   PR_SIGIL_CACHE[cacheKey] = svg.innerHTML;
+
+  /* ⚠️ ЗАПАСНОЙ ПУТЬ. Запечённый слой — это ВНЕШНИЙ документ по адресу-данным.
+     Если браузер его не примет (строгая политика содержимого, старый движок),
+     слой молча не нарисуется — получим пустоту вместо орнамента и никакой
+     подсказки. Ловим ошибку и один раз перерисовываем живым вектором:
+     дороже по кадрам, зато видно. Флаг читает лаборатория. */
+  if (PR_FX.bake){
+    let fell = false;
+    Array.prototype.forEach.call(svg.querySelectorAll('image'), function(im){
+      im.addEventListener('error', function(){
+        if (fell) return;
+        fell = true;
+        PR_SIGIL_BAKE_BROKEN = true;
+        delete PR_SIGIL_CACHE[cacheKey];
+        const was = PR_FX.bake;
+        PR_FX.bake = false;
+        prRenderSigil(god, mood);
+        PR_FX.bake = was;
+      }, { once: true });
+    });
+  }
 }
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
