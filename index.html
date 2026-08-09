@@ -770,7 +770,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    ложится поверх сцены своей прозрачностью, как обычная картинка. */
 .pr-fxVideo{
   position:absolute;left:50%;top:calc(50% + 66px);
-  width:min(120vw,760px);height:min(120vw,760px);
+  /* 09.08.2026: по просьбе Denis'а увеличено примерно на 55% (было 120vw/760) */
+  width:min(186vw,1180px);height:min(186vw,1180px);
   transform:translate(-50%,-50%);
   object-fit:contain;pointer-events:none;z-index:4;opacity:.95;
 }
@@ -791,6 +792,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .pr-details{margin-top:0}
 /* Кнопке нужен свой воздух, а не «всё оставшееся место» */
 .pr-cta{margin-top:12px}
+
+/* ── ДВА СЛОЯ РУБАШКИ, ПЕРЕКРЕСТНОЕ ЗАТУХАНИЕ ПО ТЕМЕ ────────────────────
+   Раньше рубашка была одной картинкой, а prApplyTheme подменял ей src —
+   подмена мгновенна, и цвет менялся в один кадр, рывком. Теперь в рубашке
+   лежат обе, тема гасит одну и проявляет другую за те же 0.8 с, что текстура
+   и рамка панели: весь экран переодевается одним движением.
+   Правило .pr-face img{width:100%} остаётся в силе, здесь только положение. */
+.pr-face.pr-back .pr-backImg{position:absolute;inset:0;opacity:0;transition:opacity .8s ease}
+#pr-stage[data-pr-theme="light"] .pr-face.pr-back .pr-backImg.pr-light{opacity:1}
+#pr-stage[data-pr-theme="dark"]  .pr-face.pr-back .pr-backImg.pr-dark{opacity:1}
+/* Тема ещё не проставлена (самый первый кадр экрана) — показываем тёмную */
+#pr-stage:not([data-pr-theme="light"]) .pr-face.pr-back .pr-backImg.pr-dark{opacity:1}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
@@ -4069,10 +4082,17 @@ img.img-fade.is-instant{opacity:1;transition:none}
 <div id="pr-stage" data-pr-theme="neutral">
   <main class="pr-stage">
     <section class="pr-shell">
-      <img class="pr-tex pr-light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true">
-      <img class="pr-tex pr-dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true">
-      <img class="pr-frame pr-light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true">
-      <img class="pr-frame pr-dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true">
+      <!-- ⚠️ data-nofade ОБЯЗАТЕЛЕН. Это не контентные картинки, а два слоя
+           темы: их прозрачностью управляют правила [data-pr-theme], один
+           проступает, другой гаснет. Механизм мягкого появления вешает на
+           картинку `img.img-fade.is-shown{opacity:1}`, и это правило ВЕСОМЕЕ,
+           чем `.pr-tex.pr-light{opacity:0}` — светлый слой переставал
+           гаснуть, оба висели разом, тёмный лежал сверху, и панель за картами
+           ВСЕГДА оставалась тёмной, чем бы ни была тема. -->
+      <img class="pr-tex pr-light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-tex pr-dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-frame pr-light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-frame pr-dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true" data-nofade>
       <button class="pr-close" aria-label="Закрыть" onclick="closePackReveal()">&times;</button>
       <!-- ⚠️ НЕ <header>: в приложении есть глобальное правило
            header{display:flex;justify-content:space-between} — оно раскладывало
@@ -13190,7 +13210,10 @@ function openPackReveal(demoCards){
   prEl('pr-pack').innerHTML = PR.ids.map(function(id){
     return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
       + '<span class="pr-flip">'
-      + '<span class="pr-face pr-back"><img src="images/reveal/back-dark.webp" alt="" decoding="async"></span>'
+      + '<span class="pr-face pr-back">'
+      +   '<img class="pr-backImg pr-dark" src="images/reveal/back-dark.webp" alt="" decoding="async" data-nofade>'
+      +   '<img class="pr-backImg pr-light" src="images/reveal/back-light.webp" alt="" decoding="async" data-nofade>'
+      + '</span>'
       + '<span class="pr-face pr-front"><img alt="" decoding="async"></span>'
       + '</span></button>';
   }).join('');
@@ -13237,9 +13260,16 @@ function prLayout(){
       return;
     }
     if (PR.hero === id){
-      el.className = 'pr-card pr-hero' + (PR.opened.indexOf(id) >= 0 ? ' pr-open' : '');
+      const opened = PR.opened.indexOf(id) >= 0;
+      el.className = 'pr-card pr-hero' + (opened ? ' pr-open' : '');
       el.style.opacity = '1'; el.style.pointerEvents = 'none';
-      set(0, 66, 0, '1');
+      // ⚠️ ОТКУДА БРАЛОСЬ «КАРТУ ПОДКИДЫВАЕТ». Анимация удара pr-heroImpact
+      // стоит с `both` и держит конечный кадр — а он заканчивается на 72px.
+      // Когда на фазе подписи класс снимается, карта уезжает обратно к
+      // базовым 66px: шесть пикселей ползком за секунду, ровно то самое
+      // «просто так подкинуло». Поэтому у РАСКРЫТОЙ карты покой = 72px,
+      // то есть там же, где её оставила анимация. Саму анимацию не трогаем.
+      set(0, opened ? 72 : 66, 0, '1');
       return;
     }
     if (PR.opened.indexOf(id) >= 0){ el.style.opacity = '0'; el.style.pointerEvents = 'none'; return; }
@@ -13260,9 +13290,9 @@ function prApplyTheme(card){
   stage.style.setProperty('--accent-2', mood.secondary);
   prEl('pr-aura').style.background =
     'radial-gradient(circle,' + mood.accent + '66 0%,' + mood.secondary + '33 34%,transparent 70%)';
-  prEl('pr-pack').querySelectorAll('.pr-face.pr-back img').forEach(function(img){
-    img.src = 'images/reveal/back-' + mood.appearance + '.webp';
-  });
+  // Рубашки НЕ подменяем через src: подмена мгновенна и цвет прыгал в один
+  // кадр. Теперь в каждой рубашке лежат обе картинки, а тема их перекрещивает
+  // прозрачностью — тем же способом, что текстуру и рамку панели
   prSeedAmbient(mood.accent, mood.secondary);
 }
 
