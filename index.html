@@ -626,11 +626,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage[data-pr-theme="dark"] .pr-coinBase{opacity:.024}
 .pr-scene.pr-phase-impact .pr-coinWaveAura{animation:pr-coinWaveAuraFade 1320ms ease-out both}
 .pr-scene.pr-phase-impact .pr-coinWaveGroup{animation:pr-coinWaveGroupFade 1320ms ease-out both}
-.pr-scene.pr-phase-impact .pr-coinWaveMaskDisc{animation:pr-coinMaskTravel 1320ms cubic-bezier(.14,.80,.18,1) both}
+/* заменено на pr-coinMaskScale ниже по файлу — анимация радиуса рвала кадры */
 .pr-scene.pr-phase-signature .pr-coinBase{opacity:.028}
 @keyframes pr-coinWaveAuraFade{0%{opacity:0}10%{opacity:.16}22%{opacity:.92}70%{opacity:.94}100%{opacity:0}}
 @keyframes pr-coinWaveGroupFade{0%{opacity:0}12%{opacity:.28}24%{opacity:1}72%{opacity:1}100%{opacity:0}}
-@keyframes pr-coinMaskTravel{0%{r:26px;opacity:0}10%{opacity:1}100%{r:760px;opacity:0}}
+/* pr-coinMaskTravel удалён: анимация радиуса (геометрии) заново растрировала
+   весь замаскированный орнамент на каждом кадре. Замена — pr-coinMaskScale */
 
 
 @media (max-width:390px){.pr-shell{min-height:730px}.pr-scene{height:485px}.pr-card.pr-hero{width:270px}.pr-details{margin-top:-24px}.pr-head{padding-top:32px}.pr-coinSigil{width:780px;height:780px}}
@@ -745,6 +746,39 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   .pr-heroBeams span{filter:blur(6px)}
   .pr-flash{filter:blur(28px)}
 }
+
+/* ⚠️⚠️ ГЛАВНАЯ ПРИЧИНА 1-2 КАДРОВ В СЕКУНДУ НА ДИОНИСЕ (09.08.2026).
+   Волна шла анимацией АТРИБУТА `r` у круга внутри SVG-маски. Радиус — это
+   ГЕОМЕТРИЯ: на каждом кадре браузер заново считает форму маски и заново
+   растрирует ВЕСЬ замаскированный орнамент (у Диониса это сотни обведённых
+   путей). Отсюда и падение до слайд-шоу — при этом число узлов почти ни при
+   чём, что и объясняет, почему прошлые две оптимизации не помогли.
+   ЛЕЧЕНИЕ: радиус фиксированный, а растёт круг ПРЕОБРАЗОВАНИЕМ. Масштаб не
+   меняет геометрию — его умеет композитор, растрировать заново нечего.
+   Выглядит один в один: 100 × 0.26 = 26 и 100 × 7.6 = 760, ровно прежние
+   крайние значения. `transform-box:fill-box` заставляет отсчитывать
+   преобразование от самой фигуры, иначе центр уедет. */
+.pr-coinWaveMaskDisc{transform-box:fill-box;transform-origin:50% 50%}
+.pr-scene.pr-phase-impact .pr-coinWaveMaskDisc{animation:pr-coinMaskScale 1320ms cubic-bezier(.14,.80,.18,1) both}
+@keyframes pr-coinMaskScale{0%{transform:scale(.26);opacity:0}10%{opacity:1}100%{transform:scale(7.6);opacity:0}}
+
+/* Слои волны заранее выносим на свой слой композитора */
+.pr-coinWaveGroup,.pr-coinWaveAura{will-change:opacity,transform}
+
+/* ⚠️ РЕЖИМ НАЛОЖЕНИЯ И РАЗМЫТИЕ — ВТОРАЯ ПО СТОИМОСТИ ВЕЩЬ НА ТЕЛЕФОНЕ.
+   `mix-blend-mode` заставляет браузер смешивать слой с тем, что под ним,
+   на каждом кадре, а `blur` пересчитывает пиксели. На узком экране гасим:
+   сцена и так плотная, потеря почти не читается, а кадры возвращаются */
+@media (max-width:559px){
+  .pr-coinWaveGroup{mix-blend-mode:normal}
+  .pr-fx{mix-blend-mode:normal}
+  .pr-heroBeams span{mix-blend-mode:normal;filter:blur(6px)}
+  .pr-flash{filter:blur(22px)}
+}
+
+/* Кнопка закрытия ниже: в мини-аппе на неё сверху налезают часы и собственные
+   кнопки Telegram, поэтому отсчитываем от безопасной зоны, а не от нуля */
+.pr-close{top:calc(env(safe-area-inset-top,0px) + var(--safe-top,0px) + 34px)}
 
 /* ⚠️⚠️ ЭТОТ БЛОК ДОЛЖЕН ОСТАВАТЬСЯ ПОСЛЕДНИМ СРЕДИ ПРАВИЛ ЭКРАНА.
    Второй раз подряд положил его выше и получил, что правила концепта
@@ -13261,6 +13295,33 @@ function sigilLayer(key, stroke, soft){
 /* Полная версия v8: gold-wave в dark и rainbow/holographic-wave в light.
    Геометрия одна и та же для base/aura/wave, поэтому цвет буквально проходит
    по тем же бороздкам, а не лежит отдельным пятном поверх сцены. */
+/* ⚠️⚠️ СИГИЛ ЗАПЕКАЕТСЯ В КАРТИНКУ ПРЯМО В БРАУЗЕРЕ (09.08.2026).
+
+   ПОЧЕМУ. Волна — это движущаяся маска поверх орнамента. Пока под маской
+   лежал ЖИВОЙ ВЕКТОР (сотни обведённых путей), браузер на каждом кадре
+   растрировал его заново, и на Дионисе экран падал до 1-2 кадров в секунду.
+   Ни дедупликация разметки, ни перевод анимации на масштаб этого не лечили:
+   дорога сама закраска вектора под маской, а не её причина.
+
+   ЧТО ДЕЛАЕМ. Собираем тот же самый рисунок в самостоятельный SVG-документ и
+   отдаём его как КАРТИНКУ (`<image>` с адресом-данными). Браузер растрирует её
+   ОДИН РАЗ и дальше двигает готовую текстуру — маска ездит по битмапу, а это
+   работа композитора. Рисунок при этом ровно тот же: та же функция
+   `sigilLayer`, те же цвета, те же градиенты.
+
+   ПОЧЕМУ НЕ ФАЙЛАМИ В РЕПОЗИТОРИИ. 19 персонажей × 2 слоя × 2 оформления это
+   под восемь десятков картинок и мегабайты навсегда. Здесь картинка живёт
+   ровно столько, сколько открыт экран, и весит ноль.
+
+   ⚠️ Цвета в адресе обязаны быть закодированы (`#` в data-URL начинает якорь),
+   поэтому `encodeURIComponent` на весь документ. */
+
+function prSigilImage(inner, defs){
+  const doc = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">'
+            + (defs || '') + inner + '</svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(doc);
+}
+
 function prRenderSigil(god, mood){
   const svg = document.getElementById('pr-sigil-svg');
   if (!svg) return;
@@ -13277,19 +13338,9 @@ function prRenderSigil(god, mood){
   const waveSoft = isLight ? 'url(#sigHoloSoft)' : pale;
   const auraStroke = isLight ? 'url(#sigHoloAura)' : bright;
 
-  svg.innerHTML =
-      '<defs>'
-    + '<radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
-    + '<stop offset="0%" stop-color="black" stop-opacity="0"/>'
-    + '<stop offset="24%" stop-color="black" stop-opacity="0"/>'
-    + '<stop offset="38%" stop-color="white" stop-opacity=".02"/>'
-    + '<stop offset="48%" stop-color="white" stop-opacity=".18"/>'
-    + '<stop offset="56%" stop-color="white" stop-opacity="1"/>'
-    + '<stop offset="64%" stop-color="white" stop-opacity=".62"/>'
-    + '<stop offset="74%" stop-color="white" stop-opacity=".18"/>'
-    + '<stop offset="86%" stop-color="white" stop-opacity=".04"/>'
-    + '<stop offset="100%" stop-color="black" stop-opacity="0"/>'
-    + '</radialGradient>'
+  // Градиенты переливов нужны ВНУТРИ запекаемого документа: он самостоятельный
+  // и до внешних определений не дотянется
+  const holoDefs = '<defs>'
     + '<linearGradient id="sigHoloStroke" x1="0%" y1="0%" x2="100%" y2="100%">'
     + '<stop offset="0%" stop-color="#ff4bd2"/><stop offset="14%" stop-color="#ff8b44"/>'
     + '<stop offset="28%" stop-color="#fff35d"/><stop offset="42%" stop-color="#7cff6f"/>'
@@ -13306,29 +13357,40 @@ function prRenderSigil(god, mood){
     + '<stop offset="32%" stop-color="#ffec4d"/><stop offset="48%" stop-color="#64ff70"/>'
     + '<stop offset="64%" stop-color="#14d7ff"/><stop offset="82%" stop-color="#7c86ff"/>'
     + '<stop offset="100%" stop-color="#cf72ff"/></linearGradient>'
-    + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
-    + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="18" fill="url(#sigWave)"/></mask>'
-    + '</defs>'
-    // ⚠️ ГЕОМЕТРИЯ СТРОИТСЯ ОДИН РАЗ (09.08.2026, лечение тормозов на Дионисе).
-    // Раньше один и тот же орнамент выкладывался в разметку ТРИЖДЫ — основа,
-    // аура и волна. У Диониса это 2367 узлов, вдвое больше среднего, и две из
-    // трёх копий ещё и живут под движущейся маской. Теперь копии — это <use>
-    // на общий шаблон, а цвет приходит переменными, поэтому выглядит один в один.
-    + '<defs><g id="prSigGeom">' + sigilLayer(key, 'var(--sig-line)', 'var(--sig-soft)') + '</g></defs>'
-    + '<use href="#prSigGeom" class="pr-coinBase" style="--sig-line:' + gold + ';--sig-soft:' + pale + '"/>'
-    // ⚠️ НА ТЕЛЕФОНЕ АУРУ НЕ РИСУЕМ (09.08.2026). Дедупликация разметки тормоза
-    // не убрала — значит дело не в числе узлов, а в ЗАКРАСКЕ: две копии всего
-    // орнамента живут под движущейся маской и перерисовываются каждый кадр.
-    // Аура — это подсветка того же рисунка; на широком экране оставляем, на
-    // телефоне убираем и получаем ровно вдвое меньше работы на кадр.
-    + (prHeavyEffectsAllowed()
-        ? '<use href="#prSigGeom" class="pr-coinWaveAura" mask="url(#sigMask)" opacity="0"'
-          + ' style="--sig-line:' + auraStroke + ';--sig-soft:' + waveSoft + '"/>'
-        : '')
-    + '<use href="#prSigGeom" class="pr-coinWaveGroup" mask="url(#sigMask)" opacity="0"'
-    + ' style="--sig-line:' + waveStroke + ';--sig-soft:' + waveSoft + '"/>';
-}
+    + '</defs>';
 
+  // Два запечённых слоя: спокойный золотой и переливающийся
+  const baseSrc = prSigilImage(sigilLayer(key, gold, pale));
+  const waveSrc = prSigilImage(sigilLayer(key, waveStroke, waveSoft), holoDefs);
+  const auraSrc = prHeavyEffectsAllowed()
+    ? prSigilImage(sigilLayer(key, auraStroke, waveSoft), holoDefs) : '';
+
+  const pic = function(cls, src, masked){
+    return '<image class="' + cls + '" x="0" y="0" width="1000" height="1000"'
+      + (masked ? ' mask="url(#sigMask)" opacity="0"' : '')
+      + ' href="' + src + '" xlink:href="' + src + '"/>';
+  };
+
+  svg.innerHTML =
+      '<defs>'
+    + '<radialGradient id="sigWave" cx="50%" cy="50%" r="50%">'
+    + '<stop offset="0%" stop-color="black" stop-opacity="0"/>'
+    + '<stop offset="24%" stop-color="black" stop-opacity="0"/>'
+    + '<stop offset="38%" stop-color="white" stop-opacity=".02"/>'
+    + '<stop offset="48%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="56%" stop-color="white" stop-opacity="1"/>'
+    + '<stop offset="64%" stop-color="white" stop-opacity=".62"/>'
+    + '<stop offset="74%" stop-color="white" stop-opacity=".18"/>'
+    + '<stop offset="86%" stop-color="white" stop-opacity=".04"/>'
+    + '<stop offset="100%" stop-color="black" stop-opacity="0"/>'
+    + '</radialGradient>'
+    + '<mask id="sigMask"><rect width="1000" height="1000" fill="black"/>'
+    + '<circle class="pr-coinWaveMaskDisc" cx="500" cy="500" r="100" fill="url(#sigWave)"/></mask>'
+    + '</defs>'
+    + pic('pr-coinBase', baseSrc, false)
+    + (auraSrc ? pic('pr-coinWaveAura', auraSrc, true) : '')
+    + pic('pr-coinWaveGroup', waveSrc, true);
+}
 
 /* ── Вскрытие ───────────────────────────────────────────────────────────── */
 
