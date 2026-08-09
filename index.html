@@ -7901,14 +7901,37 @@ function updateMenuPointsBadge(){
   if (el) el.textContent = points > 9999 ? Math.round(points / 1000) + 'k' : points;
 }
 
+/* КОГДА БАР УРОВНЯ И ЗНАЧОК ПРЯЧУТСЯ.
+
+   Бар стоит fixed с z-index 500, значок 501 — они ВЫШЕ любой нашей шторки
+   (полный плеер 210, эфир). Поэтому «просто перекрыть их сверху» не выйдет:
+   единственный способ — убрать на время. Условия держим ОДНОЙ функцией, иначе
+   при следующем полноэкранном слое опять всплывёт «бар налез на крестик».
+
+   Причина живая: Denis прислал скриншот, где бар лёг поверх шапки полного
+   плеера и закрыл кнопку закрытия.
+
+   Флаги берём ПРЯМЫМИ ссылками, без `typeof`: обе переменные объявлены через
+   let (строки с pfFieldOpen и liveFullOpen) ВЫШЕ вызова init(), а на переменной
+   во временной мёртвой зоне `typeof` всё равно бросает ошибку — защиты он бы
+   не дал, только вид. Если добавляешь сюда новый флаг — проверь, что он
+   объявлен раньше init(). */
+function levelBarMustHide(){
+  if (pfFieldOpen) return true;    // поле выбора тем
+  if (liveFullOpen) return true;   // полный экран эфира
+  var fp = document.getElementById('fp-overlay');
+  if (fp && fp.classList.contains('open')) return true;   // полный плеер
+  return false;
+}
+
 function renderLevelCard(){
   updateMenuPointsBadge();
   const card = document.getElementById('level-card');
   if (!card) return;
-  // Поле выбора тем прячет бар на время: visibilitychange, опрос вступления
+  // Полноэкранные слои прячут бар на время: visibilitychange, опрос вступления
   // в канал и закрытие ИИ-попапа — все дёргают эту функцию, и без явной
-  // проверки любой из них возвращал бы бар поверх поля
-  if (pfFieldOpen){
+  // проверки любой из них возвращал бы бар поверх слоя
+  if (levelBarMustHide()){
     // Прячем и значок: выход происходит раньше, чем код ниже до него доберётся
     card.style.display = 'none';
     const b0 = document.getElementById('reward-level-badge');
@@ -11294,10 +11317,12 @@ function expandLiveFull(){
   if (window.Telegram?.WebApp?.BackButton) {
     try { window.Telegram.WebApp.BackButton.show(); } catch (e) {}
   }
+  renderLevelCard();   // бар и значок налезали на шапку эфира — прячем на время
 }
 
 function collapseLiveFull(){
   liveFullOpen = false;
+  renderLevelCard();   // вернуть бар
   stopLiveChat();
   document.getElementById('live-full').style.display = 'none';
   const ff = document.getElementById('live-full-frame');
@@ -15827,10 +15852,14 @@ function plOpenFull(){
   ov.classList.add('open');
   plRenderList();
   plRenderMarkers();
+  // Бар уровня стоит выше по z-index и накрыл бы шапку плеера вместе с
+  // крестиком — убираем его на время (условия в levelBarMustHide)
+  if (typeof renderLevelCard === 'function') renderLevelCard();
 }
 function plCloseFull(){
   var ov = plEl('fp-overlay');
   if (ov) ov.classList.remove('open');
+  if (typeof renderLevelCard === 'function') renderLevelCard();   // вернуть бар
 }
 
 function plSetTab(tab){
