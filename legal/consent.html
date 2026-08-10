@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Согласие на обработку персональных данных</title>
+<style>
+/* Значения по умолчанию — на случай, если скрипт ниже почему-то не
+   выполнится (встроенный webview без matchMedia, отключённый JS и т.п.):
+   страница всё равно должна остаться читаемой, светлой темой */
+:root{
+  --bg:#e6ded4; --bg2:#ede6de; --card:#e7dfd5;
+  --border:rgba(255,255,255,.6); --line:rgba(76,58,42,.12);
+  --text:#302821; --text-dim:#77695e; --text-faint:#9c8d80;
+  --lav:#9b8cf2; --lav-deep:#7c6cf0;
+  --warm:#e8614a;
+}
+[data-theme="light"]{
+  --bg:#e6ded4; --bg2:#ede6de; --card:#e7dfd5;
+  --border:rgba(255,255,255,.6); --line:rgba(76,58,42,.12);
+  --text:#302821; --text-dim:#77695e; --text-faint:#9c8d80;
+  --lav:#9b8cf2; --lav-deep:#7c6cf0;
+  --warm:#e8614a;
+}
+[data-theme="dark"]{
+  --bg:#0c0a15; --bg2:#110f1e; --card:#151228;
+  --border:rgba(255,255,255,.08); --line:rgba(255,255,255,.10);
+  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+  --lav:#9b8cf2; --lav-deep:#b3a6ff;
+  --warm:#ff7a61;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif;
+  line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+.top{
+  position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; background:var(--bg2); border-bottom:1px solid var(--line);
+}
+.top .brand{font-weight:800; font-size:15px}
+.theme-btn{
+  width:34px; height:34px; border-radius:10px; border:1px solid var(--border);
+  background:var(--card); color:var(--text); font-size:15px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+main{max-width:680px; margin:0 auto; padding:28px 20px 80px}
+h1{font-size:22px; margin:0 0 6px; line-height:1.3}
+.meta{color:var(--text-faint); font-size:13px; margin-bottom:28px}
+h2{font-size:16px; margin:32px 0 10px; color:var(--text)}
+p, li{color:var(--text-dim); font-size:14.5px}
+ul{padding-left:20px; margin:8px 0}
+li{margin-bottom:6px}
+strong{color:var(--text); font-weight:700}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:16px 18px; margin:16px 0;
+}
+.back{
+  display:inline-block; margin-top:36px; font-size:13.5px; color:var(--lav-deep);
+  text-decoration:underline; text-underline-offset:3px; cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">Согласие на обработку персональных данных</div>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+</div>
+
+<main>
+  <h1>Согласие на обработку персональных данных</h1>
+  <div class="meta">Действует с 11 августа 2026 года</div>
+
+  <p>Регистрируясь в приложении онлайн-клуба «Ты боженька продаж», указывая номер телефона
+  или иным образом предоставляя свои персональные данные при использовании Сервиса
+  (приложения, ботов в Telegram, ВКонтакте, MAX или сайта Клуба), вы даёте согласие на
+  обработку своих персональных данных на условиях, изложенных ниже, в соответствии со
+  статьёй 9 Федерального закона от 27.07.2006 № 152-ФЗ «О персональных данных».</p>
+
+  <div class="card">
+    <p style="margin:0"><strong>Оператор, которому даётся согласие:</strong><br>
+    ИП Кузнецов Денис Александрович, ИНН 616616492674</p>
+  </div>
+
+  <h2>1. Перечень персональных данных</h2>
+  <p>Согласие даётся на обработку следующих данных: фамилия, имя; номер телефона; адрес
+  электронной почты (если указан); идентификатор в Telegram, ВКонтакте или MAX;
+  сведения об оплате подписки (без реквизитов банковской карты); данные об использовании
+  Сервиса (какие материалы просмотрены, прогресс внутри Клуба); технические данные
+  устройства и сессии, необходимые для входа.</p>
+
+  <h2>2. Цель обработки</h2>
+  <p>Предоставление доступа к материалам и функциям Клуба, идентификация участника
+  на разных платформах, управление подпиской, отправка уведомлений о занятиях
+  и материалах, связь по вопросам использования Сервиса, защита от несанкционированной
+  передачи доступа третьим лицам.</p>
+
+  <h2>3. Перечень действий с персональными данными</h2>
+  <p>Согласие даётся на совершение следующих действий: сбор, запись, систематизация,
+  накопление, хранение, уточнение (обновление, изменение), извлечение, использование,
+  передача (предоставление, доступ) обработчикам, указанным в
+  <a href="./privacy.html" style="color:var(--lav-deep)">Политике конфиденциальности</a>,
+  обезличивание, блокирование, удаление, уничтожение персональных данных — как
+  с использованием средств автоматизации, так и без их использования.</p>
+
+  <h2>4. Срок действия согласия</h2>
+  <p>Согласие действует бессрочно с момента его предоставления и может быть отозвано
+  вами в любой момент путём обращения через форму поддержки в приложении или в бота
+  Клуба. Отзыв согласия может означать невозможность дальнейшего предоставления
+  доступа к Сервису, поскольку часть указанных данных необходима для его работы.</p>
+
+  <h2>5. Дополнительно</h2>
+  <p>Более подробно о том, какие данные мы обрабатываем, для чего и кому передаём,
+  рассказано в <a href="./privacy.html" style="color:var(--lav-deep)">Политике конфиденциальности</a> Клуба.</p>
+
+  <div class="back" onclick="history.back()">← Вернуться назад</div>
+</main>
+
+<script>
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  try{ localStorage.setItem('legal_theme', t); }catch(e){}
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+(function(){
+  let saved = null;
+  try{ saved = localStorage.getItem('legal_theme'); }catch(e){}
+  if (!saved) {
+    try{ saved = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    catch(e){ saved = 'light'; }
+  }
+  applyTheme(saved);
+})();
+</script>
+</body>
+</html>

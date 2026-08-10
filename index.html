@@ -2863,6 +2863,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <input class="ai-question-input" style="text-align:center" type="tel" id="phone-login-input" value="+" placeholder="+7 999 123-45-67" inputmode="tel" oninput="keepPlusPrefix(this)">
     <button class="lec-link-btn access-btn" id="web-login-btn" onclick="handleLoginButton()">Войти</button>
   </div>
+  <p id="web-login-consent" style="max-width:320px;font-size:12px;line-height:1.5;color:var(--text-faint);margin-top:2px" data-text="login.consent">
+    Продолжая, ты соглашаешься с
+    <span style="text-decoration:underline;text-underline-offset:2px;cursor:pointer" onclick="event.stopPropagation();openLegalDoc('privacy')">политикой конфиденциальности</span>
+    и даёшь
+    <span style="text-decoration:underline;text-underline-offset:2px;cursor:pointer" onclick="event.stopPropagation();openLegalDoc('consent')">согласие на обработку персональных данных</span>
+  </p>
   <p id="web-login-error" style="display:none;color:var(--warm);max-width:320px;line-height:1.45" data-text="login.error">Не получилось войти — попробуй ещё раз чуть позже.</p>
   <div id="web-login-notfound" style="display:none;width:100%;max-width:320px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:14px">
     <div id="web-login-notfound-text" style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px"></div>
@@ -15050,11 +15056,13 @@ async function submitBugReport(){
    Пока заглушки: тексты Denis готовит отдельно. Как только появятся ссылки —
    заменить URL здесь, разметку менять не придётся. */
 
+const LEGAL_BASE = 'https://kuznetsovdenisalexandrovich.github.io/club-app/legal';
 const LEGAL_DOCS = {
-  privacy: { title: 'Согласие на обработку персональных данных', url: '' },
-  terms:   { title: 'Пользовательское соглашение',               url: '' },
-  offer:   { title: 'Оферта клуба',                              url: '' },
-  rules:   { title: 'Правила пользования',                       url: '' },
+  privacy: { title: 'Политика конфиденциальности',                 url: LEGAL_BASE + '/privacy.html' },
+  consent: { title: 'Согласие на обработку персональных данных',   url: LEGAL_BASE + '/consent.html' },
+  terms:   { title: 'Пользовательское соглашение',                 url: '' },
+  offer:   { title: 'Оферта клуба',                                url: '' },
+  rules:   { title: 'Правила пользования',                         url: '' },
 };
 
 function openLegalDoc(kind){
