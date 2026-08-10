@@ -5358,7 +5358,7 @@ async function testCheckMembership() {
     await fetch(`${API_URL}/app/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, action: 'check_membership', params: {} })
+      body: JSON.stringify({ ...actionIdent(), action: 'check_membership', params: {} })
     });
   } catch (e) {
     resultEl.textContent = 'Ошибка отправки';
@@ -5369,7 +5369,7 @@ async function testCheckMembership() {
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 1500));
     try {
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_membership`);
+      const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=check_membership`);
       const data = await r.json();
       if (data.status === 'done') {
         resultEl.textContent = 'Готово: ' + JSON.stringify(data.result);
@@ -5536,13 +5536,13 @@ async function fetchListMembership() {
   await fetch(`${API_URL}/app/action`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id: telegramId, action: 'check_lists', params: {} })
+    body: JSON.stringify({ ...actionIdent(), action: 'check_lists', params: {} })
   }).catch(()=>{});
 
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 1200));
     try {
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=check_lists`);
+      const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=check_lists`);
       const data = await r.json();
       if (data.status === 'done') {
         listMembership = data.result;
@@ -5757,7 +5757,7 @@ async function toggleNotif(key) {
   await fetch(`${API_URL}/app/action`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id: telegramId, action: trigger, params: {} })
+    body: JSON.stringify({ ...actionIdent(), action: trigger, params: {} })
   }).catch(()=>{});
 
   // Оптимистично переключаем сразу, потом сверяемся с реальностью через пару секунд
@@ -9160,11 +9160,11 @@ async function openReferralPromo(){
   try {
     await fetch(`${API_URL}/app/action`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, action: 'get_referral_promo_link', params: {} })
+      body: JSON.stringify({ ...actionIdent(), action: 'get_referral_promo_link', params: {} })
     });
     for (let i = 0; i < 12; i++){
       await new Promise(r => setTimeout(r, 1500));
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=get_referral_promo_link`);
+      const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=get_referral_promo_link`);
       const data = await r.json();
       if (data.status === 'done' && data.result){
         const link = data.result.link || data.result.promo_link || data.result.url;
@@ -12199,7 +12199,7 @@ async function openAccessPage(){
     await fetch(`${API_URL}/app/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, action: 'get_payment_links', params: {} })
+      body: JSON.stringify({ ...actionIdent(), action: 'get_payment_links', params: {} })
     });
   } catch (e) {
     el.innerHTML = roundTripErrorHtml();
@@ -12209,7 +12209,7 @@ async function openAccessPage(){
   for (let i = 0; i < 12; i++) {
     await new Promise(r => setTimeout(r, 1500));
     try {
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=get_payment_links`);
+      const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=get_payment_links`);
       const data = await r.json();
       if (data.status === 'done' && data.result) {
         renderAccessButtons(data.result);
@@ -12327,7 +12327,7 @@ async function askAi(){
     await fetch(`${API_URL}/app/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, action: 'ai_library_question', params: { lib_question: question } })
+      body: JSON.stringify({ ...actionIdent(), action: 'ai_library_question', params: { lib_question: question } })
     });
   } catch (e) {
     answerEl.innerHTML = '<div class="ai-loading">Не получилось отправить вопрос — проверь соединение</div>';
@@ -12338,7 +12338,7 @@ async function askAi(){
   for (let i = 0; i < 12; i++) {
     await new Promise(r => setTimeout(r, 1500));
     try {
-      const r = await fetch(`${API_URL}/app/action?telegram_id=${telegramId}&action=ai_library_question`);
+      const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=ai_library_question`);
       const data = await r.json();
       if (data.status === 'done' && data.result && data.result.answer) {
         await renderAiAnswerCards(data.result.answer);
@@ -12681,6 +12681,22 @@ function currentPlatform(){
 function currentPlatformId(){
   if (typeof isInsideVk === 'function' && isInsideVk()) return vkUserId();
   try { return String(Telegram.WebApp.initDataUnsafe.user.id || ''); } catch(e){ return ''; }
+}
+
+/* Кто спрашивает, когда апп идёт «в бота и обратно» (round-trip).
+   У Denis'а ОДИН проект Salebot на оба мессенджера, поэтому серверу достаточно
+   сказать, кого мы знаем: есть телеграм — колбек уйдёт в ТГ-бота, иначе в
+   ВК-бота. Человек, пришедший из ВК и не имеющий телеграма, раньше просто не
+   мог ни оплатить из аппа, ни спросить ИИ-помощника — ответа было неоткуда взять. */
+function actionIdent(){
+  if (telegramId) return { telegram_id: telegramId };
+  if (typeof isInsideVk === 'function' && isInsideVk()) return { vk_id: Number(vkUserId()) || 0 };
+  return { telegram_id: telegramId };
+}
+// Тот же выбор для опроса результата — строкой запроса
+function actionIdentQuery(){
+  const id = actionIdent();
+  return id.telegram_id ? 'telegram_id=' + id.telegram_id : 'vk_id=' + id.vk_id;
 }
 
 function setLoginError(message){
