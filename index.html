@@ -12536,16 +12536,29 @@ function markHomeScreenAddedManually(){
    Ни одна ветка не заменяет другую: внутри ВК тоже может понадобиться вход по
    телефону, если человека мы ещё не знаем. */
 
-// Внутри ВК приложение открыто с параметрами вида ?vk_user_id=...&sign=...
+/* Параметры запуска ВК приходят В АДРЕСЕ, но НЕ ВСЕГДА В ОДНОМ И ТОМ ЖЕ МЕСТЕ:
+   в мобильных клиентах это обычная строка запроса, а десктопная версия кладёт
+   их ПОСЛЕ РЕШЁТКИ. Проверяем оба места — иначе приложение решает, что оно не
+   в ВК, и показывает веб-вход (ровно это и случилось при первой проверке). */
 function vkLaunchQuery(){
   try {
-    const q = location.search || '';
-    return q.indexOf('vk_user_id=') > -1 && q.indexOf('sign=') > -1 ? q : '';
-  } catch(e){ return ''; }
+    const places = [location.search || '', location.hash || ''];
+    for (var i = 0; i < places.length; i++){
+      // После решётки может быть и путь, и параметры: '#/что-то?vk_user_id=...'
+      var raw = places[i].replace(/^[#?]/, '');
+      // Путь перед параметрами срезаем ВСЕГДА, когда есть «?»: иначе
+      // URLSearchParams разберёт «/main?vk_user_id» как одно имя поля и вернёт
+      // пустоту — проверка «внутри ВК» пройдёт, а идентификатора не будет
+      var at = raw.indexOf('?');
+      if (at > -1) raw = raw.slice(at + 1);
+      if (raw.indexOf('vk_user_id=') > -1 && raw.indexOf('sign=') > -1) return raw;
+    }
+  } catch(e){}
+  return '';
 }
 function isInsideVk(){ return !!vkLaunchQuery(); }
 function vkUserId(){
-  try { return new URLSearchParams(location.search).get('vk_user_id') || ''; }
+  try { return new URLSearchParams(vkLaunchQuery()).get('vk_user_id') || ''; }
   catch(e){ return ''; }
 }
 
