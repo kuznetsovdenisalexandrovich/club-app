@@ -2479,6 +2479,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="section-label" style="margin-bottom:8px">Сервер</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;word-break:break-all" id="debug-server-now"></div>
         <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest()">Переключиться на тестовый</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest(true)">Указать другой тестовый адрес</button>
         <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToProd()">Вернуться на боевой</button>
         <button class="help-btn" onclick="apiCompareServers()">Сравнить оба (замер отклика)</button>
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="debug-server-result"></div>
@@ -4907,6 +4908,10 @@ const API_PROD = location.hostname.endsWith('github.io')
 let apiOverride = '';
 try { apiOverride = localStorage.getItem('club_api_override') || ''; } catch (e) {}
 
+// ⚠️ ВРЕМЕННОЕ: адрес тестового сервера Timeweb, вшит, чтобы не вводить его
+// каждый раз руками. Удалить вместе со всем остальным на этапе 5 (журнал переезда)
+const API_TEST_DEFAULT = 'https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net';
+
 // Полосу ставим МГНОВЕННО, не дожидаясь ни отладочного режима, ни init(): иначе
 // можно успеть походить по тестовому серверу, не видя предупреждения
 if (apiOverride) {
@@ -7246,9 +7251,10 @@ function apiRenderServerBlock(){
   var el = document.getElementById('debug-server-now');
   if (!el) return;
   var onTest = !!apiOverride;
+  var known = apiTestUrlSaved() || API_TEST_DEFAULT;
   el.textContent =
     'Сейчас: ' + (onTest ? 'ТЕСТОВЫЙ' : 'боевой') + '\n' + API_URL
-    + (apiTestUrlSaved() ? '\n\nТестовый адрес сохранён:\n' + apiTestUrlSaved() : '\n\nТестовый адрес ещё не задан');
+    + (known ? '\n\nАдрес для кнопки «Переключиться»:\n' + known : '\n\nАдрес ещё не задан ни в коде, ни сохранён');
   document.body.classList.toggle('api-override-on', onTest);
 }
 
@@ -7263,9 +7269,17 @@ function apiApplyAndReload(url){
   location.reload();
 }
 
-function apiSwitchToTest(){
-  var saved = apiTestUrlSaved();
-  var url = prompt('Адрес тестового сервера целиком, со https://\n\nПустое поле — отмена.', saved || 'https://');
+function apiSwitchToTest(forcePrompt){
+  var known = apiTestUrlSaved() || API_TEST_DEFAULT;
+  // Обычное нажатие — сразу на известный адрес, без единого поля ввода.
+  // Свой адрес нужен только если попросили явно (кнопка «Указать другой»)
+  // или известного адреса вообще ещё нет
+  if (known && !forcePrompt){
+    try { localStorage.setItem('club_api_test_url', known); } catch(e){}
+    apiApplyAndReload(known);
+    return;
+  }
+  var url = prompt('Адрес тестового сервера целиком, со https://\n\nПустое поле — отмена.', known || 'https://');
   if (!url) return;
   url = url.trim().replace(/\/+$/, '');
   if (!/^https:\/\/[^\s\/]+$/.test(url)){
