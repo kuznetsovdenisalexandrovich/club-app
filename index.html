@@ -13131,7 +13131,13 @@ function startWebSession(){
     setTimeout(applyWebSafeArea, 300);
     window.addEventListener('resize', applyWebSafeArea);
     startVkSession().then(function(known){
-      if (!known) startWebSession();   // не узнали — обычный вход по телефону
+      if (!known) {
+        // Сразу к входу по телефону, МИМО экрана «добавь на главный экран»:
+        // внутри ВК приложение уже открыто из мессенджера, добавлять его в
+        // браузер незачем — эта подсказка там выглядит поломкой
+        loadUrgentNewsForWebEntry();
+        proceedToWebLogin();
+      }
       openFromStartParam();
     });
     return;
