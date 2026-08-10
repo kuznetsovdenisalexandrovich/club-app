@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Оферта клуба</title>
+<style>
+/* Значения по умолчанию — на случай, если скрипт ниже почему-то не
+   выполнится (встроенный webview без matchMedia, отключённый JS и т.п.):
+   страница всё равно должна остаться читаемой, светлой темой */
+:root{
+  --bg:#e6ded4; --bg2:#ede6de; --card:#e7dfd5;
+  --border:rgba(255,255,255,.6); --line:rgba(76,58,42,.12);
+  --text:#302821; --text-dim:#77695e; --text-faint:#9c8d80;
+  --lav:#9b8cf2; --lav-deep:#7c6cf0;
+  --warm:#e8614a;
+}
+[data-theme="light"]{
+  --bg:#e6ded4; --bg2:#ede6de; --card:#e7dfd5;
+  --border:rgba(255,255,255,.6); --line:rgba(76,58,42,.12);
+  --text:#302821; --text-dim:#77695e; --text-faint:#9c8d80;
+  --lav:#9b8cf2; --lav-deep:#7c6cf0;
+  --warm:#e8614a;
+}
+[data-theme="dark"]{
+  --bg:#0c0a15; --bg2:#110f1e; --card:#151228;
+  --border:rgba(255,255,255,.08); --line:rgba(255,255,255,.10);
+  --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+  --lav:#9b8cf2; --lav-deep:#b3a6ff;
+  --warm:#ff7a61;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif;
+  line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+.top{
+  position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; background:var(--bg2); border-bottom:1px solid var(--line);
+}
+.top .brand{font-weight:800; font-size:15px}
+.theme-btn{
+  width:34px; height:34px; border-radius:10px; border:1px solid var(--border);
+  background:var(--card); color:var(--text); font-size:15px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+main{max-width:680px; margin:0 auto; padding:28px 20px 80px}
+h1{font-size:22px; margin:0 0 6px; line-height:1.3}
+.meta{color:var(--text-faint); font-size:13px; margin-bottom:28px}
+h2{font-size:16px; margin:32px 0 10px; color:var(--text)}
+p, li{color:var(--text-dim); font-size:14.5px}
+ul{padding-left:20px; margin:8px 0}
+li{margin-bottom:6px}
+strong{color:var(--text); font-weight:700}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:16px 18px; margin:16px 0;
+}
+.back{
+  display:inline-block; margin-top:36px; font-size:13.5px; color:var(--lav-deep);
+  text-decoration:underline; text-underline-offset:3px; cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">Оферта клуба</div>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+</div>
+
+<main>
+<h1>Публичная оферта</h1>
+<div class="meta">Действует с 11 августа 2026 года</div>
+
+<p>Настоящий документ является публичной офертой <strong>ИП Кузнецов Денис Александрович</strong>,
+ИНН 616616492674 (далее — «Оператор»), адресованной любому дееспособному лицу
+(далее — «Участник»), в соответствии со статьёй 437 Гражданского кодекса
+Российской Федерации, и содержит все существенные условия предоставления доступа
+к онлайн-клубу «Ты боженька продаж» (далее — «Клуб») на платной основе.</p>
+
+<p>Оплата подписки означает полное и безоговорочное принятие (акцепт) настоящей
+оферты в соответствии со статьёй 438 ГК РФ.</p>
+
+<h2>1. Предмет договора</h2>
+<p>Оператор предоставляет Участнику доступ к закрытым материалам и функциям Клуба
+на условиях выбранного тарифа, а Участник оплачивает этот доступ на условиях,
+указанных на странице оплаты в приложении или у бота Клуба.</p>
+
+<h2>2. Тарифы и оплата</h2>
+<ul>
+  <li>Доступные тарифы, их стоимость и условия (в том числе пробный период) указаны
+  на странице оплаты в момент оформления подписки — это её актуальный и обязывающий вид</li>
+  <li>Оплата производится банковской картой через платёжного оператора Продамус.
+  Оператор Клуба не получает и не хранит реквизиты банковской карты</li>
+  <li>Подписка с ежемесячной оплатой продлевается автоматически до момента её
+  отмены Участником — согласие на автоматическое списание даётся при первой оплате</li>
+</ul>
+
+<h2>3. Отмена подписки</h2>
+<p>Участник может отменить подписку в любой момент через раздел «Управление подпиской»
+в приложении. После отмены доступ сохраняется до конца уже оплаченного периода,
+последующие списания не производятся.</p>
+
+<h2>4. Возврат средств</h2>
+<p>Возврат средств осуществляется в порядке, установленном законодательством
+Российской Федерации о защите прав потребителей. Для рассмотрения обращения
+о возврате напишите через форму поддержки в приложении, указав дату и способ
+оплаты — решение принимается индивидуально по каждому обращению.</p>
+
+<div class="card">
+  <p style="margin:0"><strong>Не является юридической консультацией:</strong> точные условия
+  возврата для длящихся услуг в конкретной ситуации может отличаться в зависимости
+  от обстоятельств — обратитесь в поддержку, чтобы разобраться в вашем случае.</p>
+</div>
+
+<h2>5. Ответственность сторон</h2>
+<p>Оператор несёт ответственность за предоставление доступа к оплаченным материалам
+в соответствии с условиями тарифа. Участник несёт ответственность за достоверность
+данных, указанных при оплате, и за сохранность своего доступа к Сервису.</p>
+
+<h2>6. Срок действия оферты</h2>
+<p>Оферта действует бессрочно и может быть изменена Оператором. Условия, действовавшие
+на момент оплаты конкретного периода подписки, сохраняют силу до его окончания.</p>
+
+<h2>7. Реквизиты Оператора</h2>
+<div class="card">
+  <p style="margin:0">ИП Кузнецов Денис Александрович<br>ИНН 616616492674</p>
+</div>
+
+
+<script>
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  try{ localStorage.setItem('legal_theme', t); }catch(e){}
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+(function(){
+  let saved = null;
+  try{ saved = localStorage.getItem('legal_theme'); }catch(e){}
+  if (!saved) {
+    try{ saved = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    catch(e){ saved = 'light'; }
+  }
+  applyTheme(saved);
+})();
+</script>
+</body>
+</html>
