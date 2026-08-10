@@ -12530,6 +12530,25 @@ let loginStage = 'phone';      // phone | code
 let loginPhone = '';
 let codeSendAttempts = 0;
 
+/* Каким путём подтверждаем вход:
+     'bot' — код приходит в бота на платформе, где человек уже опознан. Основной путь
+     'sms' — запасной, для тех, у кого ни одного мессенджера к карточке не привязано
+   Решает не приложение, а сервер: /auth/lookup отвечает, куда он может прислать код. */
+let loginRoute = '';
+let loginChannelLabels = [];
+
+/* Откуда человек входит прямо сейчас. Внутри Telegram платформа известна сразу,
+   в вебе её нет вовсе — тогда подтверждать будем чем угодно из известного,
+   а привязывать нечего. Дальше сюда добавятся 'vk' и 'max'. */
+function currentPlatform(){
+  if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
+      && Telegram.WebApp.initDataUnsafe.user) return 'tg';
+  return '';
+}
+function currentPlatformId(){
+  try { return String(Telegram.WebApp.initDataUnsafe.user.id || ''); } catch(e){ return ''; }
+}
+
 function setLoginError(message){
   const el = document.getElementById('web-login-error');
   if (!message){ el.style.display = 'none'; return; }
@@ -12567,6 +12586,8 @@ function exitDemoToLogin(){
   const wrb = document.getElementById('web-requisites-bar');
   if (wrb) wrb.style.display = appSettings.show_requisites ? '' : 'none';
   loginStage = 'phone';
+  loginRoute = '';
+  loginChannelLabels = [];
   setLoginError('');
   setLoginNotFound(false);
   renderLoginStage();
@@ -12581,8 +12602,15 @@ function renderLoginStage(){
   const fallback = document.getElementById('web-login-fallback');
 
   if (loginStage === 'code'){
-    title.textContent = 'Введи код из смс';
-    subtitle.textContent = `Отправили смс с кодом на ${loginPhone}`;
+    if (loginRoute === 'bot'){
+      title.textContent = 'Введи код';
+      // Название платформы берём от сервера: он знает, куда реально отправил
+      const where = loginChannelLabels.join(' и ');
+      subtitle.textContent = `Код отправлен в ${where}. Открой бота, посмотри код и вернись сюда.`;
+    } else {
+      title.textContent = 'Введи код из смс';
+      subtitle.textContent = `Отправили смс с кодом на ${loginPhone}`;
+    }
     input.type = 'tel';
     input.inputMode = 'numeric';
     input.maxLength = 4;
@@ -12609,14 +12637,102 @@ function renderLoginStage(){
 
 function handleLoginButton(){
   setLoginNotFound(false);
-  if (loginStage === 'code') return verifyLoginCode();
+  if (loginStage === 'code') return loginRoute === 'bot' ? verifyBotCode() : verifyLoginCode();
   const phone = document.getElementById('phone-login-input').value.trim();
   if (!phone) return;
-  if (appSettings.sms_login_enabled){
-    loginPhone = phone;
-    sendLoginCode();
-  } else {
-    quickPhoneLogin(phone);
+  loginPhone = phone;
+  startLogin();
+}
+
+/* Развилка входа. Сервер сам решает, куда слать код: у человека может быть
+   привязан Telegram, ВК, MAX — или ничего, и тогда остаётся смс.
+   Приложение не гадает и не хранит это решение между заходами. */
+async function startLogin(){
+  setLoginError('');
+  const btn = document.getElementById('web-login-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API_URL}/auth/lookup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: loginPhone, platform: currentPlatform(),
+                             external_id: currentPlatformId() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Не получилось проверить номер');
+
+    if (data.found && (data.channels || []).length){
+      loginRoute = 'bot';
+      await sendBotCode();
+      return;
+    }
+    // Подтверждать нечем — запасной путь ровно тот, что был до сих пор
+    loginRoute = 'sms';
+    if (appSettings.sms_login_enabled) { await sendLoginCode(); }
+    else { await quickPhoneLogin(loginPhone); }
+  } catch (e) {
+    setLoginError(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function sendBotCode(){
+  setLoginError('');
+  const btn = document.getElementById('web-login-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API_URL}/auth/challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: loginPhone, platform: currentPlatform(),
+                             external_id: currentPlatformId() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Не получилось отправить код');
+    if (!data.sent){
+      // Каналы были на прошлом шаге, а отправить не вышло — не молчим и не
+      // притворяемся, что код ушёл: человек будет ждать его впустую
+      throw new Error('Не удалось отправить код. Попробуй ещё раз или напиши в поддержку');
+    }
+    loginChannelLabels = data.labels || [];
+    codeSendAttempts += 1;
+    loginStage = 'code';
+    renderLoginStage();
+  } catch (e) {
+    setLoginError(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function verifyBotCode(){
+  setLoginError('');
+  const code = document.getElementById('phone-login-input').value.trim();
+  if (!code) return;
+  const btn = document.getElementById('web-login-btn');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API_URL}/auth/verify`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: loginPhone, code, platform: currentPlatform(),
+                             external_id: currentPlatformId() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
+    if (!data.session_token){
+      // Такое бывает у человека, который пришёл из ВК и телеграма не имеет:
+      // сессии пока опознают людей по telegram_id. Лучше честная надпись,
+      // чем белый экран после «успешного» входа
+      throw new Error('Вход подтверждён, но открыть веб-версию пока не получается. Открой приложение в мессенджере');
+    }
+    finishWebLogin(data.telegram_id, data.session_token);
+  } catch (e) {
+    setLoginError(e.message);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -12649,6 +12765,7 @@ async function sendLoginCode(){
 
 function resendLoginCode(){
   loginStage = 'phone';
+  if (loginRoute === 'bot') { sendBotCode(); return; }
   sendLoginCode();
 }
 
