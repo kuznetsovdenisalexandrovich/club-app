@@ -2474,6 +2474,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     <div id="debug-blocks" style="display:none">
       <div class="section-label">Отладка</div>
+      <!-- ⚠️ ВРЕМЕННОЕ: выбор сервера на время проверки переезда бэкенда -->
+      <div class="card" id="debug-server-block" style="margin-bottom:12px">
+        <div class="section-label" style="margin-bottom:8px">Сервер</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;word-break:break-all" id="debug-server-now"></div>
+        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest()">Переключиться на тестовый</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToProd()">Вернуться на боевой</button>
+        <button class="help-btn" onclick="apiCompareServers()">Сравнить оба (замер отклика)</button>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="debug-server-result"></div>
+      </div>
       <div class="card">
         <button class="help-btn" style="margin-bottom:8px" onclick="testCheckMembership()">Проверить членство (тест)</button>
         <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:10px;text-align:center" id="test-result"></div>
@@ -4248,7 +4257,23 @@ body.player-open .scroll-fade{height:190px}
 .ptc-row.ptc-now .ptc-time{color:var(--warm)}
 .ptc-text{font-size:13px;line-height:1.45;flex:1}
 .fp-empty{text-align:center;padding:28px 16px;color:var(--text-faint);font-size:13px;line-height:1.5}
+
+/* ⚠️ ВРЕМЕННОЕ — полоса тестового сервера. Удаляется вместе с переключателем
+   бэкенда (см. блок «АДРЕС БЭКЕНДА» в скрипте). z-index выше бара уровня (500)
+   и значка (501): её обязано быть видно поверх всего, иначе смысл теряется */
+#api-override-bar{
+  position:fixed;top:0;left:0;right:0;z-index:900;display:none;
+  background:#b3261e;color:#fff;font-size:11.5px;font-weight:700;
+  text-align:center;padding:calc(max(env(safe-area-inset-top),0px) + 5px) 10px 5px;
+  letter-spacing:.02em;cursor:pointer;line-height:1.35;
+}
+body.api-override-on #api-override-bar{display:block}
 </style>
+
+<!-- ⚠️ ВРЕМЕННОЕ: полоса тестового сервера, удаляется вместе с переключателем -->
+<div id="api-override-bar" onclick="apiSwitchPanel()">
+  ТЕСТОВЫЙ СЕРВЕР — нажми, чтобы вернуться на боевой
+</div>
 
 <div id="cardentry-overlay">
   <div class="ce-wrap">
@@ -4856,13 +4881,45 @@ function imgFadeScan(roots){
 })();
 
 
-// Быстрый контур для разработки (GitHub Pages → Railway напрямую, минуя кастомный
-// api.-домен, который сейчас периодически "плавает" из-за DPI-блокировок в РФ) —
-// и "чистовой" контур (Beget → api.youselllikeagod-magazine.ru) — на одном и том же
-// коде, без ручного переключения: адрес бэкенда определяется по хосту фронтенда.
-const API_URL = location.hostname.endsWith('github.io')
+/* ═══════════════════════════════════════════════════════════════════════════
+   АДРЕС БЭКЕНДА
+
+   БОЕВОЙ СЕРВЕР — ВСЕГДА `API_PROD`. Он один, и он определяется по хосту
+   фронтенда: с github.io бьём в Railway напрямую, с кастомного домена — через
+   api.-домен. Ничего другого боевым не является.
+
+   ⚠️ ПЕРЕКЛЮЧАТЕЛЬ НИЖЕ — ВРЕМЕННЫЙ, на время проверки переезда бэкенда.
+   Живёт ТОЛЬКО в localStorage устройства (отладочный режим), на других людей
+   не влияет никак. Пока он включён, вверху экрана висит несворачиваемая
+   красная полоса — забыть, что сидишь на тестовом сервере, невозможно.
+
+   КОГДА ПЕРЕЕЗД ЗАКОНЧЕН (или отменён) — УДАЛИТЬ:
+     1) этот блок целиком, оставив одну строку `const API_URL = ...`
+     2) функции apiSwitch* и разметку #api-override-bar и #debug-server-block
+     3) строку про переключатель в справке отладки
+   Список продублирован в журнале переезда — не полагаться только на память.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const API_PROD = location.hostname.endsWith('github.io')
   ? 'https://club-backend-production-fc7f.up.railway.app'
   : 'https://api.youselllikeagod-magazine.ru';
+
+let apiOverride = '';
+try { apiOverride = localStorage.getItem('club_api_override') || ''; } catch (e) {}
+
+// Полосу ставим МГНОВЕННО, не дожидаясь ни отладочного режима, ни init(): иначе
+// можно успеть походить по тестовому серверу, не видя предупреждения
+if (apiOverride) {
+  try { document.body.classList.add('api-override-on'); } catch (e) {}
+  document.addEventListener('DOMContentLoaded', function(){
+    document.body.classList.add('api-override-on');
+  });
+}
+
+// Адрес фиксируется ОДИН РАЗ при загрузке и дальше не меняется: половина
+// приложения уже разобрала его в свои запросы, менять на лету — гарантированная
+// каша из двух серверов в одной сессии. Переключение всегда перезагружает страницу
+const API_URL = apiOverride || API_PROD;
 
 function applyThemeIcon(theme){
   document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
@@ -7170,6 +7227,89 @@ let appSettings = {
 let debugMode = false;
 try { debugMode = localStorage.getItem('debug_mode') === '1'; } catch (e) {}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚠️ ВРЕМЕННОЕ — ПЕРЕКЛЮЧАТЕЛЬ СЕРВЕРА НА ВРЕМЯ ПЕРЕЕЗДА БЭКЕНДА
+
+   Адрес тестового сервера НЕ ЗАШИТ в код: он вводится один раз здесь и лежит
+   в localStorage. Так не нужно передеплоивать приложение, когда адрес появится
+   или поменяется — а заодно тестовый адрес не уезжает к другим людям.
+
+   УДАЛЯЕТСЯ ЦЕЛИКОМ вместе с блоком «АДРЕС БЭКЕНДА», полосой #api-override-bar
+   и разметкой #debug-server-block. Список — в журнале переезда.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function apiTestUrlSaved(){
+  try { return localStorage.getItem('club_api_test_url') || ''; } catch(e){ return ''; }
+}
+
+function apiRenderServerBlock(){
+  var el = document.getElementById('debug-server-now');
+  if (!el) return;
+  var onTest = !!apiOverride;
+  el.textContent =
+    'Сейчас: ' + (onTest ? 'ТЕСТОВЫЙ' : 'боевой') + '\n' + API_URL
+    + (apiTestUrlSaved() ? '\n\nТестовый адрес сохранён:\n' + apiTestUrlSaved() : '\n\nТестовый адрес ещё не задан');
+  document.body.classList.toggle('api-override-on', onTest);
+}
+
+/* Переключение ВСЕГДА через перезагрузку: адрес разобран по всему приложению
+   ещё на старте, менять его на лету — это две половины сессии на разных
+   серверах и невоспроизводимые баги */
+function apiApplyAndReload(url){
+  try {
+    if (url) localStorage.setItem('club_api_override', url);
+    else localStorage.removeItem('club_api_override');
+  } catch(e){}
+  location.reload();
+}
+
+function apiSwitchToTest(){
+  var saved = apiTestUrlSaved();
+  var url = prompt('Адрес тестового сервера целиком, со https://\n\nПустое поле — отмена.', saved || 'https://');
+  if (!url) return;
+  url = url.trim().replace(/\/+$/, '');
+  if (!/^https:\/\/[^\s\/]+$/.test(url)){
+    alert('Нужен адрес вида https://имя.домен, без пути в конце');
+    return;
+  }
+  try { localStorage.setItem('club_api_test_url', url); } catch(e){}
+  apiApplyAndReload(url);
+}
+
+function apiSwitchToProd(){ apiApplyAndReload(''); }
+
+/* Полоса кликабельна и возвращает на боевой одним нажатием — чтобы выход был
+   не сложнее входа и не требовал вспоминать, где лежит отладка */
+function apiSwitchPanel(){
+  if (confirm('Вернуться на боевой сервер?')) apiSwitchToProd();
+}
+
+/* Замер обоих серверов подряд: показывает, кто ответил и за сколько.
+   Бьём в /app-texts — лёгкий публичный эндпоинт без авторизации */
+async function apiCompareServers(){
+  var out = document.getElementById('debug-server-result');
+  var test = apiTestUrlSaved();
+  var targets = [['боевой', API_PROD]];
+  if (test) targets.push(['тестовый', test]);
+  out.textContent = 'Меряю...';
+  var lines = [];
+  for (var i = 0; i < targets.length; i++){
+    var name = targets[i][0], url = targets[i][1];
+    var t0 = Date.now();
+    try {
+      var ctl = new AbortController();
+      var timer = setTimeout(function(){ ctl.abort(); }, 12000);
+      var r = await fetch(url + '/app-texts', { signal: ctl.signal, cache: 'no-store' });
+      clearTimeout(timer);
+      lines.push(name + ': HTTP ' + r.status + ', ' + (Date.now() - t0) + ' мс');
+    } catch (e) {
+      lines.push(name + ': НЕ ОТВЕТИЛ за ' + (Date.now() - t0) + ' мс (' + (e.name || 'ошибка') + ')');
+    }
+  }
+  if (!test) lines.push('\nТестовый адрес не задан — сравнивать не с чем');
+  out.textContent = lines.join('\n');
+}
+
 const DEBUG_ON_PHRASE  = 'отладочный режим';
 const DEBUG_OFF_PHRASE = 'обычный режим';
 
@@ -7640,6 +7780,7 @@ function applyAppSettings(){
 function applyDebugMode(){
   const blocks = document.getElementById('debug-blocks');
   if (blocks) blocks.style.display = debugMode ? '' : 'none';
+  if (typeof apiRenderServerBlock === 'function') apiRenderServerBlock();   // ⚠️ временное
 }
 
 function setDebugMode(on){
