@@ -24,6 +24,10 @@
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap"></noscript>
 <script src="https://telegram.org/js/telegram-web-app.js" id="tg-sdk-script"></script>
+<!-- VK Bridge. Нужен даже для минимальной работы внутри ВК: без VKWebAppInit
+     мобильные клиенты открывают мини-приложение со второго раза или не
+     открывают вовсе. Вне ВК скрипт просто лежит без дела. -->
+<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" id="vk-sdk-script"></script>
 <style>
 
 :root {
@@ -12524,6 +12528,53 @@ function markHomeScreenAddedManually(){
 }
 
 
+/* ── Оболочка ВКонтакте ───────────────────────────────────────────────────────
+   Приложение одно на все платформы, различается только способ узнать человека:
+     Telegram — initData от клиента
+     ВКонтакте — параметры запуска в адресе плюс подпись `sign`
+     веб — вход по телефону
+   Ни одна ветка не заменяет другую: внутри ВК тоже может понадобиться вход по
+   телефону, если человека мы ещё не знаем. */
+
+// Внутри ВК приложение открыто с параметрами вида ?vk_user_id=...&sign=...
+function vkLaunchQuery(){
+  try {
+    const q = location.search || '';
+    return q.indexOf('vk_user_id=') > -1 && q.indexOf('sign=') > -1 ? q : '';
+  } catch(e){ return ''; }
+}
+function isInsideVk(){ return !!vkLaunchQuery(); }
+function vkUserId(){
+  try { return new URLSearchParams(location.search).get('vk_user_id') || ''; }
+  catch(e){ return ''; }
+}
+
+/* Запуск внутри ВК. Подпись проверяет СЕРВЕР — доверять адресной строке нельзя,
+   в неё можно дописать чужой vk_user_id. Не узнали человека — не беда: показываем
+   обычный вход по телефону, после подтверждения ВК привяжется сам. */
+async function startVkSession(){
+  try {
+    if (window.vkBridge && vkBridge.send) {
+      // Без этого мобильные клиенты ВК открывают приложение со второго раза
+      try { await vkBridge.send('VKWebAppInit', {}); } catch(e){}
+    }
+    const r = await fetch(`${API_URL}/auth/vk/session`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: vkLaunchQuery() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.found){
+      if (data.session_token) rememberSessionToken(data.session_token);
+      telegramId = Number(data.telegram_id) || data.telegram_id;
+      startApp();
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
 /* ── Разовая ссылка на другую платформу ───────────────────────────────────────
    Две половины одного механизма: здесь мы и ВЫДАЁМ ссылку (человек внутри
    приложения жмёт «открыть в ВК»), и ПРИНИМАЕМ её на той стороне.
@@ -12611,9 +12662,11 @@ let loginChannelLabels = [];
 function currentPlatform(){
   if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
       && Telegram.WebApp.initDataUnsafe.user) return 'tg';
+  if (typeof isInsideVk === 'function' && isInsideVk()) return 'vk';
   return '';
 }
 function currentPlatformId(){
+  if (typeof isInsideVk === 'function' && isInsideVk()) return vkUserId();
   try { return String(Telegram.WebApp.initDataUnsafe.user.id || ''); } catch(e){ return ''; }
 }
 
@@ -13054,6 +13107,20 @@ function startWebSession(){
      говорит сервер по токену из адреса */
   if (VIEW_TOKEN){
     startViewMode();
+    return;
+  }
+
+  /* Внутри ВКонтакте. Стоит ПЕРЕД телеграмной веткой намеренно: телеграмного
+     initData здесь нет, а вот безопасные отступы и веб-логика нужны те же, что
+     в вебе — поэтому дальше идём его дорогой, если человек не опознан */
+  if (isInsideVk()) {
+    applyWebSafeArea();
+    setTimeout(applyWebSafeArea, 300);
+    window.addEventListener('resize', applyWebSafeArea);
+    startVkSession().then(function(known){
+      if (!known) startWebSession();   // не узнали — обычный вход по телефону
+      openFromStartParam();
+    });
     return;
   }
 
