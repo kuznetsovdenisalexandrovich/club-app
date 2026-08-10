@@ -4680,6 +4680,7 @@ body.api-override-on #api-override-bar{display:block}
     </div>
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openStepsPopup()" data-text="settings.tg1">Получить доступ в Telegram</button>
+      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openOnPlatform('vk')" data-text="settings.open_vk">Открыть клуб во ВКонтакте</button>
     </div>
   </div>
 </div>
@@ -7612,6 +7613,9 @@ const APP_TEXTS = {
   'settings.vk1': {
     c:'Настройки приложения', l:'Кнопка получения доступа в ВК', w:'Настройки приложения', i:true,
     t:'Получить доступ к ВКонтакте' },
+  'settings.open_vk': {
+    p:'Настройки приложения',
+    t:'Открыть клуб во ВКонтакте' },
   'settings.tg1': {
     c:'Настройки приложения', l:'Кнопка получения доступа в Telegram', w:'Настройки приложения', i:true,
     t:'Получить доступ в Telegram' },
@@ -12519,6 +12523,70 @@ function markHomeScreenAddedManually(){
   showToast('Шаг засчитан');
 }
 
+
+/* ── Разовая ссылка на другую платформу ───────────────────────────────────────
+   Две половины одного механизма: здесь мы и ВЫДАЁМ ссылку (человек внутри
+   приложения жмёт «открыть в ВК»), и ПРИНИМАЕМ её на той стороне.
+   Ни телефона, ни кода: человек уже подтвердил, что это он, тем, что сидит
+   в приложении. */
+
+async function requestLinkUrl(target){
+  const r = await fetch(`${API_URL}/link/start`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+    body: JSON.stringify({ target, telegram_id: telegramId,
+                           platform: currentPlatform(), external_id: currentPlatformId() })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || 'Не получилось создать ссылку');
+  return data.url;
+}
+
+// Открыть клуб на другой платформе. MAX здесь поддержан, но КНОПКИ ЕГО В АППЕ
+// СОЗНАТЕЛЬНО НЕТ (решение Denis'а 10.08.2026): показывать платформу, где ещё
+// нет ни мини-приложения, ни бота, значит обещать то, чего нет. Вернуть —
+// одна строка разметки рядом с кнопкой ВК.
+// Открыть клуб на другой платформе. Ссылку не показываем и не даём копировать:
+// она одноразовая и живёт минуты, копирование только запутает
+async function openOnPlatform(target){
+  try {
+    const url = await requestLinkUrl(target);
+    if (!url) throw new Error('Эта платформа ещё не подключена');
+    // t.me открываем через openTelegramLink — openLink на iOS уводит в браузер
+    if (url.indexOf('https://t.me/') === 0 && window.Telegram?.WebApp?.openTelegramLink){
+      Telegram.WebApp.openTelegramLink(url);
+    } else {
+      openUrl(url);
+    }
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// Обратная сторона: мы открылись ПО такой ссылке
+async function claimLinkToken(token){
+  try {
+    const r = await fetch(`${API_URL}/link/claim`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, platform: currentPlatform(),
+                             external_id: currentPlatformId() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || 'Ссылка не сработала');
+    if (data.session_token) rememberSessionToken(data.session_token);
+    if (data.telegram_id) telegramId = Number(data.telegram_id) || data.telegram_id;
+    // Дальше приложение запускается обычным путём — узнавать человека повторно
+    // не нужно, мы только что это сделали
+  } catch (e) {
+    // Молча не глотаем: человек нажал ссылку и ждёт, что его узнают
+    setLoginError ? setLoginError(e.message) : alert(e.message);
+  }
+}
+
+
 /* ── Вход в веб-версию ────────────────────────────────────────────────────────
    Экран один, стадии две. На первой — поле для номера и кнопка "Получить код",
    на второй то же самое поле становится полем для кода, а кнопка — "Войти".
@@ -12940,6 +13008,13 @@ function startWebSession(){
   // может быть ещё не заполнен, и start_param потеряется
   function openFromStartParam(){
     try {
+      // Разовая ссылка «открой клуб на другой платформе» — САМАЯ ПЕРВАЯ ветка.
+      // Человек пришёл по ней, чтобы его узнали; показывать ему карточку,
+      // бонус или тест до того, как мы поняли, кто он, бессмысленно
+      if (appStartParam().indexOf('link_') === 0){
+        claimLinkToken(appStartParam().slice(5));
+        return;
+      }
       // Привязку к пригласившему пробуем ВСЕГДА, какой бы ни была ссылка:
       // и `r_<айди>` (приглашение), и `c_<карта>_<айди>` (расшаренная карточка)
       if (typeof attachReferralFromStart === 'function') attachReferralFromStart();
