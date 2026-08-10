@@ -16147,9 +16147,39 @@ function plMount(){
   requestAnimationFrame(function(){ box.classList.add('show'); });
 }
 
+/* Ссылку на аудио берём у сервера в момент включения, а не из общего списка
+   лекций: хранилище закрыто, и адрес подписывается под конкретное
+   прослушивание. Подпись живёт сутки, поэтому одна и та же ссылка спокойно
+   доигрывает полуторачасовую лекцию и переживает перемотку.
+   Если сервер почему-то не ответил — пробуем сохранённый адрес: у части
+   лекций он может вести не в наше хранилище. */
+async function plResolveAudioUrl(lec){
+  try {
+    const r = await fetch(`${API_URL}/lectures/${encodeURIComponent(lec.slug)}/audio`);
+    if (r.ok){
+      const d = await r.json();
+      if (d && d.url) return d.url;
+    }
+  } catch(e){}
+  return lec.audio_url || '';
+}
+
 function plLoadCurrent(autoplay){
   var lec = plQueue[plIndex];
   if (!lec || !plAudio) return;
+
+  // Ставим сохранённый адрес сразу, а подписанный подставляем, когда придёт:
+  // так плеер не ждёт сети, чтобы просто нарисовать название и обложку
+  plResolveAudioUrl(lec).then(function(url){
+    if (plQueue[plIndex] !== lec) return;   // человек успел переключить трек
+    if (url && plAudio.src !== url){
+      var wasPlaying = !plAudio.paused;
+      var at = plAudio.currentTime || 0;
+      plAudio.src = url;
+      if (at) { try { plAudio.currentTime = at; } catch(e){} }
+      if (wasPlaying) { try { plAudio.play(); } catch(e){} }
+    }
+  });
 
   plAudio.src = lec.audio_url;
   plAudio.playbackRate = plSpeeds[plSpeedIdx];
