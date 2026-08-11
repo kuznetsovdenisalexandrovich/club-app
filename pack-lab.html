@@ -1425,7 +1425,7 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
   display:none!important;
 }
 .pr-shell{
-  background-image:url("images/reveal/screens/stage-dark.webp")!important;
+  background-image:url("images/reveal/stage-dark.webp")!important;
   background-size:100% 100%!important;
   background-position:center!important;
   background-repeat:no-repeat!important;
@@ -1507,7 +1507,7 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
   width:min(98vw,520px);
   height:min(98vw,520px);
   transform:translate(-50%,-50%);
-  background:url("images/reveal/screens/sigil-idle.webp") center/contain no-repeat;
+  background:url("images/reveal/sigil-idle.webp") center/contain no-repeat;
   opacity:.38;
   pointer-events:none;
   z-index:0;
@@ -1738,7 +1738,7 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
   padding:0 62px!important;
   border:0!important;
   border-radius:0!important;
-  background:url("images/reveal/screens/plate-dark.webp") center/100% 100% no-repeat!important;
+  background:url("images/reveal/plate-dark.webp") center/100% 100% no-repeat!important;
   box-shadow:none!important;
   color:#f3d79f!important;
   font:600 15px/1.2 var(--serif)!important;
@@ -1798,9 +1798,9 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
    (пул пуст, код не дошёл), экран всё равно одет.
    ══════════════════════════════════════════════════════════════════════════ */
 #pr-stage{
-  --pr-stage-img:url("images/reveal/screens/stage-dark.webp");
-  --pr-idle-img:url("images/reveal/screens/sigil-idle.webp");
-  --pr-plate-img:url("images/reveal/screens/plate-dark.webp");
+  --pr-stage-img:url("images/reveal/stage-dark.webp");
+  --pr-idle-img:url("images/reveal/sigil-idle.webp");
+  --pr-plate-img:url("images/reveal/plate-dark.webp");
 }
 .pr-shell{background-image:var(--pr-stage-img)!important}
 #pr-pack::before{background-image:var(--pr-idle-img)}
@@ -1932,6 +1932,21 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
 .pr-scene.pr-phase-signature .pr-fxVideo.pr-fxDone,
 .pr-fxVideo.pr-fxDone{
   transition:opacity var(--pr-sigil-fade) ease!important;
+}
+
+/* ── ОРНАМЕНТ: УКРАШЕНИЕ ПОВЕРХ СЦЕНЫ (12.08.2026) ────────────────────────
+   Отдельный слой над задником и ПОД картами: он обрамляет сцену, а не лежит
+   на картах. Ставится только когда в наборе есть картинка (класс от кода) —
+   пустой слой на светлом заднике был бы заметен прямоугольником.
+   ⚠️ `pointer-events:none` обязателен: слой накрывает всю панель, и без него
+   он съел бы нажатия по стопке — ровно беда v131/v132. */
+#pr-stage.pr-hasOrnament .pr-shell::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:var(--pr-ornament-img) center/100% 100% no-repeat;
+  pointer-events:none;
+  z-index:2;
 }
 /* ═══ PR-CSS-END ═══ */
 </style>
@@ -2296,7 +2311,7 @@ const PR_THEMES = ['dark','light','legendary'];
    Случайность здесь законна (в отличие от вида самой карточки): задник и
    рубашка нигде не сохраняются, в альбом и в шеринг не попадают. */
 const PR_SLOT_TO_KIND = {
-  stage:'stage', back:'back', close:'close', sigil:'idle',
+  stage:'stage', back:'back', close:'close', sigil:'idle', ornament:'ornament',
   cta:'plate', ctaOpen:'plateOpen', ctaDone:'plateDone'
 };
 let PR_SCREENS = null;      // {dark:[набор,…], light:[…], legendary:[…]}
@@ -2483,13 +2498,17 @@ function prApplyAssets(card){
   const stage = prEl('pr-stage');
   const theme = prTheme(card);
   const seed  = (PR.hero != null) ? PR.hero : 0;
-  [['stage','--pr-stage-img'],['idle','--pr-idle-img'],['close','--pr-close-img']]
+  [['stage','--pr-stage-img'],['idle','--pr-idle-img'],['close','--pr-close-img'],
+   ['ornament','--pr-ornament-img']]
     .forEach(function(pair){
       const src = prPickAsset(pair[0], theme, seed);
       if (src) stage.style.setProperty(pair[1], 'url("' + src + '")');
       else     stage.style.removeProperty(pair[1]);
     });
   stage.classList.toggle('pr-hasClose', !!prPickAsset('close', theme, seed));
+  // Орнамент рисуется, только если он есть: слой без картинки — пустой
+  // прямоугольник поверх сцены, и на светлом заднике он был бы заметен
+  stage.classList.toggle('pr-hasOrnament', !!prPickAsset('ornament', theme, seed));
   prApplyPlate();
 }
 
@@ -2554,7 +2573,7 @@ function prWarm(src){
 function prPrefetchAssets(){
   PR.ids.forEach(function(id){
     PR_THEMES.forEach(function(theme){
-      ['stage','idle','plate','close'].forEach(function(kind){
+      ['stage','idle','plate','close','ornament'].forEach(function(kind){
         prWarm(prPickAsset(kind, theme, id));
       });
       ['plateOpen','plateDone'].forEach(function(kind){
