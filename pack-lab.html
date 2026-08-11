@@ -1948,6 +1948,21 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
   pointer-events:none;
   z-index:2;
 }
+
+/* ── ПОДИУМ ПОД РАСКРЫТОЙ КАРТОЙ (12.08.2026) ─────────────────────────────
+   Место было готово: `.pr-heroPedestal` уже есть в разметке и рисует мягкую
+   тень под героем. Если в наборе есть картинка — подменяем тень ею, если нет
+   — остаётся прежняя тень, ничего не пропадает.
+   ⚠️ Ширину и высоту задаём заново: у тени они подогнаны под размытое пятно
+   (300×64), настоящий подиум с рисунком в такую полоску не влезет. */
+#pr-stage.pr-hasPedestal .pr-heroPedestal{
+  width:min(86vw,420px);
+  height:min(26vw,132px);
+  opacity:1;
+  background:var(--pr-pedestal-img) center/contain no-repeat;
+  box-shadow:none;
+  filter:none;
+}
 /* ═══ PR-CSS-END ═══ */
 </style>
 </head>
@@ -2283,8 +2298,9 @@ const PR_ASSETS = {
          plateDone — все карты вскрыты
        Когда для состояния есть запечённая плашка, свой текст мы прячем
        (см. prApplyPlate). Пустой список = обычная плашка со своим текстом. */
-    plateOpen: ['plate-legendary-open.webp'],
-    plateDone: ['plate-legendary-done.webp'],
+    plateStart: ['plate-legendary-open.webp'],   // «ОТКРЫТЬ КАРТУ»
+    plateNext:  ['plate-legendary-done.webp'],   // «ПРОДОЛЖИТЬ» — открыть следующую
+    plateDone:  ['plate-legendary-view.webp'],   // «ПОСМОТРЕТЬ» — всё вскрыто
     plate: [],
     back:  ['back-legendary.webp'],
     close: ['close-legendary.webp']
@@ -2311,8 +2327,9 @@ const PR_THEMES = ['dark','light','legendary'];
    Случайность здесь законна (в отличие от вида самой карточки): задник и
    рубашка нигде не сохраняются, в альбом и в шеринг не попадают. */
 const PR_SLOT_TO_KIND = {
-  stage:'stage', back:'back', close:'close', sigil:'idle', ornament:'ornament',
-  cta:'plate', ctaOpen:'plateOpen', ctaDone:'plateDone'
+  stage:'stage', back:'back', close:'close', sigil:'idle',
+  ornament:'ornament', pedestal:'pedestal',
+  cta:'plate', ctaStart:'plateStart', ctaNext:'plateNext', ctaDone:'plateDone'
 };
 let PR_SCREENS = null;      // {dark:[набор,…], light:[…], legendary:[…]}
 let PR_PICKED  = null;      // выбранное на это открытие: {dark:{вид:адрес}, …}
@@ -2499,7 +2516,7 @@ function prApplyAssets(card){
   const theme = prTheme(card);
   const seed  = (PR.hero != null) ? PR.hero : 0;
   [['stage','--pr-stage-img'],['idle','--pr-idle-img'],['close','--pr-close-img'],
-   ['ornament','--pr-ornament-img']]
+   ['ornament','--pr-ornament-img'],['pedestal','--pr-pedestal-img']]
     .forEach(function(pair){
       const src = prPickAsset(pair[0], theme, seed);
       if (src) stage.style.setProperty(pair[1], 'url("' + src + '")');
@@ -2509,6 +2526,9 @@ function prApplyAssets(card){
   // Орнамент рисуется, только если он есть: слой без картинки — пустой
   // прямоугольник поверх сцены, и на светлом заднике он был бы заметен
   stage.classList.toggle('pr-hasOrnament', !!prPickAsset('ornament', theme, seed));
+  // Подиум под раскрытой картой. Своей картинки нет — остаётся мягкая тень,
+  // как было; она нарисована в стилях и никуда не делась
+  stage.classList.toggle('pr-hasPedestal', !!prPickAsset('pedestal', theme, seed));
   prApplyPlate();
 }
 
@@ -2517,8 +2537,13 @@ function prApplyAssets(card){
    а собственный текст кнопки надо спрятать. Поэтому вызывается не один раз
    при смене темы, а ВСЯКИЙ РАЗ, когда меняется надпись.
    Состояний два: есть что открывать ('open') и всё вскрыто ('done'). */
+/* ⚠️ СОСТОЯНИЙ ТРИ, А НЕ ДВА. Надписей на кнопке ровно три: «Открой карту»,
+   «Открой следующую», «Продолжить» — и под каждую у Denis'а своя плашка.
+   Сначала я слил первые две в одну (действие-то одно), и третья плашка
+   оставалась без места. */
 function prPlateState(){
-  return (PR.opened.length >= PR.ids.length) ? 'done' : 'open';
+  if (PR.opened.length >= PR.ids.length) return 'done';
+  return PR.opened.length ? 'next' : 'start';
 }
 function prApplyPlate(){
   const stage = prEl('pr-stage'), cta = prEl('pr-cta');
@@ -2526,9 +2551,15 @@ function prApplyPlate(){
   const card  = (PR.hero != null) ? PR.cards[PR.hero] : null;
   const theme = card ? prTheme(card) : 'dark';
   const seed  = (PR.hero != null) ? PR.hero : 0;
-  const kind  = (prPlateState() === 'done') ? 'plateDone' : 'plateOpen';
-  // Сначала ищем плашку с запечённой надписью, потом обычную пустую
-  const baked = prPickAssetStrict(kind, theme, seed);
+  const state = prPlateState();
+  const kind  = 'plate' + state.charAt(0).toUpperCase() + state.slice(1);
+  /* Сначала плашка с запечённой надписью под ЭТО состояние, потом обычная
+     пустая. ⚠️ Для «есть ещё карты» разрешено падение на плашку «первая
+     карта»: действие то же самое, и набор с двумя плашками вместо трёх
+     остаётся рабочим. Обратно падать нельзя — «Продолжить» вместо
+     «Посмотреть» соврало бы про то, что будет дальше. */
+  let baked = prPickAssetStrict(kind, theme, seed);
+  if (!baked && state === 'next') baked = prPickAssetStrict('plateStart', theme, seed);
   const src   = baked || prPickAsset('plate', theme, seed);
   if (src) stage.style.setProperty('--pr-plate-img', 'url("' + src + '")');
   else     stage.style.removeProperty('--pr-plate-img');
@@ -2573,10 +2604,10 @@ function prWarm(src){
 function prPrefetchAssets(){
   PR.ids.forEach(function(id){
     PR_THEMES.forEach(function(theme){
-      ['stage','idle','plate','close','ornament'].forEach(function(kind){
+      ['stage','idle','plate','close','ornament','pedestal'].forEach(function(kind){
         prWarm(prPickAsset(kind, theme, id));
       });
-      ['plateOpen','plateDone'].forEach(function(kind){
+      ['plateStart','plateNext','plateDone'].forEach(function(kind){
         prWarm(prPickAssetStrict(kind, theme, id));
       });
     });
