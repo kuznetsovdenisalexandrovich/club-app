@@ -1963,6 +1963,30 @@ html,body{margin:0;padding:0;background:#111;-webkit-font-smoothing:antialiased}
   box-shadow:none;
   filter:none;
 }
+
+/* ── КНОПКИ ДЕЙСТВИЙ ВНУТРИ КАРТОЧКИ (12.08.2026) ─────────────────────────
+   «Посмотреть», «Забрать», «Поделиться» — они рисуются функцией, общей с
+   витриной альбома, и до сих пор оставались в оформлении приложения: посреди
+   мраморного экрана висела тёмная скруглённая кнопка. Denis: «всплыла кнопка
+   Посмотреть, которая как будто не настраиваемая».
+
+   ⚠️ ЗАПЕЧЁННАЯ НАДПИСЬ ИМ НЕ ГОДИТСЯ: текст у них разный и зависит от
+   карточки («Посмотреть» / «Забрать» / «+40»). Поэтому берут ПУСТУЮ плашку
+   набора — ту самую «Кнопку без надписи», — а слова рисует приложение.
+   Плашки нет — остаётся прежний вид, ничего не ломается. */
+#pr-stage.pr-hasPlate .pr-cta-inline{
+  background:var(--pr-plate-plain) center/100% 100% no-repeat!important;
+  border:0!important;
+  box-shadow:none!important;
+  height:auto!important;
+  aspect-ratio:4.2;
+  min-height:44px;
+  padding:0 44px!important;
+  font:600 14px/1.2 var(--serif)!important;
+}
+/* Цвет надписи — по теме: на светлой плашке золото не читается */
+#pr-stage.pr-hasPlate .pr-cta-inline{color:#f3d79f!important;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+#pr-stage.pr-hasPlate[data-pr-theme="light"] .pr-cta-inline{color:#4a3720!important;text-shadow:none}
 /* ═══ PR-CSS-END ═══ */
 </style>
 </head>
@@ -2529,6 +2553,15 @@ function prApplyAssets(card){
   // Подиум под раскрытой картой. Своей картинки нет — остаётся мягкая тень,
   // как было; она нарисована в стилях и никуда не делась
   stage.classList.toggle('pr-hasPedestal', !!prPickAsset('pedestal', theme, seed));
+
+  /* ⚠️ ПУСТАЯ ПЛАШКА НУЖНА ОТДЕЛЬНОЙ ПЕРЕМЕННОЙ. `--pr-plate-img` меняется
+     по состоянию главной кнопки и может держать плашку С НАДПИСЬЮ — подставь
+     её кнопкам действий, и на них проступило бы чужое «ПРОДОЛЖИТЬ» поверх
+     их собственных слов. Здесь только плашка без надписи. */
+  const plain = prPickAssetStrict('plate', theme, seed) || prPickAsset('plate', theme, seed);
+  if (plain) stage.style.setProperty('--pr-plate-plain', 'url("' + plain + '")');
+  else       stage.style.removeProperty('--pr-plate-plain');
+  stage.classList.toggle('pr-hasPlate', !!plain);
   prApplyPlate();
 }
 
