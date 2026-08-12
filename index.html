@@ -2482,8 +2482,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="card" id="debug-server-block" style="margin-bottom:12px">
         <div class="section-label" style="margin-bottom:8px">Сервер</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;word-break:break-all" id="debug-server-now"></div>
-        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest()">Переключиться на тестовый</button>
-        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest(true)">Указать другой тестовый адрес</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest()">Откатиться на старый (Railway)</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToTest(true)">Указать другой адрес сервера</button>
         <button class="help-btn" style="margin-bottom:8px" onclick="apiSwitchToProd()">Вернуться на боевой</button>
         <button class="help-btn" onclick="apiCompareServers()">Сравнить оба (замер отклика)</button>
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="debug-server-result"></div>
@@ -4281,9 +4281,9 @@ body.player-open .scroll-fade{height:190px}
 body.api-override-on #api-override-bar{display:block}
 </style>
 
-<!-- ⚠️ ВРЕМЕННОЕ: полоса тестового сервера, удаляется вместе с переключателем -->
+<!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
 <div id="api-override-bar" onclick="apiSwitchPanel()">
-  ТЕСТОВЫЙ СЕРВЕР — нажми, чтобы вернуться на боевой
+  СТАРЫЙ СЕРВЕР (Railway) — нажми, чтобы вернуться на боевой
 </div>
 
 <div id="cardentry-overlay">
@@ -4896,14 +4896,15 @@ function imgFadeScan(roots){
 /* ═══════════════════════════════════════════════════════════════════════════
    АДРЕС БЭКЕНДА
 
-   БОЕВОЙ СЕРВЕР — ВСЕГДА `API_PROD`. Он один, и он определяется по хосту
-   фронтенда: с github.io бьём в Railway напрямую, с кастомного домена — через
-   api.-домен. Ничего другого боевым не является.
+   БОЕВОЙ СЕРВЕР — ВСЕГДА `API_PROD`, и с 11.08.2026 это `api.`-домен, который
+   ведёт на Timeweb (Москва). Раньше с github.io мы били в Railway НАПРЯМУЮ, в
+   обход домена — потому что домен «плавал» из-за DPI; теперь плавать нечему,
+   сервер стоит в России, и обходной путь больше не нужен.
 
    ⚠️ ПЕРЕКЛЮЧАТЕЛЬ НИЖЕ — ВРЕМЕННЫЙ, на время проверки переезда бэкенда.
    Живёт ТОЛЬКО в localStorage устройства (отладочный режим), на других людей
    не влияет никак. Пока он включён, вверху экрана висит несворачиваемая
-   красная полоса — забыть, что сидишь на тестовом сервере, невозможно.
+   красная полоса — забыть, что сидишь не на боевом сервере, невозможно.
 
    КОГДА ПЕРЕЕЗД ЗАКОНЧЕН (или отменён) — УДАЛИТЬ:
      1) этот блок целиком, оставив одну строку `const API_URL = ...`
@@ -4912,16 +4913,16 @@ function imgFadeScan(roots){
    Список продублирован в журнале переезда — не полагаться только на память.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const API_PROD = location.hostname.endsWith('github.io')
-  ? 'https://club-backend-production-fc7f.up.railway.app'
-  : 'https://api.youselllikeagod-magazine.ru';
+const API_PROD = 'https://api.youselllikeagod-magazine.ru';
 
 let apiOverride = '';
 try { apiOverride = localStorage.getItem('club_api_override') || ''; } catch (e) {}
 
-// ⚠️ ВРЕМЕННОЕ: адрес тестового сервера Timeweb, вшит, чтобы не вводить его
-// каждый раз руками. Удалить вместе со всем остальным на этапе 5 (журнал переезда)
-const API_TEST_DEFAULT = 'https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net';
+// ⚠️ ВРЕМЕННОЕ: теперь это путь ОТКАТА, а не проверки. Переключатель уводит на
+// СТАРЫЙ Railway — на случай, если с новым сервером что-то пойдёт не так и нужно
+// быстро вернуться одной кнопкой. Красная полоса вверху теперь значит
+// «ты на старом сервере», а не «ты на тестовом». Удалить на этапе 5
+const API_TEST_DEFAULT = 'https://club-backend-production-fc7f.up.railway.app';
 
 // Полосу ставим МГНОВЕННО, не дожидаясь ни отладочного режима, ни init(): иначе
 // можно успеть походить по тестовому серверу, не видя предупреждения
@@ -7290,7 +7291,7 @@ function apiSwitchToTest(forcePrompt){
     apiApplyAndReload(known);
     return;
   }
-  var url = prompt('Адрес тестового сервера целиком, со https://\n\nПустое поле — отмена.', known || 'https://');
+  var url = prompt('Адрес сервера целиком, со https://\n\nПустое поле — отмена.', known || 'https://');
   if (!url) return;
   url = url.trim().replace(/\/+$/, '');
   if (!/^https:\/\/[^\s\/]+$/.test(url)){
@@ -7315,7 +7316,7 @@ async function apiCompareServers(){
   var out = document.getElementById('debug-server-result');
   var test = apiTestUrlSaved();
   var targets = [['боевой', API_PROD]];
-  if (test) targets.push(['тестовый', test]);
+  if (test) targets.push(['старый', test]);
   out.textContent = 'Меряю...';
   var lines = [];
   for (var i = 0; i < targets.length; i++){
