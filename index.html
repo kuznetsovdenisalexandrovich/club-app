@@ -15851,7 +15851,12 @@ let PR_PICKED  = null;      // выбранное на это открытие: 
 async function prLoadScreens(){
   if (PR_SCREENS) return PR_SCREENS;
   try {
-    const r = await apiRequest('/cards/reveal-screens');
+    /* ⚠️⚠️ АДРЕС ТОЛЬКО С `API_URL`. Здесь стоял относительный '/cards/...' —
+       единственный такой вызов во всём приложении. Апп лежит на GitHub Pages,
+       поэтому запрос уходил НА САЙТ СТРАНИЦЫ, получал 404, и `catch` ниже
+       молча одевал экран запасным комплектом. Со стороны это выглядело как
+       «наборы не работают»: сервер их отдавал, приложение их не спрашивало. */
+    const r = await apiRequest(`${API_URL}/cards/reveal-screens`);
     PR_SCREENS = (r && r.screens) ? r.screens : {};
   } catch(e){
     // Молча падаем на зашитые наборы: экран важнее свежести оформления
