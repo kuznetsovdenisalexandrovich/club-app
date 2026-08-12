@@ -2510,6 +2510,29 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage:not(.pr-hasPlate) .pr-cta-inline{
   height:52px!important;
 }
+
+/* ── ПЕРЕХОД ПРИ ОТКРЫТИИ И ЗАКРЫТИИ ЭКРАНА (13.08.2026, просьба Denis'а) ──
+   Экран появлялся и пропадал мгновенно: `display:none` → `display:block`.
+   Прозрачность на `display` не анимируется, поэтому показ и скрытие
+   разведены: класс `pr-shown` включает элемент, класс `pr-in` (ставится
+   следующим кадром) проявляет его. При закрытии наоборот — сначала гаснем,
+   элемент выключается по окончании перехода.
+
+   ⚠️ ЛЁГКИЙ ПОДЪЁМ, А НЕ УЕЗД: сцену со стопкой и так поднимает своя
+   анимация, второе движение на том же кадре читалось бы как рывок. */
+#pr-stage.pr-shown{
+  opacity:0;
+  transition:opacity .34s ease;
+}
+#pr-stage.pr-shown.pr-in{
+  opacity:1;
+}
+
+/* Раскрытая карта теперь увеличивается по нажатию — курсор обязан об этом
+   сказать. `default` стоял с тех пор, когда нажимать было не на что */
+#pr-stage .pr-card.pr-hero.pr-open{
+  cursor:zoom-in;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -16241,6 +16264,10 @@ function openPackReveal(demoCards){
   prLayout();
   prSeedAmbient('#d9b97a', '#9f8ad2');
   stage.classList.add('pr-shown');
+  /* Следующим кадром — иначе браузер не увидит смены прозрачности и покажет
+     экран рывком. Через проверку: без кадрового таймера просто появимся сразу */
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(function(){ stage.classList.add('pr-in'); });
+  else stage.classList.add('pr-in');
   document.body.style.overflow = 'hidden';
   // Греем не в тот же кадр, что показ стопки: сначала человек должен увидеть карты
   setTimeout(prPrefetchAssets, 400);
@@ -16248,7 +16275,12 @@ function openPackReveal(demoCards){
 
 function closePackReveal(){
   if (PR_SIGIL_TIMER){ clearTimeout(PR_SIGIL_TIMER); PR_SIGIL_TIMER = null; }
-  prEl('pr-stage').classList.remove('pr-shown');
+  const stage = prEl('pr-stage');
+  stage.classList.remove('pr-in');           // гаснем
+  /* ⚠️ ВЫКЛЮЧАЕМ ПО ТАЙМЕРУ, А НЕ ПО `transitionend`: событие не придёт вовсе,
+     если переходы отключены системной настройкой «меньше движения» — экран
+     остался бы висеть поверх приложения. Длительность чуть больше перехода. */
+  setTimeout(function(){ stage.classList.remove('pr-shown'); }, 380);
   document.body.style.overflow = '';
   prSeedAmbient(null);                 // таймеры мерцания не должны жить после закрытия
   if (PR.demo){ PR.demo = false; return; }
@@ -16267,6 +16299,15 @@ function prClearPhase(){
 
 /* Раскладка: пока героя нет — стопка веером; как только карта выбрана, она
    уезжает в центр крупно, а остальные встают полочкой сверху */
+/* Увеличение раскрытой карты. Берём ту же картинку, что показывает витрина:
+   полную, если она есть, иначе превью — оно уже в кэше и откроется мгновенно. */
+function prZoomCard(id){
+  const card = PR.cards[id];
+  const src  = card && (card.image_full_url || card.image_url);
+  if (!src || typeof openCardZoom !== 'function') return;
+  openCardZoom(src);
+}
+
 function prLayout(){
   PR.ids.forEach(function(id, i){
     const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
@@ -16373,7 +16414,15 @@ async function prPrepareFrontImage(img, src){
 }
 
 async function prOpenCard(id){
-  if (PR.busy || PR.opened.indexOf(id) >= 0) return;
+  /* ⚠️ ПОВТОРНОЕ НАЖАТИЕ ПО УЖЕ РАСКРЫТОЙ КАРТЕ = УВЕЛИЧЕНИЕ (13.08.2026).
+     Раньше оно просто гасилось. Механизм увеличения уже есть и работает в
+     витрине коллекции (`openCardZoom` с общим оверлеем) — заводим тот же, а
+     не второй свой: разошлись бы за неделю. */
+  if (PR.opened.indexOf(id) >= 0){
+    if (PR.hero === id) prZoomCard(id);
+    return;
+  }
+  if (PR.busy) return;
   PR.busy = true;
 
   let data = null;
