@@ -15837,6 +15837,9 @@ async function prLoadScreens(){
 /* Один набор на тему, случайно. Переводим гнёзда сервера в наши виды. */
 function prPickScreens(){
   PR_PICKED = {};
+  // Запасные наборы перевыбираем ВМЕСТЕ с серверными: иначе на одном экране
+  // могли бы соседствовать запасной набор от прошлого открытия и новый серверный
+  PR_FB = {};
   const all = PR_SCREENS || {};
   PR_THEMES.forEach(function(theme){
     const list = all[theme] || [];
@@ -15968,12 +15971,34 @@ const PR_SIGIL_MS   = 1600;
 const PR_SIGIL_FADE = 520;   // ДОЛЖНО совпадать с --pr-sigil-fade в стилях
 let PR_SIGIL_TIMER = null;
 
-/* ⚠️ ВЫБОР НЕ СЛУЧАЙНЫЙ, А ПО ИДЕНТИФИКАТОРУ КАРТЫ. Math.random() давал бы
-   разный вид одной и той же карте при каждом открытии, а карта потом живёт
-   в альбоме и уезжает в шеринг — она обязана узнаваться. Остаток от деления
-   даёт тот же разброс по колоде, но закреплён за картой навсегда.
-   Отрицательные id (отладочный пак) обрабатываются abs. */
-function prPickAsset(kind, theme, seed){
+/* ══ ⚠️⚠️ НАБОР — ЕДИНИЦА ВЫБОРА, А НЕ КАРТИНКА ═════════════════════════════
+   13.08.2026, по жалобе Denis'а: «рубашки рандомно из одного набора, фон из
+   другого». Так и было, и причин было ДВЕ, обе про то, что случайность
+   разрешалась КАЖДОМУ ЭЛЕМЕНТУ ОТДЕЛЬНО:
+
+     1. рубашка выбиралась по id КАРТЫ, а задник — по id героя. При пуле
+        больше одной картинки три карты в стопке получали три разные
+        рубашки, и ни одна не обязана была совпасть с задником
+     2. пустое гнездо у набора добиралось из запасной таблицы своим
+        остатком от деления — то есть тоже независимо от соседей
+
+   Теперь на КАЖДОЕ ОТКРЫТИЕ выбирается ОДИН запасной набор на тему
+   (`PR_FB[theme]`), и все виды берутся с этим одним индексом. Случайность
+   осталась ровно там, где Denis её и хотел: в выборе набора целиком.
+
+   ⚠️ ПОЧЕМУ СЕМЯ БОЛЬШЕ НЕ НУЖНО. Раньше выбор был привязан к карте, чтобы
+   одна и та же карта всегда выглядела одинаково. Это верно для САМОЙ КАРТЫ,
+   но задник, рубашка и плашка — вещи ЭКРАННЫЕ: они нигде не сохраняются, в
+   альбом и в шеринг не попадают. Привязка к карте здесь ничего не защищала,
+   зато разводила элементы одного экрана по разным наборам. */
+let PR_FB = {};              // {тема: индекс запасного набора на это открытие}
+
+function prFallbackIndex(theme){
+  if (PR_FB[theme] == null) PR_FB[theme] = Math.floor(Math.random() * 1000);
+  return PR_FB[theme];
+}
+
+function prPickAsset(kind, theme){
   // Набор, выбранный на это открытие, главнее зашитой таблицы
   const fromScreen = prScreenAsset(kind, theme);
   if (fromScreen) return fromScreen;
@@ -15981,7 +16006,7 @@ function prPickAsset(kind, theme, seed){
   const pool = (set[kind] && set[kind].length) ? set[kind]
              : ((PR_ASSETS.dark[kind] || []));
   if (!pool.length) return null;
-  return 'images/reveal/screens/' + pool[Math.abs(seed | 0) % pool.length];
+  return 'images/reveal/screens/' + pool[prFallbackIndex(theme) % pool.length];
 }
 
 /* Задник, сигил и плашка — вещи ЭКРАННЫЕ, а не карточные: их выбирает
@@ -15991,38 +16016,42 @@ function prPickAsset(kind, theme, seed){
    когда у темы пусто, — для плашек с ЗАПЕЧЁННОЙ НАДПИСЬЮ это неверно:
    у тёмной темы их нет, и падение молча вернуло бы пустую плашку, из-за
    чего кнопка осталась бы вообще без текста (свой мы прячем). */
-function prPickAssetStrict(kind, theme, seed){
+function prPickAssetStrict(kind, theme){
   const fromScreen = prScreenAsset(kind, theme);
   if (fromScreen) return fromScreen;
   const pool = (PR_ASSETS[theme] || {})[kind] || [];
   if (!pool.length) return null;
-  return 'images/reveal/screens/' + pool[Math.abs(seed | 0) % pool.length];
+  return 'images/reveal/screens/' + pool[prFallbackIndex(theme) % pool.length];
 }
 
 function prApplyAssets(card){
   const stage = prEl('pr-stage');
   const theme = prTheme(card);
-  const seed  = (PR.hero != null) ? PR.hero : 0;
+  /* ⚠️ ПОДПИСЬ НАБОРА В РАЗМЕТКЕ. Ничего не рисует, но по скриншоту с
+     инспектором сразу видно, какой набор применён и добирается ли что-то из
+     запасного. В прошлый раз это выяснялось разговором и гаданием. */
+  const setKey = (PR_PICKED && PR_PICKED[theme] && PR_PICKED[theme].__key) || 'запасной';
+  stage.setAttribute('data-pr-set', theme + ':' + setKey);
   [['stage','--pr-stage-img'],['idle','--pr-idle-img'],['close','--pr-close-img'],
    ['ornament','--pr-ornament-img'],['pedestal','--pr-pedestal-img']]
     .forEach(function(pair){
-      const src = prPickAsset(pair[0], theme, seed);
+      const src = prPickAsset(pair[0], theme);
       if (src) stage.style.setProperty(pair[1], 'url("' + src + '")');
       else     stage.style.removeProperty(pair[1]);
     });
-  stage.classList.toggle('pr-hasClose', !!prPickAsset('close', theme, seed));
+  stage.classList.toggle('pr-hasClose', !!prPickAsset('close', theme));
   // Орнамент рисуется, только если он есть: слой без картинки — пустой
   // прямоугольник поверх сцены, и на светлом заднике он был бы заметен
-  stage.classList.toggle('pr-hasOrnament', !!prPickAsset('ornament', theme, seed));
+  stage.classList.toggle('pr-hasOrnament', !!prPickAsset('ornament', theme));
   // Подиум под раскрытой картой. Своей картинки нет — остаётся мягкая тень,
   // как было; она нарисована в стилях и никуда не делась
-  stage.classList.toggle('pr-hasPedestal', !!prPickAsset('pedestal', theme, seed));
+  stage.classList.toggle('pr-hasPedestal', !!prPickAsset('pedestal', theme));
 
   /* ⚠️ ПУСТАЯ ПЛАШКА НУЖНА ОТДЕЛЬНОЙ ПЕРЕМЕННОЙ. `--pr-plate-img` меняется
      по состоянию главной кнопки и может держать плашку С НАДПИСЬЮ — подставь
      её кнопкам действий, и на них проступило бы чужое «ПРОДОЛЖИТЬ» поверх
      их собственных слов. Здесь только плашка без надписи. */
-  const plain = prPickAssetStrict('plate', theme, seed) || prPickAsset('plate', theme, seed);
+  const plain = prPickAssetStrict('plate', theme) || prPickAsset('plate', theme);
   if (plain) stage.style.setProperty('--pr-plate-plain', 'url("' + plain + '")');
   else       stage.style.removeProperty('--pr-plate-plain');
   stage.classList.toggle('pr-hasPlate', !!plain);
@@ -16047,7 +16076,6 @@ function prApplyPlate(){
   if (!stage || !cta) return;
   const card  = (PR.hero != null) ? PR.cards[PR.hero] : null;
   const theme = card ? prTheme(card) : 'dark';
-  const seed  = (PR.hero != null) ? PR.hero : 0;
   const state = prPlateState();
   const kind  = 'plate' + state.charAt(0).toUpperCase() + state.slice(1);
   /* Сначала плашка с запечённой надписью под ЭТО состояние, потом обычная
@@ -16055,9 +16083,9 @@ function prApplyPlate(){
      карта»: действие то же самое, и набор с двумя плашками вместо трёх
      остаётся рабочим. Обратно падать нельзя — «Продолжить» вместо
      «Посмотреть» соврало бы про то, что будет дальше. */
-  let baked = prPickAssetStrict(kind, theme, seed);
-  if (!baked && state === 'next') baked = prPickAssetStrict('plateStart', theme, seed);
-  const src   = baked || prPickAsset('plate', theme, seed);
+  let baked = prPickAssetStrict(kind, theme);
+  if (!baked && state === 'next') baked = prPickAssetStrict('plateStart', theme);
+  const src   = baked || prPickAsset('plate', theme);
   if (src) stage.style.setProperty('--pr-plate-img', 'url("' + src + '")');
   else     stage.style.removeProperty('--pr-plate-img');
   /* Надпись прячем ВИЗУАЛЬНО, а не удаляем: текст остаётся в разметке для
@@ -16085,7 +16113,7 @@ function prRefreshBacks(){
     PR_THEMES.forEach(function(theme){
       const img = btn.querySelector('.pr-backImg.pr-' + theme);
       if (!img) return;
-      const src = prPickAsset('back', theme, id);
+      const src = prPickAsset('back', theme);
       if (src && img.getAttribute('src') !== src) img.setAttribute('src', src);
     });
   });
@@ -16102,10 +16130,10 @@ function prPrefetchAssets(){
   PR.ids.forEach(function(id){
     PR_THEMES.forEach(function(theme){
       ['stage','idle','plate','close','ornament','pedestal'].forEach(function(kind){
-        prWarm(prPickAsset(kind, theme, id));
+        prWarm(prPickAsset(kind, theme));
       });
       ['plateStart','plateNext','plateDone'].forEach(function(kind){
-        prWarm(prPickAssetStrict(kind, theme, id));
+        prWarm(prPickAssetStrict(kind, theme));
       });
     });
   });
@@ -16149,7 +16177,7 @@ function openPackReveal(demoCards){
        пул темы даёт тот же адрес, что у тёмной — браузер возьмёт файл один
        раз, лишнего веса от этого нет. */
     const backs = PR_THEMES.map(function(theme){
-      const src = prPickAsset('back', theme, id);
+      const src = prPickAsset('back', theme);
       return src ? ('<img class="pr-backImg pr-' + theme + '" src="' + src
                     + '" alt="" decoding="async" data-nofade>') : '';
     }).join('');
