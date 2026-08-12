@@ -2484,6 +2484,32 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   background-size:cover!important;
   background-position:center!important;
 }
+
+/* ── КНОПКИ ДЕЙСТВИЙ: ПЛОТНЕЕ И КРУПНЕЕ (13.08.2026, просьба Denis'а) ──────
+   «кнопки действий можно ближе друг к другу по высоте расположить, и кнопку
+   действия чуть больше сделать».
+
+   ⚠️ ОТСТУПЫ ЗАДАНЫ INLINE В `cardActionsHtml` (margin-top:12px и 14px), а
+   эта функция ОБЩАЯ С ВИТРИНОЙ АЛЬБОМА. Править её значило бы менять заодно
+   и альбом, где эти отступы уместны. Поэтому перебиваем правилом, суженным
+   до `#pr-actions` — за пределы экрана вскрытия оно не выходит.
+
+   ⚠️ КРУПНЕЕ — ЗА СЧЁТ ШИРИНЫ, А НЕ ВЫСОТЫ. У плашки задана пропорция
+   коробки, поэтому высота считается от ширины сама: раздвинув блок на 12px в
+   каждую сторону, получаем и более широкую, и более высокую кнопку разом.
+   Задавать высоту отдельно нельзя — плашка поехала бы по пропорциям. */
+#pr-actions{
+  margin:0 -12px!important;
+}
+#pr-actions > div{
+  margin-top:6px!important;
+}
+#pr-stage .pr-cta-inline{
+  font-size:15px!important;
+}
+#pr-stage:not(.pr-hasPlate) .pr-cta-inline{
+  height:52px!important;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
