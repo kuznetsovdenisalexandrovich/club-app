@@ -2533,6 +2533,42 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage .pr-card.pr-hero.pr-open{
   cursor:zoom-in;
 }
+
+/* ── ЗАМЕР РАСКЛАДКИ ДЛЯ ОТЛАДКИ (13.08.2026) ─────────────────────────────
+   Три правки этого экрана подряд я сделал по скриншоту и все три ухудшили
+   картину. Причина одна: я не знал НАСТОЯЩИХ размеров — высоты вида, сцены,
+   карты и панели, — а считал их по своим представлениям. Теперь их показывает
+   сам экран, и разговор идёт по числам.
+   ⚠️ Только в отладочном прогоне: класс `pr-demo` ставится там же, где
+   включается демо-режим. У участника строки нет. */
+.pr-diag{
+  display:none;
+}
+#pr-stage.pr-demo .pr-diag{
+  display:block;
+  font:400 10px/1.35 var(--sans);
+  letter-spacing:.02em;
+  color:#8fd6a0;
+  background:rgba(0,0,0,.55);
+  border-radius:8px;
+  margin:6px 14px 0;
+  padding:4px 8px;
+  white-space:pre-line;
+  position:relative;
+  z-index:40;
+}
+
+/* ── ПАНЕЛЬ ОПИСАНИЯ ОПУСКАЕТСЯ, КАРТЕ ДАЁТСЯ ВОЗДУХ (13.08.2026) ──────────
+   [stated] Denis: «описания можно тоже опустить ниже, дав карте воздуха» и
+   «подиум не видно под картой». На полном кадре видно, что это ОДНА беда:
+   панель имеет отрицательный верхний отступ (−24 и −22 в медиазапросах) и
+   лежит ПОВЕРХ сцены (`z-index:12`), накрывая низ карты вместе с подиумом.
+
+   ⚠️ ТОЛЬКО ОТСТУП, БЕЗ РАЗМЕРОВ КАРТЫ. Размер карты я сегодня уже трогал и
+   сделал хуже; здесь меняется одна величина, и её действие видно глазом. */
+#pr-stage .pr-details{
+  margin-top:16px!important;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -6187,6 +6223,9 @@ body.api-override-on #api-override-bar{display:block}
         <div class="pr-eyebrow">Пантеон · подарок</div>
         <div class="pr-title">Твой пак</div>
         <div class="pr-sub" id="pr-sub">Открой карту, чтобы узнать награду</div>
+        <!-- Замер раскладки. Показывается ТОЛЬКО в отладочном прогоне: у
+             участника этой строки нет и быть не должно -->
+        <div class="pr-diag" id="pr-diag"></div>
       </div>
       <div class="pr-scene" id="pr-scene">
         <div class="pr-aura" id="pr-aura"></div>
@@ -16211,6 +16250,7 @@ function openPackReveal(demoCards){
   PR.opened = []; PR.hero = null; PR.busy = false; PR.cards = {}; PR.extra = {};
   PR.themeCard = null;
   PR.demo = !!(demoCards && demoCards.length);
+  prEl('pr-stage').classList.toggle('pr-demo', PR.demo);
   if (PR.demo) ids.forEach(function(id, i){ PR.cards[id] = demoCards[i]; });
 
   const stage = prEl('pr-stage');
@@ -16262,6 +16302,8 @@ function openPackReveal(demoCards){
 
   prClearPhase();
   prLayout();
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(prDiag);
+  else setTimeout(prDiag, 16);
   prSeedAmbient('#d9b97a', '#9f8ad2');
   stage.classList.add('pr-shown');
   /* Следующим кадром — иначе браузер не увидит смены прозрачности и покажет
@@ -16306,6 +16348,34 @@ function prZoomCard(id){
   const src  = card && (card.image_full_url || card.image_url);
   if (!src || typeof openCardZoom !== 'function') return;
   openCardZoom(src);
+}
+
+/* ⚠️ МЕРЯЕМ ФАКТ, А НЕ СЧИТАЕМ ПО ПАМЯТИ. Все числа берутся с живых узлов:
+   что реально получилось на этом телефоне, а не что должно было по моим
+   расчётам. Именно этого знания не хватало во всех трёх неудачных правках. */
+function prDiag(){
+  const box = prEl('pr-diag');
+  if (!box || !PR.demo) return;
+  const R = function(el){ return el ? Math.round(el.getBoundingClientRect().height) : 0; };
+  const scene = prEl('pr-scene');
+  const hero  = prEl('pr-pack') && prEl('pr-pack').querySelector('.pr-hero');
+  const card  = hero || (prEl('pr-pack') && prEl('pr-pack').querySelector('.pr-card'));
+  const sceneBox = scene ? scene.getBoundingClientRect() : null;
+  const cardBox  = card  ? card.getBoundingClientRect()  : null;
+  // Насколько карта вылезает за сцену вверх и вниз — то самое «налезает
+  // на заголовок» и «уходит под панель», только в пикселях
+  const over = (sceneBox && cardBox)
+    ? ('вылет ↑' + Math.round(sceneBox.top - cardBox.top) + ' ↓' + Math.round(cardBox.bottom - sceneBox.bottom))
+    : '';
+  box.textContent =
+    'вид ' + window.innerWidth + '×' + window.innerHeight
+    + ' · шапка ' + R(prEl('pr-head'))
+    + ' · сцена ' + R(scene)
+    + ' · карта ' + R(card)
+    + '\nпанель ' + R(prEl('pr-details'))
+    + ' · действия ' + R(prEl('pr-actions'))
+    + ' · кнопка ' + R(prEl('pr-cta'))
+    + (over ? ' · ' + over : '');
 }
 
 function prLayout(){
@@ -16385,6 +16455,9 @@ function prFillDetails(card, pointsAwarded, cardId, claimed){
   prEl('pr-ability-title').textContent = card.title || '';
   prEl('pr-ability-text').textContent  = card.description || '';
   prEl('pr-actions').innerHTML = cardActionsHtml(card, cardId, claimed, 0, 'pr-cta pr-cta-inline');
+  // Панель только что выросла — мерить надо следующим кадром, сейчас размеры старые
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(prDiag);
+  else setTimeout(prDiag, 16);
 }
 
 async function prPrepareFrontImage(img, src){
