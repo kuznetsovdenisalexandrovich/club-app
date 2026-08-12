@@ -3657,6 +3657,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    а лента растёт вверх. `justify-content:flex-end` в прокручиваемом контейнере
    безопасен только вместе с `margin-top:auto` у первого элемента — сам по себе
    он в part браузеров обрезает верх при переполнении */
+.live-practice-top{flex:0 0 auto;padding:16px;font-size:15px;margin-bottom:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .live-chat-list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   display:flex;flex-direction:column;gap:8px;padding-bottom:6px}
 .live-chat-list > *:first-child{margin-top:auto}
@@ -13138,8 +13140,7 @@ function expandLiveFull(){
   const badge = document.getElementById('live-full-badge');
   badge.textContent = (liveNow && liveNow.started) ? t('live.badge.on') : t('live.badge.soon');
   badge.classList.toggle('live-badge-soon', !(liveNow && liveNow.started));
-  document.getElementById('live-full-practice').style.display =
-    (liveNow && liveNow.link) ? 'flex' : 'none';
+  syncLivePractice();
   document.getElementById('live-full-frame').src = url;
   document.getElementById('live-full').style.display = 'flex';
   startLiveChat();
@@ -13176,8 +13177,46 @@ function dismissLive(){
   renderLiveBlock();
 }
 
+/* КНОПКА ДЕЙСТВИЯ ПОВЕРХ ЧАТА.
+   Адрес приходит с сервера и включается Denis'ом из пульта в нужный момент —
+   обычно когда лекционная часть кончилась и пора вести всех в телемост.
+   Старая ссылка события расписания остаётся запасным путём: эфиры, заведённые
+   до появления этой кнопки, продолжают работать как работали. */
+function livePracticeInfo(){
+  if (liveNow && liveNow.practice_on && liveNow.practice_url){
+    return { url: liveNow.practice_url, label: liveNow.practice_label || '' };
+  }
+  if (liveNow && liveNow.link) return { url: liveNow.link, label: '' };
+  return null;
+}
+
+/* Обе кнопки — в ленте и на полном экране — переключаются ОДНОЙ функцией.
+   Разведи их по местам вызова, и одна из двух рано или поздно отстанет.
+
+   ⚠️ НАДПИСЬ У ЭТИХ КНОПОК МОГУТ СТАВИТЬ ДВА МЕХАНИЗМА: реестр текстов (по
+   атрибуту data-text) и Denis из пульта. Пока свою надпись не вписали —
+   элемент принадлежит реестру; как только вписали, атрибут снимаем, иначе
+   applyAppTexts() затрёт её при первом же своём проходе. */
+function syncLivePractice(){
+  const info = livePracticeInfo();
+  ['live-practice-btn', 'live-full-practice'].forEach(function(id){
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.style.display = info ? 'flex' : 'none';
+    if (!info) return;
+    if (info.label){
+      b.removeAttribute('data-text');
+      b.textContent = info.label;
+    } else {
+      b.setAttribute('data-text', 'live.practice');
+      b.textContent = t('live.practice');
+    }
+  });
+}
+
 function openLivePractice(){
-  if (liveNow && liveNow.link) openUrl(liveNow.link);
+  const info = livePracticeInfo();
+  if (info) openUrl(info.url);
 }
 
 /* Рисуем то, что вернул сервер. Ошибки показываем ТЕКСТОМ, а не молчим —
@@ -13185,6 +13224,12 @@ function openLivePractice(){
 function renderLiveBlock(){
   const host = liveHostEl(), slot = liveSlotEl();
   if (!host || !slot) return;
+
+  // ПОКА ОТКРЫТ ПОЛНЫЙ ЭКРАН — маленький плеер не трогаем вовсе. Опрос идёт
+  // раз в десять секунд и без этой заставы возвращал бы уголок с ВТОРЫМ
+  // потоком поверх идущего эфира. Кнопку действия при этом обновляем: ради
+  // неё опрос во время эфира и нужен
+  if (liveFullOpen){ syncLivePractice(); return; }
 
   // ЗАКРЫТАЯ БЕСПЛАТНАЯ ЧАСТЬ: не-участник плеер больше не видит. Именно это
   // делает кнопка «Закрыть бесплатную часть» в дашборде — вторая её работа
@@ -13212,8 +13257,7 @@ function renderLiveBlock(){
   badge.textContent = liveNow.started ? t('live.badge.on') : t('live.badge.soon');
   badge.classList.toggle('live-badge-soon', !liveNow.started);
 
-  const practiceBtn = document.getElementById('live-practice-btn');
-  practiceBtn.style.display = liveNow.link ? 'flex' : 'none';
+  syncLivePractice();
 
   // Пересоздаём iframe ТОЛЬКО если поменялся адрес — иначе поток начнётся заново
   const frame = document.getElementById('live-frame');
@@ -18691,6 +18735,11 @@ plInit();
   <!-- ЧАТ. Свой, а не встроенный у Kinescope: человек здесь уже опознан и
        входить повторно на каждом устройстве не надо -->
   <div class="live-chat" id="live-chat">
+    <!-- КНОПКА ДЕЙСТВИЯ — НАД ЧАТОМ, а не под ним. Нужна она ровно в тот
+         момент, когда пора уходить на практику, и должна быть видна не
+         прокручивая ленту сообщений -->
+    <button class="live-btn live-btn-main live-practice-top" id="live-full-practice"
+            onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
     <div class="live-chat-list" id="live-chat-list"></div>
     <div class="live-chat-note" id="live-chat-note"></div>
     <div class="live-chat-form" id="live-chat-form">
@@ -18703,7 +18752,6 @@ plInit();
     <button class="live-btn live-btn-main" id="live-chat-paywall" style="display:none"
             onclick="closeLiveEntryPopup();collapseLiveFull();openPaywall()"
             data-text="live.chat.join">Чат — для участников клуба</button>
-    <button class="live-btn" id="live-full-practice" onclick="openLivePractice()" style="display:none;margin-top:8px" data-text="live.practice">Подключиться к практике</button>
   </div>
 </div>
 
