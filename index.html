@@ -2484,33 +2484,6 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   background-size:cover!important;
   background-position:center!important;
 }
-
-/* ⚠️⚠️ ДВЕ БЕДЫ ПРИ ТРЁХ КНОПКАХ — 13.08.2026, по скриншоту Denis'а.
-
-   1. КАРТА УЛЕТАЛА ВВЕРХ. Колонка экрана — шапка, сцена, панель, кнопка;
-      сцена одна умеет сжиматься (`flex:1;min-height:0`). Панель с ТРЕМЯ
-      кнопками действий выше панели с одной на добрую сотню пикселей, сцена
-      на столько же ужимается — а карта-герой считает размер от ШИРИНЫ вида и
-      не ужимается вовсе. Её центр уезжает вверх вместе с центром сцены, и
-      верх карты выходит за сцену прямо на заголовок.
-      Лечение — `prFitHero()`: масштаб карты МЕРЯЕТСЯ по тому, сколько места
-      осталось. Правило то же, что и с рамкой превью: любую величину от
-      размера вида — мерять, а не зашивать.
-
-   2. БУКВЫ ВЫЛЕЗАЛИ ЗА ПЛАШКУ. Надпись стояла по центру кнопки во всю её
-      ширину, а у плашки Denis'а ажурные концы — полезная площадь заметно уже
-      картинки. Длинные надписи («Похвастаться картой», «Открой следующую»)
-      заезжали прямо на завитки.
-      Лечение: поля в ДОЛЯХ ширины (концы масштабируются вместе с плашкой,
-      поэтому проценты, а не пиксели) + `prFitText()` ужимает кегль, если
-      надпись всё равно не влезла. */
-#pr-stage.pr-hasPlate #pr-cta,
-#pr-stage.pr-hasPlate .pr-cta-inline{
-  padding-left:var(--pr-plate-inset,17%)!important;
-  padding-right:var(--pr-plate-inset,17%)!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -16119,9 +16092,6 @@ function prApplyPlate(){
      озвучки и поиска, иначе кнопка становится безымянной картинкой. */
   cta.classList.toggle('pr-cta-baked', !!baked);
   cta.setAttribute('aria-label', cta.textContent.trim());
-  // Надпись меняется вместе с состоянием — значит и вписывать её надо здесь,
-  // а не одним разом при открытии экрана
-  prFitText(cta);
 }
 
 /* ⚠️ ЧТО МЫ МОЖЕМ ГРЕТЬ ЗАРАНЕЕ, А ЧТО НЕТ. До вскрытия известны ТОЛЬКО
@@ -16266,60 +16236,6 @@ function prClearPhase(){
 
 /* Раскладка: пока героя нет — стопка веером; как только карта выбрана, она
    уезжает в центр крупно, а остальные встают полочкой сверху */
-/* ⚠️ МАСШТАБ КАРТЫ-ГЕРОЯ — ПО ОСТАТКУ ВЫСОТЫ СЦЕНЫ (13.08.2026).
-   Панель с тремя кнопками действий отбирает у сцены около сотни пикселей, а
-   карта считает размер от ШИРИНЫ вида и об этом не знает — вылезала вверх на
-   заголовок. Меряем, сколько осталось, и ужимаем ровно настолько, насколько
-   надо. Возвращает множитель для --s.
-
-   ⚠️ Пол в 0.62 намеренный: ниже карта перестаёт читаться, и честнее дать ей
-   немного выйти за сцену, чем показать марку вместо карты. */
-const PR_HERO_FIT_MIN = 0.62;
-function prHeroFit(el, y){
-  const scene = prEl('pr-scene');
-  const out = { k: 1, y: y };
-  if (!scene || !el) return out;
-  // offsetHeight — размер ДО трансформаций, ровно то, что нужно для расчёта
-  const cardH  = el.offsetHeight;
-  const sceneH = scene.clientHeight;
-  if (!cardH || !sceneH) return out;      // не измерилось — не выдумываем
-  const AIR = 8;
-
-  /* ⚠️ СНАЧАЛА ПОДТЯГИВАЕМ КАРТУ К ЦЕНТРУ, ПОТОМ УЖИМАЕМ. Сдвиг вниз (y)
-     съедает запас снизу — там панель, на которую карта и налезала. Ужимать
-     карту, оставляя её смещённой, значит платить размером за красивость,
-     которая в тесноте всё равно не читается. */
-  const half = sceneH / 2 - AIR;
-  out.k = Math.max(PR_HERO_FIT_MIN, Math.min(1, (half * 2) / cardH));
-  // Сколько сдвига вниз ещё можно себе позволить при этом масштабе
-  const slack = half - (cardH * out.k) / 2;
-  out.y = Math.max(0, Math.min(y, slack));
-  return out;
-}
-
-/* ⚠️ НАДПИСЬ ДОЛЖНА ВЛЕЗТЬ В ПОЛЕЗНУЮ ЧАСТЬ ПЛАШКИ, а не в её габарит.
-   Поля в процентах задаёт CSS, здесь — последний рубеж: если надпись всё
-   равно не помещается, ужимаем кегль. Работает и с плашкой, и без неё. */
-function prFitText(el){
-  if (!el) return;
-  el.style.fontSize = '';                       // сначала вернуть исходный
-  const room = el.clientWidth - 2;
-  if (!room || !el.scrollWidth) return;         // ничего не измерилось
-  const base = parseFloat(getComputedStyle(el).fontSize) || 15;
-  let size = base;
-  // Шаг в 0.5px и пол в 11px: мельче надпись на плашке уже не читается
-  while (el.scrollWidth > room && size > 11){
-    size -= 0.5;
-    el.style.fontSize = size + 'px';
-  }
-}
-
-function prFitAllText(){
-  prFitText(prEl('pr-cta'));
-  const box = prEl('pr-actions');
-  if (box) box.querySelectorAll('button').forEach(prFitText);
-}
-
 function prLayout(){
   PR.ids.forEach(function(id, i){
     const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
@@ -16355,8 +16271,7 @@ function prLayout(){
       // базовым 66px: шесть пикселей ползком за секунду, ровно то самое
       // «просто так подкинуло». Поэтому у РАСКРЫТОЙ карты покой = 72px,
       // то есть там же, где её оставила анимация. Саму анимацию не трогаем.
-      const fit = prHeroFit(el, opened ? 72 : 66);
-      set(0, fit.y, 0, String(fit.k));
+      set(0, opened ? 72 : 66, 0, '1');
       return;
     }
     if (PR.opened.indexOf(id) >= 0){ el.style.opacity = '0'; el.style.pointerEvents = 'none'; return; }
@@ -16398,14 +16313,6 @@ function prFillDetails(card, pointsAwarded, cardId, claimed){
   prEl('pr-ability-title').textContent = card.title || '';
   prEl('pr-ability-text').textContent  = card.description || '';
   prEl('pr-actions').innerHTML = cardActionsHtml(card, cardId, claimed, 0, 'pr-cta pr-cta-inline');
-  /* ⚠️ ПАНЕЛЬ ТОЛЬКО ЧТО ВЫРОСЛА — значит сцена только что ужалась, и карту
-     надо пересчитать. Ждать следующего кадра обязательно: прямо сейчас
-     высота ещё старая. Отсюда и брались «улетающие вверх» карты. */
-  const after = function(fn){
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fn);
-    else setTimeout(fn, 16);
-  };
-  after(function(){ prFitAllText(); prLayout(); });
 }
 
 async function prPrepareFrontImage(img, src){
