@@ -492,233 +492,762 @@ body.onboarding-bar-visible header{margin-bottom:106px}
         в приложении есть правила `[data-theme="..."]` БЕЗ имени элемента,
         они перекрасили бы интерфейс вокруг.
    Больше ничего не трогать: цифры, тени и тайминги — авторские. */
-
-#pr-stage{position:fixed;inset:0;z-index:900;display:none;overflow-y:auto;
-  font-family:var(--sans);color:#eee;background:#070912;
-  transition:background 1s ease,color .6s ease}
-#pr-stage.pr-shown{display:block}
-#pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
-#pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
-
+#pr-stage{
+  position:fixed;
+  inset:0;
+  z-index:900;
+  display:none;
+  overflow-y:auto;
+  font-family:var(--sans);
+  color:#eee;
+  background:#070912;
+  transition:background 1s ease,color .6s ease;
+}
+#pr-stage.pr-shown{
+  display:block;
+}
 #pr-stage{
   --ease:cubic-bezier(.16,1,.3,1);
   --panel-w:min(440px,calc(100vw - 24px));
-  --serif: Georgia,"Times New Roman",serif;
-  --sans: Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:Georgia,"Times New Roman",serif;
+  --sans:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --accent:#c9a765;
   --accent-2:#c8bee1;
 }
-#pr-stage *{box-sizing:border-box}
-#pr-stage[data-pr-theme="light"]{background:#cfc6b9;color:#2a241d}
-#pr-stage[data-pr-theme="dark"]{background:#060811;color:#eee}
-#pr-stage::before,#pr-stage::after{
-  content:"";position:fixed;pointer-events:none;filter:blur(70px);opacity:.55;transition:background 1s ease,opacity 1s ease,transform 10s ease;
-  animation:pr-blob 12s ease-in-out infinite alternate;
+#pr-stage *{
+  box-sizing:border-box;
 }
-#pr-stage::before{width:340px;height:340px;left:-90px;top:12vh;background:rgba(223,181,113,.16)}
-#pr-stage::after{width:390px;height:390px;right:-100px;bottom:3vh;background:rgba(152,126,215,.13);animation-direction:alternate-reverse}
-#pr-stage[data-pr-theme="light"]::before{background:rgba(255,236,204,.58);opacity:.8}
-#pr-stage[data-pr-theme="light"]::after{background:rgba(199,173,133,.28);opacity:.5}
-#pr-stage[data-pr-theme="dark"]::before{background:rgba(217,171,93,.12)}
-#pr-stage[data-pr-theme="dark"]::after{background:rgba(121,96,190,.13)}
-@keyframes pr-blob{from{transform:translate3d(-12px,-8px,0) scale(.94)}to{transform:translate3d(18px,14px,0) scale(1.12)}}
-
-.pr-stage{min-height:100vh;padding:20px 12px 72px;display:grid;place-items:center;position:relative}
+#pr-stage::before,#pr-stage::after{
+  opacity:.55;
+  transition:background 1s ease,opacity 1s ease,transform 10s ease;
+}
+#pr-stage[data-pr-theme="light"]::before{
+  background:rgba(255,236,204,.58);
+  opacity:.8;
+}
+#pr-stage[data-pr-theme="light"]::after{
+  background:rgba(199,173,133,.28);
+  opacity:.5;
+}
+#pr-stage[data-pr-theme="dark"]::before,
+#pr-stage[data-pr-theme="legendary"]::before{
+  background:rgba(217,171,93,.12);
+}
+#pr-stage[data-pr-theme="dark"]::after,
+#pr-stage[data-pr-theme="legendary"]::after{
+  background:rgba(121,96,190,.13);
+}
+@keyframes pr-blob{
+  from{
+    transform:translate3d(-12px,-8px,0) scale(.94);
+  }
+  to{
+    transform:translate3d(18px,14px,0) scale(1.12);
+  }
+}
+.pr-stage{
+  place-items:center;
+  position:relative;
+}
 .pr-shell{
-  width:var(--panel-w);min-height:760px;position:relative;overflow:hidden;border-radius:34px;
-  box-shadow:0 35px 110px rgba(0,0,0,.48);isolation:isolate;
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
   transition:box-shadow .8s ease;
 }
-#pr-stage[data-pr-theme="light"] .pr-shell{box-shadow:0 34px 95px rgba(73,55,35,.30),0 0 34px rgba(255,239,213,.18)}
-#pr-stage[data-pr-theme="dark"] .pr-shell{box-shadow:0 40px 120px rgba(0,0,0,.72),0 0 30px rgba(207,165,92,.08)}
-.pr-tex,.pr-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;transition:opacity .8s ease}
-.pr-tex{z-index:-4}.pr-frame{z-index:30}
-.pr-tex.pr-light,.pr-frame.pr-light{opacity:0}.pr-tex.pr-dark,.pr-frame.pr-dark{opacity:0}
-#pr-stage[data-pr-theme="light"] .pr-tex.pr-light,#pr-stage[data-pr-theme="light"] .pr-frame.pr-light{opacity:1}
-#pr-stage[data-pr-theme="dark"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="dark"] .pr-frame.pr-dark{opacity:1}
-#pr-stage[data-pr-theme="neutral"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="neutral"] .pr-frame.pr-dark{opacity:1}
+#pr-stage[data-pr-theme="light"] .pr-shell{
+  box-shadow:0 34px 95px rgba(73,55,35,.30),0 0 34px rgba(255,239,213,.18);
+}
+#pr-stage[data-pr-theme="dark"] .pr-shell,
+#pr-stage[data-pr-theme="legendary"] .pr-shell{
+  box-shadow:0 40px 120px rgba(0,0,0,.72),0 0 30px rgba(207,165,92,.08);
+}
+.pr-tex,.pr-frame{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  pointer-events:none;
+  transition:opacity .8s ease;
+}
+.pr-tex{
+  z-index:-4;
+}
+.pr-frame{
+  z-index:30;
+}
+.pr-tex.pr-light,.pr-frame.pr-light{
+  opacity:0;
+}
+.pr-tex.pr-dark,.pr-frame.pr-dark{
+  opacity:0;
+}
+#pr-stage[data-pr-theme="light"] .pr-tex.pr-light,#pr-stage[data-pr-theme="light"] .pr-frame.pr-light{
+  opacity:1;
+}
+#pr-stage[data-pr-theme="dark"] .pr-tex.pr-dark,
+#pr-stage[data-pr-theme="dark"] .pr-frame.pr-dark,
+#pr-stage[data-pr-theme="legendary"] .pr-tex.pr-dark,
+#pr-stage[data-pr-theme="legendary"] .pr-frame.pr-dark{
+  opacity:1;
+}
+#pr-stage[data-pr-theme="neutral"] .pr-tex.pr-dark,#pr-stage[data-pr-theme="neutral"] .pr-frame.pr-dark{
+  opacity:1;
+}
 .pr-shell::before{
-  content:"";position:absolute;inset:0;z-index:-3;pointer-events:none;
-  background:radial-gradient(circle at 50% 38%,rgba(235,190,110,.10),transparent 36%),linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22));
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-3;
+  pointer-events:none;
 }
-#pr-stage[data-pr-theme="light"] .pr-shell::before{background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.28),transparent 35%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(119,88,50,.06))}
-
-.pr-head{position:relative;z-index:10;text-align:center;padding:36px 54px 0}
-.pr-eyebrow{font:600 10px/1 var(--sans);letter-spacing:.22em;text-transform:uppercase;opacity:.76;margin-bottom:10px;color:color-mix(in srgb,var(--accent) 58%,currentColor)}
-.pr-title{font:500 clamp(30px,8vw,42px)/1 var(--serif);letter-spacing:-.025em;margin:0;text-shadow:0 2px 18px rgba(0,0,0,.18),0 0 18px rgba(255,225,171,.06);color:color-mix(in srgb,var(--accent) 26%,currentColor)}
-.pr-sub{font-size:13px;line-height:1.4;margin:10px auto 0;opacity:.63;max-width:260px}
-.pr-close{position:absolute;right:18px;top:17px;width:38px;height:38px;border-radius:50%;border:1px solid currentColor;background:rgba(255,255,255,.025);color:inherit;opacity:.55;font-size:22px;cursor:pointer;z-index:35}
-
-.pr-scene{height:510px;position:relative;margin-top:8px;z-index:5;perspective:1400px;overflow:visible}
-.pr-motif{position:absolute;left:50%;top:52%;width:390px;height:390px;transform:translate(-50%,-50%);object-fit:contain;opacity:.58;pointer-events:none;z-index:1;filter:drop-shadow(0 0 18px rgba(218,175,101,.14));transition:opacity .5s ease,filter .7s ease}
-#pr-stage[data-pr-theme="light"] .pr-motif{opacity:.47}
-#pr-stage[data-pr-theme="dark"] .pr-motif{opacity:.68}
-.pr-aura{position:absolute;left:50%;top:54%;width:330px;height:330px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:0;filter:blur(27px);opacity:.35;transition:background .7s ease,opacity .7s ease,transform .8s var(--ease)}
-.pr-scene.pr-revealing .pr-aura{opacity:.84;transform:translate(-50%,-50%) scale(1.18)}
-
+#pr-stage[data-pr-theme="light"] .pr-shell::before{
+  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.28),transparent 35%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(119,88,50,.06));
+}
+.pr-head{
+  text-align:center;
+}
+.pr-eyebrow{
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+.pr-title{
+  margin:0;
+}
+.pr-sub{
+  line-height:1.4;
+  margin:10px auto 0;
+  max-width:260px;
+}
+.pr-close{
+  position:absolute;
+  border-radius:50%;
+  border:1px solid currentColor;
+  opacity:.55;
+  font-size:22px;
+  cursor:pointer;
+  z-index:35;
+}
+.pr-scene{
+  position:relative;
+  z-index:5;
+  overflow:visible;
+}
+.pr-motif{
+  position:absolute;
+  left:50%;
+  top:52%;
+  width:390px;
+  height:390px;
+  transform:translate(-50%,-50%);
+  object-fit:contain;
+  opacity:.58;
+  pointer-events:none;
+  z-index:1;
+  filter:drop-shadow(0 0 18px rgba(218,175,101,.14));
+  transition:opacity .5s ease,filter .7s ease;
+}
+#pr-stage[data-pr-theme="light"] .pr-motif{
+  opacity:.47;
+}
+#pr-stage[data-pr-theme="dark"] .pr-motif,
+#pr-stage[data-pr-theme="legendary"] .pr-motif{
+  opacity:.68;
+}
+.pr-aura{
+  position:absolute;
+  left:50%;
+  top:54%;
+  width:330px;
+  height:330px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:0;
+  transition:background .7s ease,opacity .7s ease,transform .8s var(--ease);
+}
+.pr-scene.pr-revealing .pr-aura{
+  transform:translate(-50%,-50%) scale(1.18);
+}
 .pr-card{
-  --x:0px;--y:0px;--r:0deg;--s:1;
-  position:absolute;left:50%;top:50%;width:174px;aspect-ratio:.70;border:0;background:none;padding:0;
+  --x:0px;
+  --y:0px;
+  --r:0deg;
+  --s:1;
+  position:absolute;
+  left:50%;
+  top:50%;
+  aspect-ratio:.70;
+  border:0;
+  background:none;
+  padding:0;
   transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--r)) scale(var(--s));
-  transition:transform 1s var(--ease),opacity .55s ease,filter .55s ease;transform-origin:50% 65%;cursor:pointer;
+  transition:transform 1s var(--ease),opacity .55s ease,filter .55s ease;
+  transform-origin:50% 65%;
+  cursor:pointer;
 }
-.pr-card.pr-shelf{z-index:3;filter:brightness(.84);opacity:.9}
-.pr-card.pr-shelf:hover{filter:brightness(1.05);transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) - 4px)) rotate(var(--r)) scale(calc(var(--s) * 1.02))}
-.pr-card.pr-hero{z-index:10;width:286px;cursor:default;filter:drop-shadow(0 28px 36px rgba(0,0,0,.34))}
-.pr-flip{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .92s var(--ease)}
-.pr-card.pr-open .pr-flip{transform:rotateY(180deg)}
-.pr-face{position:absolute;inset:0;border-radius:19px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.pr-face.pr-back{box-shadow:0 18px 36px rgba(0,0,0,.34)}
-.pr-face.pr-front{transform:rotateY(180deg);background:#111;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 45px rgba(0,0,0,.34)}
-.pr-face img{display:block;width:100%;height:100%;object-fit:cover}
-.pr-card.pr-hero .pr-face{border-radius:20px}
+.pr-card.pr-hero{
+  cursor:default;
+}
+.pr-flip{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  transition:transform .92s var(--ease);
+}
+.pr-card.pr-open .pr-flip{
+  transform:rotateY(180deg);
+}
+.pr-face{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.pr-face.pr-front{
+  transform:rotateY(180deg);
+  box-shadow:0 0 0 1px rgba(255,255,255,.14),0 20px 45px rgba(0,0,0,.34);
+}
+.pr-face img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
 .pr-card.pr-hero.pr-open .pr-face.pr-front::after{
-  content:"";position:absolute;inset:-25%;background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.35) 48%,rgba(255,232,181,.16) 53%,transparent 65%);transform:translateX(-75%);animation:pr-glint 1.2s .46s ease-out both;pointer-events:none
+  content:"";
+  position:absolute;
+  inset:-25%;
+  transform:translateX(-75%);
+  pointer-events:none;
 }
-@keyframes pr-glint{0%{opacity:0;transform:translateX(-75%)}20%{opacity:.85}100%{opacity:0;transform:translateX(75%)}}
-
-.pr-fx{position:absolute;z-index:40;pointer-events:none;mix-blend-mode:screen}
-.pr-fx.pr-dot{width:var(--sz);height:var(--sz);border-radius:50%;background:var(--c);box-shadow:0 0 11px var(--c);animation:pr-fly var(--dur) var(--ease) both}
-.pr-fx.pr-star{width:var(--sz);height:var(--sz);background:transparent;animation:pr-fly var(--dur) var(--ease) both}
-.pr-fx.pr-star::before,.pr-fx.pr-star::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--c);border-radius:99px;box-shadow:0 0 8px var(--c)}
-.pr-fx.pr-star::before{width:1.5px;height:100%}.pr-fx.pr-star::after{width:100%;height:1.5px}
-@keyframes pr-fly{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}16%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.05)}}
-.pr-ambient{position:absolute;z-index:2;width:3px;height:3px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);opacity:.45;pointer-events:none;animation:pr-float var(--d) ease-in-out infinite alternate}
-@keyframes pr-float{from{transform:translate3d(0,8px,0) scale(.7);opacity:.15}to{transform:translate3d(var(--mx),-14px,0) scale(1.15);opacity:.65}}
-
-.pr-details{position:relative;z-index:9;margin:-18px 22px 0;opacity:0;transform:translate3d(0,15px,0);transition:opacity .55s ease,transform .65s var(--ease);will-change:opacity,transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.pr-details.pr-on{opacity:1;transform:translate3d(0,0,0)}
-.pr-stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid rgba(255,255,255,.10);border-radius:19px;background:linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.030));box-shadow:inset 0 1px rgba(255,255,255,.055),0 14px 35px rgba(0,0,0,.11);overflow:hidden;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
-#pr-stage[data-pr-theme="light"] .pr-stats{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(247,238,222,.24));border-color:rgba(108,82,49,.16);box-shadow:inset 0 1px rgba(255,255,255,.58),0 13px 30px rgba(74,55,33,.08)}
-.pr-stat{text-align:left;padding:13px 11px;min-width:0}.pr-stat+.pr-stat{border-left:1px solid rgba(255,255,255,.08)}#pr-stage[data-pr-theme="light"] .pr-stat+.pr-stat{border-left-color:rgba(95,72,44,.12)}
-.pr-label{font-size:8px;letter-spacing:.11em;text-transform:uppercase;opacity:.50}.pr-value{font:500 13px/1.2 var(--sans);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pr-ability{display:flex;align-items:center;gap:12px;padding:14px 6px 2px}.pr-ability-icon{width:42px;height:42px;flex:none;display:grid;place-items:center;border:1px solid rgba(218,177,105,.33);border-radius:50%;font-size:18px;color:var(--accent)}
-
-.pr-details .pr-stats,.pr-details .pr-ability{transform:translateZ(0);}
-.pr-ability strong{font-size:13px;font-weight:600}.pr-ability p{font-size:11.5px;line-height:1.42;margin:3px 0 0;opacity:.57}
-.pr-cta{width:calc(100% - 44px);margin:15px 22px 24px;height:52px;border-radius:18px;border:1px solid rgba(221,181,105,.42);background:rgba(8,9,14,.18);color:inherit;font:500 15px/1 var(--sans);letter-spacing:.01em;cursor:pointer;position:relative;z-index:31;box-shadow:inset 0 1px rgba(255,255,255,.07),0 9px 24px rgba(0,0,0,.14);transition:transform .25s var(--ease),background .4s ease,box-shadow .4s ease}
-#pr-stage[data-pr-theme="light"] .pr-cta{background:rgba(255,248,235,.34);border-color:rgba(151,112,64,.28);box-shadow:inset 0 1px rgba(255,255,255,.6),0 10px 25px rgba(96,67,36,.10)}
-.pr-cta:hover{transform:translateY(-2px);box-shadow:inset 0 1px rgba(255,255,255,.1),0 14px 30px rgba(0,0,0,.18),0 0 18px color-mix(in srgb,var(--accent) 18%,transparent)}
-
-.pr-ring,.pr-flash{position:absolute;left:50%;top:53%;pointer-events:none;z-index:20;opacity:0;transform:translate(-50%,-50%)}
-.pr-ring{width:420px;height:420px;border-radius:50%;border:1px solid rgba(255,235,190,.36);box-shadow:0 0 56px rgba(255,220,176,.18), inset 0 0 28px rgba(255,255,255,.08)}
-.pr-flash{width:760px;height:760px;border-radius:50%;filter:blur(36px);background:radial-gradient(circle,rgba(255,255,255,.88) 0%,rgba(255,233,186,.40) 16%,rgba(178,151,242,.24) 42%,rgba(126,235,255,.14) 56%,transparent 76%)}
-.pr-scene.pr-phase-charge .pr-aura{opacity:.90;transform:translate(-50%,-50%) scale(1.34)}
-.pr-scene.pr-phase-impact .pr-flash{animation:pr-flashPulse .54s ease-out both}
-.pr-scene.pr-phase-impact .pr-ring{animation:pr-ringShock .92s ease-out both}
-.pr-scene.pr-phase-signature .pr-motif{transform:translate(-50%,-50%) scale(1.03)}
-@keyframes pr-flashPulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.18)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.58)}}
-@keyframes pr-ringShock{0%{opacity:0;transform:translate(-50%,-50%) scale(.26)}18%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(2.02)}}
-.pr-card.pr-hero.pr-phase-anticipation{transform:translate(-50%,-50%) translate(0px,66px) rotate(0deg) scale(.985)}
-.pr-card.pr-hero.pr-phase-charge{animation:pr-heroCharge .42s ease-out both}
-.pr-card.pr-hero.pr-phase-impact{animation:pr-heroImpact .52s var(--ease) both}
-@keyframes pr-heroCharge{0%{transform:translate(-50%,-50%) translate(0px,66px) scale(.985)}100%{transform:translate(-50%,-50%) translate(0px,62px) scale(1.01)}}
-@keyframes pr-heroImpact{0%{transform:translate(-50%,-50%) translate(0px,62px) scale(1.01)}40%{transform:translate(-50%,-50%) translate(0px,66px) scale(1.03)}100%{transform:translate(-50%,-50%) translate(0px,72px) scale(1)}}
-.pr-card.pr-hero .pr-face.pr-front::before{content:"";position:absolute;inset:-20%;pointer-events:none;opacity:0;mix-blend-mode:screen;background:linear-gradient(112deg,transparent 22%,rgba(255,205,231,.18) 34%,rgba(189,238,255,.24) 42%,rgba(255,243,188,.20) 50%,rgba(203,178,255,.24) 58%,transparent 74%)}
-.pr-card.pr-hero .pr-face.pr-front::after{content:"";position:absolute;inset:-25%;background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.52) 48%,rgba(255,231,182,.24) 54%,transparent 68%);transform:translateX(-75%);pointer-events:none;opacity:0}
-.pr-card.pr-hero.pr-open .pr-face.pr-front::before{animation:pr-holoWash 1.45s .22s ease-out both}
-.pr-card.pr-hero.pr-open .pr-face.pr-front::after{animation:pr-heroGlint 1.15s .34s ease-out both}
-@keyframes pr-heroGlint{0%{opacity:0;transform:translateX(-72%)}18%{opacity:1}100%{opacity:0;transform:translateX(76%)}}
-@keyframes pr-holoWash{0%{opacity:0;transform:translateX(-36%) rotate(-8deg) scale(1.1)}18%{opacity:.82}55%{opacity:.68}100%{opacity:0;transform:translateX(34%) rotate(8deg) scale(1.24)}}
-@media (max-width:390px){.pr-shell{min-height:730px}.pr-scene{height:485px}.pr-card.pr-hero{width:270px}.pr-details{margin-top:-24px}.pr-head{padding-top:32px}}
-
+@keyframes pr-glint{
+  0%{
+    opacity:0;
+    transform:translateX(-75%);
+  }
+  20%{
+    opacity:.85;
+  }
+  100%{
+    opacity:0;
+    transform:translateX(75%);
+  }
+}
+.pr-fx{
+  position:absolute;
+  z-index:40;
+  pointer-events:none;
+  mix-blend-mode:screen;
+}
+.pr-fx.pr-dot{
+  border-radius:50%;
+  background:var(--c);
+  animation:pr-fly var(--dur) var(--ease) both;
+}
+.pr-fx.pr-star{
+  width:var(--sz);
+  height:var(--sz);
+  background:transparent;
+  animation:pr-fly var(--dur) var(--ease) both;
+}
+.pr-fx.pr-star::before,.pr-fx.pr-star::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  background:var(--c);
+  border-radius:99px;
+  box-shadow:0 0 8px var(--c);
+}
+.pr-fx.pr-star::before{
+  width:1.5px;
+  height:100%;
+}
+.pr-fx.pr-star::after{
+  width:100%;
+  height:1.5px;
+}
+@keyframes pr-fly{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.2);
+  }
+  16%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.05);
+  }
+}
+.pr-ambient{
+  position:absolute;
+  z-index:2;
+  border-radius:50%;
+  background:var(--c);
+  pointer-events:none;
+  animation:pr-float var(--d) ease-in-out infinite alternate;
+}
+@keyframes pr-float{
+  from{
+    transform:translate3d(0,8px,0) scale(.7);
+    opacity:.15;
+  }
+  to{
+    transform:translate3d(var(--mx),-14px,0) scale(1.15);
+    opacity:.65;
+  }
+}
+.pr-details{
+  position:relative;
+  opacity:0;
+  transform:translate3d(0,15px,0);
+  transition:opacity .55s ease,transform .65s var(--ease);
+  will-change:opacity,transform;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.pr-details.pr-on{
+  opacity:1;
+  transform:translate3d(0,0,0);
+}
+.pr-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  overflow:hidden;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.pr-stat{
+  text-align:left;
+  min-width:0;
+}
+.pr-stat+.pr-stat{
+  border-left:1px solid rgba(255,255,255,.08);
+}
+.pr-label{
+  font-size:8px;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.pr-value{
+  font:500 13px/1.2 var(--sans);
+  margin-top:5px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.pr-ability{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.pr-ability-icon{
+  flex:none;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(218,177,105,.33);
+  border-radius:50%;
+  font-size:18px;
+}
+.pr-details .pr-stats,.pr-details .pr-ability{
+  transform:translateZ(0);
+}
+.pr-ability strong{
+  font-size:13px;
+  font-weight:600;
+}
+.pr-ability p{
+  font-size:11.5px;
+  line-height:1.42;
+  margin:3px 0 0;
+}
+.pr-cta{
+  font:500 15px/1 var(--sans);
+  letter-spacing:.01em;
+  cursor:pointer;
+  position:relative;
+  z-index:31;
+  transition:transform .25s var(--ease),background .4s ease,box-shadow .4s ease;
+}
+.pr-ring,.pr-flash{
+  position:absolute;
+  left:50%;
+  top:53%;
+  pointer-events:none;
+  z-index:20;
+  opacity:0;
+  transform:translate(-50%,-50%);
+}
+.pr-ring{
+  border-radius:50%;
+}
+.pr-flash{
+  border-radius:50%;
+}
+.pr-scene.pr-phase-charge .pr-aura{
+  opacity:.90;
+  transform:translate(-50%,-50%) scale(1.34);
+}
+.pr-scene.pr-phase-impact .pr-flash{
+  animation:pr-flashPulse .54s ease-out both;
+}
+.pr-scene.pr-phase-impact .pr-ring{
+  animation:pr-ringShock .92s ease-out both;
+}
+.pr-scene.pr-phase-signature .pr-motif{
+  transform:translate(-50%,-50%) scale(1.03);
+}
+@keyframes pr-flashPulse{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.18);
+  }
+  20%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(1.58);
+  }
+}
+@keyframes pr-ringShock{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.26);
+  }
+  18%{
+    opacity:.95;
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(2.02);
+  }
+}
+.pr-card.pr-hero.pr-phase-charge{
+  animation:pr-heroCharge .42s ease-out both;
+}
+.pr-card.pr-hero.pr-phase-impact{
+  animation:pr-heroImpact .52s var(--ease) both;
+}
+.pr-card.pr-hero .pr-face.pr-front::before{
+  content:"";
+  position:absolute;
+  inset:-20%;
+  pointer-events:none;
+  opacity:0;
+  mix-blend-mode:screen;
+  background:linear-gradient(112deg,transparent 22%,rgba(255,205,231,.18) 34%,rgba(189,238,255,.24) 42%,rgba(255,243,188,.20) 50%,rgba(203,178,255,.24) 58%,transparent 74%);
+}
+.pr-card.pr-hero .pr-face.pr-front::after{
+  content:"";
+  position:absolute;
+  inset:-25%;
+  background:linear-gradient(108deg,transparent 36%,rgba(255,255,255,.52) 48%,rgba(255,231,182,.24) 54%,transparent 68%);
+  transform:translateX(-75%);
+  pointer-events:none;
+  opacity:0;
+}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::before{
+  animation:pr-holoWash 1.45s .22s ease-out both;
+}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::after{
+  animation:pr-heroGlint 1.15s .34s ease-out both;
+}
+@keyframes pr-heroGlint{
+  0%{
+    opacity:0;
+    transform:translateX(-72%);
+  }
+  18%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    transform:translateX(76%);
+  }
+}
+@keyframes pr-holoWash{
+  0%{
+    opacity:0;
+    transform:translateX(-36%) rotate(-8deg) scale(1.1);
+  }
+  18%{
+    opacity:.82;
+  }
+  55%{
+    opacity:.68;
+  }
+  100%{
+    opacity:0;
+    transform:translateX(34%) rotate(8deg) scale(1.24);
+  }
+}
+@media (max-width:390px){
+  .pr-shell{
+    min-height:730px;
+  }
+  .pr-scene{
+    height:485px;
+  }
+  .pr-card.pr-hero{
+    width:270px;
+  }
+  .pr-details{
+    margin-top:-24px;
+  }
+  .pr-head{
+    padding-top:32px;
+  }
+}
 /* Кнопки действий («Посмотреть», «Забрать», «Поделиться») — та же кнопка
    концепта, но внутри панели: без внешних отступов и пониже ростом */
-.pr-cta-inline{width:100%;margin:10px 0 0;height:46px}
-
+.pr-cta-inline{
+  width:100%;
+  margin:10px 0 0;
+  height:46px;
+}
 /* Подсветка следующей закрытой карты по кнопке — код её звал, а правила не было */
-.pr-nudge{animation:pr-nudge-pulse .7s ease-out 2}
-@keyframes pr-nudge-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35)}}
-
-
+.pr-nudge{
+  animation:pr-nudge-pulse .7s ease-out 2;
+}
+@keyframes pr-nudge-pulse{
+  0%,100%{
+    filter:brightness(1);
+  }
+  50%{
+    filter:brightness(1.35);
+  }
+}
 /* ── «ГЕРОИЧЕСКИЙ» СЛОЙ (концепт v6-4, 09.08.2026) ────────────────────────
    Три чисто декоративных слоя: свет за героем, пять лучей и световой
    постамент под картой. Ни одной новой функции — всё живёт на тех же фазах
    сцены, что уже есть. Цвета берут `--accent` и `--accent-2`, поэтому
    настроение по редкости работает и здесь. */
-.pr-heroSky{position:absolute;inset:2% 0 10%;pointer-events:none;z-index:0;opacity:.95;background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--accent) 15%, rgba(255,247,229,.20)) 0%,transparent 34%),radial-gradient(circle at 50% 85%,rgba(255,228,182,.08) 0%,transparent 26%),linear-gradient(180deg,rgba(255,255,255,.02),transparent 22%,rgba(255,228,182,.03) 78%,rgba(0,0,0,.08) 100%)}
-.pr-heroBeams{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:visible}
-.pr-heroBeams span{position:absolute;left:50%;top:51%;width:120px;height:430px;transform:translate(-50%,-8%) rotate(var(--rot)) scaleY(.3) scaleX(.76);transform-origin:50% 100%;border-radius:120px 120px 0 0;opacity:0;filter:blur(8px);mix-blend-mode:screen;will-change:opacity,transform;background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,color-mix(in srgb,var(--accent) 65%, white 35%) 26%,color-mix(in srgb,var(--accent-2) 35%, transparent) 56%,transparent 100%)}
-.pr-heroBeams span:nth-child(1){--rot:-26deg;margin-left:-124px}
-.pr-heroBeams span:nth-child(2){--rot:-12deg;margin-left:-60px}
-.pr-heroBeams span:nth-child(3){--rot:0deg;margin-left:0px}
-.pr-heroBeams span:nth-child(4){--rot:12deg;margin-left:60px}
-.pr-heroBeams span:nth-child(5){--rot:26deg;margin-left:124px}
-.pr-scene.pr-revealing .pr-heroBeams span{animation:pr-beamRise 1220ms ease-out both}
-.pr-scene.pr-revealing .pr-heroBeams span:nth-child(2),.pr-scene.pr-revealing .pr-heroBeams span:nth-child(4){animation-delay:70ms}
-.pr-scene.pr-revealing .pr-heroBeams span:nth-child(3){animation-delay:120ms}
-.pr-scene.pr-phase-signature .pr-heroBeams span{opacity:.14;transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1)}
-.pr-heroPedestal{position:absolute;left:50%;bottom:34px;width:340px;height:100px;transform:translateX(-50%);pointer-events:none;z-index:2;border-radius:50%;opacity:.72;background:radial-gradient(ellipse at center,rgba(255,249,240,.18) 0%,color-mix(in srgb,var(--accent) 34%, transparent) 34%,rgba(255,219,161,.08) 48%,transparent 74%);box-shadow:0 0 0 1px rgba(255,226,176,.08),0 18px 44px rgba(0,0,0,.22),inset 0 10px 20px rgba(255,255,255,.06);transition:opacity .7s ease,transform .7s var(--ease)}
-.pr-scene.pr-revealing .pr-heroPedestal{opacity:.92;transform:translateX(-50%) scale(1.05)}
-.pr-scene.pr-phase-signature .pr-heroPedestal{opacity:.98;transform:translateX(-50%) scale(1.08)}
-#pr-stage[data-pr-theme="light"] .pr-heroBeams span{mix-blend-mode:hard-light;background:linear-gradient(180deg,rgba(255,255,255,.18) 0%,color-mix(in srgb,var(--accent) 30%, white 70%) 22%,color-mix(in srgb,var(--accent-2) 78%, white 22%) 52%,transparent 100%)}
-#pr-stage[data-pr-theme="light"] .pr-heroPedestal{box-shadow:0 0 0 1px rgba(148,113,57,.12),0 16px 38px rgba(118,89,42,.12),inset 0 10px 20px rgba(255,255,255,.2)}
-@keyframes pr-beamRise{0%{opacity:0;transform:translate(-50%,4%) rotate(var(--rot)) scaleY(.24) scaleX(.72)}16%{opacity:.16}42%{opacity:.56}100%{opacity:.14;transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1)}}
-
+.pr-heroSky{
+  position:absolute;
+  inset:2% 0 10%;
+  pointer-events:none;
+  z-index:0;
+}
+.pr-heroBeams{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+  overflow:visible;
+}
+.pr-heroBeams span{
+  position:absolute;
+  left:50%;
+  top:51%;
+  width:120px;
+  height:430px;
+  transform:translate(-50%,-8%) rotate(var(--rot)) scaleY(.3) scaleX(.76);
+  transform-origin:50% 100%;
+  border-radius:120px 120px 0 0;
+  opacity:0;
+  filter:blur(8px);
+  mix-blend-mode:screen;
+  will-change:opacity,transform;
+  background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,color-mix(in srgb,var(--accent) 65%, white 35%) 26%,color-mix(in srgb,var(--accent-2) 35%, transparent) 56%,transparent 100%);
+}
+.pr-heroBeams span:nth-child(1){
+  --rot:-26deg;
+  margin-left:-124px;
+}
+.pr-heroBeams span:nth-child(2){
+  --rot:-12deg;
+  margin-left:-60px;
+}
+.pr-heroBeams span:nth-child(3){
+  --rot:0deg;
+  margin-left:0px;
+}
+.pr-heroBeams span:nth-child(4){
+  --rot:12deg;
+  margin-left:60px;
+}
+.pr-heroBeams span:nth-child(5){
+  --rot:26deg;
+  margin-left:124px;
+}
+.pr-scene.pr-revealing .pr-heroBeams span{
+  animation:pr-beamRise 1220ms ease-out both;
+}
+.pr-scene.pr-revealing .pr-heroBeams span:nth-child(2),.pr-scene.pr-revealing .pr-heroBeams span:nth-child(4){
+  animation-delay:70ms;
+}
+.pr-scene.pr-revealing .pr-heroBeams span:nth-child(3){
+  animation-delay:120ms;
+}
+.pr-scene.pr-phase-signature .pr-heroBeams span{
+  opacity:.14;
+  transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1);
+}
+.pr-heroPedestal{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  pointer-events:none;
+  z-index:2;
+  border-radius:50%;
+  transition:opacity .7s ease,transform .7s var(--ease);
+}
+.pr-scene.pr-revealing .pr-heroPedestal{
+  opacity:.92;
+  transform:translateX(-50%) scale(1.05);
+}
+.pr-scene.pr-phase-signature .pr-heroPedestal{
+  opacity:.98;
+  transform:translateX(-50%) scale(1.08);
+}
+#pr-stage[data-pr-theme="light"] .pr-heroBeams span{
+  mix-blend-mode:hard-light;
+  background:linear-gradient(180deg,rgba(255,255,255,.18) 0%,color-mix(in srgb,var(--accent) 30%, white 70%) 22%,color-mix(in srgb,var(--accent-2) 78%, white 22%) 52%,transparent 100%);
+}
+@keyframes pr-beamRise{
+  0%{
+    opacity:0;
+    transform:translate(-50%,4%) rotate(var(--rot)) scaleY(.24) scaleX(.72);
+  }
+  16%{
+    opacity:.16;
+  }
+  42%{
+    opacity:.56;
+  }
+  100%{
+    opacity:.14;
+    transform:translate(-50%,-14%) rotate(var(--rot)) scaleY(1.06) scaleX(1);
+  }
+}
 /* ── ПОСАДКА КОНЦЕПТА В ПРИЛОЖЕНИЕ (09.08.2026) ──────────────────────────
    Концепт был МАКЕТОМ НА СТРАНИЦЕ: панель 440×760 лежала по центру белого
    поля, вокруг оставался воздух. Внутри приложения экран сам себе страница —
    поэтому панель растягивается на весь вид, а не висит узкой колонкой.
    Пропорции и внутренние отступы концепта при этом не трогаем. */
-.pr-stage{min-height:100vh;min-height:100dvh;padding:0;display:block}
+.pr-stage{
+  min-height:100dvh;
+  padding:0;
+  display:block;
+}
 .pr-shell{
-  width:100%;max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;border-radius:0;
-  display:flex;flex-direction:column;
+  width:100%;
+  max-width:520px;
+  margin:0 auto;
+  min-height:100dvh;
+  border-radius:0;
+  display:flex;
+  flex-direction:column;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (min-width:560px){
   /* На широком экране панель снова становится панелью — но по высоте
      тянется во весь вид, иначе низ обрезается на ноутбуках */
-  .pr-stage{padding:16px 12px;display:grid;place-items:start center}
-  .pr-shell{border-radius:34px;min-height:calc(100vh - 32px);min-height:calc(100dvh - 32px)}
+  .pr-stage{
+    padding:16px 12px;
+    display:grid;
+    place-items:start center;
+  }
+  .pr-shell{
+    border-radius:34px;
+    min-height:calc(100dvh - 32px);
+  }
 }
-
 /* Сцена забирает остаток высоты вместо жёстких 510px: иначе на телефоне
    голова + сцена + панель + кнопка не помещаются и экран уезжает в прокрутку */
-.pr-scene{height:auto;flex:1 1 auto;min-height:var(--pr-scene-min,330px);
-  display:flex;align-items:center;justify-content:center}
-.pr-head{flex:none}
-.pr-details{flex:none}
-.pr-cta{flex:none;margin-top:auto}
-
+.pr-scene{
+  height:auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.pr-head{
+  flex:none;
+}
+.pr-details{
+  flex:none;
+}
+.pr-cta{
+  flex:none;
+}
 /* ⚠️ ПОДЗАГОЛОВОК ДЁРГАЛ ВСЮ ШАПКУ. Он меняется по ходу вскрытия
    («энергия собирается…» → «раскрытие начинается…» → «Осталось карт: 2»), и
    строка то в одну, то в две — высота скакала, а вместе с ней прыгало всё
    выше и ниже. Резервируем две строки и больше не двигаемся */
-.pr-sub{min-height:2.8em;display:flex;align-items:center;justify-content:center}
-
+.pr-sub{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 /* ⚠️ РАЗМЕР КАРТ — ОТ ЭКРАНА, А НЕ ЖЁСТКИЕ ПИКСЕЛИ. В концепте панель была
    ровно 440px, и 174/286px читались правильно. В приложении ширина любая:
    на широком экране те же пиксели выглядели крошечными посреди пустоты.
    Карта занимает долю ширины панели и упирается в потолок по высоте сцены */
-.pr-card{width:clamp(150px,38vw,190px)}
-.pr-card.pr-hero{width:clamp(270px,64vw,330px)}
+.pr-card{
+  width:clamp(150px,38vw,190px);
+}
 @media (min-width:560px){
-  .pr-card{width:174px}
-  .pr-card.pr-hero{width:300px}
+  .pr-card{
+    width:174px;
+  }
+  .pr-card.pr-hero{
+    width:300px;
+  }
 }
 /* На низких экранах сначала ужимаем воздух, а не саму главную карту. */
 @media (max-height:760px){
-  .pr-card{width:clamp(138px,33vw,158px)}
-  .pr-card.pr-hero{width:clamp(250px,58vw,286px)}
-  .pr-scene{--pr-scene-min:305px}
-  .pr-head{padding-top:20px}
-  .pr-details{margin-top:-22px}
+  .pr-card{
+    width:clamp(138px,33vw,158px);
+  }
+  .pr-card.pr-hero{
+    width:clamp(250px,58vw,286px);
+  }
+  .pr-scene{
+    --pr-scene-min:305px;
+  }
+  .pr-head{
+    padding-top:20px;
+  }
+  .pr-details{
+    margin-top:-22px;
+  }
 }
 @media (max-height:640px){
-  .pr-card{width:clamp(126px,31vw,145px)}
-  .pr-card.pr-hero{width:clamp(228px,54vw,254px)}
-  .pr-scene{--pr-scene-min:270px}
-  .pr-head{padding-top:16px}
-  .pr-title{font-size:28px}
-  .pr-sub{margin-top:7px}
+  .pr-card{
+    width:clamp(126px,31vw,145px);
+  }
+  .pr-card.pr-hero{
+    width:clamp(228px,54vw,254px);
+  }
+  .pr-scene{
+    --pr-scene-min:270px;
+  }
+  .pr-head{
+    padding-top:16px;
+  }
+  .pr-title{
+    font-size:28px;
+  }
+  .pr-sub{
+    margin-top:7px;
+  }
 }
 @media (max-width:360px), (max-height:600px){
-  .pr-heroBeams span{filter:blur(6px)}
-  .pr-flash{filter:blur(28px)}
+  .pr-heroBeams span{
+    filter:blur(6px);
+  }
+  .pr-flash{
+    filter:blur(28px);
+  }
 }
-
 /* ⚠️⚠️ ГЛАВНАЯ ПРИЧИНА 1-2 КАДРОВ В СЕКУНДУ НА ДИОНИСЕ (09.08.2026).
    Волна шла анимацией АТРИБУТА `r` у круга внутри SVG-маски. Радиус — это
    ГЕОМЕТРИЯ: на каждом кадре браузер заново считает форму маски и заново
@@ -730,23 +1259,37 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    Выглядит один в один: 100 × 0.26 = 26 и 100 × 7.6 = 760, ровно прежние
    крайние значения. `transform-box:fill-box` заставляет отсчитывать
    преобразование от самой фигуры, иначе центр уедет. */
-@keyframes pr-coinMaskScale{0%{transform:scale(.26);opacity:0}10%{opacity:1}100%{transform:scale(7.6);opacity:0}}
-
-
+@keyframes pr-coinMaskScale{
+  0%{
+    transform:scale(.26);
+    opacity:0;
+  }
+  10%{
+    opacity:1;
+  }
+  100%{
+    transform:scale(7.6);
+    opacity:0;
+  }
+}
 /* ⚠️ РЕЖИМ НАЛОЖЕНИЯ И РАЗМЫТИЕ — ВТОРАЯ ПО СТОИМОСТИ ВЕЩЬ НА ТЕЛЕФОНЕ.
    `mix-blend-mode` заставляет браузер смешивать слой с тем, что под ним,
    на каждом кадре, а `blur` пересчитывает пиксели. На узком экране гасим:
    сцена и так плотная, потеря почти не читается, а кадры возвращаются */
 @media (max-width:559px){
-  .pr-fx{mix-blend-mode:normal}
-  .pr-heroBeams span{mix-blend-mode:normal;filter:blur(6px)}
-  .pr-flash{filter:blur(22px)}
+  .pr-fx{
+    mix-blend-mode:normal;
+  }
+  .pr-heroBeams span{
+    mix-blend-mode:normal;
+    filter:blur(6px);
+  }
+  .pr-flash{
+    filter:blur(22px);
+  }
 }
-
 /* Кнопка закрытия ниже: в мини-аппе на неё сверху налезают часы и собственные
    кнопки Telegram, поэтому отсчитываем от безопасной зоны, а не от нуля */
-.pr-close{top:calc(env(safe-area-inset-top,0px) + var(--safe-top,0px) + 34px)}
-
 /* ── ПО ЗАМЕРАМ DENIS'А В ЛАБОРАТОРИИ, 09.08.2026 ─────────────────────────
 
    ТЕНЬ ГЕРОЯ роняла кадры до 24. Причина: `filter:drop-shadow` считает тень по
@@ -759,11 +1302,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    ТЕКСТУРА И РАМКА роняли до 35-40. Они статичны, но лежат под движущейся
    сценой и попадают в каждую перерисовку. `translateZ(0)` выносит их на
    отдельный слой — дальше они просто лежат готовой картинкой. */
-.pr-card.pr-hero{filter:none}
-.pr-card.pr-hero .pr-face{box-shadow:0 28px 36px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.14)}
-.pr-tex,.pr-frame{transform:translateZ(0);backface-visibility:hidden}
-
-
+.pr-card.pr-hero{
+  filter:none;
+}
+.pr-tex,.pr-frame{
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
 /* ── ФОНОВОЕ ВИДЕО ВСКРЫТИЯ ────────────────────────────────────────────────
    Лежит ПОД картами, поверх текстуры. Видео декодирует железо, поэтому
    стоимость кадра не зависит от того, насколько сложная там картинка —
@@ -774,14 +1319,22 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    она бы просто не работала. Поэтому режим наложения здесь НЕ нужен: слой
    ложится поверх сцены своей прозрачностью, как обычная картинка. */
 .pr-fxVideo{
-  position:absolute;left:50%;top:calc(50% + 66px);
   /* 09.08.2026: по просьбе Denis'а увеличено примерно на 55% (было 120vw/760) */
-  width:min(186vw,1180px);height:min(186vw,1180px);
+  position:absolute;
+  left:50%;
+  top:calc(50% + 66px);
+  width:min(186vw,1180px);
+  height:min(186vw,1180px);
   transform:translate(-50%,-50%);
-  object-fit:contain;pointer-events:none;z-index:4;opacity:.95;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:4;
 }
-@media (prefers-reduced-motion:reduce){.pr-fxVideo{display:none}}
-
+@media (prefers-reduced-motion:reduce){
+  .pr-fxVideo{
+    display:none;
+  }
+}
 /* ⚠️⚠️ ЭТОТ БЛОК ДОЛЖЕН ОСТАВАТЬСЯ ПОСЛЕДНИМ СРЕДИ ПРАВИЛ ЭКРАНА.
    Второй раз подряд положил его выше и получил, что правила концепта
    перебивают его обратно. Ниже — только общие правила приложения.
@@ -793,11 +1346,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    Сцена ОБЯЗАНА уступать место панели и кнопке, поэтому `min-height:0`.
    (Попытка привязать размер карты к высоте сцены была неверной: карта тогда
    зависела от того, сколько места осталось, и размеры прыгали. Откачено.) */
-.pr-scene{min-height:0;flex:1 1 auto}
-.pr-details{margin-top:0}
+.pr-scene{
+  min-height:0;
+  flex:1 1 auto;
+}
+.pr-details{
+  margin-top:0;
+}
 /* Кнопке нужен свой воздух, а не «всё оставшееся место» */
-.pr-cta{margin-top:12px}
-
+.pr-cta{
+  margin-top:12px;
+}
 /* ── ШАПКА НЕ ДОЛЖНА ПЕРЕХВАТЫВАТЬ НАЖАТИЯ ПО КАРТАМ ─────────────────────
    ⚠️ Вторая половина той же беды с попаданием (Denis прислал скриншот с
    обведённой верхушкой карт на полочке). `.pr-head` это `z-index:10` против
@@ -807,19 +1366,1124 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    Полоса шапки съедала все нажатия по этой части карт.
    Внутри шапки нет ничего нажимаемого (надпись, заголовок, подпись), а
    кнопка закрытия — её СОСЕД, а не потомок, и своих нажатий не теряет. */
-.pr-head{pointer-events:none}
-
+.pr-head{
+  pointer-events:none;
+}
 /* ── ДВА СЛОЯ РУБАШКИ, ПЕРЕКРЕСТНОЕ ЗАТУХАНИЕ ПО ТЕМЕ ────────────────────
    Раньше рубашка была одной картинкой, а prApplyTheme подменял ей src —
    подмена мгновенна, и цвет менялся в один кадр, рывком. Теперь в рубашке
    лежат обе, тема гасит одну и проявляет другую за те же 0.8 с, что текстура
    и рамка панели: весь экран переодевается одним движением.
    Правило .pr-face img{width:100%} остаётся в силе, здесь только положение. */
-.pr-face.pr-back .pr-backImg{position:absolute;inset:0;opacity:0;transition:opacity .8s ease}
-#pr-stage[data-pr-theme="light"] .pr-face.pr-back .pr-backImg.pr-light{opacity:1}
-#pr-stage[data-pr-theme="dark"]  .pr-face.pr-back .pr-backImg.pr-dark{opacity:1}
+.pr-face.pr-back .pr-backImg{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  transition:opacity .8s ease;
+}
+#pr-stage[data-pr-theme="light"] .pr-face.pr-back .pr-backImg.pr-light{
+  opacity:1;
+}
+#pr-stage[data-pr-theme="dark"]  .pr-face.pr-back .pr-backImg.pr-dark,
+#pr-stage[data-pr-theme="legendary"]  .pr-face.pr-back .pr-backImg.pr-dark{
+  opacity:1;
+}
 /* Тема ещё не проставлена (самый первый кадр экрана) — показываем тёмную */
-#pr-stage:not([data-pr-theme="light"]) .pr-face.pr-back .pr-backImg.pr-dark{opacity:1}
+#pr-stage:not([data-pr-theme="light"]) .pr-face.pr-back .pr-backImg.pr-dark{
+  opacity:1;
+}
+/* ── LAB DESIGN EXPERIMENT · TCG REVEAL / MOBILE PACK OPENING ───────────────
+   Вариант по новому видео-референсу: ценность строится не на рамке вокруг карты,
+   а на постановке, световом разрезе, чистом фоне и отдельном hero-моменте редкой
+   карты. Механика фаз остаётся прежней. */
+#pr-stage,
+#pr-stage[data-pr-theme="neutral"]{
+  background:linear-gradient(180deg,#e7f0ff 0%,#d8e6fa 48%,#cdddf5 100%);
+  color:#1e2632;
+}
+#pr-stage[data-pr-theme="dark"],
+#pr-stage[data-pr-theme="legendary"]{
+  background:linear-gradient(180deg,#e7f0ff 0%,#dce9fb 45%,#ccdff7 100%);
+  color:#1e2632;
+}
+#pr-stage[data-pr-theme="light"]{
+  background:radial-gradient(circle at 24% 30%,rgba(255,219,118,.72),transparent 23%),
+    radial-gradient(circle at 79% 35%,rgba(255,108,162,.58),transparent 27%),
+    radial-gradient(circle at 50% 80%,rgba(104,214,255,.48),transparent 33%),
+    linear-gradient(145deg,#ff8f5b 0%,#ff5f92 43%,#a774ff 70%,#70d8ff 100%);
+  color:#fff;
+}
+#pr-stage::before,#pr-stage::after{
+  content:"";
+  position:fixed;
+  pointer-events:none;
+  border-radius:50%;
+  filter:blur(70px);
+  animation:pr-tcgAmbient 8s ease-in-out infinite alternate;
+}
+#pr-stage::before{
+  width:240px;
+  height:240px;
+  left:-100px;
+  top:22%;
+  background:rgba(255,255,255,.32);
+  opacity:.45;
+}
+#pr-stage::after{
+  width:280px;
+  height:280px;
+  right:-110px;
+  bottom:14%;
+  background:rgba(255,255,255,.24);
+  opacity:.34;
+  animation-direction:alternate-reverse;
+}
+@keyframes pr-tcgAmbient{
+  from{
+    transform:translate3d(0,-8px,0) scale(.94);
+  }
+  to{
+    transform:translate3d(10px,12px,0) scale(1.08);
+  }
+}
+.pr-shell{
+  background:transparent;
+}
+#pr-stage[data-pr-theme="light"] .pr-shell,
+#pr-stage[data-pr-theme="dark"] .pr-shell,
+#pr-stage[data-pr-theme="legendary"] .pr-shell{
+  box-shadow:none;
+}
+#pr-stage .pr-tex,#pr-stage .pr-frame{
+  opacity:0!important;
+}
+.pr-head{
+  padding-top:28px;
+}
+#pr-stage[data-pr-theme="light"] .pr-eyebrow,#pr-stage[data-pr-theme="light"] .pr-sub{
+  text-shadow:0 1px 12px rgba(31,20,64,.18);
+}
+#pr-stage[data-pr-theme="light"] .pr-close{
+  border-color:rgba(255,255,255,.28);
+  background:rgba(255,255,255,.12);
+}
+.pr-scene::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:0;
+  transition:opacity .45s ease,transform .65s var(--ease);
+}
+#pr-stage[data-pr-theme="light"] .pr-scene::before{
+  background:radial-gradient(circle,rgba(255,255,255,.58),rgba(255,255,255,.14) 34%,transparent 70%);
+}
+/* Горизонтальный световой "разрез" пакета из референса. */
+.pr-scene::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:42%;
+  width:min(440px,92vw);
+  height:4px;
+  transform:translate(-50%,-50%) scaleX(0);
+  z-index:28;
+  pointer-events:none;
+  opacity:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.4) 12%,#fff 35%,#fff 65%,rgba(255,255,255,.4) 88%,transparent 100%);
+  box-shadow:0 0 8px rgba(255,255,255,.9),0 0 26px rgba(255,255,255,.65);
+}
+.pr-scene.pr-phase-charge::after{
+  animation:pr-tcgSlice .42s ease-out both;
+}
+@keyframes pr-tcgSlice{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scaleX(.05);
+  }
+  22%{
+    opacity:1;
+  }
+  58%{
+    opacity:.95;
+    transform:translate(-50%,-50%) scaleX(1);
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%,-50%) scaleX(1.12);
+  }
+}
+.pr-heroSky{
+  opacity:0;
+  background:none;
+}
+.pr-heroBeams{
+  display:none;
+}
+.pr-heroPedestal{
+  bottom:22px;
+  width:300px;
+  height:64px;
+  opacity:.40;
+  background:radial-gradient(ellipse at center,rgba(39,56,85,.20),transparent 68%);
+  box-shadow:none;
+}
+#pr-stage[data-pr-theme="light"] .pr-heroPedestal{
+  background:radial-gradient(ellipse at center,rgba(47,23,72,.24),transparent 70%);
+  box-shadow:none;
+}
+.pr-fxVideo{
+  opacity:.34;
+  filter:saturate(.9) brightness(1.12);
+}
+/* Карта остаётся картой: минимум внешней рамки. */
+.pr-card{
+  perspective:1800px;
+}
+.pr-card.pr-shelf{
+  filter:none;
+}
+.pr-card.pr-shelf:hover{
+  filter:none;
+}
+.pr-flip{
+  overflow:visible;
+  will-change:transform;
+}
+.pr-face{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.62);
+  background:#fff;
+  box-shadow:0 14px 28px rgba(48,72,110,.16);
+}
+.pr-card.pr-hero .pr-face{
+  border-radius:19px;
+}
+#pr-stage[data-pr-theme="light"] .pr-card.pr-hero .pr-face{
+  box-shadow:0 30px 62px rgba(68,21,78,.34),0 0 0 1px rgba(255,255,255,.72),0 0 36px rgba(255,255,255,.10);
+}
+.pr-face.pr-front img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+/* NEW badge и индикатор редкости, как в ролике. */
+.pr-card.pr-hero.pr-open::before{
+  content:"NEW";
+  position:absolute;
+  left:10px;
+  top:-31px;
+  z-index:50;
+  padding:5px 8px 4px;
+  border-radius:9px;
+  font:800 9px/1 var(--sans);
+  letter-spacing:.04em;
+  animation:pr-tcgBadge .42s .62s var(--ease) both;
+}
+@keyframes pr-tcgBadge{
+  from{
+    opacity:0;
+    transform:translateY(6px) scale(.9);
+  }
+  to{
+    opacity:1;
+    transform:none;
+  }
+}
+.pr-card.pr-hero.pr-open::after{
+  content:"✦";
+  position:absolute;
+  left:50%;
+  bottom:-44px;
+  transform:translateX(-50%);
+  z-index:50;
+  font:700 28px/1 Georgia,serif;
+  animation:pr-tcgGem .58s .72s var(--ease) both;
+}
+#pr-stage[data-pr-theme="light"] .pr-card.pr-hero.pr-open::after{
+  content:"★ ★";
+  font-size:25px;
+  color:#ffd55c;
+  text-shadow:0 1px 0 #8a6119,0 0 12px rgba(255,224,100,.85),0 0 24px rgba(255,255,255,.6);
+}
+@keyframes pr-tcgGem{
+  0%{
+    opacity:0;
+    transform:translateX(-50%) translateY(-5px) scale(.45) rotate(-30deg);
+  }
+  65%{
+    opacity:1;
+    transform:translateX(-50%) translateY(3px) scale(1.16) rotate(5deg);
+  }
+  100%{
+    opacity:1;
+    transform:translateX(-50%) scale(1);
+  }
+}
+/* Обычный reveal — короткий и чистый. */
+.pr-ring{
+  width:330px;
+  height:330px;
+  border:1px solid rgba(255,255,255,.34);
+}
+.pr-flash{
+  width:500px;
+  height:500px;
+  filter:blur(38px);
+}
+#pr-stage[data-pr-theme="light"] .pr-flash{
+  background:radial-gradient(circle,rgba(255,255,255,.98) 0%,rgba(255,240,181,.52) 15%,rgba(255,124,190,.28) 35%,rgba(118,209,255,.20) 48%,transparent 70%);
+}
+.pr-aura{
+  filter:blur(34px);
+}
+/* Редкая/легендарная карта получает отдельную 3D-подачу после открытия. */
+@keyframes pr-tcgHeroTilt{
+  0%{
+    transform:rotateY(180deg) rotateX(0deg) rotateZ(0deg) scale(1);
+  }
+  16%{
+    transform:rotateY(164deg) rotateX(1.2deg) rotateZ(-1.4deg) scale(1.015);
+  }
+  38%{
+    transform:rotateY(191deg) rotateX(-1deg) rotateZ(1deg) scale(1.03);
+  }
+  62%{
+    transform:rotateY(174deg) rotateX(.6deg) rotateZ(-.5deg) scale(1.02);
+  }
+  100%{
+    transform:rotateY(180deg) rotateX(0deg) rotateZ(0deg) scale(1);
+  }
+}
+#pr-stage[data-pr-theme="light"] .pr-card.pr-hero.pr-open .pr-face.pr-front::before{
+  inset:-14%;
+  opacity:0;
+  mix-blend-mode:screen;
+  background:linear-gradient(112deg,transparent 20%,rgba(255,221,112,.18) 34%,rgba(107,229,255,.24) 43%,rgba(255,255,255,.42) 50%,rgba(255,132,221,.24) 58%,transparent 74%);
+  animation:pr-tcgRainbow 1.8s .24s ease-out both;
+}
+@keyframes pr-tcgRainbow{
+  0%{
+    opacity:0;
+    transform:translateX(-42%) rotate(-6deg);
+  }
+  22%{
+    opacity:.82;
+  }
+  60%{
+    opacity:.62;
+  }
+  100%{
+    opacity:0;
+    transform:translateX(42%) rotate(7deg);
+  }
+}
+.pr-card.pr-hero.pr-open .pr-face.pr-front::after{
+  background:linear-gradient(105deg,transparent 37%,rgba(255,255,255,.74) 48%,rgba(255,255,255,.18) 53%,transparent 64%);
+}
+/* Частицы редкие и крупнее, чтобы не превращать сцену в конфетти. */
+.pr-fx.pr-dot{
+  width:calc(var(--sz) * .55);
+  height:calc(var(--sz) * .55);
+  box-shadow:0 0 6px var(--c);
+  opacity:.62;
+}
+.pr-fx.pr-star{
+  opacity:.7;
+}
+.pr-ambient{
+  width:2px;
+  height:2px;
+  opacity:.22;
+  box-shadow:0 0 6px var(--c);
+}
+/* Информация остаётся вторичной относительно карты. */
+.pr-stats{
+  border-color:rgba(56,74,100,.14);
+}
+#pr-stage[data-pr-theme="light"] .pr-stats{
+  border-color:rgba(255,255,255,.22);
+  background:rgba(50,22,77,.16);
+  box-shadow:inset 0 1px rgba(255,255,255,.18),0 14px 30px rgba(60,20,80,.16);
+}
+#pr-stage[data-pr-theme="light"] .pr-stat+.pr-stat{
+  border-left-color:rgba(255,255,255,.14);
+}
+#pr-stage[data-pr-theme="light"] .pr-ability-icon{
+  border-color:rgba(255,255,255,.20);
+  background:rgba(255,255,255,.10);
+}
+.pr-cta{
+  border-color:rgba(56,74,100,.14);
+}
+#pr-stage[data-pr-theme="light"] .pr-cta{
+  border-color:rgba(255,255,255,.22);
+  background:rgba(42,18,68,.17);
+  box-shadow:inset 0 1px rgba(255,255,255,.18),0 14px 30px rgba(62,20,81,.16);
+}
+.pr-cta:hover{
+  transform:translateY(-2px);
+  box-shadow:inset 0 1px rgba(255,255,255,.75),0 15px 30px rgba(61,84,121,.16);
+}
+#pr-stage[data-pr-theme="light"] .pr-cta:hover{
+  background:rgba(255,255,255,.18);
+}
+@media (max-width:559px){
+  .pr-stats,.pr-cta{
+    backdrop-filter:none;
+  }
+  .pr-card.pr-hero.pr-open::after{
+    bottom:-38px;
+  }
+  .pr-fxVideo{
+    opacity:.26;
+  }
+}
+
+#pr-pack::before,
+#pr-pack::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  pointer-events:none;
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:contain;
+  transition:opacity .7s ease,transform 1.2s var(--ease),filter .8s ease;
+  will-change:transform,opacity;
+  z-index:1;
+}
+#pr-stage[data-pr-theme="light"] #pr-pack::before{
+  opacity:.12;
+  filter:drop-shadow(0 0 16px rgba(255,255,255,.18));
+}
+.pr-scene.pr-phase-signature #pr-pack::before{
+  transform:translate(-50%,-46%) scale(1.10) rotate(18deg);
+}
+@keyframes pr-sigilDrift{
+  from{
+    transform:translate(-50%,-46%) scale(1.10) rotate(0deg);
+  }
+  to{
+    transform:translate(-50%,-46%) scale(1.10) rotate(360deg);
+  }
+}
+.pr-face.pr-back{
+  box-shadow:0 14px 28px rgba(48,72,110,.12),inset 0 0 0 1px rgba(255,255,255,.24);
+}
+.pr-face.pr-back .pr-backImg{
+  border-radius:inherit;
+  object-fit:cover;
+}
+#pr-stage[data-pr-theme="light"] .pr-face.pr-back{
+  box-shadow:0 18px 34px rgba(84,18,88,.18),inset 0 0 0 1px rgba(255,255,255,.26);
+}
+#pr-stage[data-pr-theme="light"] .pr-scene.pr-phase-signature::before{
+  background:radial-gradient(circle,rgba(255,255,255,.82) 0%,rgba(255,240,194,.34) 24%,rgba(255,123,193,.18) 44%,rgba(118,209,255,.16) 57%,transparent 76%);
+}
+.pr-scene.pr-phase-signature .pr-flash{
+  opacity:.34;
+  animation:pr-showcasePulse 4.8s 1.8s ease-in-out infinite;
+}
+@keyframes pr-showcasePulse{
+  0%,100%{
+    transform:translate(-50%,-50%) scale(.92);
+    opacity:.18;
+  }
+  50%{
+    transform:translate(-50%,-50%) scale(1.06);
+    opacity:.34;
+  }
+}
+#pr-stage[data-pr-theme="light"] .pr-scene.pr-phase-signature .pr-card.pr-hero.pr-open .pr-flip{
+  animation:pr-tcgHeroTilt 2.85s .08s cubic-bezier(.2,.72,.22,1) both,
+            pr-showcaseFloat 6.2s 2.95s ease-in-out infinite alternate;
+}
+#pr-stage:not([data-pr-theme="light"]) .pr-scene.pr-phase-signature .pr-card.pr-hero.pr-open .pr-flip{
+  animation:pr-showcaseFloatDark 5.8s .9s ease-in-out infinite alternate;
+}
+@keyframes pr-showcaseFloat{
+  0%{
+    transform:rotateY(180deg) rotateX(-.3deg) rotateZ(-.5deg) scale(1);
+  }
+  25%{
+    transform:rotateY(173deg) rotateX(1.35deg) rotateZ(-1.1deg) scale(1.028);
+  }
+  52%{
+    transform:rotateY(186deg) rotateX(-1deg) rotateZ(.9deg) scale(1.038);
+  }
+  76%{
+    transform:rotateY(176deg) rotateX(.7deg) rotateZ(-.6deg) scale(1.028);
+  }
+  100%{
+    transform:rotateY(182deg) rotateX(-.2deg) rotateZ(.35deg) scale(1.02);
+  }
+}
+@keyframes pr-showcaseFloatDark{
+  0%{
+    transform:rotateY(180deg) rotateX(0deg) rotateZ(0deg) scale(1);
+  }
+  50%{
+    transform:rotateY(184deg) rotateX(.8deg) rotateZ(-.4deg) scale(1.018);
+  }
+  100%{
+    transform:rotateY(178deg) rotateX(-.4deg) rotateZ(.35deg) scale(1.01);
+  }
+}
+.pr-scene.pr-phase-signature ~ .pr-details.pr-on{
+  animation:pr-detailsShowcase .85s .28s cubic-bezier(.2,.72,.22,1) both;
+}
+.pr-scene.pr-phase-signature ~ .pr-cta{
+  animation:pr-ctaShowcase .78s .52s cubic-bezier(.2,.72,.22,1) both;
+}
+@keyframes pr-detailsShowcase{
+  0%{
+    opacity:0;
+    transform:translate3d(0,18px,0) scale(.98);
+  }
+  100%{
+    opacity:1;
+    transform:translate3d(0,0,0) scale(1);
+  }
+}
+@keyframes pr-ctaShowcase{
+  0%{
+    opacity:0;
+    transform:translateY(16px) scale(.985);
+  }
+  100%{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+#pr-stage,
+#pr-stage[data-pr-theme="neutral"],
+#pr-stage[data-pr-theme="dark"],
+#pr-stage[data-pr-theme="light"],
+#pr-stage[data-pr-theme="legendary"]{
+  background:#050912;
+  color:#f4ead8;
+}
+#pr-stage::before,#pr-stage::after{
+  display:none!important;
+}
+.pr-shell{
+  background-image:url("images/reveal/stage-dark.webp")!important;
+  background-size:100% 100%!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  box-shadow:0 28px 100px rgba(0,0,0,.72)!important;
+}
+.pr-shell::before{
+  background:none!important;
+}
+#pr-stage .pr-tex,#pr-stage .pr-frame{
+  display:none!important;
+}
+.pr-fxVideo{
+  display:none!important;
+}
+.pr-head{
+  padding:36px 54px 0!important;
+  position:relative;
+  z-index:12;
+}
+.pr-eyebrow{
+  font:650 9px/1 var(--sans)!important;
+  letter-spacing:.30em!important;
+  color:#d6aa61!important;
+  opacity:.98!important;
+}
+.pr-title{
+  font:560 clamp(34px,7.8vw,48px)/1 var(--serif)!important;
+  color:#e7c57f!important;
+  letter-spacing:.015em!important;
+  text-shadow:0 2px 0 rgba(0,0,0,.25),0 0 20px rgba(235,192,108,.08)!important;
+}
+.pr-sub{
+  font-size:13px!important;
+  color:rgba(245,232,210,.72)!important;
+  opacity:1!important;
+  min-height:2.5em!important;
+}
+.pr-close{
+  width:46px!important;
+  height:46px!important;
+  top:28px!important;
+  right:24px!important;
+  border-color:rgba(224,183,100,.30)!important;
+  background:rgba(5,8,15,.45)!important;
+  color:#e7c57f!important;
+  box-shadow:0 0 0 1px rgba(255,234,192,.03),0 10px 28px rgba(0,0,0,.26)!important;
+}
+.pr-scene{
+  margin-top:0!important;
+  perspective:1800px!important;
+  isolation:isolate;
+}
+.pr-scene::before{
+  width:420px!important;
+  height:420px!important;
+  top:49%!important;
+  opacity:.10!important;
+  filter:blur(24px)!important;
+  background:radial-gradient(circle,rgba(245,205,121,.30) 0%,rgba(245,205,121,.08) 34%,transparent 70%)!important;
+}
+.pr-scene.pr-revealing::before{
+  opacity:.22!important;
+  transform:translate(-50%,-50%) scale(1.06)!important;
+}
+.pr-scene.pr-phase-signature::before{
+  opacity:.28!important;
+  transform:translate(-50%,-50%) scale(1.10)!important;
+}
+#pr-pack{
+  position:absolute;
+  inset:0;
+  z-index:2;
+}
+#pr-pack::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:49%;
+  width:min(98vw,520px);
+  height:min(98vw,520px);
+  transform:translate(-50%,-50%);
+  background:url("images/reveal/sigil-idle.webp") center/contain no-repeat;
+  opacity:.38;
+  pointer-events:none;
+  z-index:0;
+  filter:drop-shadow(0 0 20px rgba(255,201,93,.10));
+  transition:opacity .55s ease,transform .9s var(--ease);
+}
+.pr-scene.pr-phase-anticipation #pr-pack::before{
+  opacity:.44;
+  transform:translate(-50%,-50%) scale(1.02);
+}
+.pr-scene.pr-phase-charge #pr-pack::before{
+  opacity:.56;
+  transform:translate(-50%,-50%) scale(1.05);
+}
+.pr-scene.pr-revealing #pr-pack::before{
+  opacity:.62;
+  transform:translate(-50%,-50%) scale(1.08);
+}
+.pr-scene.pr-phase-signature #pr-pack::before{
+  opacity:.48;
+  animation:pr-conceptSigilFloat 7s ease-in-out infinite alternate;
+}
+@keyframes pr-conceptSigilFloat{
+  from{
+    transform:translate(-50%,-50%) scale(1.07) rotate(-1.5deg);
+  }
+  to{
+    transform:translate(-50%,-50%) scale(1.11) rotate(1.5deg);
+  }
+}
+.pr-card{
+  filter:none!important;
+}
+.pr-card .pr-face{
+  border:1px solid rgba(255,236,195,.22)!important;
+  box-shadow:0 18px 44px rgba(0,0,0,.34),0 0 0 1px rgba(240,195,103,.07)!important;
+}
+.pr-card.pr-hero .pr-face{
+  box-shadow:0 30px 70px rgba(0,0,0,.46),0 0 0 1px rgba(255,238,198,.22),0 0 30px rgba(232,185,91,.12)!important;
+}
+.pr-face.pr-front{
+  background:#0a0d14!important;
+}
+.pr-face.pr-front img{
+  border-radius:inherit;
+}
+.pr-face.pr-back{
+  background:transparent!important;
+}
+/* После выбора две оставшиеся карты садятся под героя, как на концепте. */
+.pr-card.pr-shelf{
+  z-index:5!important;
+  transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) + 286px)) rotate(var(--r)) scale(calc(var(--s) * .78))!important;
+  opacity:.94!important;
+}
+.pr-card.pr-shelf:hover{
+  transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) + 280px)) rotate(var(--r)) scale(calc(var(--s) * .80))!important;
+}
+.pr-card.pr-hero{
+  z-index:9!important;
+  width:clamp(270px,61vw,318px)!important;
+}
+.pr-card.pr-hero.pr-phase-anticipation{
+  transform:translate(-50%,-50%) translate(0,24px) scale(.97)!important;
+}
+@keyframes pr-heroCharge{
+  0%{
+    transform:translate(-50%,-50%) translate(0,24px) scale(.97);
+  }
+  100%{
+    transform:translate(-50%,-50%) translate(0,19px) scale(1.01);
+  }
+}
+@keyframes pr-heroImpact{
+  0%{
+    transform:translate(-50%,-50%) translate(0,19px) scale(1.01);
+  }
+  45%{
+    transform:translate(-50%,-50%) translate(0,26px) scale(1.045);
+  }
+  100%{
+    transform:translate(-50%,-50%) translate(0,31px) scale(1);
+  }
+}
+.pr-card.pr-hero.pr-open::before{
+  background:#c49345!important;
+  color:#090b10!important;
+  box-shadow:0 5px 18px rgba(203,156,72,.20)!important;
+}
+.pr-card.pr-hero.pr-open::after{
+  color:#f1cd7e!important;
+  text-shadow:0 0 8px rgba(255,224,154,.50)!important;
+}
+.pr-details{
+  margin:0 48px!important;
+  padding-top:4px!important;
+  z-index:12!important;
+}
+.pr-stats{
+  background:rgba(5,9,16,.76)!important;
+  border:1px solid rgba(210,168,89,.28)!important;
+  border-radius:14px!important;
+  box-shadow:inset 0 1px 0 rgba(255,235,194,.04),0 14px 36px rgba(0,0,0,.28)!important;
+  backdrop-filter:none!important;
+}
+.pr-stat{
+  padding:12px 12px!important;
+}
+.pr-stat+.pr-stat{
+  border-left-color:rgba(210,168,89,.16)!important;
+}
+.pr-label{
+  color:#b79356!important;
+  opacity:1!important;
+}
+.pr-value{
+  color:#efe2c3!important;
+}
+.pr-ability{
+  margin-top:8px!important;
+  padding:11px 12px!important;
+  border:1px solid rgba(210,168,89,.22)!important;
+  border-radius:14px!important;
+  background:rgba(5,9,16,.74)!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.22)!important;
+}
+.pr-ability-icon{
+  width:38px!important;
+  height:38px!important;
+  background:rgba(211,166,82,.10)!important;
+  border-color:rgba(211,166,82,.30)!important;
+  color:#e5bd6e!important;
+}
+.pr-ability strong{
+  color:#efe0bd!important;
+}
+.pr-ability p{
+  color:rgba(241,228,199,.67)!important;
+  opacity:1!important;
+}
+.pr-cta{
+  width:calc(100% - 96px)!important;
+  margin:12px 48px 18px!important;
+  height:48px!important;
+  border-radius:14px!important;
+  border:1px solid rgba(211,166,82,.30)!important;
+  background:linear-gradient(180deg,rgba(37,25,14,.84),rgba(12,11,12,.90))!important;
+  color:#f1d49a!important;
+  box-shadow:inset 0 1px 0 rgba(255,235,194,.06),0 12px 32px rgba(0,0,0,.26),0 0 18px rgba(218,171,84,.05)!important;
+  backdrop-filter:none!important;
+}
+.pr-cta:hover{
+  background:linear-gradient(180deg,rgba(52,34,16,.90),rgba(14,12,12,.94))!important;
+}
+.pr-ring{
+  border-color:rgba(236,194,110,.28)!important;
+  box-shadow:0 0 38px rgba(236,194,110,.10),inset 0 0 16px rgba(255,255,255,.04)!important;
+}
+.pr-flash{
+  background:radial-gradient(circle,rgba(255,244,218,.86) 0%,rgba(244,201,115,.32) 18%,rgba(131,98,213,.12) 42%,transparent 70%)!important;
+}
+.pr-aura{
+  opacity:.12!important;
+}
+.pr-scene.pr-revealing .pr-aura{
+  opacity:.30!important;
+}
+#pr-stage .pr-scene.pr-phase-signature .pr-card.pr-hero.pr-open .pr-flip{
+  animation:pr-tcgHeroTilt 2.8s .08s cubic-bezier(.2,.72,.22,1) both,pr-showcaseFloatDark 5.8s 2.9s ease-in-out infinite alternate!important;
+}
+@media (max-width:559px){
+  .pr-head{
+    padding-top:30px!important;
+  }
+  .pr-title{
+    font-size:41px!important;
+  }
+  .pr-sub{
+    font-size:12px!important;
+  }
+  .pr-close{
+    width:42px!important;
+    height:42px!important;
+    right:18px!important;
+    top:24px!important;
+  }
+  #pr-pack::before{
+    width:min(114vw,500px);
+    height:min(114vw,500px);
+    top:49%;
+  }
+  .pr-card.pr-hero{
+    width:clamp(248px,60vw,288px)!important;
+  }
+  .pr-card.pr-shelf{
+    transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) + 250px)) rotate(var(--r)) scale(calc(var(--s) * .72))!important;
+  }
+  .pr-card.pr-shelf:hover{
+    transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) + 246px)) rotate(var(--r)) scale(calc(var(--s) * .74))!important;
+  }
+  .pr-details{
+    margin:0 28px!important;
+  }
+  .pr-cta{
+    width:calc(100% - 56px)!important;
+    margin-left:28px!important;
+    margin-right:28px!important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   СБОРКА 11.08.2026 — запечённые ассеты садятся на готовую хореографию.
+   Всё, что ниже, идёт САМЫМ ПОСЛЕДНИМ блоком: правки посадки, положенные
+   выше, перебиваются медиазапросами концепта (урок 57).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. КНОПКА — ЗАПЕЧЁННАЯ ПЛАШКА ────────────────────────────────────────
+   Только #pr-cta: класс .pr-cta носят ещё и кнопки внутри блока действий
+   (cardActionsHtml зовут с 'pr-cta pr-cta-inline'), плашка им не нужна.
+   Соотношение сторон кнопки = соотношение сторон картинки, поэтому
+   background-size:100% 100% ничего не растягивает. */
+#pr-cta{
+  width:min(340px,calc(100% - 88px))!important;
+  margin:10px auto 18px!important;
+  aspect-ratio:1425/420;
+  height:auto!important;
+  min-height:56px;
+  padding:0 62px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:url("images/reveal/plate-dark.webp") center/100% 100% no-repeat!important;
+  box-shadow:none!important;
+  color:#f3d79f!important;
+  font:600 15px/1.2 var(--serif)!important;
+  letter-spacing:.02em;
+  text-shadow:0 1px 0 rgba(0,0,0,.55),0 0 14px rgba(240,200,120,.22);
+  transition:filter .25s ease,transform .18s ease;
+}
+#pr-cta:hover{filter:brightness(1.09)}
+#pr-cta:active{transform:translateY(1px)}
+
+/* ── 3. СИГИЛ: СТАТИЧНЫЙ ДО ВСПЫШКИ, ЖИВОЙ ПОСЛЕ ──────────────────────────
+   До ответа сервера бог неизвестен — там и стоит общий статичный сигил.
+   На вспышке место занимает анимированный сигил ТОГО САМОГО бога: слой
+   .pr-fxVideo, у которого уже есть предзагрузка и падение на запасной файл
+   (prPrefetchFx / prPlayFxVideo). Концепт этот слой прятал — возвращаем его
+   в геометрию статичного, чтобы одно сменяло другое на том же месте. */
+.pr-fxVideo{
+  display:block!important;
+  position:absolute;
+  left:50%;
+  top:49%;
+  width:min(98vw,520px)!important;
+  height:min(98vw,520px)!important;
+  max-width:none;
+  transform:translate(-50%,-50%)!important;
+  object-fit:contain;
+  opacity:0!important;
+  z-index:1;
+  pointer-events:none;
+  mix-blend-mode:normal;
+  filter:none!important;
+  transition:opacity .55s ease;
+}
+.pr-scene.pr-phase-impact .pr-fxVideo,
+.pr-scene.pr-phase-signature .pr-fxVideo{opacity:.72!important}
+/* Статичный уступает место живому, а не спорит с ним */
+.pr-scene.pr-phase-impact #pr-pack::before{opacity:.10}
+.pr-scene.pr-phase-signature #pr-pack::before{opacity:0;animation:none}
+
+@media (max-width:559px){
+  #pr-cta{width:min(320px,calc(100% - 56px))!important;padding:0 54px!important}
+  .pr-fxVideo{width:min(114vw,500px)!important;height:min(114vw,500px)!important;top:49%}
+}
+
+/* ── 4. УКРАШЕНИЯ ГЕРОЯ НЕ ЛОВЯТ НАЖАТИЯ ──────────────────────────────────
+   Значок NEW и звезда — псевдоэлементы кнопки-героя, и нажатия по ним
+   достаются ЕЙ. Звезда висит на 44 px ниже карты, то есть заходит на полосу,
+   где теперь стоит полочка из оставшихся карт: тап по ней открывал бы не ту
+   карту, что под пальцем. Ровно та беда, что чинили 09.08 (v131/v132). */
+.pr-card.pr-hero.pr-open::before,
+.pr-card.pr-hero.pr-open::after{pointer-events:none}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ПУЛЫ АССЕТОВ И ДВЕРЬ ДЛЯ НОВЫХ АНИМАЦИЙ (11.08.2026)
+   Картинки приходят из таблицы PR_ASSETS переменными, которые ставит
+   prApplyAssets. Запасное значение прямо здесь: если переменной нет
+   (пул пуст, код не дошёл), экран всё равно одет.
+   ══════════════════════════════════════════════════════════════════════════ */
+#pr-stage{
+  --pr-stage-img:url("images/reveal/stage-dark.webp");
+  --pr-idle-img:url("images/reveal/sigil-idle.webp");
+  --pr-plate-img:url("images/reveal/plate-dark.webp");
+}
+.pr-shell{background-image:var(--pr-stage-img)!important}
+#pr-pack::before{background-image:var(--pr-idle-img)}
+#pr-cta{background-image:var(--pr-plate-img)!important}
+
+/* ── РУБАШКА: ПО СЛОЮ НА ТЕМУ ─────────────────────────────────────────────
+   Раньше слоёв было два, стало три. Правило то же: видна ровно одна, тема
+   перекрещивает их за 0.8 с. Пока тема не проставлена (первый кадр экрана,
+   neutral) — показываем тёмную. */
+.pr-face.pr-back .pr-backImg.pr-legendary{opacity:0}
+#pr-stage[data-pr-theme="legendary"] .pr-face.pr-back .pr-backImg.pr-legendary{opacity:1}
+#pr-stage[data-pr-theme="legendary"] .pr-face.pr-back .pr-backImg.pr-dark{opacity:0}
+#pr-stage[data-pr-theme="light"]     .pr-face.pr-back .pr-backImg.pr-dark{opacity:0}
+
+/* ── МЕСТО ДЛЯ СЛЕДУЮЩЕЙ АНИМАЦИИ ─────────────────────────────────────────
+   Новый вариант хореографии пишется ЗДЕСЬ, целиком внутри своего
+   [data-pr-anim="v2"], и ничего не удаляет. Переключатель в стенде.
+   Пример формы записи (закомментирован, чтобы не влиять):
+
+   #pr-stage[data-pr-anim="v2"] .pr-card.pr-hero.pr-phase-anticipation{ ... }
+   #pr-stage[data-pr-anim="v2"] .pr-scene.pr-phase-charge::after{ ... }
+
+   ⚠️ Правила v2 обязаны идти ПОСЛЕ базовых и нести префикс #pr-stage[...],
+   иначе вес селектора окажется ниже базового и переключатель ничего
+   не изменит — это ровно та беда, что была с .pr-on / .pr-nav. */
+
+/* ── СИГИЛ НА ВСПЫШКЕ: РАЗМЕР И ГАШЕНИЕ ───────────────────────────────────
+   Размер отдельной переменной — крутить его придётся ещё не раз, а искать
+   его по трём медиазапросам каждый раз неудобно.
+   ⚠️ Величина в vw, а НЕ в процентах от сцены: сцена сжимаема (min-height:0),
+   и привязка к ней уже подводила — размер начинал зависеть от остатка места
+   и прыгал от карты к карте. */
+#pr-stage{--pr-sigil-size:min(150vw,760px)}
+.pr-fxVideo{
+  width:var(--pr-sigil-size)!important;
+  height:var(--pr-sigil-size)!important;
+}
+/* Отыграл сколько положено — гаснет, но остаётся в разметке: снимать тег
+   нельзя, следующий запуск начался бы с пустого кадра. */
+.pr-fxVideo.pr-fxDone{opacity:0!important;transition:opacity .7s ease}
+
+@media (max-width:559px){
+  #pr-stage{--pr-sigil-size:min(168vw,700px)}
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ТРИ ПОЛНЫХ НАБОРА (11.08.2026): тёмный, светлый, легендарный.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ПЛАШКА КНОПКИ: РАЗНЫЕ ПРОПОРЦИИ У РАЗНЫХ НАБОРОВ ─────────────────────
+   Плашки пришли от 2.3:1 до 3.7:1. Растягивать их в одну коробку нельзя —
+   ажурные концы поплывут, а прописывать пропорцию каждой значило бы
+   превратить таблицу пулов из списка имён в список настроек.
+   Поэтому у кнопки СВОЯ пропорция, а картинка вписывается `contain`:
+   широкая ляжет во всю ширину, узкая — во всю высоту. Разница в 10-15%
+   незаметна, а таблица остаётся списком имён файлов. */
+#pr-cta{
+  aspect-ratio:2.6;
+  background-size:contain!important;
+  background-position:center!important;
+}
+
+/* ⚠️ НАДПИСЬ, ЗАПЕЧЁННАЯ В ПЛАШКУ. Свой текст прячем ВИЗУАЛЬНО, а не
+   через display:none — иначе кнопка становится безымянной картинкой для
+   озвучки и поиска по странице. */
+#pr-cta.pr-cta-baked{
+  color:transparent!important;
+  text-shadow:none!important;
+}
+
+/* ── КРЕСТИК КАРТИНКОЙ ────────────────────────────────────────────────────
+   Ставится, только когда у набора есть свой файл: класс pr-hasClose даёт
+   код. Без него остаётся прежний крестик — то есть тёмный и светлый наборы
+   не ломаются от того, что картинки у них нет. */
+#pr-stage.pr-hasClose .pr-close{
+  background:var(--pr-close-img) center/contain no-repeat!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:transparent!important;
+  width:52px!important;
+  height:52px!important;
+  opacity:.92;
+}
+
+/* ── СВЕТЛЫЙ И ЛЕГЕНДАРНЫЙ ЗАДНИКИ ────────────────────────────────────────
+   Задники непрозрачные и рисуют собственную сцену целиком, поэтому фоновая
+   заливка панели под ними не нужна: на просвет по краям лезла холодная
+   голубизна из базовых правил. */
+#pr-stage[data-pr-theme="light"] .pr-shell,
+#pr-stage[data-pr-theme="legendary"] .pr-shell{
+  background-color:transparent!important;
+}
+/* Подписи на светлом заднике: он существенно светлее тёмного */
+#pr-stage[data-pr-theme="light"]{color:#3a2c1a}
+#pr-stage[data-pr-theme="light"] .pr-sub{color:#6b573c}
+
+/* ⚠️⚠️ ПОЙМАНО 11.08.2026 ПО ЖАЛОБЕ DENIS'А «сигил независимо крутится на фоне».
+   Гашение после нужного числа проходов НЕ РАБОТАЛО ВООБЩЕ: правило
+   `.pr-fxVideo.pr-fxDone{opacity:0!important}` весит (0,2,0), а показывающее
+   `.pr-scene.pr-phase-signature .pr-fxVideo{opacity:.72!important}` — (0,3,0).
+   Оба важные, и побеждает ВЕС, а не порядок в файле. Класс менялся честно,
+   таймер срабатывал, картинка не гасла — молча, без единой ошибки.
+   Ровно та же беда, что 09.08 с data-nofade: гасящее правило легче
+   показывающего. ЛЕЧЕНИЕ: гасящему правилу вес не ниже показывающего. */
+.pr-scene.pr-phase-impact .pr-fxVideo.pr-fxDone,
+.pr-scene.pr-phase-signature .pr-fxVideo.pr-fxDone,
+.pr-fxVideo.pr-fxDone{
+  opacity:0!important;
+  transition:opacity .7s ease;
+}
+
+/* ⚠️ ТА ЖЕ БЕДА, НАЙДЕНА НОВОЙ ПРОВЕРКОЙ, А НЕ ГЛАЗАМИ. В светлой теме
+   статичный сигил на фазе подписи не гас: гасящее
+   `.pr-scene.pr-phase-signature #pr-pack::before` весит (1,3,1), а
+   `#pr-stage[data-pr-theme="light"] #pr-pack::before{opacity:.12}` — (2,2,1),
+   и два идентификатора перевешивают. То есть под уже открытой картой в
+   светлой теме оставался призрак статичного сигила поверх живого. */
+#pr-stage[data-pr-theme] .pr-scene.pr-phase-signature #pr-pack::before{
+  opacity:0;
+  animation:none;
+}
+
+/* ⚠️ ДЛИТЕЛЬНОСТЬ ЗАТУХАНИЯ ЖИВЁТ В ДВУХ МЕСТАХ — здесь и в PR_SIGIL_FADE.
+   Код вычитает её из длительности прохода, чтобы картинка успела погаснуть
+   ДО начала второго круга. Меняешь одно — меняй второе, иначе вернётся
+   «сигил показывается дважды». */
+#pr-stage{--pr-sigil-fade:.52s}
+.pr-scene.pr-phase-impact .pr-fxVideo.pr-fxDone,
+.pr-scene.pr-phase-signature .pr-fxVideo.pr-fxDone,
+.pr-fxVideo.pr-fxDone{
+  transition:opacity var(--pr-sigil-fade) ease!important;
+}
+
+/* ── ОРНАМЕНТ: УКРАШЕНИЕ ПОВЕРХ СЦЕНЫ (12.08.2026) ────────────────────────
+   Отдельный слой над задником и ПОД картами: он обрамляет сцену, а не лежит
+   на картах. Ставится только когда в наборе есть картинка (класс от кода) —
+   пустой слой на светлом заднике был бы заметен прямоугольником.
+   ⚠️ `pointer-events:none` обязателен: слой накрывает всю панель, и без него
+   он съел бы нажатия по стопке — ровно беда v131/v132. */
+#pr-stage.pr-hasOrnament .pr-shell::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:var(--pr-ornament-img) center/100% 100% no-repeat;
+  pointer-events:none;
+  z-index:2;
+}
+
+/* ── ПОДИУМ ПОД РАСКРЫТОЙ КАРТОЙ (12.08.2026) ─────────────────────────────
+   Место было готово: `.pr-heroPedestal` уже есть в разметке и рисует мягкую
+   тень под героем. Если в наборе есть картинка — подменяем тень ею, если нет
+   — остаётся прежняя тень, ничего не пропадает.
+   ⚠️ Ширину и высоту задаём заново: у тени они подогнаны под размытое пятно
+   (300×64), настоящий подиум с рисунком в такую полоску не влезет. */
+#pr-stage.pr-hasPedestal .pr-heroPedestal{
+  width:min(86vw,420px);
+  height:min(26vw,132px);
+  opacity:1;
+  background:var(--pr-pedestal-img) center/contain no-repeat;
+  box-shadow:none;
+  filter:none;
+}
+
+/* ── КНОПКИ ДЕЙСТВИЙ ВНУТРИ КАРТОЧКИ (12.08.2026) ─────────────────────────
+   «Посмотреть», «Забрать», «Поделиться» — они рисуются функцией, общей с
+   витриной альбома, и до сих пор оставались в оформлении приложения: посреди
+   мраморного экрана висела тёмная скруглённая кнопка. Denis: «всплыла кнопка
+   Посмотреть, которая как будто не настраиваемая».
+
+   ⚠️ ЗАПЕЧЁННАЯ НАДПИСЬ ИМ НЕ ГОДИТСЯ: текст у них разный и зависит от
+   карточки («Посмотреть» / «Забрать» / «+40»). Поэтому берут ПУСТУЮ плашку
+   набора — ту самую «Кнопку без надписи», — а слова рисует приложение.
+   Плашки нет — остаётся прежний вид, ничего не ломается. */
+#pr-stage.pr-hasPlate .pr-cta-inline{
+  background:var(--pr-plate-plain) center/100% 100% no-repeat!important;
+  border:0!important;
+  box-shadow:none!important;
+  height:auto!important;
+  aspect-ratio:4.2;
+  min-height:44px;
+  padding:0 44px!important;
+  font:600 14px/1.2 var(--serif)!important;
+}
+/* Цвет надписи — по теме: на светлой плашке золото не читается */
+#pr-stage.pr-hasPlate .pr-cta-inline{color:#f3d79f!important;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+#pr-stage.pr-hasPlate[data-pr-theme="light"] .pr-cta-inline{color:#4a3720!important;text-shadow:none}
+
+/* ── ОРНАМЕНТ БОЛЬШЕ НЕ РАСТЯГИВАЕТСЯ (12.08.2026) ────────────────────────
+   ⚠️ Было `center/100% 100%` — картинка натягивалась на панель как плёнка.
+   Орнамент 760×1193 (2:3), панель телефона 390×844 (1:2.2): по вертикали
+   растяжение почти в полтора раза. Самоцветы вытягивались в овалы, меандр
+   плыл. Denis это и увидел.
+
+   Правильный инструмент — `border-image`: углы берутся из картинки КАК ЕСТЬ
+   и не деформируются, тянутся только прямые участки между ними. Ровно для
+   рамок он и придуман.
+
+   ⚠️ ДОЛЯ УГЛА (`--pr-orn-slice`) — не на глаз: измерена по самой картинке.
+   На глубине 12% высоты непрозрачны 86 пикселей из 760, то есть по 43 на
+   сторону — боковина занимает около 6% ширины, а угловые украшения
+   умещаются в 9%. Слишком маленькая доля срежет угол пополам, слишком
+   большая утащит в угол кусок боковины и он повторится дважды.
+
+   Обе величины — переменными: их придётся подгонять под каждый набор. */
+#pr-stage{
+  --pr-orn-slice:9%;
+  --pr-orn-width:min(9vw,46px);
+}
+#pr-stage.pr-hasOrnament .pr-shell::after{
+  background:none;                 /* растягивающую подложку убираем совсем */
+  box-sizing:border-box;
+  border:var(--pr-orn-width) solid transparent;
+  border-image:var(--pr-ornament-img) var(--pr-orn-slice) fill / var(--pr-orn-width) stretch;
+}
+
+/* ⚠️ ТО ЖЕ САМОЕ БЫЛО У ПЛАШКИ КНОПОК ДЕЙСТВИЙ. Плашка 3.7:1, коробка
+   кнопки 4.2:1 — растяжение вдоль, ажурные концы уезжали. `contain`
+   вписывает по пропорции: широкая ляжет во всю ширину, узкая — во всю
+   высоту, и ничего не поплывёт. */
+#pr-stage.pr-hasPlate .pr-cta-inline{
+  background-size:contain!important;
+  background-position:center!important;
+}
+
+/* ⚠️ И САМ ЗАДНИК ТЯНУЛСЯ — это досталось от концепта GPT и пережило всю
+   сборку. Задник 820×1457 (0.56), панель телефона 390×844 (0.46): картинка
+   растягивалась вверх процентов на двадцать. На ночной террасе Denis'а это
+   видно по колоннам и кругу на полу.
+   `cover` вместо `100% 100%`: картинка ПОДРЕЗАЕТСЯ по краям, но пропорции
+   держит. Для полноэкранного фона это единственный честный вариант —
+   `contain` оставил бы пустые поля сверху и снизу. */
+.pr-shell{
+  background-size:cover!important;
+  background-position:center!important;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -4460,10 +6124,10 @@ body.api-override-on #api-override-bar{display:block}
            чем `.pr-tex.pr-light{opacity:0}` — светлый слой переставал
            гаснуть, оба висели разом, тёмный лежал сверху, и панель за картами
            ВСЕГДА оставалась тёмной, чем бы ни была тема. -->
-      <img class="pr-tex pr-light" src="images/reveal/tex-light.webp" alt="" aria-hidden="true" data-nofade>
-      <img class="pr-tex pr-dark" src="images/reveal/tex-dark.webp" alt="" aria-hidden="true" data-nofade>
-      <img class="pr-frame pr-light" src="images/reveal/frame-light.webp" alt="" aria-hidden="true" data-nofade>
-      <img class="pr-frame pr-dark" src="images/reveal/frame-dark.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-tex pr-light" src="images/reveal/screens/tex-light.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-tex pr-dark" src="images/reveal/screens/tex-dark.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-frame pr-light" src="images/reveal/screens/frame-light.webp" alt="" aria-hidden="true" data-nofade>
+      <img class="pr-frame pr-dark" src="images/reveal/screens/frame-dark.webp" alt="" aria-hidden="true" data-nofade>
       <button class="pr-close" aria-label="Закрыть" onclick="closePackReveal()">&times;</button>
       <!-- ⚠️ НЕ <header>: в приложении есть глобальное правило
            header{display:flex;justify-content:space-between} — оно раскладывало
@@ -14027,11 +15691,382 @@ const PR_MOOD = {
   uncommon:  { appearance:'dark',  accent:'#9fd2c0', secondary:'#7fb4d8' },
   rare:      { appearance:'dark',  accent:'#9fb4f2', secondary:'#c0a6ef' },
   epic:      { appearance:'light', accent:'#c8a2f0', secondary:'#e0b7d8' },
-  legendary: { appearance:'light', accent:'#f0c977', secondary:'#e5b45f' }
+  /* ⚠️ ЛЕГЕНДАРНАЯ — ТРЕТЬЯ ТЕМА, А НЕ ОТТЕНОК ТЁМНОЙ (решение Denis'а 11.08.2026).
+     Она ИСКЛЮЧАЕТ выбор светлая/тёмная: у легендарной карты своё оформление
+     целиком. Пока запечённых ассетов под неё нет, она попадает в те же правила,
+     что тёмная — селекторы им обеим выписаны явно. Как появятся картинки,
+     хватит блока [data-pr-theme="legendary"] в конце, трогать остальное не надо.
+     ⚠️ prFxTheme НАМЕРЕННО отдаёт для неё 'dark': сигилы напечены парами
+     бог-dark / бог-light, третьего набора файлов не существует. */
+  legendary: { appearance:'legendary', accent:'#f0c977', secondary:'#e5b45f' }
 };
 function prMood(card){ return PR_MOOD[(card && card.rarity) || ''] || PR_MOOD.common; }
 
 const PR = { ids: [], opened: [], hero: null, busy: false, cards: {}, extra: {} };
+
+/* ══ ПУЛЫ ЗАПЕЧЁННЫХ АССЕТОВ ═══════════════════════════════════════════════
+   11.08.2026. Добавить новую картинку = ДОПИСАТЬ СТРОКУ В ЭТУ ТАБЛИЦУ.
+   Ни код, ни стили при этом трогать не нужно — в этом весь смысл.
+
+   Что чем является:
+     stage — задник панели (фон всей сцены)
+     idle  — общий статичный сигил, который стоит ДО вспышки
+     plate — плашка главной кнопки
+     back  — рубашка карты
+
+   ⚠️ ТЕМА ЗДЕСЬ — ВЕРХНИЙ КЛЮЧ, а тем ровно три: dark / light / legendary.
+   Легендарная ИСКЛЮЧАЕТ светлую и тёмную, поэтому у неё свой набор целиком.
+   Пустой или отсутствующий пул НЕ ломает экран: берётся тёмный (см. prPickAsset).
+   Именно поэтому легендарную можно завести сегодня, а печь под неё — потом. */
+const PR_ASSETS = {
+  dark: {
+    stage: ['stage-dark.webp'],
+    idle:  ['sigil-idle.webp'],
+    plate: ['plate-dark.webp'],
+    back:  ['back-dark.webp'],
+    close: []
+  },
+  light: {
+    stage: ['stage-light.webp'],
+    idle:  [],
+    plate: ['plate-light.webp'],
+    back:  ['back-light.webp'],
+    close: []
+  },
+  legendary: {
+    stage: ['stage-legendary.webp'],
+    idle:  [],
+    /* ⚠️ У ЛЕГЕНДАРНОЙ ПЛАШКИ НАДПИСЬ ЗАПЕЧЕНА В КАРТИНКУ. Поэтому пустого
+       plate у неё нет, а есть отдельные плашки на СОСТОЯНИЕ кнопки:
+         plateOpen — пока есть что открывать
+         plateDone — все карты вскрыты
+       Когда для состояния есть запечённая плашка, свой текст мы прячем
+       (см. prApplyPlate). Пустой список = обычная плашка со своим текстом. */
+    plateStart: ['plate-legendary-open.webp'],   // «ОТКРЫТЬ КАРТУ»
+    plateNext:  ['plate-legendary-done.webp'],   // «ПРОДОЛЖИТЬ» — открыть следующую
+    plateDone:  ['plate-legendary-view.webp'],   // «ПОСМОТРЕТЬ» — всё вскрыто
+    plate: [],
+    back:  ['back-legendary.webp'],
+    close: ['close-legendary.webp']
+  }
+};
+
+
+/* Порядок важен: в этом порядке рубашки лежат слоями в разметке карты. */
+const PR_THEMES = ['dark','light','legendary'];
+
+/* ══ ЭКРАНЫ С СЕРВЕРА ══════════════════════════════════════════════════════
+   Denis собирает наборы в дашборде, `/cards/reveal-screens` отдаёт их
+   сгруппированными по темам. Таблица PR_ASSETS выше остаётся ЗАПАСНЫМ путём:
+   сервер не ответил, наборов ещё нет, интернет отвалился — экран всё равно
+   одет. Ничего не «включается» и не «выключается»: есть набор — берём его,
+   нет — берём зашитый.
+
+   ⚠️ НАБОР ВЫБИРАЕТСЯ ЦЕЛИКОМ, А НЕ ПО КАРТИНКЕ НА ГНЕЗДО. Задник, рубашка и
+   плашка рисовались вместе; выбирая их порознь, мы бы смешали оформления.
+
+   ⚠️ ВЫБОР СЛУЧАЙНЫЙ И ДЕЛАЕТСЯ ОДИН РАЗ НА ОТКРЫТИЕ ЭКРАНА — по одному
+   набору на каждую из трёх тем. Тему знает только карточка, а карточка
+   неизвестна до вскрытия, поэтому готовыми должны быть все три.
+   Случайность здесь законна (в отличие от вида самой карточки): задник и
+   рубашка нигде не сохраняются, в альбом и в шеринг не попадают. */
+const PR_SLOT_TO_KIND = {
+  stage:'stage', back:'back', close:'close', sigil:'idle',
+  ornament:'ornament', pedestal:'pedestal',
+  cta:'plate', ctaStart:'plateStart', ctaNext:'plateNext', ctaDone:'plateDone'
+};
+let PR_SCREENS = null;      // {dark:[набор,…], light:[…], legendary:[…]}
+let PR_PICKED  = null;      // выбранное на это открытие: {dark:{вид:адрес}, …}
+
+async function prLoadScreens(){
+  if (PR_SCREENS) return PR_SCREENS;
+  try {
+    const r = await apiRequest('/cards/reveal-screens');
+    PR_SCREENS = (r && r.screens) ? r.screens : {};
+  } catch(e){
+    // Молча падаем на зашитые наборы: экран важнее свежести оформления
+    PR_SCREENS = {};
+  }
+  return PR_SCREENS;
+}
+
+/* Один набор на тему, случайно. Переводим гнёзда сервера в наши виды. */
+function prPickScreens(){
+  PR_PICKED = {};
+  const all = PR_SCREENS || {};
+  PR_THEMES.forEach(function(theme){
+    const list = all[theme] || [];
+    if (!list.length) return;
+    const set = list[Math.floor(Math.random() * list.length)];
+    const byKind = {};
+    Object.keys(set.slots || {}).forEach(function(slot){
+      const kind = PR_SLOT_TO_KIND[slot];
+      if (kind) byKind[kind] = set.slots[slot];
+    });
+    if (Object.keys(byKind).length) { byKind.__key = set.key; PR_PICKED[theme] = byKind; }
+  });
+  return PR_PICKED;
+}
+
+/* Адрес из выбранного набора — или null, и тогда работает прежний путь. */
+function prScreenAsset(kind, theme){
+  const set = PR_PICKED && PR_PICKED[theme];
+  const v = set && set[kind];
+  return (typeof v === 'string' && v) ? v : null;
+}
+
+/* ══ ЧТО ЗАДАЁТ ТЕМУ ЭКРАНА ════════════════════════════════════════════════
+   Решение Denis'а 11.08.2026:
+
+     легендарная редкость            → legendary
+     иначе тег карточки говорит light → light
+     иначе                            → dark
+
+   ⚠️ ГДЕ ЖИВЁТ ТЕГ НА САМОМ ДЕЛЕ (проверено по дашборду 11.08.2026):
+   поле «Тема» со значениями light / dark / **any** есть у ЭЛЕМЕНТА
+   конструктора (рамка, арт, плашка), а НЕ у карточки. У самой карточки
+   такого поля нет: она хранит key, god, title, description, card_class,
+   rarity, effect_type, image_url, personal, active, secret, reward_key.
+   Чтобы тег доехал сюда, его надо перенести на карточку — проще всего
+   копировать тему АРТА в момент сборки картинки.
+
+   Пока поля нет — тихо падаем на прежнюю раскладку по редкости. Появится —
+   заработает само, без правок здесь.
+
+   ⚠️ ЗНАЧЕНИЕ 'any' ОБРАБАТЫВАЕМ ЯВНО: оно есть в дашборде и означает
+   «годится в любую тему», то есть НЕ ответ на вопрос «какая тема экрана».
+   Без этой ветки 'any' молча уходил бы в тёмную, и элемент, помеченный как
+   универсальный, тянул бы за собой конкретный набор.
+
+   Имя поля на карточке пока неизвестно; в дашборде у элемента оно зовётся
+   'theme', с него и начинаем. ⚠️ 'style' стоит последним и не любим: в
+   приложении `card` сплошь и рядом ЭЛЕМЕНТ РАЗМЕТКИ, у которого card.style —
+   это его css-стиль. Как заведём колонку — оставить одно имя. */
+const PR_THEME_FIELDS = ['theme','art_theme','tone','style'];
+
+/* ══ КАКУЮ КАРТИНКУ КАРТЫ ПОКАЗЫВАТЬ ═══════════════════════════════════════
+   Решение Denis'а 11.08.2026: карточку заводят двумя путями, и картинка
+   у них разной природы.
+
+     собрана конструктором → на вскрытии показываем ТОЛЬКО АРТ (без каёмки
+                             и плашки: их роль здесь играет постановка)
+     залита целой картинкой → показываем её как есть
+
+   ⚠️ РАЗЛИЧАТЬ НАДО ПО НАЛИЧИЮ ЧИСТОГО АРТА, А НЕ ПО ПРИЗНАКУ «СОБРАНА».
+   Флаг «собрана конструктором» может стоять, а ссылки на арт не быть (старая
+   карточка, ручная правка, недособранная) — и экран остался бы пустым.
+   Поэтому правило простое: есть чистый арт — берём его, нет — берём картинку
+   целиком. Флаг для этого не нужен вовсе.
+
+   ⚠️ `image_url` и `image_full_url` — ЭТО НЕ АРТ И НЕ СБОРКА, а превью и
+   оригинал ОДНОЙ И ТОЙ ЖЕ картинки (дашборд, uploadCardArt). Различать по
+   ним нельзя, нужно отдельное поле.
+
+   Поля пока нет — читаем несколько возможных имён, как и с темой. */
+const PR_ART_FIELDS = ['art_url','art_image_url','clean_art_url'];
+
+function prCardImage(card){
+  if (!card) return null;
+  for (let i = 0; i < PR_ART_FIELDS.length; i++){
+    const v = card[PR_ART_FIELDS[i]];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return card.image_url || card.image_full_url || null;
+}
+
+function prCardTag(card){
+  if (!card) return null;
+  for (let i = 0; i < PR_THEME_FIELDS.length; i++){
+    const v = card[PR_THEME_FIELDS[i]];
+    // ⚠️ Отсекаем не-строки: если полем окажется объект (у DOM-элемента
+    // style — объект), проверка `=== 'light'` молча дала бы false, а мы бы
+    // думали, что тег прочитан
+    if (typeof v === 'string' && v.trim()) return v.trim().toLowerCase();
+  }
+  return null;
+}
+
+function prTheme(card){
+  const mood = prMood(card);
+  if (mood.appearance === 'legendary') return 'legendary';   // редкость главнее тега
+  const tag = prCardTag(card);
+  if (tag === 'light' || tag === 'dark') return tag;         // тег карточки
+  // 'any' и всё непонятное — не ответ, идём дальше
+  return mood.appearance === 'light' ? 'light' : 'dark';     // запасной путь: редкость
+}
+
+/* Какой набор правил анимации играет. Меняется в стенде переключателем;
+   в приложении пока всегда 'v1'. */
+let PR_ANIM = 'v1';
+
+/* ══ СИГИЛ НА ВСПЫШКЕ: СКОЛЬКО РАЗ ИГРАЕТ ══════════════════════════════════
+   ⚠️ ЧИСЛО ПОВТОРОВ НЕ ЗАПЕКАЕТСЯ В ФАЙЛ, а считается здесь по таймеру.
+   Причина: в анимированном WebP счётчик повторов — свойство САМОГО ФАЙЛА,
+   и чтобы сменить его, пришлось бы перегнать заново все 38 сигилов. Файлы
+   собраны с бесконечным повтором, а мы просто гасим слой после нужного
+   числа проходов — тогда «один раз / два / бесконечно» становится
+   настройкой одной строкой, а не поводом трогать картинки.
+
+   ⚠️⚠️ ЗАТУХАНИЕ ОБЯЗАНО ЗАКОНЧИТЬСЯ РОВНО К КОНЦУ ПРОХОДА, А НЕ НАЧАТЬСЯ
+   ПОСЛЕ НЕГО. Сначала я поставил запас (1700 мс при проходе 1600) — картинка
+   успевала начать ВТОРОЙ круг, и он гас на глазах. Denis: «сигил два раза
+   показывается, второй как будто чуть более прозрачный». Правильно наоборот:
+   гасить начинаем ЗА время затухания ДО границы прохода.
+
+   PR_SIGIL_MS — длительность прохода, взятая по САМОМУ КОРОТКОМУ файлу
+   (1600 мс; у части сигилов 1632). Если ошибиться в большую сторону, вылезет
+   ровно та же вторая петля, поэтому округляем вниз, а не вверх.
+   Терять при этом нечего: последний кадр держится 933 мс — это неподвижный
+   хвост после того, как волна прошла.
+   0 в PR_SIGIL_LOOPS = крутить бесконечно. */
+let PR_SIGIL_LOOPS = 1;
+const PR_SIGIL_MS   = 1600;
+const PR_SIGIL_FADE = 520;   // ДОЛЖНО совпадать с --pr-sigil-fade в стилях
+let PR_SIGIL_TIMER = null;
+
+/* ⚠️ ВЫБОР НЕ СЛУЧАЙНЫЙ, А ПО ИДЕНТИФИКАТОРУ КАРТЫ. Math.random() давал бы
+   разный вид одной и той же карте при каждом открытии, а карта потом живёт
+   в альбоме и уезжает в шеринг — она обязана узнаваться. Остаток от деления
+   даёт тот же разброс по колоде, но закреплён за картой навсегда.
+   Отрицательные id (отладочный пак) обрабатываются abs. */
+function prPickAsset(kind, theme, seed){
+  // Набор, выбранный на это открытие, главнее зашитой таблицы
+  const fromScreen = prScreenAsset(kind, theme);
+  if (fromScreen) return fromScreen;
+  const set  = PR_ASSETS[theme] || {};
+  const pool = (set[kind] && set[kind].length) ? set[kind]
+             : ((PR_ASSETS.dark[kind] || []));
+  if (!pool.length) return null;
+  return 'images/reveal/screens/' + pool[Math.abs(seed | 0) % pool.length];
+}
+
+/* Задник, сигил и плашка — вещи ЭКРАННЫЕ, а не карточные: их выбирает
+   карта-герой, потому что именно она задаёт тему. Отдаём стилям переменными,
+   чтобы не плодить элементы и не трогать разметку. */
+/* ⚠️ БЕЗ ПАДЕНИЯ НА ТЁМНЫЙ. Обычный prPickAsset подставляет тёмный набор,
+   когда у темы пусто, — для плашек с ЗАПЕЧЁННОЙ НАДПИСЬЮ это неверно:
+   у тёмной темы их нет, и падение молча вернуло бы пустую плашку, из-за
+   чего кнопка осталась бы вообще без текста (свой мы прячем). */
+function prPickAssetStrict(kind, theme, seed){
+  const fromScreen = prScreenAsset(kind, theme);
+  if (fromScreen) return fromScreen;
+  const pool = (PR_ASSETS[theme] || {})[kind] || [];
+  if (!pool.length) return null;
+  return 'images/reveal/screens/' + pool[Math.abs(seed | 0) % pool.length];
+}
+
+function prApplyAssets(card){
+  const stage = prEl('pr-stage');
+  const theme = prTheme(card);
+  const seed  = (PR.hero != null) ? PR.hero : 0;
+  [['stage','--pr-stage-img'],['idle','--pr-idle-img'],['close','--pr-close-img'],
+   ['ornament','--pr-ornament-img'],['pedestal','--pr-pedestal-img']]
+    .forEach(function(pair){
+      const src = prPickAsset(pair[0], theme, seed);
+      if (src) stage.style.setProperty(pair[1], 'url("' + src + '")');
+      else     stage.style.removeProperty(pair[1]);
+    });
+  stage.classList.toggle('pr-hasClose', !!prPickAsset('close', theme, seed));
+  // Орнамент рисуется, только если он есть: слой без картинки — пустой
+  // прямоугольник поверх сцены, и на светлом заднике он был бы заметен
+  stage.classList.toggle('pr-hasOrnament', !!prPickAsset('ornament', theme, seed));
+  // Подиум под раскрытой картой. Своей картинки нет — остаётся мягкая тень,
+  // как было; она нарисована в стилях и никуда не делась
+  stage.classList.toggle('pr-hasPedestal', !!prPickAsset('pedestal', theme, seed));
+
+  /* ⚠️ ПУСТАЯ ПЛАШКА НУЖНА ОТДЕЛЬНОЙ ПЕРЕМЕННОЙ. `--pr-plate-img` меняется
+     по состоянию главной кнопки и может держать плашку С НАДПИСЬЮ — подставь
+     её кнопкам действий, и на них проступило бы чужое «ПРОДОЛЖИТЬ» поверх
+     их собственных слов. Здесь только плашка без надписи. */
+  const plain = prPickAssetStrict('plate', theme, seed) || prPickAsset('plate', theme, seed);
+  if (plain) stage.style.setProperty('--pr-plate-plain', 'url("' + plain + '")');
+  else       stage.style.removeProperty('--pr-plate-plain');
+  stage.classList.toggle('pr-hasPlate', !!plain);
+  prApplyPlate();
+}
+
+/* ⚠️ ПЛАШКА КНОПКИ ЗАВИСИТ НЕ ТОЛЬКО ОТ ТЕМЫ, НО И ОТ СОСТОЯНИЯ: у части
+   тем надпись запечена в картинку, и тогда плашка своя на каждое состояние,
+   а собственный текст кнопки надо спрятать. Поэтому вызывается не один раз
+   при смене темы, а ВСЯКИЙ РАЗ, когда меняется надпись.
+   Состояний два: есть что открывать ('open') и всё вскрыто ('done'). */
+/* ⚠️ СОСТОЯНИЙ ТРИ, А НЕ ДВА. Надписей на кнопке ровно три: «Открой карту»,
+   «Открой следующую», «Продолжить» — и под каждую у Denis'а своя плашка.
+   Сначала я слил первые две в одну (действие-то одно), и третья плашка
+   оставалась без места. */
+function prPlateState(){
+  if (PR.opened.length >= PR.ids.length) return 'done';
+  return PR.opened.length ? 'next' : 'start';
+}
+function prApplyPlate(){
+  const stage = prEl('pr-stage'), cta = prEl('pr-cta');
+  if (!stage || !cta) return;
+  const card  = (PR.hero != null) ? PR.cards[PR.hero] : null;
+  const theme = card ? prTheme(card) : 'dark';
+  const seed  = (PR.hero != null) ? PR.hero : 0;
+  const state = prPlateState();
+  const kind  = 'plate' + state.charAt(0).toUpperCase() + state.slice(1);
+  /* Сначала плашка с запечённой надписью под ЭТО состояние, потом обычная
+     пустая. ⚠️ Для «есть ещё карты» разрешено падение на плашку «первая
+     карта»: действие то же самое, и набор с двумя плашками вместо трёх
+     остаётся рабочим. Обратно падать нельзя — «Продолжить» вместо
+     «Посмотреть» соврало бы про то, что будет дальше. */
+  let baked = prPickAssetStrict(kind, theme, seed);
+  if (!baked && state === 'next') baked = prPickAssetStrict('plateStart', theme, seed);
+  const src   = baked || prPickAsset('plate', theme, seed);
+  if (src) stage.style.setProperty('--pr-plate-img', 'url("' + src + '")');
+  else     stage.style.removeProperty('--pr-plate-img');
+  /* Надпись прячем ВИЗУАЛЬНО, а не удаляем: текст остаётся в разметке для
+     озвучки и поиска, иначе кнопка становится безымянной картинкой. */
+  cta.classList.toggle('pr-cta-baked', !!baked);
+  cta.setAttribute('aria-label', cta.textContent.trim());
+}
+
+/* ⚠️ ЧТО МЫ МОЖЕМ ГРЕТЬ ЗАРАНЕЕ, А ЧТО НЕТ. До вскрытия известны ТОЛЬКО
+   идентификаторы карт — редкость сервер не отдаёт, в этом суть пака. Значит
+   тему мы не знаем, а вот индекс в пуле знаем: он считается от id. Поэтому
+   греем кандидатов ПО ВСЕМ ТРЁМ ТЕМАМ — их немного, а пулы у тем часто
+   совпадают (пустой падает на тёмный), и одинаковые адреса берутся один раз.
+   Это снимает ту самую гонку в 640 мс, из-за которой сигилам понадобился
+   запасной файл. */
+/* ⚠️ РУБАШКИ РИСУЮТСЯ ДО ОТВЕТА СЕРВЕРА, поэтому после его приезда им надо
+   перевесить адреса — иначе набор с сервера подействовал бы на всё, кроме
+   рубашки, и разъехалось бы ровно то, что человек видит первым. Меняем
+   ТОЛЬКО адрес: узлы не пересоздаём, иначе оборвём начатое появление. */
+function prRefreshBacks(){
+  const pack = prEl('pr-pack');
+  if (!pack) return;
+  pack.querySelectorAll('.pr-card').forEach(function(btn){
+    const id = Number(btn.dataset.id);
+    PR_THEMES.forEach(function(theme){
+      const img = btn.querySelector('.pr-backImg.pr-' + theme);
+      if (!img) return;
+      const src = prPickAsset('back', theme, id);
+      if (src && img.getAttribute('src') !== src) img.setAttribute('src', src);
+    });
+  });
+}
+
+const PR_WARMED = {};
+function prWarm(src){
+  if (!src || PR_WARMED[src]) return;
+  PR_WARMED[src] = true;
+  const img = new Image();
+  img.src = src;
+}
+function prPrefetchAssets(){
+  PR.ids.forEach(function(id){
+    PR_THEMES.forEach(function(theme){
+      ['stage','idle','plate','close','ornament','pedestal'].forEach(function(kind){
+        prWarm(prPickAsset(kind, theme, id));
+      });
+      ['plateStart','plateNext','plateDone'].forEach(function(kind){
+        prWarm(prPickAssetStrict(kind, theme, id));
+      });
+    });
+  });
+}
+
 
 function prEl(id){ return document.getElementById(id); }
 
@@ -14048,6 +16083,7 @@ function openPackReveal(demoCards){
   }
   PR.ids = ids;
   PR.opened = []; PR.hero = null; PR.busy = false; PR.cards = {}; PR.extra = {};
+  PR.themeCard = null;
   PR.demo = !!(demoCards && demoCards.length);
   if (PR.demo) ids.forEach(function(id, i){ PR.cards[id] = demoCards[i]; });
 
@@ -14057,29 +16093,58 @@ function openPackReveal(demoCards){
   stage.style.removeProperty('--accent-2');
   prEl('pr-sub').textContent = 'Открой карту, чтобы узнать награду';
   prEl('pr-cta').textContent = 'Открой карту';
+  prApplyPlate();
   prEl('pr-details').classList.remove('pr-on');
   prEl('pr-aura').style.background =
     'radial-gradient(circle, rgba(217,185,122,.22) 0%, rgba(159,138,210,.14) 38%, transparent 72%)';
 
   prEl('pr-pack').innerHTML = PR.ids.map(function(id){
+    /* ⚠️ РУБАШКА — ПО СЛОЮ НА ТЕМУ, все три сразу. Тема выясняется только
+       после ответа сервера, а рубашки нужны прямо сейчас, на стопке: значит
+       кладём все и перекрещиваем прозрачностью, как делали с двумя. Пустой
+       пул темы даёт тот же адрес, что у тёмной — браузер возьмёт файл один
+       раз, лишнего веса от этого нет. */
+    const backs = PR_THEMES.map(function(theme){
+      const src = prPickAsset('back', theme, id);
+      return src ? ('<img class="pr-backImg pr-' + theme + '" src="' + src
+                    + '" alt="" decoding="async" data-nofade>') : '';
+    }).join('');
     return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
       + '<span class="pr-flip">'
-      + '<span class="pr-face pr-back">'
-      +   '<img class="pr-backImg pr-dark" src="images/reveal/back-dark.webp" alt="" decoding="async" data-nofade>'
-      +   '<img class="pr-backImg pr-light" src="images/reveal/back-light.webp" alt="" decoding="async" data-nofade>'
-      + '</span>'
+      + '<span class="pr-face pr-back">' + backs + '</span>'
       + '<span class="pr-face pr-front"><img alt="" decoding="async"></span>'
       + '</span></button>';
   }).join('');
+
+  /* ⚠️ ДВЕРЬ ДЛЯ НОВЫХ АНИМАЦИЙ. Текущая хореография — база, она НЕ обёрнута
+     ни в какой селектор: обернуть её значило бы переписать все правила блока.
+     Новый вариант приезжает отдельным блоком правил под своим значением
+     data-pr-anim и перекрывает базу — так же, как это делал GPT, только
+     осознанно и с подписью. Старый вариант при этом остаётся живым рядом,
+     возвращаться есть куда. */
+  stage.setAttribute('data-pr-anim', PR_ANIM);
+  /* ⚠️ ЖДАТЬ СЕРВЕР ЗДЕСЬ НЕЛЬЗЯ — стопка должна появиться сразу. Одеваемся
+     тем, что есть, а когда наборы приедут, переодеваемся тихо: до вскрытия
+     видна только рубашка, и подмена задника в этот момент незаметна. */
+  prApplyAssets(null);          // нейтральное состояние: тёмный набор
+  prLoadScreens().then(function(){
+    prPickScreens();
+    prRefreshBacks();           // рубашки уже нарисованы — перевесить адреса
+    prApplyAssets(PR.themeCard || null);   // чья тема на экране, а не «кто герой»
+    prPrefetchAssets();
+  });
 
   prClearPhase();
   prLayout();
   prSeedAmbient('#d9b97a', '#9f8ad2');
   stage.classList.add('pr-shown');
   document.body.style.overflow = 'hidden';
+  // Греем не в тот же кадр, что показ стопки: сначала человек должен увидеть карты
+  setTimeout(prPrefetchAssets, 400);
 }
 
 function closePackReveal(){
+  if (PR_SIGIL_TIMER){ clearTimeout(PR_SIGIL_TIMER); PR_SIGIL_TIMER = null; }
   prEl('pr-stage').classList.remove('pr-shown');
   document.body.style.overflow = '';
   prSeedAmbient(null);                 // таймеры мерцания не должны жить после закрытия
@@ -14146,9 +16211,15 @@ function prLayout(){
 }
 
 function prApplyTheme(card){
+  /* ⚠️ ЗАПОМИНАЕМ, ЧЬЮ ТЕМУ СЕЙЧАС НОСИТ ЭКРАН. Спрашивать потом `PR.cards[PR.hero]`
+     нельзя: `PR.hero` проставляется на семь строк ПОЗЖЕ этого вызова, и любой
+     код, попавший в это окно (например ответ сервера с наборами), увидел бы
+     «карты нет» и переодел бы экран обратно в нейтральный. Ровно та же гонка,
+     что была с предзагрузкой сигилов, читавшей тему из разметки. */
+  PR.themeCard = card || null;
   const mood = prMood(card);
   const stage = prEl('pr-stage');
-  stage.setAttribute('data-pr-theme', mood.appearance);
+  stage.setAttribute('data-pr-theme', prTheme(card));
   stage.style.setProperty('--accent', mood.accent);
   // Лучи и постамент «героического» слоя красятся вторым цветом — без него
   // color-mix получает пустое значение и слой просто не рисуется
@@ -14159,6 +16230,7 @@ function prApplyTheme(card){
   // кадр. Теперь в каждой рубашке лежат обе картинки, а тема их перекрещивает
   // прозрачностью — тем же способом, что текстуру и рамку панели
   prSeedAmbient(mood.accent, mood.secondary);
+  prApplyAssets(card);   // задник, сигил и плашка — из пула той же темы
 }
 
 /* Пилюли и блок способности — стили концепта, надписи наши */
@@ -14232,7 +16304,9 @@ async function prOpenCard(id){
   prApplyTheme(card);
   // Ждём готовности арта до начала хореографии, чтобы переворот не показал
   // пустую коробку. Сигилов здесь больше нет — их прогрев уехал вместе с ними
-  if (front && card.image_url) await prPrepareFrontImage(front, card.image_url);
+  // Чистый арт, если он есть; иначе картинка карточки целиком
+  const artSrc = prCardImage(card);
+  if (front && artSrc) await prPrepareFrontImage(front, artSrc);
 
   PR.hero = id;
   prLayout();
@@ -14267,6 +16341,7 @@ async function prOpenCard(id){
     const left = PR.ids.length - PR.opened.length;
     prEl('pr-sub').textContent = left ? ('Осталось карт: ' + left) : 'Пак открыт';
     prEl('pr-cta').textContent = left ? 'Открой следующую' : 'Продолжить';
+    prApplyPlate();
     prLayout();
     PR.busy = false;
   }, 1380);
@@ -14283,7 +16358,7 @@ async function prOpenCard(id){
    записать и фоном крутить». Он прав — видео декодирует железо, это
    принципиально другой класс стоимости.
 
-   Файл кладётся в images/reveal/reveal-fx.mp4 и НЕ ОБЯЗАТЕЛЕН: если его нет
+   Файл кладётся в images/reveal/screens/reveal-fx.mp4 и НЕ ОБЯЗАТЕЛЕН: если его нет
    или браузер его не принял, слой прячется и вскрытие идёт без фона. */
 /* ФОН СВОЙ У КАЖДОГО БОГА (09.08.2026). Тридцать восемь файлов по ~865 КБ:
    участник никогда не качает всю пачку — только того бога, которого вскрыл,
@@ -14313,11 +16388,13 @@ const PR_FX_LOADED = {};
 /* ⚠️ ТЕМУ БЕРЁМ ИЗ САМОЙ КАРТЫ, А НЕ ИЗ АТРИБУТА НА ЭКРАНЕ. Предзагрузка
    стартует ДО prApplyTheme, и в этот момент на #pr-stage ещё висит тема
    ПРЕДЫДУЩЕЙ карты — по ней качался бы не тот файл. */
-function prFxTheme(card){ return prMood(card).appearance === 'light' ? 'light' : 'dark'; }
+/* Файлы сигилов напечены парами бог-dark / бог-light — третьего комплекта
+   нет, поэтому легендарная берёт тёмный. */
+function prFxTheme(card){ return prTheme(card) === 'light' ? 'light' : 'dark'; }
 
 function prFxGodSrc(card, theme){
   const slug = PR_FX_GODS[(card && card.god) || ''];
-  return slug ? ('images/reveal/' + slug + '-' + theme + '.webp') : null;
+  return slug ? ('images/reveal/screens/' + slug + '-' + theme + '.webp') : null;
 }
 
 /* ⚠️ ГЛАВНОЕ ПРО ВРЕМЯ: бог известен ТОЛЬКО после ответа сервера — до этого
@@ -14349,9 +16426,21 @@ function prPlayFxVideo(){
   // с пустым кадром ровно в тот момент, ради которого всё и затевалось
   const src = (god && PR_FX_LOADED[god] === 'ok') ? god : PR_FX_SRC[theme];
   el.style.display = '';
+  el.classList.remove('pr-fxDone');
   el.src = '';
   void el.offsetWidth;
   el.src = src;
+
+  // Гасим после нужного числа проходов. Плавно: класс запускает переход
+  // прозрачности, сам тег не трогаем — иначе следующий запуск начнёт
+  // с пустого кадра.
+  if (PR_SIGIL_TIMER) clearTimeout(PR_SIGIL_TIMER);
+  PR_SIGIL_TIMER = null;
+  if (PR_SIGIL_LOOPS > 0){
+    PR_SIGIL_TIMER = setTimeout(function(){
+      el.classList.add('pr-fxDone');
+    }, Math.max(0, PR_SIGIL_LOOPS * PR_SIGIL_MS - PR_SIGIL_FADE));
+  }
 }
 
 function prCta(){
@@ -14390,7 +16479,7 @@ function prImpact(el, mood){
   const palette = [mood.accent, mood.secondary, '#fff4dc'];
   // На телефоне частиц вдвое меньше: каждая это отдельный анимируемый элемент
   // со свечением и режимом наложения
-  const full = mood.appearance === 'light' ? 68 : 58;
+  const full = prTheme(PR.cards[PR.hero] || null) === 'light' ? 68 : 58;
   const count = prHeavyEffectsAllowed() ? full : Math.round(full / 2);
   for (let i = 0; i < count; i++){
     const p = document.createElement('span');
