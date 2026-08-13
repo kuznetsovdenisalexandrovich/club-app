@@ -10637,6 +10637,48 @@ function bonusShareUrl(key){
   return BOT_LINK + '/app?startapp=bonus_' + encodeURIComponent(key);
 }
 
+/* ── Атрибуция продаж: единица контента / канал (13.08.2026) ────────────────
+   [stated] Denis: «запомнить последнюю единицу, которая дожала до оплаты,
+   и отдельно — откуда человек пришёл (реклама ВК/Яндекс, рилс, пост, Дзен)».
+
+   Диплинк ?startapp=u_<код>. В ОТЛИЧИЕ от pay_ — НЕ ведёт сразу на оплату,
+   это мягкая метка: человек может зайти по рилсу и купить через неделю из
+   меню или из дожимного сообщения. Поэтому после отметки разбор диплинка
+   идёт ДАЛЬШЕ обычным путём (главный экран, как без метки вовсе).
+
+   ⚠️ ГОСТЬ БЕЗ TELEGRAM ID (веб-версия, обычный человек с рекламы) — метку
+   всё равно копим в localStorage и отправляем при первой возможности: код
+   не должен потеряться только из-за того, что вход ещё не случился. */
+function unitFromUrl(){
+  const param = appStartParam();
+  if (param.indexOf('u_') !== 0) return false;
+  const code = param.slice('u_'.length);
+  if (!code) return false;
+  try { localStorage.setItem('club_app_attribution_code', code); } catch(e){}
+  sendAttributionTouch(code);
+  return false;   // мягкая метка — маршрут разбирается дальше как обычно
+}
+
+function sendAttributionTouch(code){
+  if (!code || !telegramId) return;
+  // Best-effort: если не дошло — ничего страшного, это не единственный шанс
+  // (та же метка лежит в localStorage и уйдёт при следующем открытии)
+  fetch(`${API_URL}/attribution/touch`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ telegram_id: telegramId, code: code })
+  }).catch(function(){});
+}
+
+/* Метка, отложенная до входа: гость зашёл по ссылке БЕЗ известного telegramId
+   (веб-версия), потом вошёл — досылаем сохранённый код один раз */
+function flushPendingAttribution(){
+  let code = '';
+  try { code = localStorage.getItem('club_app_attribution_code') || ''; } catch(e){ return; }
+  if (!code) return;
+  sendAttributionTouch(code);
+  try { localStorage.removeItem('club_app_attribution_code'); } catch(e){}
+}
+
 /* ── Метка источника (зачаток UTM) ──────────────────────────────────────────
    Диплинк вида pay_<метка> ведёт на оплату и запоминает, ОТКУДА человек пришёл.
    Метка нужна дважды: сказать, что именно продало (журнал, рилс, пост), и
@@ -15073,6 +15115,8 @@ function startWebSession(){
         payFromUrl();
         return;
       }
+      // Мягкая метка источника — отмечаем и идём дальше, ничего не решаем за человека
+      if (typeof unitFromUrl === 'function') unitFromUrl();
       // Простые маршруты по таблице DEEPLINKS: schedule, library, cards и т.д.
       // Стоит ПОСЛЕ разборов с параметром и ПЕРЕД тестом: `quiz` есть и в
       // таблице, но `quiz_КОД` со своим экраном результата должен победить
@@ -15143,6 +15187,7 @@ function startWebSession(){
     }
     syncTgBackButton('portal');   // стартовый экран — кнопки быть не должно
     telegramId = tg.initDataUnsafe.user.id;
+    flushPendingAttribution();
     startApp();
     openFromStartParam();
   } else {
