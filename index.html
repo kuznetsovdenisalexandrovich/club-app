@@ -7360,6 +7360,19 @@ function diagShowEnv(){
 }
 
 function openContinue() {
+  if (welcomeLectureData){
+    const l = welcomeLectureData;
+    rememberLastLecture(l);         // дальше это уже обычная «последняя лекция»
+    openUrl(l.link || l.link_vk);
+    // Гасим ПОСЛЕ открытия, а не при показе: человек мог не заметить виджет
+    // и вернуться позже — до тапа он должен видеть его снова при каждом заходе
+    if (telegramId){
+      fetch(`${API_URL}/users/welcome-lecture-shown?telegram_id=${encodeURIComponent(telegramId)}`, {method:'POST'}).catch(function(){});
+    }
+    welcomeLectureSlug = '';
+    welcomeLectureData = null;
+    return;
+  }
   let last = null;
   try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
   const mag = lastMagazineRead();
@@ -7622,9 +7635,39 @@ async function toggleNotif(key) {
   tourAdvanceOn('notif_toggled');
 }
 
+/* ⚠️ ПРИОРИТЕТ ВЫШЕ ОБЫЧНОГО «ПРОДОЛЖИТЬ ПРОСМОТР»: если после оплаты сервер
+   прислал welcome_lecture_slug, показываем именно ту лекцию, кусок которой
+   человек видел в рилсе/посте — это ровно то, что его сюда привело.
+   welcomeLectureSlug приходит из loadProfile() и может быть ещё НЕ известен
+   на момент первого вызова этой функции (обе стартуют параллельно) — тогда
+   просто рисуем как обычно, а loadProfile перерисует после своего ответа. */
+let welcomeLectureSlug = '';
+let welcomeLectureData = null;
+
 async function loadContinueWidget() {
   const kickerEl = document.getElementById('continue-kicker');
   const titleEl = document.getElementById('continue-title');
+
+  if (welcomeLectureSlug){
+    try {
+      const r = await fetch(`${API_URL}/lectures/${encodeURIComponent(welcomeLectureSlug)}`);
+      if (r.ok){
+        const l = await r.json();
+        welcomeLectureData = l;
+        kickerEl.textContent = 'Твоя полная версия';
+        titleEl.textContent = l.title;
+        return;
+      }
+    } catch(e){}
+    // Лекция не нашлась (удалена/переименована) — стёртый slug молча не
+    // повторяем каждый заход, гасим на сервере и падаем на обычный виджет
+    welcomeLectureSlug = '';
+    if (telegramId){
+      fetch(`${API_URL}/users/welcome-lecture-shown?telegram_id=${encodeURIComponent(telegramId)}`, {method:'POST'}).catch(function(){});
+    }
+  }
+  welcomeLectureData = null;
+
   let last = null;
   try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
   const mag = lastMagazineRead();
@@ -7703,6 +7746,10 @@ async function loadProfile() {
     document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
 
     isMember = !!u.is_member;
+    // «Вот полная версия того, что тебя сюда привело» — вместо обычного
+    // «Продолжить просмотр» на главной, ровно один раз после оплаты
+    welcomeLectureSlug = u.welcome_lecture_slug || '';
+    loadContinueWidget();
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
     homeScreenAdded = !!u.home_screen_added;
