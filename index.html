@@ -3835,6 +3835,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    он в part браузеров обрезает верх при переполнении */
 .live-practice-top{flex:0 0 auto;padding:16px;font-size:15px;margin-bottom:10px;
   box-shadow:0 6px 18px rgba(0,0,0,.18)}
+/* Средняя по размеру: заметнее обычной строки, но не спорит с кнопкой
+   практики — та зовёт к действию, а эта просто даёт файл */
+.live-handout-btn{flex:0 0 auto;padding:12px;font-size:14px;margin-bottom:8px}
 .live-chat-list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   display:flex;flex-direction:column;gap:8px;padding-bottom:6px}
 .live-chat-list > *:first-child{margin-top:auto}
@@ -13377,6 +13380,7 @@ function livePracticeInfo(){
    элемент принадлежит реестру; как только вписали, атрибут снимаем, иначе
    applyAppTexts() затрёт её при первом же своём проходе. */
 function syncLivePractice(){
+  syncLiveHandout();          // обе кнопки живут в одном опросе
   const info = livePracticeInfo();
   ['live-practice-btn', 'live-full-practice'].forEach(function(id){
     const b = document.getElementById(id);
@@ -13391,6 +13395,50 @@ function syncLivePractice(){
       b.textContent = t('live.practice');
     }
   });
+}
+
+/* ── Раздаточный файл эфира ──────────────────────────────────────────────
+   Кнопку видят ВСЕ, файл получают только участники. Проверка живёт на
+   сервере: показывать кнопку по своему `isMember` и на этом успокоиться —
+   значит отдать файл каждому, кто откроет инструменты разработчика. */
+function syncLiveHandout(){
+  const b = document.getElementById('live-full-handout');
+  if (!b) return;
+  const has = !!(liveNow && liveNow.handout);
+  b.style.display = has ? 'flex' : 'none';
+  if (has) b.textContent = liveNow.handout_name || 'Скачать майндкарту';
+}
+
+async function openLiveHandout(){
+  if (!isMember){ if (typeof openPaywall === 'function') openPaywall(); return; }
+  const b = document.getElementById('live-full-handout');
+  const label = b ? b.textContent : '';
+  if (b) b.textContent = 'Готовлю файл…';
+  try {
+    const r = await fetch(`${API_URL}/live/handout?telegram_id=${encodeURIComponent(telegramId || '')}`);
+    if (r.status === 402){                       // сервер говорит «не участник»
+      if (typeof openPaywall === 'function') openPaywall();
+      return;
+    }
+    if (!r.ok) throw new Error('сервер ответил ' + r.status);
+    /* ⚠️ СКАЧИВАЕМ ЧЕРЕЗ BLOB, А НЕ ССЫЛКОЙ. Внутри Telegram и ВК окно живёт
+       в webview: обычный переход по адресу открыл бы файл поверх приложения
+       или не открыл вовсе. Blob сохраняется как файл и возвращает человека
+       туда же, где он был. */
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mindmap.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  } catch(e){
+    if (typeof showToast === 'function') showToast('Не получилось скачать: ' + (e && e.message || e));
+  } finally {
+    if (b && label) b.textContent = label;
+  }
 }
 
 function openLivePractice(){
@@ -19036,6 +19084,12 @@ plInit();
     <!-- КНОПКА ДЕЙСТВИЯ — НАД ЧАТОМ, а не под ним. Нужна она ровно в тот
          момент, когда пора уходить на практику, и должна быть видна не
          прокручивая ленту сообщений -->
+    <!-- РАЗДАТОЧНЫЙ ФАЙЛ. [stated] Denis: средняя по размеру кнопка под окном
+         эфира, над чатом. Видна ВСЕМ — гостю она открывает оплату, и это
+         сознательно: кнопка сама по себе показывает, что участникам дают
+         больше -->
+    <button class="live-btn live-handout-btn" id="live-full-handout"
+            onclick="openLiveHandout()" style="display:none">Скачать майндкарту</button>
     <button class="live-btn live-btn-main live-practice-top" id="live-full-practice"
             onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
     <div class="live-chat-list" id="live-chat-list"></div>
