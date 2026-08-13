@@ -8405,7 +8405,11 @@ async function homeLoadMovedData(tries){
     // loadLibrary сама тянет справочник проблем и ответы анкеты и сама
     // дорисовывает блок. Если библиотека уже загружена — тянем только план
     if (typeof allLectures !== 'undefined' && !allLectures.length) jobs.push(loadLibrary());
-    else jobs.push(loadPlanProblems(), loadPlanAnswers(), loadPlaylists());
+    else jobs.push(loadPlanProblems(), loadPlanAnswers().then(function(){
+      // ⚠️ ТОЛЬКО ПОСЛЕ ОТВЕТОВ: серверу нужны уровень, глубина и темы, иначе
+      // он не поймёт, какой плейлист подходит
+      return loadPlaylistHead(planAnswers);
+    }));
     await Promise.all(jobs);
     renderPersonalPlanBody();
     renderPersonalPlanSection();
@@ -11386,7 +11390,8 @@ async function loadLibrary() {
        этого ждала сумму двух ожиданий вместо самого долгого из них.
        Denis: «карта медленно подтягивалась» — вот прямая причина. */
     const lecturesPromise = fetch(`${API_URL}/lectures?limit=100`).then(r => r.json());
-    const planPromise = Promise.all([loadPlanProblems(), loadPlanAnswers(), loadPlaylists()]);
+    const planPromise = Promise.all([loadPlanProblems(),
+      loadPlanAnswers().then(function(){ return loadPlaylistHead(planAnswers); })]);
 
     const data = await lecturesPromise;
     // ЕСЛИ НИЧЕГО НЕ ИЗМЕНИЛОСЬ — НЕ ПЕРЕРИСОВЫВАЕМ. Иначе при каждом заходе
@@ -11577,67 +11582,28 @@ function planLecturesFor(key, answers, used){
    ⚠️ ПОРЯДОК ВНУТРИ ПЛЕЙЛИСТА НЕ ТРОГАЕМ. Обычный путь сортируется по фазам
    воронки, но плейлист — это и есть кураторское знание о порядке; пересортировать
    его значит выкинуть то, ради чего он заводился. */
-let planPlaylists = [];
+/* ⚠️ РАЗРЕШЕНИЕ СЛОТОВ ПЕРЕЕХАЛО НА СЕРВЕР (14.08.2026). Раньше апп подбирал
+   лекции под слоты сам — и предпросмотр в анализаторе считал бы СВОЮ копию
+   того же правила. Две реализации одного правила разъезжаются, у нас это уже
+   было с генераторами картинок. Теперь `/playlists/resolve` — единственное
+   место, а апп только рисует то, что оно вернуло.
 
-async function loadPlaylists(){
+   Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
+   (`planStopList`) синхронная, ходить в сеть из неё нельзя. */
+let planPlaylistHead = [];
+
+async function loadPlaylistHead(answers){
+  planPlaylistHead = [];
+  if (!answers || !(answers.problems || []).length) return;
   try {
-    const r = await fetch(`${API_URL}/playlists`);
-    const d = await r.json();
-    planPlaylists = (d && d.playlists) || [];
-  } catch(e){ planPlaylists = []; }   // молча: путь и без плейлиста рабочий
-}
-
-/* Условия И-шные между собой, ИЛИ-шные внутри. Пустое условие = «подходит
-   всем» — это самый частый случай, и он не должен требовать перечисления
-   всех уровней руками. */
-function planlistMatches(pl, answers){
-  const lv = pl.cond_levels || [], dp = pl.cond_depths || [], pr = pl.cond_problems || [];
-  if (lv.length && (!answers.level || lv.indexOf(answers.level) < 0)) return false;
-  if (dp.length && (!answers.depth || dp.indexOf(answers.depth) < 0)) return false;
-  if (pr.length){
-    const mine = answers.problems || [];
-    if (!pr.some(function(k){ return mine.indexOf(k) >= 0; })) return false;
-  }
-  return true;
-}
-
-function planPickPlaylist(answers){
-  // Первый подходящий по возрастанию sort: плейлисты приходят уже отсортированными
-  return planPlaylists.find(function(pl){ return planlistMatches(pl, answers); }) || null;
-}
-
-/* Разрешаем слоты в конкретные лекции. `used` общий с обычным подбором —
-   лекция из плейлиста не должна прийти второй раз хвостом. */
-function planResolvePlaylist(pl, answers, used){
-  const out = [];
-  (pl.slots || []).forEach(function(sl){
-    if (sl.kind === 'lecture'){
-      const lec = allLectures.find(function(l){ return l.slug === sl.slug; });
-      // Лекции нет в библиотеке (удалили/переименовали) — слот молча исчезает
-      if (!lec || used[lec.slug]) return;
-      used[lec.slug] = true;
-      out.push({ lec: lec, entry: {}, viaParent: false, fromPlaylist: true,
-                 group: pl.title, slotNote: sl.note || '' });
-      return;
-    }
-    if (sl.kind !== 'slot' || !sl.problem) return;
-    const rows = [];
-    allLectures.forEach(function(lec){
-      if (used[lec.slug]) return;
-      const entry = planEntryFor(lec, sl.problem);
-      if (!entry) return;
-      if (sl.weight === 'main' && entry.weight === 'touch') return;
-      if (sl.weight === 'touch' && entry.weight !== 'touch') return;
-      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers) });
+    const r = await fetch(`${API_URL}/playlists/resolve`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ level: answers.level || '', depth: answers.depth || '',
+                             problems: answers.problems || [] })
     });
-    if (!rows.length) return;            // пустой слот молча исчезает
-    rows.sort(function(a, b){ return b.score - a.score; });
-    const best = rows[0];
-    used[best.lec.slug] = true;
-    out.push({ lec: best.lec, entry: best.entry, viaParent: false, fromPlaylist: true,
-               group: pl.title, slotNote: sl.note || '' });
-  });
-  return out;
+    const d = await r.json();
+    planPlaylistHead = (d && d.items) || [];
+  } catch(e){ planPlaylistHead = []; }   // молча: путь и без плейлиста рабочий
 }
 
 function buildPlan(answers, used){
@@ -11831,8 +11797,14 @@ function planStopList(answers){
      болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
      этого курированная лекция всплывала бы в пути дважды. */
   const used = {};
-  const pl = planPickPlaylist(answers);
-  const head = pl ? planResolvePlaylist(pl, answers, used) : [];
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
   const groups = buildPlan(answers, used);
   const phaseIdx = {};
   PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
