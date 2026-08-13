@@ -2660,6 +2660,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   height:68px!important;
   max-height:none!important;
 }
+
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -6124,6 +6125,49 @@ body.player-open .scroll-fade{height:190px}
   letter-spacing:.02em;cursor:pointer;line-height:1.35;
 }
 body.api-override-on #api-override-bar{display:block}
+
+/* ══ ПРОКРУТКА: ЧТО ЕЁ ГРУЗИЛО (14.08.2026) ═══════════════════════════════
+   Жалоба участника: на десктопном Linux приложение сильно тормозит при
+   прокрутке. Обработчики прокрутки тут ни при чём — их два, оба пассивные и
+   делают одну строчку. Грузило другое:
+
+   ⚠️ 1. `backdrop-filter:blur(22px)` СТОЯЛ НА КАРТОЧКАХ ЛЕКЦИЙ. Размытие
+   заднего плана пересчитывается КАЖДЫЙ КАДР для КАЖДОГО видимого элемента, а
+   карточек в библиотеке десятки. На машине без аппаратного ускорения (обычное
+   дело для Linux-сборок браузеров) это именно «тормозит при прокрутке».
+   Убираем размытие у ПОВТОРЯЮЩИХСЯ элементов, оставляем у одиночных панелей —
+   там оно стоит один раз на экран и заметно. Чтобы карточки не стали
+   прозрачнее, подложку делаем плотнее ровно на ту же долю.
+
+   ⚠️ 2. СПИСОК РИСОВАЛСЯ ЦЕЛИКОМ, включая карточки далеко за экраном.
+   `content-visibility:auto` разрешает браузеру пропускать отрисовку того, что
+   не видно; `contain-intrinsic-size` сообщает примерную высоту, чтобы полоса
+   прокрутки не скакала. */
+[data-theme="dark"] .lec-card,
+[data-theme="dark"] .sched-event-item,
+[data-theme="dark"] .stream-tile,
+[data-theme="dark"] .watch-later-tile{
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+  background:var(--card2, var(--card));
+}
+.lec-card,.stream-tile,.watch-later-tile{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 190px;
+}
+
+/* ⚠️ 3. ТРИ РАЗМЫТЫХ ПЯТНА ФОНА анимируются бесконечно. Сама анимация дешёвая
+   (только transform), но пятно несёт `filter:blur(70px)` — без своего слоя
+   браузер переразмывает его на каждом кадре. `will-change` просит слой явно.
+   При системной настройке «меньше движения» анимацию снимаем совсем: там она
+   не нужна, а на слабой машине это ещё и самый большой выигрыш. */
+.blob{will-change:transform}
+@media (prefers-reduced-motion:reduce){
+  .blob{animation:none!important;will-change:auto}
+  .mark{animation:none!important}
+  .fade-rise{animation:none!important;opacity:1!important;transform:none!important}
+}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10474,6 +10518,24 @@ function startLibraryTour(){
   }
 }
 
+/* Лежит ли цель шага внутри элемента с `position:fixed`. Проверяем предков
+   ФАКТИЧЕСКИ через getComputedStyle, а не по списку известных классов: попапов
+   в приложении много, и список рано или поздно отстал бы от разметки. */
+function tourTargetInFixed(step){
+  const el = step.targetGroupSelector
+    ? document.querySelector(step.targetGroupSelector)
+    : (step.targetId ? document.getElementById(step.targetId)
+                     : document.querySelector(step.targetSelector));
+  let node = el;
+  while (node && node !== document.body){
+    let pos = '';
+    try { pos = getComputedStyle(node).position; } catch(e){}
+    if (pos === 'fixed') return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
 function showTourStep(){
   if (!tourActive) return;
   try {
@@ -10496,16 +10558,28 @@ function showTourStep(){
       if (!target) { tourStep++; showTourStep(); return; }
       rect = target.getBoundingClientRect();
     }
-    // Документо-относительные координаты (не viewport) — подсветка scrollится вместе со страницей
-    const docTop = rect.top + window.scrollY;
-    const docLeft = rect.left + window.scrollX;
+    /* ⚠️⚠️ ЦЕЛЬ ВНУТРИ ФИКСИРОВАННОГО ПОПАПА СЧИТАЕТСЯ ИНАЧЕ (14.08.2026).
+       Жалоба участника: «после ввода поиска для ИИ всё покрылось оверлеем».
+       Причина: подсветка позиционируется в ДОКУМЕНТНЫХ координатах
+       (`rect.top + scrollY`), а второй шаг тура целится в кнопки внутри попапа
+       ИИ, который `position:fixed`. Фиксированный элемент со страницей не
+       едет — прибавленный scrollY уводил дырку вниз ровно на величину
+       прокрутки, и вместо подсветки человек получал сплошное затемнение:
+       «окно» оказывалось за пределами экрана.
+       Лечение: цель в fixed-предке → дырка и подсказка тоже fixed, координаты
+       БЕЗ прибавки прокрутки. */
+    const inFixed = tourTargetInFixed(step);
+    const docTop = inFixed ? rect.top : rect.top + window.scrollY;
+    const docLeft = inFixed ? rect.left : rect.left + window.scrollX;
     const hole = document.getElementById('tour-hole');
+    hole.style.position = inFixed ? 'fixed' : 'absolute';
     hole.style.left = (docLeft - 10) + 'px';
     hole.style.top = (docTop - 10) + 'px';
     hole.style.width = (rect.width + 20) + 'px';
     hole.style.height = (rect.height + 20) + 'px';
     document.getElementById('tour-tooltip-text').textContent = step.text;
     const tooltip = document.getElementById('tour-tooltip');
+    tooltip.style.position = inFixed ? 'fixed' : 'absolute';
     const spaceBelow = window.innerHeight - rect.bottom;
     if (spaceBelow > 100) {
       tooltip.style.top = (docTop + rect.height + 22) + 'px';
@@ -10516,7 +10590,9 @@ function showTourStep(){
     // Подсветка уже на месте — теперь убеждаемся, что она в поле зрения.
     // Раньше этого не было: наблюдатель за размерами пересчитывал ДЫРКУ, но не
     // мотал экран, и после дорисовки соседних блоков подсветка уезжала за край
-    if (step.targetId) ensureTourTargetVisible(document.getElementById(step.targetId));
+    // Домотка нужна только документным целям: фиксированная и так на экране,
+    // а scrollIntoView в этом случае увёл бы страницу под попапом
+    if (step.targetId && !inFixed) ensureTourTargetVisible(document.getElementById(step.targetId));
   } catch (e) {
     console.error('Тур онбординга упал:', e);
     endLibraryTour(false);
