@@ -2632,6 +2632,34 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #pr-stage #pr-actions{
   pointer-events:auto;
 }
+
+/* ══ ВЫСОТА КНОПОК — ФИКСИРОВАННАЯ (13.08.2026, замер с телефона) ══════════
+       вид 440×956 · сцена 212 · карта 377 · панель 350
+       ДЕЙСТВИЯ 223 · кнопка 75 · вылет ↑10 ↓154
+   [stated] Denis: «кнопки очень мелкие, а расстояния между ними огромные» и
+   «проще кнопки запечь сразу все, сразу с параметрами нужными, чтобы не
+   скакали по экрану». Он прав, и это снимает целый класс возни.
+
+   ⚠️ ПОЧЕМУ БЫЛО ОДНОВРЕМЕННО «МЕЛКО» И «ДАЛЕКО». Коробка кнопки считала
+   высоту от ширины (`aspect-ratio`), а плашка внутри вписывалась `contain`.
+   Плашка уже коробки по пропорции — значит она ложилась по ширине, а сверху
+   и снизу оставалась ПУСТОТА, которая и выглядела как расстояние между
+   кнопками. Чем шире экран, тем выше коробка и тем больше пустоты: два
+   изъяна из одного места, и оба лечатся отказом от пропорции.
+
+   Теперь высота задана в пикселях и НЕ ЗАВИСИТ ОТ ШИРИНЫ ЭКРАНА — кнопки
+   перестают скакать, а Denis печёт плашки под известную форму. */
+#pr-stage .pr-cta-inline{
+  aspect-ratio:auto!important;
+  height:56px!important;
+  min-height:0!important;
+  max-height:none!important;
+}
+#pr-stage #pr-cta{
+  aspect-ratio:auto!important;
+  height:68px!important;
+  max-height:none!important;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
