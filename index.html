@@ -14868,6 +14868,48 @@ function vkUserId(){
   catch(e){ return ''; }
 }
 
+/* ══ ОБОЛОЧКА MAX (14.08.2026) ═══════════════════════════════════════════
+   ⚠️ MAX КЛАДЁТ ПАРАМЕТРЫ ЗАПУСКА В ХЕШ АДРЕСА, а не в строку запроса, как
+   ВК. Внутри хеша — `WebAppData=<...>`, и уже внутри него свои пары. Отдаём
+   серверу фрагмент ЦЕЛИКОМ: разбирать и проверять подпись должен он, в хеш
+   можно дописать что угодно.
+
+   ⚠️ И ОСТОРОЖНО С ССЫЛКАМИ-ПРИВЯЗКАМИ: у нас в хеше живёт ещё и `link_<токен>`
+   (см. `appStartParam`). Признаком MAX считаем ИМЕННО `WebAppData` — иначе
+   обычная ссылка-привязка выглядела бы как запуск из MAX. */
+function maxLaunchData(){
+  try {
+    const h = (location.hash || '').replace(/^#/, '');
+    return h.indexOf('WebAppData=') >= 0 ? h : '';
+  } catch(e){ return ''; }
+}
+function isInsideMax(){ return !!maxLaunchData(); }
+function maxUserId(){
+  try {
+    const wa = window.WebApp && WebApp.initDataUnsafe && WebApp.initDataUnsafe.user;
+    return wa && wa.id ? String(wa.id) : '';
+  } catch(e){ return ''; }
+}
+
+async function startMaxSession(){
+  try {
+    const r = await fetch(`${API_URL}/auth/max/session`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: maxLaunchData() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.found){
+      if (data.session_token) rememberSessionToken(data.session_token);
+      telegramId = Number(data.telegram_id) || data.telegram_id;
+      startApp();
+      return true;
+    }
+  } catch(e){}
+  return false;   // не узнали — обычный вход по телефону, привязка случится сама
+}
+
 /* Запуск внутри ВК. Подпись проверяет СЕРВЕР — доверять адресной строке нельзя,
    в неё можно дописать чужой vk_user_id. Не узнали человека — не беда: показываем
    обычный вход по телефону, после подтверждения ВК привяжется сам. */
@@ -14982,9 +15024,11 @@ function currentPlatform(){
   if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
       && Telegram.WebApp.initDataUnsafe.user) return 'tg';
   if (typeof isInsideVk === 'function' && isInsideVk()) return 'vk';
+  if (typeof isInsideMax === 'function' && isInsideMax()) return 'max';
   return '';
 }
 function currentPlatformId(){
+  if (typeof isInsideMax === 'function' && isInsideMax()) return maxUserId();
   if (typeof isInsideVk === 'function' && isInsideVk()) return vkUserId();
   try { return String(Telegram.WebApp.initDataUnsafe.user.id || ''); } catch(e){ return ''; }
 }
@@ -15444,6 +15488,24 @@ function startWebSession(){
      говорит сервер по токену из адреса */
   if (VIEW_TOKEN){
     startViewMode();
+    return;
+  }
+
+  /* Внутри MAX. Ветка устроена как ВК-шная и стоит перед ней: там свой признак
+     (`WebAppData` в хеше), пересечься они не могут, но порядок держим тот же —
+     сначала мессенджеры, потом Telegram, потом веб. */
+  if (isInsideMax()) {
+    applyWebSafeArea();
+    setTimeout(applyWebSafeArea, 300);
+    window.addEventListener('resize', applyWebSafeArea);
+    startMaxSession().then(function(known){
+      if (!known) {
+        // Как и в ВК — сразу к входу по телефону, мимо «добавь на главный экран»
+        loadUrgentNewsForWebEntry();
+        proceedToWebLogin();
+      }
+      openFromStartParam();
+    });
     return;
   }
 
