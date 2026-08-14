@@ -2850,13 +2850,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   box-shadow:0 18px 40px -20px rgba(0,0,0,.7);
 }
 .funnel-film-poster{width:100%;height:100%;object-fit:cover;display:block}
+/* ⚠️ ТРЕУГОЛЬНИК ТОНУЛ ПОД КРУЖКОМ (14.08.2026). Denis: «вместо кнопки плей
+   просто размытый круг». Причина: `::before` абсолютно позиционирован, а
+   собственный текст элемента — нет, поэтому псевдоэлемент рисовался ПОВЕРХ
+   него. Классическая ловушка: `z-index` на самом элементе тут не помогает,
+   он про соседей, а не про своё содержимое.
+   Лечение: кружок и знак — два ЯВНЫХ слоя, знак выше. Заодно знак рисуем
+   треугольником через границы, а не символом ▶: тот в разных шрифтах то
+   квадратный, то смещённый. */
 .funnel-film-play{
   position:absolute;inset:0;
   display:flex;align-items:center;justify-content:center;
-  font-size:26px;color:#fff;
-  /* Кружок «играть» рисуем тенью, а не картинкой: ещё один файл на первом
-     экране — ещё одна причина ему не открыться на медленной сети */
-  text-shadow:0 2px 12px rgba(0,0,0,.6);
+  z-index:1;
 }
 .funnel-film-play::before{
   content:'';
@@ -2867,7 +2872,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   backdrop-filter:blur(4px);
   -webkit-backdrop-filter:blur(4px);
 }
-.funnel-film-play{z-index:1}
+.funnel-film-play::after{
+  content:'';
+  position:relative;          /* выше кружка по порядку рисования */
+  width:0;height:0;
+  margin-left:5px;            /* оптический центр: треугольник тяжелее слева */
+  border-left:19px solid #fff;
+  border-top:12px solid transparent;
+  border-bottom:12px solid transparent;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
+}
 .funnel-film-slot{margin:14px auto 0;height:min(58vh,480px);aspect-ratio:9/16;max-width:100%}
 .funnel-film-slot iframe{width:100%;height:100%;border:0;border-radius:16px;display:block;background:#000}
 .funnel-secondary{
@@ -4950,7 +4964,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
   <div class="funnel-film" id="funnel-film" onclick="startFunnelFilm()">
     <img src="images/film-ya-podumayu.jpg" alt="" class="funnel-film-poster" id="funnel-film-poster">
-    <div class="funnel-film-play">▶</div>
+    <!-- Знак «играть» рисуется целиком стилями (::before кружок, ::after
+         треугольник) — символ ▶ убран: в разных шрифтах он то квадратный,
+         то смещённый от центра -->
+    <div class="funnel-film-play" aria-hidden="true"></div>
   </div>
   <!-- Плеер вставляется сюда по нажатию, а не лежит в разметке: иначе Boomstream
        грузит своё окружение при каждом открытии приложения, даже если фильм
@@ -14745,6 +14762,25 @@ window.addEventListener('message', function(ev){
   let d = ev.data;
   try { if (typeof d === 'string') d = JSON.parse(d); } catch(e){ return; }
   if (!d || d.code !== FUNNEL_FILM_CODE) return;
+
+  /* ⚠️ ОДНО НАЖАТИЕ ВМЕСТО ДВУХ (14.08.2026). Denis: «нажимаешь — только после
+     этого появляется интерфейс бумстрим и кнопка плей». Так и было: сначала
+     наш постер, потом их плеер со своей кнопкой. Теперь, как только плеер
+     сообщил о готовности, шлём ему `play` их же командой — человек нажал один
+     раз, фильм пошёл.
+     Жест человека был на НАШЕЙ странице, и браузер засчитывает его документу,
+     так что звук останется. Если вдруг не засчитает, плеер просто покажет
+     свою кнопку — то есть станет как сейчас, хуже не будет. */
+  if (d.method === 'loaded'){
+    const frame = document.querySelector('#funnel-film-slot iframe');
+    if (frame && frame.contentWindow){
+      try {
+        frame.contentWindow.postMessage(
+          { code: FUNNEL_FILM_CODE, method: 'action', action: 'play', data: '' }, '*');
+      } catch(e){}
+    }
+    return;
+  }
 
   if (d.method === 'stop'){ showFunnelAfter(); return; }
 
