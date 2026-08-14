@@ -4958,7 +4958,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="funnel-film-slot" id="funnel-film-slot" style="display:none"></div>
 
   <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:16px">
-    <button class="lec-link-btn access-btn" id="funnel-buy" onclick="openAccessPage()" data-text="funnel.buy">Получить доступ в клуб</button>
+    <button class="lec-link-btn access-btn" id="funnel-buy" onclick="funnelBuy()" data-text="funnel.buy">Получить доступ в клуб</button>
     <button class="lec-link-btn funnel-secondary" id="funnel-browse" onclick="funnelBrowse()" data-text="funnel.browse">Осмотреться в приложении</button>
   </div>
   <div class="payment-help-link" id="funnel-login" style="margin-top:16px" onclick="funnelToLogin()" data-text="funnel.login">Уже участник — войти</div>
@@ -4974,7 +4974,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <h2 id="funnel-after-title" data-text="funnel.after_title">Ну что, всё понятно?</h2>
   <p id="funnel-after-sub" data-text="funnel.after_sub">Внутри — библиотека занятий, живые эфиры каждую неделю, разборы твоих ситуаций и личный план обучения под твои задачи.</p>
   <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:10px">
-    <button class="lec-link-btn access-btn" onclick="openAccessPage()" data-text="funnel.after_buy">Вступить в клуб</button>
+    <button class="lec-link-btn access-btn" onclick="funnelBuy()" data-text="funnel.after_buy">Вступить в клуб</button>
     <button class="lec-link-btn funnel-secondary" onclick="funnelBrowse()" data-text="funnel.after_browse">Сначала осмотрюсь</button>
   </div>
   <div class="payment-help-link" style="margin-top:16px" onclick="funnelRewatch()" data-text="funnel.after_again">Пересмотреть фильм</div>
@@ -14630,6 +14630,7 @@ function markFunnelSeen(){
    Отсюда правило показа: воронку видит ТОЛЬКО тот, кого мы не узнали. Узнали
    по указателю платформы или по живой сессии — сразу приложение. */
 const FUNNEL_FILM_CODE = 'd9uzmOdM';    // фильм о клубе, код Boomstream от Denis'а
+const FUNNEL_FILM_LENGTH_MS = (31 * 60 + 30) * 1000;   // 31:30 — длина фильма
 let funnelFilmStarted = false;
 
 function showFunnelScreen(){
@@ -14664,7 +14665,13 @@ function startFunnelFilm(){
      блокировки, человек ушёл на паузе). Поэтому есть и запасной путь: кнопка
      «Что дальше» появляется через время, равное длине фильма минус запас. */
   clearTimeout(funnelAfterTimer);
-  funnelAfterTimer = setTimeout(showFunnelAfter, 27 * 60 * 1000);
+  /* ⚠️ 31:30 — ТОЧНАЯ ДЛИНА ФИЛЬМА (Denis, 14.08.2026). Событие окончания от
+     Boomstream не пришло — проверено живьём, промоткой в конец. Значит таймер
+     не запасной путь, а ОСНОВНОЙ, и ошибаться ему нельзя: сработает раньше —
+     оборвём человека на полуслове, позже — он досмотрит и упрётся в тишину.
+     Слушателя события оставляем: если он однажды сработает, экран покажется
+     раньше таймера, и это ровно то, что нужно промотавшему. */
+  funnelAfterTimer = setTimeout(showFunnelAfter, FUNNEL_FILM_LENGTH_MS);
 }
 
 let funnelAfterTimer = null;
@@ -14706,27 +14713,45 @@ function funnelRewatch(){
 
 /* «Осмотреться» — это и есть демо-режим. Отдельной кнопки «демо» сознательно
    нет: рядом с «получить доступ» она путает, человек не понимает разницы */
-function funnelBrowse(){
+/* ⚠️ ОПЛАТА ИЗ ВОРОНКИ — ЧЕРЕЗ СВОЮ ОБЁРТКУ (14.08.2026). [stated] Denis:
+   «кнопка получить доступ видимо открыла страницу с оплатой, но не убрала
+   экран с фильмом». Так и было: `openAccessPage()` делает `switchView('access')`
+   — переключает вид ВНУТРИ оболочки приложения, а у гостя оболочка спрятана и
+   сверху лежит экран воронки. Вид честно переключился, только под ней.
+   Поэтому сначала гасим воронку и поднимаем оболочку (демо-режим), и лишь
+   потом открываем оплату. Заодно человек, вернувшись с оплаты, оказывается в
+   приложении, а не на экране фильма, — и апп ловит платёж своим опросом. */
+function funnelBuy(){
+  funnelLeave();
+  enterDemoMode();
+  openAccessPage();
+}
+
+/* Общий выход из воронки. Раньше эти шаги были размазаны по трём функциям, и
+   каждая новая кнопка требовала не забыть все сразу — что и случилось с
+   «Получить доступ»: она не гасила ни плеер, ни экран */
+function funnelLeave(){
   markFunnelSeen();
-  const a = document.getElementById('funnel-screen');
-  const b = document.getElementById('funnel-after');
-  if (a) a.style.display = 'none';
-  if (b) b.style.display = 'none';
-  const slot = document.getElementById('funnel-film-slot');
-  if (slot) slot.innerHTML = '';
+  clearTimeout(funnelAfterTimer);
   stopVideoHeartbeat();
+  const slot = document.getElementById('funnel-film-slot');
+  if (slot) slot.innerHTML = '';        // иначе фильм играет под другим экраном
+  ['funnel-screen','funnel-after'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  funnelFilmStarted = false;
+}
+
+function funnelBrowse(){
+  funnelLeave();
   track('funnel_browse');
   enterDemoMode();
 }
 
 function funnelToLogin(){
-  markFunnelSeen();
   funnelSuppressed = true;      // иначе proceedToWebLogin вернёт нас в воронку
-  const a = document.getElementById('funnel-screen');
-  if (a) a.style.display = 'none';
-  const slot = document.getElementById('funnel-film-slot');
-  if (slot) slot.innerHTML = '';
-  stopVideoHeartbeat();
+  funnelLeave();
   track('funnel_to_login');
   proceedToWebLogin();
 }
