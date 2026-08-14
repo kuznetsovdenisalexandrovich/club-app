@@ -5017,6 +5017,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <h2 id="funnel-title" data-text="funnel.title">Смотри фильм о клубе</h2>
   <p id="funnel-sub" data-text="funnel.sub">За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.</p>
 
+  <!-- Постер остаётся запасным путём: если плеер не встал (нет сети, домен
+       недоступен), человек видит кадр и может нажать ещё раз -->
   <div class="funnel-film" id="funnel-film" onclick="startFunnelFilm()">
     <img src="images/film-ya-podumayu.jpg" alt="" class="funnel-film-poster" id="funnel-film-poster">
     <!-- Знак «играть» рисуется целиком стилями (::before кружок, ::after
@@ -14740,10 +14742,20 @@ function markFunnelSeen(){
    по указателю платформы или по живой сессии — сразу приложение. */
 const FUNNEL_FILM_CODE = 'd9uzmOdM';    // фильм о клубе, код Boomstream от Denis'а
 const FUNNEL_FILM_LENGTH_MS = (31 * 60 + 30) * 1000;   // 31:30 — длина фильма
-let funnelFilmStarted = false;
+let funnelFilmStarted = false;   // человек НАЖАЛ play в плеере
+let funnelPlayerReady = false;   // плеер вставлен на экран
 
 function showFunnelScreen(){
   hideSplash();
+  /* ⚠️ ПЛЕЕР СТАВИМ СРАЗУ (14.08.2026). Свой постер с кнопкой был нужен, пока
+     я собирался запускать фильм командой — тогда наш клик имел смысл. Теперь
+     запускает сам плеер (ради звука), и наш постер стал лишним нажатием перед
+     точно такой же кнопкой. Ставим их плеер сразу: человек видит кадр фильма
+     и одну кнопку — его собственную.
+     ⚠️ Плата за это — Boomstream грузится при каждом показе экрана воронки.
+     Терпимо: экран показывается ОДИН раз неузнанному человеку, а не при каждом
+     открытии приложения, как было бы с плеером в разметке. */
+  try { startFunnelFilm(); } catch(e){}
   ['web-login-screen','web-add-home-screen-screen','funnel-after'].forEach(function(id){
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -14768,21 +14780,20 @@ function startFunnelFilm(){
   // без него плеер не отдаёт часть событий и не уходит в полный экран
   slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + FUNNEL_FILM_CODE
     + '" allow="autoplay; fullscreen" frameborder="0" scrolling="no"></iframe>';
-  funnelFilmStarted = true;
-  track('funnel_film_start');
-  startVideoHeartbeat('funnel');
+  /* ⚠️ ОТСЧЁТ НАЧИНАЕТСЯ НЕ ЗДЕСЬ. Плеер теперь ставится сразу при показе
+     экрана, и если считать фильм запущенным с этого мгновения, то у человека,
+     который его даже не включил, через 31:30 выскочит «ну что, всё понятно?».
+     Поэтому `funnelFilmStarted` и таймер поднимает событие `play` от самого
+     плеера — то есть настоящее начало просмотра. */
+  funnelPlayerReady = true;
   /* ⚠️ ОКОНЧАНИЕ ФИЛЬМА ЖДЁМ, НО НЕ ПОЛАГАЕМСЯ НА НЕГО. Событие приходит из
      чужого плеера через postMessage и может не прийти вовсе (другая версия,
      блокировки, человек ушёл на паузе). Поэтому есть и запасной путь: кнопка
      «Что дальше» появляется через время, равное длине фильма минус запас. */
-  clearTimeout(funnelAfterTimer);
-  /* ⚠️ 31:30 — ТОЧНАЯ ДЛИНА ФИЛЬМА (Denis, 14.08.2026). Событие окончания от
-     Boomstream не пришло — проверено живьём, промоткой в конец. Значит таймер
-     не запасной путь, а ОСНОВНОЙ, и ошибаться ему нельзя: сработает раньше —
-     оборвём человека на полуслове, позже — он досмотрит и упрётся в тишину.
-     Слушателя события оставляем: если он однажды сработает, экран покажется
-     раньше таймера, и это ровно то, что нужно промотавшему. */
-  funnelAfterTimer = setTimeout(showFunnelAfter, FUNNEL_FILM_LENGTH_MS);
+  /* ⚠️ ТАЙМЕР ПЕРЕЕХАЛ В ОБРАБОТЧИК СОБЫТИЯ `play` — считать надо от начала
+     ПРОСМОТРА, а не от появления плеера на экране. Длина 31:30 и смысл прежние:
+     событие окончания от Boomstream живьём не пришло, поэтому таймер не
+     запасной путь, а основной, и ошибаться ему нельзя. */
 }
 
 let funnelAfterTimer = null;
@@ -14812,28 +14823,45 @@ let funnelAfterTimer = null;
 const BOOMSTREAM_ORIGIN = 'https://play.boomstream.com';
 
 window.addEventListener('message', function(ev){
-  if (!funnelFilmStarted) return;
+  /* ⚠️ ПРОПУСКАЕМ ПО «ПЛЕЕР НА ЭКРАНЕ», А НЕ ПО «ФИЛЬМ ЗАПУЩЕН» (14.08.2026).
+     Здесь стояло `if (!funnelFilmStarted) return` — и это отбрасывало САМО
+     событие `play`, которым фильм и объявляется запущенным. Отсчёт не начался
+     бы никогда. Условие поймала проверка, а не глаз: в коде оно выглядело
+     разумной защитой. */
+  if (!funnelPlayerReady) return;
   if (ev.origin !== BOOMSTREAM_ORIGIN) return;
   let d = ev.data;
   try { if (typeof d === 'string') d = JSON.parse(d); } catch(e){ return; }
   if (!d || d.code !== FUNNEL_FILM_CODE) return;
 
-  /* ⚠️ ОДНО НАЖАТИЕ ВМЕСТО ДВУХ (14.08.2026). Denis: «нажимаешь — только после
-     этого появляется интерфейс бумстрим и кнопка плей». Так и было: сначала
-     наш постер, потом их плеер со своей кнопкой. Теперь, как только плеер
-     сообщил о готовности, шлём ему `play` их же командой — человек нажал один
-     раз, фильм пошёл.
-     Жест человека был на НАШЕЙ странице, и браузер засчитывает его документу,
-     так что звук останется. Если вдруг не засчитает, плеер просто покажет
-     свою кнопку — то есть станет как сейчас, хуже не будет. */
-  if (d.method === 'loaded'){
-    const frame = document.querySelector('#funnel-film-slot iframe');
-    if (frame && frame.contentWindow){
-      try {
-        frame.contentWindow.postMessage(
-          { code: FUNNEL_FILM_CODE, method: 'action', action: 'play', data: '' }, '*');
-      } catch(e){}
-    }
+  /* ⚠️⚠️ АВТОЗАПУСК ЧЕРЕЗ `play` УБРАН — ОН И ОТНИМАЛ ЗВУК (14.08.2026).
+     Я слал плееру `play`, как только он сообщал о готовности, чтобы избавить
+     человека от второго нажатия. Denis проверил в MAX: «фильм запускается без
+     звука… тап всего лишь включает кнопку паузы, и только после паузы
+     появляется возможность включить звук».
+
+     ПОЧЕМУ ТАК. Браузер разрешает автозапуск СО ЗВУКОМ только после жеста
+     человека В ТОМ ЖЕ ДОКУМЕНТЕ. Наш клик был на нашей странице, а плеер живёт
+     в чужом iframe — для него жеста не было, и он запустился приглушённым. Об
+     этом прямо сказано и в документации Boomstream: «при старте по загрузке
+     разрешено только с выключенным звуком». Дальше человек боролся уже не с
+     фильмом, а с последствиями: первый тап снимал не немоту, а игру.
+
+     ⚠️ ЗВУК ВАЖНЕЕ ЛИШНЕГО НАЖАТИЯ. Фильм о клубе без звука бессмыслен, а
+     нажатие по кнопке в самом плеере — это жест ВНУТРИ его документа, после
+     которого звук разрешён. Поэтому команду не шлём: пусть плеер покажет свою
+     кнопку, и человек запустит фильм ею.
+
+     `loaded` при этом остаётся полезным событием — просто ничего не делаем. */
+
+  /* Настоящее начало просмотра: человек нажал кнопку В САМОМ ПЛЕЕРЕ. Только
+     теперь имеет смысл считать время и ждать конца */
+  if (d.method === 'play' && !funnelFilmStarted){
+    funnelFilmStarted = true;
+    track('funnel_film_start');
+    startVideoHeartbeat('funnel');
+    clearTimeout(funnelAfterTimer);
+    funnelAfterTimer = setTimeout(showFunnelAfter, FUNNEL_FILM_LENGTH_MS);
     return;
   }
 
@@ -14898,6 +14926,7 @@ function funnelLeave(){
     if (el) el.style.display = 'none';
   });
   funnelFilmStarted = false;
+  funnelPlayerReady = false;
 }
 
 function funnelBrowse(){
