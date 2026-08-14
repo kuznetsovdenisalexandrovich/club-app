@@ -2833,10 +2833,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    раз здесь. */
 .funnel-screen{gap:10px}
 .funnel-film{
+  /* ⚠️ ФИЛЬМ ВЕРТИКАЛЬНЫЙ (14.08.2026). Denis: «под фильм было горизонтальное
+     окошко, а фильм у нас в вертикальном формате». Пропорция и способ размера
+     взяты у существующего `.video-embed-player`, где это уже решено: ведём от
+     ВЫСОТЫ экрана, ширину считает пропорция — иначе на узком телефоне
+     вертикальное видео выпирает за экран. */
   position:relative;
-  width:100%;max-width:420px;
-  aspect-ratio:16/9;
-  margin-top:14px;
+  height:min(58vh,480px);
+  width:auto;max-width:100%;
+  aspect-ratio:9/16;
+  margin:14px auto 0;
   border-radius:16px;
   overflow:hidden;
   cursor:pointer;
@@ -2862,8 +2868,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   -webkit-backdrop-filter:blur(4px);
 }
 .funnel-film-play{z-index:1}
-.funnel-film-slot{width:100%;max-width:420px;margin-top:14px}
-.funnel-film-slot iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:16px;display:block}
+.funnel-film-slot{margin:14px auto 0;height:min(58vh,480px);aspect-ratio:9/16;max-width:100%}
+.funnel-film-slot iframe{width:100%;height:100%;border:0;border-radius:16px;display:block;background:#000}
 .funnel-secondary{
   background:transparent!important;
   border:1px solid var(--line, rgba(255,255,255,.16))!important;
@@ -4912,7 +4918,13 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="center-modal-title" style="margin-bottom:8px">Заглянуть в клуб</div>
     <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:20px" data-text="login.demo_offer">Можешь посмотреть что внутри — без входа. Или сразу оплатить участие.</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">Посмотреть демо</button>
+      <!-- ⚠️ ПЕРВЫМ — ФИЛЬМ (14.08.2026). Раньше окошко предлагало сразу «демо»
+           или «оплатить»: человек, который ещё ничего про клуб не знает,
+           выбирал между «побродить наугад» и «заплатить наугад». Теперь у него
+           есть третий, естественный путь — сначала посмотреть, о чём вообще
+           речь. Тот же фильм, что на первом экране. -->
+      <button class="lec-link-btn access-btn" style="width:100%" onclick="closeDemoEntryPopup();showFunnelScreen()" data-text="login.demo_film">Посмотреть фильм о клубе</button>
+      <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();enterDemoMode()">Посмотреть демо</button>
       <button class="lec-link-btn" style="width:100%" onclick="closeDemoEntryPopup();openAccessPage()">Оплатить доступ</button>
       <div class="payment-help-link" style="margin:12px 0 0" onclick="closeDemoEntryPopup();openQuiz()" data-text="misc.a1">Узнать, кто я из боженек продаж</div>
     </div>
@@ -9712,6 +9724,9 @@ const APP_TEXTS = {
   'funnel.after_browse': {
     c:'Первый экран', l:'Вторая кнопка после фильма', w:'Сразу после фильма', i:true,
     t:'Сначала осмотрюсь' },
+  'login.demo_film': {
+    c:'Первый экран', l:'Кнопка «посмотреть фильм» в окошке для не-участника', w:'Окошко «Заглянуть в клуб»', i:true,
+    t:'Посмотреть фильм о клубе' },
   'funnel.after_again': {
     c:'Первый экран', l:'Ссылка пересмотреть фильм', w:'Сразу после фильма', i:true,
     t:'Пересмотреть фильм' },
@@ -14692,6 +14707,7 @@ function funnelRewatch(){
 /* «Осмотреться» — это и есть демо-режим. Отдельной кнопки «демо» сознательно
    нет: рядом с «получить доступ» она путает, человек не понимает разницы */
 function funnelBrowse(){
+  markFunnelSeen();
   const a = document.getElementById('funnel-screen');
   const b = document.getElementById('funnel-after');
   if (a) a.style.display = 'none';
@@ -14704,6 +14720,7 @@ function funnelBrowse(){
 }
 
 function funnelToLogin(){
+  markFunnelSeen();
   funnelSuppressed = true;      // иначе proceedToWebLogin вернёт нас в воронку
   const a = document.getElementById('funnel-screen');
   if (a) a.style.display = 'none';
@@ -15795,8 +15812,7 @@ async function proceedToWebLogin(){
      участник». Показываем воронку ОДИН РАЗ: увидевший её и ушедший в вход
      не должен встречать фильм при каждом открытии. */
   if (!funnelAlreadySeen() && !funnelSuppressed){
-    markFunnelSeen();
-    showFunnelScreen();
+    showFunnelScreen();      // отметку ставим на ВЫХОДЕ из воронки, не на входе
     return;
   }
 
@@ -15835,9 +15851,17 @@ function startWebSession(){
     proceedToWebLogin();
     return;
   }
-  // Ещё не добавлено на главный экран — сначала показываем инструкцию (с подсказкой
-  // нужного браузера, определённой по User-Agent — Telegram.WebApp.platform тут
-  // недоступен, мы уже вне Telegram), и только после неё — вход
+  /* ⚠️⚠️ ВОРОНКА ИДЁТ ПЕРЕД ИНСТРУКЦИЕЙ «ДОБАВЬ НА ГЛАВНЫЙ» (14.08.2026).
+     Denis: «этот экран остался первым в веб просмотре». Так и было: человек с
+     рекламы попадал на инструкцию по установке вместо фильма — то есть на
+     просьбу сделать что-то ради приложения, которого он ещё не видел.
+     Теперь порядок: сначала показываем, ЗАЧЕМ оно ему, и только потом
+     предлагаем поставить (инструкция теперь и вовсе отдельной страницей
+     `home.html`, эту можно будет убрать совсем). */
+  if (!funnelAlreadySeen() && !funnelSuppressed){
+    proceedToWebLogin();     // внутри решит: воронка или форма входа
+    return;
+  }
   const ua = navigator.userAgent || '';
   const textEl = document.getElementById('web-add-home-screen-text');
   const stepsEl = document.getElementById('web-add-home-screen-steps');
