@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Диагностика запуска</title>
+<!-- ⚠️ НИ ОДНОГО ВНЕШНЕГО РЕСУРСА. Ни шрифтов, ни скриптов, ни картинок:
+     страница обязана открыться там, где не открывается приложение. Если пусто
+     будет и здесь — дело не в нашем коде, а в самом подключении. -->
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;padding:16px;background:#0d1117;color:#e6edf3;
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       word-break:break-all}
+  h1{font-size:17px;margin:0 0 4px}
+  .sub{color:#8b949e;font-size:12px;margin-bottom:14px}
+  .row{padding:8px 0;border-bottom:1px solid #21262d}
+  .k{color:#8b949e;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .v{margin-top:2px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .ok{color:#3fb950}
+  .bad{color:#f85149}
+  button{margin-top:16px;width:100%;padding:14px;border:0;border-radius:12px;
+         background:#238636;color:#fff;font-size:15px;font-weight:600}
+  #err{margin-top:14px;color:#f85149;white-space:pre-wrap;font-size:12px}
+</style>
+</head>
+<body>
+<h1>Диагностика запуска</h1>
+<div class="sub">Эта страница ничего не грузит извне. Если ты её видишь — WebView работает.</div>
+<div id="out">собираю…</div>
+<button onclick="copyAll()">Скопировать всё</button>
+<div id="err"></div>
+
+<script>
+/* Всё в одном try: если что-то падает, мы обязаны увидеть ЧТО именно,
+   а не получить очередной пустой экран */
+var lines = [];
+function add(k, v, cls){
+  lines.push(k + ': ' + v);
+  var d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<div class="k">' + k + '</div><div class="v ' + (cls || '') + '">' +
+                String(v).replace(/[<>&]/g, function(c){
+                  return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];
+                }) + '</div>';
+  document.getElementById('out').appendChild(d);
+}
+
+try {
+  document.getElementById('out').innerHTML = '';
+  add('Адрес', location.href.slice(0, 300));
+  add('Хеш', location.hash ? location.hash.slice(0, 300) : '— пусто —',
+      location.hash.indexOf('WebAppData') >= 0 ? 'ok' : 'bad');
+  add('Строка запроса', location.search ? location.search.slice(0, 300) : '— пусто —');
+  add('Мост MAX (WebApp)', typeof WebApp, typeof WebApp === 'undefined' ? 'bad' : 'ok');
+  add('Мост Telegram', (window.Telegram && Telegram.WebApp) ? 'есть' : 'нет');
+  add('Браузер', navigator.userAgent.slice(0, 200));
+  add('Экран', window.innerWidth + '×' + window.innerHeight +
+      ', плотность ' + (window.devicePixelRatio || 1));
+  add('Хранилище', (function(){
+    try { localStorage.setItem('t', '1'); localStorage.removeItem('t'); return 'работает'; }
+    catch(e){ return 'ЗАПРЕЩЕНО: ' + e.message; }
+  })(), 'ok');
+  add('Service Worker', ('serviceWorker' in navigator) ? 'поддерживается' : 'нет');
+
+  /* Дотягиваемся до нашего бэкенда — если запрос не проходит, приложение
+     тоже не сможет ничего показать, кроме пустоты */
+  add('Запрос к бэкенду', 'идёт…');
+  var t0 = Date.now();
+  fetch('https://api.youselllikeagod-magazine.ru/', { cache: 'no-store' })
+    .then(function(r){
+      var el = document.querySelectorAll('.row .v');
+      el[el.length - 1].textContent = 'ответ ' + r.status + ' за ' + (Date.now() - t0) + ' мс';
+      el[el.length - 1].className = 'v ok';
+      lines.push('Бэкенд: ' + r.status + ' / ' + (Date.now() - t0) + ' мс');
+    })
+    .catch(function(e){
+      var el = document.querySelectorAll('.row .v');
+      el[el.length - 1].textContent = 'НЕ ДОШЁЛ: ' + (e && e.message || e);
+      el[el.length - 1].className = 'v bad';
+      lines.push('Бэкенд НЕ ДОШЁЛ: ' + (e && e.message || e));
+    });
+} catch (e) {
+  document.getElementById('err').textContent = 'ОШИБКА СБОРА: ' + (e && e.stack || e);
+}
+
+/* Любая ошибка страницы — на экран, а не в консоль: до консоли на телефоне
+   ещё надо добраться, а сюда человек уже смотрит */
+window.onerror = function(msg, src, line, col){
+  document.getElementById('err').textContent += '\nОШИБКА: ' + msg + '\n' + src + ':' + line + ':' + col;
+};
+
+function copyAll(){
+  var text = lines.join('\n');
+  try {
+    navigator.clipboard.writeText(text);
+    document.querySelector('button').textContent = 'Скопировано';
+  } catch(e){
+    document.getElementById('err').textContent = 'Скопировать не вышло, сделай скриншот';
+  }
+}
+</script>
+</body>
+</html>
