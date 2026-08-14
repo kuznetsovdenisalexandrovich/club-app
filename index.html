@@ -6473,10 +6473,13 @@ body.api-override-on #api-override-bar{display:block}
            чем `.pr-tex.pr-light{opacity:0}` — светлый слой переставал
            гаснуть, оба висели разом, тёмный лежал сверху, и панель за картами
            ВСЕГДА оставалась тёмной, чем бы ни была тема. -->
-      <img class="pr-tex pr-light" src="images/reveal/screens/tex-light.webp" alt="" aria-hidden="true" data-nofade>
-      <img class="pr-tex pr-dark" src="images/reveal/screens/tex-dark.webp" alt="" aria-hidden="true" data-nofade>
-      <img class="pr-frame pr-light" src="images/reveal/screens/frame-light.webp" alt="" aria-hidden="true" data-nofade>
-      <img class="pr-frame pr-dark" src="images/reveal/screens/frame-dark.webp" alt="" aria-hidden="true" data-nofade>
+      <!-- ⚠️ ЧЕТЫРЕ КАРТИНКИ УБРАНЫ 14.08.2026: файлов `tex-*`/`frame-*` в
+           репозитории нет, а теги оставались — браузер тянул их при КАЖДОМ
+           запуске и получал 404 (видно в консоли на скриншотах Denis'а).
+           Сами слои давно скрыты правилом `display:none!important` в блоке
+           перенесённого оформления: задники набора рисуют сцену целиком, и
+           текстура с рамкой поверх них не нужны. Правила `.pr-tex`/`.pr-frame`
+           оставлены — вернуть слои можно, добавив теги обратно. -->
       <button class="pr-close" aria-label="Закрыть" onclick="closePackReveal()">&times;</button>
       <!-- ⚠️ НЕ <header>: в приложении есть глобальное правило
            header{display:flex;justify-content:space-between} — оно раскладывало
@@ -14705,7 +14708,14 @@ function applyWebSafeArea(){
   const measured = probe.offsetHeight;
   probe.remove();
 
-  const standalone = window.matchMedia('(display-mode: standalone)').matches
+  /* ⚠️⚠️ `matchMedia` ЕСТЬ НЕ ВЕЗДЕ. В мобильном клиенте MAX его нет вовсе —
+     подтверждено диагностикой с телефона Denis'а 14.08.2026: в веб-версии
+     приложение открывалось, на телефоне был пустой экран. Эта функция —
+     ПЕРВАЯ строка ветки MAX в `init()`, поэтому исключение здесь роняло
+     запуск целиком, ещё до единой отрисовки. Урок 78 записан давно, но в
+     этой строке применён не был. */
+  const standalone = (typeof window.matchMedia === 'function'
+      && window.matchMedia('(display-mode: standalone)').matches)
     || window.navigator.standalone === true;
 
   if (measured > 0){
