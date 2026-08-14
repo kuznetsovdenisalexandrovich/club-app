@@ -2772,6 +2772,60 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   height:52px!important;
   box-shadow:0 0 0 1px rgba(255,234,192,.03),0 8px 24px rgba(0,0,0,.42)!important;
 }
+
+/* ── БАННЕР НЕДОСТУПНОСТИ ХРАНИЛИЩА (14.08.2026) ───────────────────────────
+   Тихий и снизу: это не авария приложения, а временная беда хостинга, и
+   баннер не должен выглядеть тревожнее, чем есть на самом деле. */
+.storage-banner{
+  position:fixed;
+  left:12px;right:12px;
+  bottom:calc(var(--safe-bottom, 0px) + 12px);
+  z-index:850;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:12px 14px;
+  border-radius:14px;
+  background:var(--card2, rgba(20,18,30,.92));
+  border:1px solid var(--border, rgba(255,255,255,.12));
+  box-shadow:0 12px 32px -14px rgba(0,0,0,.5);
+  font-size:12.5px;
+  line-height:1.4;
+  color:var(--text-dim, #b8b3c9);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.storage-banner-text{flex:1;min-width:180px}
+.storage-banner-link{
+  flex-shrink:0;
+  padding:7px 12px;
+  border-radius:10px;
+  background:var(--warm);
+  color:#fff!important;
+  font-weight:600;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.storage-banner-close{
+  flex-shrink:0;
+  background:none;border:none;
+  color:var(--text-faint,#8a839c);
+  font-size:20px;line-height:1;
+  cursor:pointer;
+  padding:0 2px;
+}
+@media (max-width:380px){
+  .storage-banner{font-size:12px}
+}
+
+/* Картинка, сломавшаяся во время падения хранилища — не крестик браузера,
+   а спокойная плашка на месте изображения, тем же тоном, что баннер */
+.storage-img-down{
+  background:var(--card2, rgba(255,255,255,.05));
+  border-radius:inherit;
+  min-height:60px;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -4107,6 +4161,16 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      от прогресс-бара, тап открывает "что открывается на каком уровне" -->
 <div class="reward-level-badge" id="reward-level-badge" style="display:none" onclick="event.stopPropagation();openLevelsPopup()">
   <span id="reward-level-badge-num">3</span>
+</div>
+
+<!-- ⚠️ БАННЕР НЕДОСТУПНОСТИ ХРАНИЛИЩА (14.08.2026). [stated] Denis: «у
+     Таймвеба иногда s3 хранилище падает... надо мягко предупреждать и
+     давать ссылки на ботов». Живёт ВНЕ .shell — виден и гостю на экране
+     входа, и участнику внутри аппа, одним и тем же кодом. -->
+<div class="storage-banner" id="storage-banner" style="display:none" role="status">
+  <span class="storage-banner-text">Файлы временно недоступны у хостинга — картинки, аудио и записи эфиров могут не открыться. Продолжай через бота, там всё работает:</span>
+  <a class="storage-banner-link" id="storage-banner-link" href="#" onclick="return false;">Открыть бота</a>
+  <button class="storage-banner-close" onclick="dismissStorageBanner()" aria-label="Скрыть">&times;</button>
 </div>
 
 <div class="shell" id="app-shell" style="display:none">
@@ -6956,6 +7020,77 @@ if (apiOverride) {
 // приложения уже разобрала его в свои запросы, менять на лету — гарантированная
 // каша из двух серверов в одной сессии. Переключение всегда перезагружает страницу
 const API_URL = apiOverride || API_PROD;
+
+/* ══ БАННЕР НЕДОСТУПНОСТИ ХРАНИЛИЩА (14.08.2026) ══════════════════════════
+   [stated] Denis: «у Таймвеба иногда s3 хранилище падает... надо мягко
+   предупреждать и давать ссылки на ботов».
+
+   ⚠️ ОДИН ГЛОБАЛЬНЫЙ БАННЕР, А НЕ ПОПЫТКА ПОЙМАТЬ КАЖДУЮ СЛОМАННУЮ КАРТИНКУ
+   ОТДЕЛЬНО. Картинок и звуков, идущих из нашего хранилища, в приложении
+   десятки мест — карточки, экран пака, обложки, аудио. Вешать на каждую
+   свой обработчик значит держать их все синхронными с этим местом и рано
+   или поздно забыть новое. Вместо этого: сервер знает, жив ли бакет
+   (`/storage/status`, кэш на его стороне 30 с — не бьём по S3 лишний раз),
+   апп периодически спрашивает и красит ОДНО место. */
+let STORAGE_DOWN = false;
+let storageBannerDismissed = false;
+let storagePollTimer = null;
+
+async function checkStorageStatus(){
+  try {
+    const r = await fetch(`${API_URL}/storage/status`);
+    const d = await r.json();
+    STORAGE_DOWN = !d.ok;
+    if (d.bot_link){
+      const link = document.getElementById('storage-banner-link');
+      if (link){ link.href = d.bot_link; link.onclick = function(){ openUrl(d.bot_link); return false; }; }
+    }
+  } catch(e){
+    // Сам запрос не прошёл — не считаем это падением хранилища, это может
+    // быть обрыв сети у человека, а не у бакета. Баннер трогать не за что
+  }
+  renderStorageBanner();
+}
+
+function renderStorageBanner(){
+  const box = document.getElementById('storage-banner');
+  if (!box) return;
+  box.style.display = (STORAGE_DOWN && !storageBannerDismissed) ? 'flex' : 'none';
+}
+
+function dismissStorageBanner(){
+  storageBannerDismissed = true;
+  renderStorageBanner();
+}
+
+/* Опрос идёт, только пока приложение открыто, и останавливается на скрытой
+   вкладке — держать связь с сервером ради баннера, когда его никто не видит,
+   не нужно. Раз в две минуты: хранилище лежит не секунды, чаще не имеет смысла */
+function startStoragePoll(){
+  checkStorageStatus();
+  clearInterval(storagePollTimer);
+  storagePollTimer = setInterval(function(){
+    if (document.visibilityState === 'visible') checkStorageStatus();
+  }, 120000);
+}
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible') checkStorageStatus();
+});
+
+/* ⚠️ ПЕРЕХВАТ НА УРОВНЕ ДОКУМЕНТА, а не на каждой картинке. `error` не
+   всплывает обычным образом, но браузер зовёт обработчики, повешенные на
+   capture-фазе, — вешаем один такой на document и фильтруем по адресу: нас
+   касаются только картинки из НАШЕГО раздатчика `/media/`. Внешние (Дзен,
+   обложки на GitHub Pages) сюда не попадают — они не про наш бакет. */
+document.addEventListener('error', function(ev){
+  const el = ev.target;
+  if (!el || el.tagName !== 'IMG' || !el.src || el.src.indexOf('/media/') < 0) return;
+  if (!STORAGE_DOWN) return;      // не наш случай — обычная битая ссылка, не трогаем
+  if (el.dataset.storageDownMark) return;   // уже пометили, не дублируем работу
+  el.dataset.storageDownMark = '1';
+  el.classList.add('storage-img-down');
+}, true);
+
 
 function applyThemeIcon(theme){
   document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
@@ -14342,7 +14477,12 @@ function openDemoEntryPopup(){
 function closeDemoEntryPopup(){
   document.getElementById('demo-entry-overlay').classList.remove('open');
 }
+function startStoragePollOnce(){
+  if (typeof startStoragePoll === 'function') startStoragePoll();
+}
+
 function enterDemoMode(){
+  startStoragePollOnce();
   isMember = false;
   // Скрываем экраны входа
   var demoScreens = ['web-login-screen','web-add-home-screen-screen'];
@@ -14742,6 +14882,7 @@ function startApp(){
   track('app_open');
   document.getElementById('app-shell').style.display = 'block';
   document.getElementById('tabbar').style.display = 'flex';
+  if (typeof startStoragePoll === 'function') startStoragePoll();
   const urgentBanner = document.getElementById('web-urgent-news-banner');
   if (urgentBanner) urgentBanner.style.display = 'none';
   var wb3 = document.getElementById('web-requisites-bar');
@@ -14789,6 +14930,7 @@ function startApp(){
         try { prPickScreens(); prPrefetchAssets(); } catch(e){}
       });
     }, 2500);
+    if (typeof startStoragePoll === 'function') startStoragePoll();
   });
 }
 
@@ -19540,7 +19682,11 @@ function plInit(){
   });
   plAudio.addEventListener('error', function(){
     if (!plAudio.src) return;   // сброс при закрытии — не ошибка
-    showToast('Не удалось загрузить аудио');
+    // Хранилище лежит целиком — это не «эта запись сломалась», а «сейчас у
+    // хостинга беда»; баннер снизу уже объясняет и даёт ссылку на бота,
+    // здесь достаточно короткого тоста без повторения того же текста
+    showToast(STORAGE_DOWN ? 'Аудио временно недоступно — хранилище у хостинга лежит'
+                            : 'Не удалось загрузить аудио');
     plSetPlayIcon(false);
   });
   // Уходя со страницы, дописываем позицию: событие pause при закрытии вкладки
