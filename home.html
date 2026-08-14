@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Добавь клуб на экран «Домой»</title>
+<meta name="description" content="Как добавить приложение клуба «Ты боженька продаж» на главный экран телефона">
+<!-- ⚠️ ОФОРМЛЕНИЕ ВЗЯТО ИЗ САМОГО ПРИЛОЖЕНИЯ (14.08.2026). [stated] Denis:
+     «у нас же был довольно симпатичный дизайн этой страницы в приложении,
+     может его скопируем?» — разметка шагов и правила `.hs-*`, `.center-msg`,
+     `.mark` перенесены 1:1 из `index.html`, а не написаны заново.
+
+     ⚠️ НО СТРАНИЦА ОБЯЗАНА ОСТАТЬСЯ САМОДОСТАТОЧНОЙ: её адрес человек
+     вставляет в Safari руками, и она должна открыться с первого раза на любой
+     сети. Поэтому переменные темы вписаны прямо сюда (значения тёмной темы из
+     приложения), а шрифты — системные: `Unbounded` и `Manrope` подтягиваются
+     из Google Fonts, а это ещё один зарубежный домен на пути. Начертание
+     чуть другое, всё остальное совпадает. -->
+<style>
+  :root{
+    --bg:#0c0a15; --bg2:#110f1e;
+    --card:rgba(255,255,255,0.05); --card2:rgba(255,255,255,0.09);
+    --border:rgba(255,255,255,0.08);
+    --text:#f0eefc; --text-dim:#a29dc2; --text-faint:#655f80;
+    --lav:#9b8cf2; --warm:#e8614a;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(124,108,240,.13), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    background-attachment:fixed;
+    color:var(--text);
+    min-height:100vh;
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  /* Ниже — правила из приложения, перенесённые как есть */
+  .center-msg{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;text-align:center;
+    padding:calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 80px);
+    gap:14px;
+  }
+  .mark{
+    width:56px;height:56px;border-radius:16px;font-size:18px;
+    background:linear-gradient(135deg,var(--lav),var(--warm));
+    display:flex;align-items:center;justify-content:center;
+    font-weight:900;color:#fff;flex-shrink:0;
+    box-shadow:0 0 11px rgba(232,97,74,.18),0 0 7px rgba(155,140,242,.15),
+               inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(0,0,0,.25);
+  }
+  .center-msg h2{font-weight:700;font-size:17px}
+  .center-msg p{font-size:13px;color:var(--text-dim);line-height:1.6;max-width:340px}
+  .steps{width:100%;max-width:360px;margin-top:6px}
+  .hs-step{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--border)}
+  .hs-step:last-child{border-bottom:none}
+  .hs-step-num{font-weight:900;font-size:19px;flex-shrink:0;width:64px;color:var(--text);text-align:left}
+  .hs-step-content{display:flex;align-items:center;gap:12px;font-size:13.5px;color:var(--text-dim);flex:1;min-width:0}
+  .hs-icon-circle{width:36px;height:36px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text);font-weight:700;letter-spacing:1px}
+  .hs-icon-pill{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card2);border-radius:14px;padding:11px 14px;color:var(--text);font-size:13.5px;font-weight:600;width:100%}
+  .hs-icon-square{width:26px;height:26px;border-radius:8px;border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0}
+  .hs-step-3{flex-direction:column;gap:6px;text-align:center}
+  .hs-step-3 .hs-caption{font-size:11.5px;color:var(--text-faint)}
+
+  .tabs{display:flex;gap:8px;width:100%;max-width:360px}
+  .tab{flex:1;padding:10px;border-radius:14px;text-align:center;font-size:13px;
+       background:var(--card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer}
+  .tab.on{background:linear-gradient(135deg,var(--lav),var(--warm));color:#fff;border-color:transparent}
+  .open-btn{
+    display:block;width:100%;max-width:360px;margin-top:18px;padding:15px;
+    border-radius:16px;text-align:center;text-decoration:none;font-weight:600;
+    background:linear-gradient(135deg,var(--lav),var(--warm));color:#fff;
+    box-shadow:0 10px 26px -14px rgba(232,97,74,.7);
+  }
+  .note{max-width:360px;font-size:12px;color:var(--text-faint);line-height:1.55;margin-top:4px}
+  .requisites{
+    position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));
+    text-align:center;font-size:13px;color:#fff;opacity:.85;
+  }
+</style>
+</head>
+<body>
+<div class="center-msg">
+  <div class="mark">БП</div>
+  <h2>Добавь на главный экран</h2>
+  <p>Это займёт 10 секунд — и клуб будет открываться так же быстро, как обычное приложение.</p>
+
+  <div class="tabs">
+    <div class="tab on" id="tab-ios" onclick="pick('ios')">iPhone</div>
+    <div class="tab" id="tab-android" onclick="pick('android')">Android</div>
+  </div>
+
+  <div class="steps" id="ios">
+    <div class="hs-step">
+      <div class="hs-step-num">1 шаг</div>
+      <div class="hs-step-content">
+        <span>В Safari внизу экрана нажми на значок</span>
+        <span class="hs-icon-circle">•••</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">2 шаг</div>
+      <div class="hs-step-content">
+        <span class="hs-icon-pill"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M12 3l4 4M12 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Поделиться</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">3 шаг</div>
+      <div class="hs-step-content hs-step-3">
+        <span class="hs-icon-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="hs-caption">Показать больше</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">4 шаг</div>
+      <div class="hs-step-content">
+        <span class="hs-icon-square">+</span>
+        <span>Добавить на экран «Домой»</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps" id="android" style="display:none">
+    <div class="hs-step">
+      <div class="hs-step-num">1 шаг</div>
+      <div class="hs-step-content"><span>Открой эту страницу в Chrome</span></div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">2 шаг</div>
+      <div class="hs-step-content">
+        <span>Нажми на значок вверху справа</span>
+        <span class="hs-icon-circle">⋮</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">3 шаг</div>
+      <div class="hs-step-content">
+        <span class="hs-icon-pill">Добавить на главный экран</span>
+      </div>
+    </div>
+    <div class="hs-step">
+      <div class="hs-step-num">4 шаг</div>
+      <div class="hs-step-content">
+        <span class="hs-icon-square">+</span>
+        <span>Подтверди — значок появится на рабочем столе</span>
+      </div>
+    </div>
+  </div>
+
+  <a class="open-btn" href="./">Открыть приложение</a>
+  <p class="note">Если пункта «На экран „Домой“» нет — скорее всего страница открыта не в Safari, а во встроенном браузере мессенджера. Скопируй адрес сверху и открой его в Safari.</p>
+
+  <div class="requisites">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+</div>
+
+<script>
+/* Показываем сразу подходящую вкладку, но обе оставляем доступными: определение
+   по строке браузера ошибается на планшетах и в редких прошивках, и человек
+   должен иметь возможность переключиться руками */
+function pick(which){
+  document.getElementById('ios').style.display = which === 'ios' ? 'block' : 'none';
+  document.getElementById('android').style.display = which === 'android' ? 'block' : 'none';
+  document.getElementById('tab-ios').className = 'tab' + (which === 'ios' ? ' on' : '');
+  document.getElementById('tab-android').className = 'tab' + (which === 'android' ? ' on' : '');
+}
+try {
+  if (/android/i.test(navigator.userAgent)) pick('android');
+} catch(e){}
+</script>
+</body>
+</html>

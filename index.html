@@ -2826,6 +2826,49 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border-radius:inherit;
   min-height:60px;
 }
+
+/* ── ПЕРВЫЙ ЭКРАН ВОРОНКИ (14.08.2026) ─────────────────────────────────────
+   Отдельный вид, а не правка экрана входа: у них разные задачи. Вход — форма
+   для того, кто знает, зачем пришёл; воронка — витрина для того, кто первый
+   раз здесь. */
+.funnel-screen{gap:10px}
+.funnel-film{
+  position:relative;
+  width:100%;max-width:420px;
+  aspect-ratio:16/9;
+  margin-top:14px;
+  border-radius:16px;
+  overflow:hidden;
+  cursor:pointer;
+  background:var(--card2, rgba(255,255,255,.06));
+  box-shadow:0 18px 40px -20px rgba(0,0,0,.7);
+}
+.funnel-film-poster{width:100%;height:100%;object-fit:cover;display:block}
+.funnel-film-play{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;color:#fff;
+  /* Кружок «играть» рисуем тенью, а не картинкой: ещё один файл на первом
+     экране — ещё одна причина ему не открыться на медленной сети */
+  text-shadow:0 2px 12px rgba(0,0,0,.6);
+}
+.funnel-film-play::before{
+  content:'';
+  position:absolute;
+  width:64px;height:64px;
+  border-radius:50%;
+  background:rgba(0,0,0,.42);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+.funnel-film-play{z-index:1}
+.funnel-film-slot{width:100%;max-width:420px;margin-top:14px}
+.funnel-film-slot iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:16px;display:block}
+.funnel-secondary{
+  background:transparent!important;
+  border:1px solid var(--line, rgba(255,255,255,.16))!important;
+  color:var(--text, #fff)!important;
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -4874,6 +4917,55 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="payment-help-link" style="margin:12px 0 0" onclick="closeDemoEntryPopup();openQuiz()" data-text="misc.a1">Узнать, кто я из боженек продаж</div>
     </div>
   </div>
+</div>
+
+<!-- ══ ПЕРВЫЙ ЭКРАН ВОРОНКИ (14.08.2026) ═══════════════════════════════════
+     [stated] Denis: «приложение при первом касании должно вести себя как
+     автоворонка: человек открыл его в первый раз — и ему сразу предлагается
+     фильм. А ниже получить доступ, войти в приложение, демо-доступ».
+
+     ⚠️ ПОКАЗЫВАЕТСЯ ТОЛЬКО НЕУЗНАННОМУ. Кого узнали по указателю (TG, ВК, MAX)
+     или по живой сессии — сразу в приложение: воронка человеку, который уже
+     платит, выглядит как «тебя тут не помнят».
+
+     ⚠️ ФИЛЬМ НЕ АВТОЗАПУСКАЕТСЯ. В мобильных браузерах автозапуск со звуком
+     запрещён, а немой фильм о клубе бессмыслен: человек увидел бы говорящую
+     голову без звука и ушёл. Поэтому постер и явное нажатие. -->
+<div class="center-msg funnel-screen" id="funnel-screen" style="display:none">
+  <div class="mark">БП</div>
+  <h2 id="funnel-title" data-text="funnel.title">Смотри фильм о клубе</h2>
+  <p id="funnel-sub" data-text="funnel.sub">За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.</p>
+
+  <div class="funnel-film" id="funnel-film" onclick="startFunnelFilm()">
+    <img src="images/film-ya-podumayu.jpg" alt="" class="funnel-film-poster" id="funnel-film-poster">
+    <div class="funnel-film-play">▶</div>
+  </div>
+  <!-- Плеер вставляется сюда по нажатию, а не лежит в разметке: иначе Boomstream
+       грузит своё окружение при каждом открытии приложения, даже если фильм
+       никто не смотрит -->
+  <div class="funnel-film-slot" id="funnel-film-slot" style="display:none"></div>
+
+  <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:16px">
+    <button class="lec-link-btn access-btn" id="funnel-buy" onclick="openAccessPage()" data-text="funnel.buy">Получить доступ в клуб</button>
+    <button class="lec-link-btn funnel-secondary" id="funnel-browse" onclick="funnelBrowse()" data-text="funnel.browse">Осмотреться в приложении</button>
+  </div>
+  <div class="payment-help-link" id="funnel-login" style="margin-top:16px" onclick="funnelToLogin()" data-text="funnel.login">Уже участник — войти</div>
+  <div id="funnel-requisites" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+</div>
+
+<!-- ══ ЭКРАН ПОСЛЕ ФИЛЬМА ═══════════════════════════════════════════════════
+     [stated] Denis: «по окончании фильма — предложение купить или побродить
+     по приложению», экраном целиком. Показывается по событию окончания от
+     плеера, а если оно не пришло — по кнопке возврата из фильма. -->
+<div class="center-msg funnel-screen" id="funnel-after" style="display:none">
+  <div class="mark">БП</div>
+  <h2 id="funnel-after-title" data-text="funnel.after_title">Ну что, всё понятно?</h2>
+  <p id="funnel-after-sub" data-text="funnel.after_sub">Внутри — библиотека занятий, живые эфиры каждую неделю, разборы твоих ситуаций и личный план обучения под твои задачи.</p>
+  <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:10px">
+    <button class="lec-link-btn access-btn" onclick="openAccessPage()" data-text="funnel.after_buy">Вступить в клуб</button>
+    <button class="lec-link-btn funnel-secondary" onclick="funnelBrowse()" data-text="funnel.after_browse">Сначала осмотрюсь</button>
+  </div>
+  <div class="payment-help-link" style="margin-top:16px" onclick="funnelRewatch()" data-text="funnel.after_again">Пересмотреть фильм</div>
 </div>
 
 <div class="center-msg" id="web-login-screen" style="display:none">
@@ -9592,6 +9684,38 @@ const APP_TEXTS = {
   'cardentry.badge_cta': {
     c:'Первый экран', l:'Кнопка для Знака', w:'Приход по чужой ссылке — Знак', i:true,
     t:'Узнать про клуб' },
+  // ── Первый экран: воронка (14.08.2026) ──
+  'funnel.title': {
+    c:'Первый экран', l:'Заголовок над фильмом', w:'Первое открытие приложения', i:true,
+    t:'Смотри фильм о клубе' },
+  'funnel.sub': {
+    c:'Первый экран', l:'Подзаголовок над фильмом', w:'Первое открытие приложения', i:true,
+    t:'За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.' },
+  'funnel.buy': {
+    c:'Первый экран', l:'Главная кнопка под фильмом', w:'Первое открытие приложения', i:true,
+    t:'Получить доступ в клуб' },
+  'funnel.browse': {
+    c:'Первый экран', l:'Вторая кнопка — уйти смотреть приложение', w:'Первое открытие приложения', i:true,
+    t:'Осмотреться в приложении' },
+  'funnel.login': {
+    c:'Первый экран', l:'Ссылка для действующих участников', w:'Первое открытие приложения', i:true,
+    t:'Уже участник — войти' },
+  'funnel.after_title': {
+    c:'Первый экран', l:'Заголовок экрана после фильма', w:'Сразу после фильма', i:true,
+    t:'Ну что, всё понятно?' },
+  'funnel.after_sub': {
+    c:'Первый экран', l:'Текст экрана после фильма', w:'Сразу после фильма', i:true,
+    t:'Внутри — библиотека занятий, живые эфиры каждую неделю, разборы твоих ситуаций и личный план обучения под твои задачи.' },
+  'funnel.after_buy': {
+    c:'Первый экран', l:'Главная кнопка после фильма', w:'Сразу после фильма', i:true,
+    t:'Вступить в клуб' },
+  'funnel.after_browse': {
+    c:'Первый экран', l:'Вторая кнопка после фильма', w:'Сразу после фильма', i:true,
+    t:'Сначала осмотрюсь' },
+  'funnel.after_again': {
+    c:'Первый экран', l:'Ссылка пересмотреть фильм', w:'Сразу после фильма', i:true,
+    t:'Пересмотреть фильм' },
+
   'cardentry.from': {
     c:'Первый экран', l:'Кто прислал карточку', w:'Приход по чужой карточке', i:true,
     t:'Тебе прислали карточку из клуба «Ты боженька продаж»' },
@@ -11040,8 +11164,19 @@ function bonusShareUrl(key){
    не должен потеряться только из-за того, что вход ещё не случился. */
 function unitFromUrl(){
   const param = appStartParam();
-  if (param.indexOf('u_') !== 0) return false;
-  const code = param.slice('u_'.length);
+  /* ⚠️ ТРИ ВИДА ОДНОЙ МЕТКИ (14.08.2026):
+       `u_<код>`     — просто отметить касание
+       `film_<код>`  — реклама на фильм: и маршрут, и метка в одном параметре
+       `?u=<код>`    — прямой веб-вход (реклама ВК/Яндекс ведёт на адрес аппа,
+                       где обычные utm тоже работают и живут рядом)
+     Больше одного параметра Telegram не отдаёт, поэтому метка склеена с
+     маршрутом через подчёркивание, а utm хранятся в карточке единицы у нас */
+  let code = '';
+  if (param.indexOf('u_') === 0) code = param.slice(2);
+  else if (param.indexOf('film_') === 0) code = param.slice(5);
+  else {
+    try { code = new URLSearchParams(location.search).get('u') || ''; } catch(e){}
+  }
   if (!code) return false;
   try { localStorage.setItem('club_app_attribution_code', code); } catch(e){}
   sendAttributionTouch(code);
@@ -11133,6 +11268,11 @@ const DEEPLINKS = {
   // то, за что платят
   'vk':          { go: () => openVkAccessFlow(),          guests: false },
   'vkaccess':    { go: () => openVkAccessFlow(),          guests: false },
+  // Вход прямо на фильм — сюда ведём рекламу. Метка источника едет ОТДЕЛЬНЫМ
+  // куском payload (`film_<код единицы>`), см. unitFromUrl: в Telegram параметр
+  // запуска один и в нём можно только латиницу с цифрами, обычные utm туда не
+  // положить — они живут в карточке единицы атрибуции на нашей стороне
+  'film':        { go: () => showFunnelScreen(),          guests: true  },
   'live':        { go: () => openLiveEntry(),             guests: true  },
   'efir':        { go: () => openLiveEntry(),             guests: true  },
   'club':        { go: () => switchView('club-info'),     guests: true  },
@@ -11165,7 +11305,10 @@ const DEEPLINKS = {
 /* Разбор простого диплинка по таблице выше */
 function routeFromUrl(){
   const param = appStartParam();
-  const route = DEEPLINKS[param];
+  // `film_<код источника>` ведёт туда же, куда голый `film`: метку уже забрал
+  // unitFromUrl, здесь остаётся только маршрут
+  const key = param.indexOf('film_') === 0 ? 'film' : param;
+  const route = DEEPLINKS[key];
   if (!route) return false;
 
   const shell = document.getElementById('app-shell');
@@ -14453,6 +14596,124 @@ function initSwipeToClose(popupId, closeFn){
 initSwipeToClose('sched-popup', closeSchedPopup);
 initSwipeToClose('ai-popup', closeAiPopup);
 
+/* Показывали ли воронку этому человеку. Хранится локально: серверной отметки
+   у неузнанного быть не может — мы про него ничего не знаем, в этом и суть */
+let funnelSuppressed = false;
+
+function funnelAlreadySeen(){
+  try { return localStorage.getItem('club_app_funnel_seen') === '1'; } catch(e){ return false; }
+}
+function markFunnelSeen(){
+  try { localStorage.setItem('club_app_funnel_seen', '1'); } catch(e){}
+}
+
+/* ══ ВОРОНКА ПЕРВОГО КАСАНИЯ (14.08.2026) ═════════════════════════════════
+   [stated] Denis: «новый пользователь пришёл по ссылке, сразу получил фильм,
+   побродил по приложению, купил. Действующий — увидел фильм, но легко смог
+   войти в аккаунт. Старый и уже известный — просто зашёл в акк».
+
+   Отсюда правило показа: воронку видит ТОЛЬКО тот, кого мы не узнали. Узнали
+   по указателю платформы или по живой сессии — сразу приложение. */
+const FUNNEL_FILM_CODE = 'd9uzmOdM';    // фильм о клубе, код Boomstream от Denis'а
+let funnelFilmStarted = false;
+
+function showFunnelScreen(){
+  hideSplash();
+  ['web-login-screen','web-add-home-screen-screen','funnel-after'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const box = document.getElementById('funnel-screen');
+  if (box) box.style.display = 'flex';
+  track('funnel_open');
+}
+
+/* ⚠️ ПЛЕЕР ВСТАВЛЯЕТСЯ ПО НАЖАТИЮ, А НЕ ЛЕЖИТ В РАЗМЕТКЕ. Иначе Boomstream
+   тянет своё окружение при КАЖДОМ открытии приложения, даже когда фильм никто
+   не смотрит, — а это первый экран, ему положено открываться мгновенно.
+   Ифреймом, а не спаном с data-boomstream-*: их скрипт сканирует страницу при
+   загрузке, наш блок появляется позже (те же грабли, что были с бонусами). */
+function startFunnelFilm(){
+  const slot = document.getElementById('funnel-film-slot');
+  const cover = document.getElementById('funnel-film');
+  if (!slot || !cover) return;
+  cover.style.display = 'none';
+  slot.style.display = 'block';
+  slot.innerHTML = '<iframe src="https://play.boomstream.com/' + FUNNEL_FILM_CODE
+    + '?autoplay=1" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>';
+  funnelFilmStarted = true;
+  track('funnel_film_start');
+  startVideoHeartbeat('funnel');
+  /* ⚠️ ОКОНЧАНИЕ ФИЛЬМА ЖДЁМ, НО НЕ ПОЛАГАЕМСЯ НА НЕГО. Событие приходит из
+     чужого плеера через postMessage и может не прийти вовсе (другая версия,
+     блокировки, человек ушёл на паузе). Поэтому есть и запасной путь: кнопка
+     «Что дальше» появляется через время, равное длине фильма минус запас. */
+  clearTimeout(funnelAfterTimer);
+  funnelAfterTimer = setTimeout(showFunnelAfter, 27 * 60 * 1000);
+}
+
+let funnelAfterTimer = null;
+
+/* Плеер Boomstream шлёт события окончания сообщением в окно. Слушаем ЛЮБОЕ
+   сообщение и ищем в нём признак конца — формат у них меняется от версии к
+   версии, и жёсткая привязка к одному виду данных сломается молча. */
+window.addEventListener('message', function(ev){
+  if (!funnelFilmStarted) return;
+  let raw = ev.data;
+  try { if (typeof raw === 'string') raw = JSON.parse(raw); } catch(e){ /* не JSON — сверим строкой */ }
+  const text = (typeof ev.data === 'string' ? ev.data : JSON.stringify(raw || '')).toLowerCase();
+  if (text.indexOf('end') >= 0 || text.indexOf('complete') >= 0 || text.indexOf('finish') >= 0){
+    showFunnelAfter();
+  }
+});
+
+function showFunnelAfter(){
+  if (!funnelFilmStarted) return;      // фильм не запускали — нечего подытоживать
+  clearTimeout(funnelAfterTimer);
+  stopVideoHeartbeat();
+  const slot = document.getElementById('funnel-film-slot');
+  if (slot) slot.innerHTML = '';        // выгружаем плеер, иначе звук играет под экраном
+  const cur = document.getElementById('funnel-screen');
+  if (cur) cur.style.display = 'none';
+  const box = document.getElementById('funnel-after');
+  if (box) box.style.display = 'flex';
+  track('funnel_film_done');
+}
+
+function funnelRewatch(){
+  const box = document.getElementById('funnel-after');
+  if (box) box.style.display = 'none';
+  const cover = document.getElementById('funnel-film');
+  if (cover) cover.style.display = 'block';
+  funnelFilmStarted = false;
+  showFunnelScreen();
+}
+
+/* «Осмотреться» — это и есть демо-режим. Отдельной кнопки «демо» сознательно
+   нет: рядом с «получить доступ» она путает, человек не понимает разницы */
+function funnelBrowse(){
+  const a = document.getElementById('funnel-screen');
+  const b = document.getElementById('funnel-after');
+  if (a) a.style.display = 'none';
+  if (b) b.style.display = 'none';
+  const slot = document.getElementById('funnel-film-slot');
+  if (slot) slot.innerHTML = '';
+  stopVideoHeartbeat();
+  track('funnel_browse');
+  enterDemoMode();
+}
+
+function funnelToLogin(){
+  funnelSuppressed = true;      // иначе proceedToWebLogin вернёт нас в воронку
+  const a = document.getElementById('funnel-screen');
+  if (a) a.style.display = 'none';
+  const slot = document.getElementById('funnel-film-slot');
+  if (slot) slot.innerHTML = '';
+  stopVideoHeartbeat();
+  track('funnel_to_login');
+  proceedToWebLogin();
+}
+
 function openVideoPopup(which){
   document.getElementById(`video-popup-${which}-overlay`).classList.add('open');
   track('sales_video', which, 0);
@@ -15526,6 +15787,19 @@ async function proceedToWebLogin(){
   } catch (e) {}
   // Настройки нужны ДО показа экрана: от них зависит, спрашивать код или пускать по номеру
   await loadAppSettings();
+
+  /* ⚠️ ЧЕЛОВЕКА НЕ УЗНАЛИ — ЗНАЧИТ ЭТО ПЕРВОЕ КАСАНИЕ, И ЕМУ ПОЛОЖЕНА ВОРОНКА,
+     А НЕ ФОРМА ВХОДА (14.08.2026). [stated] Denis: приложение при первом
+     касании должно вести себя как автоворонка.
+     Форма входа остаётся, но становится вторым шагом — по ссылке «уже
+     участник». Показываем воронку ОДИН РАЗ: увидевший её и ушедший в вход
+     не должен встречать фильм при каждом открытии. */
+  if (!funnelAlreadySeen() && !funnelSuppressed){
+    markFunnelSeen();
+    showFunnelScreen();
+    return;
+  }
+
   loginStage = 'phone';
   codeSendAttempts = 0;
   document.getElementById('web-login-screen').style.display = 'flex';
