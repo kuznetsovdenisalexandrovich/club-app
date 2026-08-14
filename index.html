@@ -2743,12 +2743,34 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    заметно только то, что кнопка «стоит над» фоном, а не сама тень. */
 #pr-stage.pr-hasPlate #pr-cta,
 #pr-stage.pr-hasPlate .pr-cta-inline{
-  filter:drop-shadow(0 5px 16px rgba(0,0,0,.30));
+  /* Усилено 14.08 по просьбе Denis'а: было .30 при размытии 16 — на светлом
+     наборе почти не читалось. Смещение и размытие растут вместе, чтобы тень
+     осталась мягкой: 8 против 26 — по-прежнему больше чем втрое */
+  filter:drop-shadow(0 8px 26px rgba(0,0,0,.46));
 }
 /* Без плашки кнопка обычная, прямоугольная — здесь дешевле и точнее box-shadow */
 #pr-stage:not(.pr-hasPlate) #pr-cta,
 #pr-stage:not(.pr-hasPlate) .pr-cta-inline{
-  box-shadow:0 5px 16px rgba(0,0,0,.28);
+  box-shadow:0 8px 26px rgba(0,0,0,.44);
+}
+
+/* ── КРЕСТИК: ТЕНЬ И РАЗМЕР (14.08.2026, просьба Denis'а) ──────────────────
+   ⚠️ У КРЕСТИКА С КАРТИНКОЙ ТЕНЬ БЫЛА СНЯТА СОВСЕМ (`box-shadow:none` в
+   правиле `.pr-hasClose`) — так и задумывалось, пока картинка рисовала себя
+   сама. Возвращаем её тем же способом, что у плашек: по ФОРМЕ, иначе
+   круглый значок получил бы квадратную тень.
+   Размер поднят 52 → 60: Denis просил крупнее, и по краю экрана в это
+   попадать пальцем заметно легче. */
+#pr-stage.pr-hasClose .pr-close{
+  width:60px!important;
+  height:60px!important;
+  filter:drop-shadow(0 6px 20px rgba(0,0,0,.48));
+}
+/* Запасной крестик (без картинки набора) — круг, тень по коробке точна */
+#pr-stage:not(.pr-hasClose) .pr-close{
+  width:52px!important;
+  height:52px!important;
+  box-shadow:0 0 0 1px rgba(255,234,192,.03),0 8px 24px rgba(0,0,0,.42)!important;
 }
 /* ═══ PR-CSS-END ═══ */
 
