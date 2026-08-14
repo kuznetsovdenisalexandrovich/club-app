@@ -2661,6 +2661,95 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   max-height:none!important;
 }
 
+
+/* ── ЗАСТАВКА ЗАГРУЗКИ ЭКРАНА ПАКА (14.08.2026) ────────────────────────────
+   Появляется вместе с экраном и гаснет, когда доехали ключевые картинки
+   набора. ⚠️ НЕ КРУТИЛКА, А БУДУЩАЯ СТОПКА: три силуэта стоят там же и под
+   теми же углами, что настоящие карты, поэтому смена читается как проявление.
+   Рисуем своими средствами, без картинок — иначе заставка ждала бы загрузки
+   ровно так же, как то, ради чего она нужна. */
+.pr-loading{
+  position:absolute;
+  inset:0;
+  z-index:60;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:26px;
+  background:radial-gradient(circle at 50% 42%, rgba(217,185,122,.10), transparent 62%);
+  transition:opacity .45s ease;
+}
+.pr-loading.pr-loading-off{
+  opacity:0;
+  pointer-events:none;
+}
+.pr-loading-deck{
+  position:relative;
+  width:min(58vw, 220px);
+  height:min(78vw, 300px);
+}
+.pr-loading-card{
+  position:absolute;
+  inset:0;
+  border-radius:14px;
+  background:linear-gradient(150deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  /* Блик пробегает по стопке — тот же приём, что у скелетов в библиотеке */
+  animation:prLoadPulse 1.8s ease-in-out infinite;
+}
+.pr-loading-card:nth-child(1){transform:rotate(-8deg) translateX(-16px);animation-delay:0s}
+.pr-loading-card:nth-child(2){transform:rotate(0deg) translateY(-6px);animation-delay:.22s}
+.pr-loading-card:nth-child(3){transform:rotate(8deg) translateX(16px);animation-delay:.44s}
+@keyframes prLoadPulse{
+  0%,100%{opacity:.30}
+  50%{opacity:.72}
+}
+.pr-loading-text{
+  font:600 13.5px/1.4 var(--sans);
+  letter-spacing:.02em;
+  color:rgba(255,255,255,.72);
+  text-align:center;
+  padding:0 24px;
+}
+/* Пока заставка видна, сцену не показываем: иначе сквозь неё проступают
+   недогруженные куски — ровно то, от чего заставка и защищает */
+#pr-stage.pr-loading-on .pr-stage{opacity:0}
+#pr-stage .pr-stage{transition:opacity .45s ease}
+
+@media (prefers-reduced-motion:reduce){
+  .pr-loading-card{animation:none;opacity:.5}
+}
+
+/* ── ЛЁГКАЯ ТЕНЬ ПОД КНОПКАМИ (14.08.2026, просьба Denis'а) ────────────────
+   [stated] «сделать лёгкую тень под кнопками, чтобы они чуть-чуть от фона
+   отделялись. Но только лёгкую и сильно размытую».
+
+   ⚠️ ПОЧЕМУ `drop-shadow`, А НЕ `box-shadow`. Плашка — это КАРТИНКА в фоне
+   кнопки, и у неё ажурные концы с прозрачностью. `box-shadow` обвёл бы
+   прямоугольник коробки, то есть тень висела бы в пустоте по краям, где
+   плашки нет. `drop-shadow` считает по непрозрачным пикселям — обводит саму
+   плашку.
+
+   ⚠️ И ПОЧЕМУ ЗДЕСЬ ЭТО НЕ ДОРОГО, хотя 09.08 тень героя роняла кадры до 24.
+   Тогда её пересчитывали КАЖДЫЙ КАДР, пока карта летела и поворачивалась.
+   Кнопки статичны: тень посчитается один раз и ляжет готовой картинкой.
+   Единственное движение — сдвиг на пиксель при нажатии, он ничего не
+   перерисовывает. ⚠️ ЕСЛИ У КНОПОК КОГДА-НИБУДЬ ПОЯВИТСЯ ПОСТОЯННАЯ АНИМАЦИЯ
+   (пульсация, блик) — эту тень надо будет снять и вернуться к box-shadow.
+
+   Значения намеренно скромные: смещение меньше размытия, прозрачность 0.3 —
+   заметно только то, что кнопка «стоит над» фоном, а не сама тень. */
+#pr-stage.pr-hasPlate #pr-cta,
+#pr-stage.pr-hasPlate .pr-cta-inline{
+  filter:drop-shadow(0 5px 16px rgba(0,0,0,.30));
+}
+/* Без плашки кнопка обычная, прямоугольная — здесь дешевле и точнее box-shadow */
+#pr-stage:not(.pr-hasPlate) #pr-cta,
+#pr-stage:not(.pr-hasPlate) .pr-cta-inline{
+  box-shadow:0 5px 16px rgba(0,0,0,.28);
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -6340,6 +6429,19 @@ body.api-override-on #api-override-bar{display:block}
 
 <!-- ═══ PR-HTML-START ═══ метка для стенда pack-lab.html, НЕ УДАЛЯТЬ ═══ -->
 <div id="pr-stage" data-pr-theme="neutral">
+  <!-- ⚠️ ЗАСТАВКА ЗАГРУЗКИ (14.08.2026). [stated] Denis: «экран открытия
+       карточек долго грузится с ВПН, может сделаем какую-то красивую заставку
+       загрузки». Задник и рубашки — тяжёлые картинки с сервера; пока они едут,
+       человек видел пустоту. Три карты-силуэта повторяют будущую стопку, чтобы
+       переход в настоящую сцену читался как проявление, а не как подмена. -->
+  <div class="pr-loading" id="pr-loading" aria-hidden="true">
+    <div class="pr-loading-deck">
+      <span class="pr-loading-card"></span>
+      <span class="pr-loading-card"></span>
+      <span class="pr-loading-card"></span>
+    </div>
+    <div class="pr-loading-text" id="pr-loading-text">Готовим твой пак…</div>
+  </div>
   <main class="pr-stage">
     <section class="pr-shell">
       <!-- ⚠️ data-nofade ОБЯЗАТЕЛЕН. Это не контентные картинки, а два слоя
@@ -16617,6 +16719,69 @@ function prPrefetchAssets(){
 
 function prEl(id){ return document.getElementById(id); }
 
+/* ══ ЗАСТАВКА ЗАГРУЗКИ ЭКРАНА ПАКА (14.08.2026) ═══════════════════════════
+   [stated] Denis: «экран открытия карточек долго грузится с ВПН... может
+   сделаем какую-то красивую заставку загрузки».
+
+   ⚠️ ЖДЁМ КАРТИНКИ, А НЕ ОТМЕРЕННУЮ ПАУЗУ — на ВПН пауза либо коротка, либо
+   держит зря того, у кого всё уже в кэше. Ждём ровно те два вида, без которых
+   сцена выглядит сломанной: задник и рубашку.
+
+   ⚠️ И ОБЯЗАТЕЛЬНО ПОТОЛОК ОЖИДАНИЯ. Сеть может не ответить вовсе; лучше
+   показать сцену с недогруженным задником, чем держать человека в заставке
+   бесконечно. Тот же принцип, что у заставки самого приложения. */
+const PR_LOADING_CAP_MS  = 7000;   // дольше не держим никого
+const PR_LOADING_HINT_MS = 2500;   // когда сознаться, что сеть медленная
+
+function prLoadOne(src, timeoutMs){
+  return new Promise(function(resolve){
+    if (!src || src.indexOf('data:') === 0) { resolve(true); return; }
+    const img = new Image();
+    let done = false;
+    const finish = function(ok){ if (!done){ done = true; resolve(ok); } };
+    img.onload = function(){ finish(true); };
+    img.onerror = function(){ finish(false); };   // не дошла — не повод держать экран
+    img.src = src;
+    if (img.complete) finish(true);               // уже в кэше
+    setTimeout(function(){ finish(false); }, timeoutMs);
+  });
+}
+
+function prShowLoading(){
+  const stage = prEl('pr-stage');
+  const box = prEl('pr-loading');
+  if (!stage || !box) return;
+  stage.classList.add('pr-loading-on');
+  box.classList.remove('pr-loading-off');
+  const text = prEl('pr-loading-text');
+  if (text) text.textContent = 'Готовим твой пак…';
+  // Сознаёмся, если сеть медленная: молчащая заставка читается как зависание
+  PR_LOADING_HINT = setTimeout(function(){
+    if (text) text.textContent = 'Медленная сеть — ещё пара секунд…';
+  }, PR_LOADING_HINT_MS);
+}
+
+function prHideLoading(){
+  clearTimeout(PR_LOADING_HINT);
+  const stage = prEl('pr-stage');
+  const box = prEl('pr-loading');
+  if (!stage || !box) return;
+  box.classList.add('pr-loading-off');
+  stage.classList.remove('pr-loading-on');       // сцена проступает своим переходом
+}
+
+let PR_LOADING_HINT = null;
+
+/* Ждём задник и рубашку выбранного набора. Адреса берём ТЕМ ЖЕ выбирателем,
+   каким одевается экран, — иначе ждали бы одни картинки, а показывали другие. */
+async function prWaitAssets(){
+  const theme = prTheme(null);
+  const wanted = [prPickAsset('stage', theme), prPickAsset('back', theme)]
+    .filter(function(u){ return !!u; });
+  if (!wanted.length) return;
+  await Promise.all(wanted.map(function(u){ return prLoadOne(u, PR_LOADING_CAP_MS); }));
+}
+
 function openPackReveal(demoCards){
   let ids;
   if (demoCards && demoCards.length){
@@ -16679,18 +16844,24 @@ function openPackReveal(demoCards){
      ровно то, что Denis назвал «грузится рывками». */
   if (PR_SCREENS && Object.keys(PR_SCREENS).length && !PR_PICKED) prPickScreens();
   prApplyAssets(null);          // нейтральное состояние: тёмный набор
-  prLoadScreens().then(function(){
+  prLoadScreens().then(async function(){
     prPickScreens();
     prRefreshBacks();           // рубашки уже нарисованы — перевесить адреса
     prApplyAssets(PR.themeCard || null);   // чья тема на экране, а не «кто герой»
+    /* ⚠️ ЗАСТАВКУ СНИМАЕМ ПОСЛЕ того, как одеты И загружены ключевые картинки.
+       Порядок важен: сначала переодеваемся (иначе ждали бы запасные адреса),
+       потом ждём, потом показываем. */
+    try { await prWaitAssets(); } catch(e){}
+    prHideLoading();
     prPrefetchAssets();
-  });
+  }).catch(function(){ prHideLoading(); });   // сеть отвалилась — экран всё равно отдаём
 
   prClearPhase();
   prLayout();
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(prDiag);
   else setTimeout(prDiag, 16);
   prSeedAmbient('#d9b97a', '#9f8ad2');
+  prShowLoading();              // до появления сцены, а не после
   stage.classList.add('pr-shown');
   /* ⚠️ ЧТЕНИЕ РАЗМЕРА — НЕ ЛИШНЯЯ СТРОКА. Браузер объединяет включение
      элемента и смену прозрачности в один пересчёт, и перехода не случается
@@ -16706,6 +16877,7 @@ function openPackReveal(demoCards){
 
 function closePackReveal(){
   if (PR_SIGIL_TIMER){ clearTimeout(PR_SIGIL_TIMER); PR_SIGIL_TIMER = null; }
+  prHideLoading();              // иначе останется висеть до следующего открытия
   const stage = prEl('pr-stage');
   stage.classList.remove('pr-in');           // гаснем
   /* ⚠️ ВЫКЛЮЧАЕМ ПО ТАЙМЕРУ, А НЕ ПО `transitionend`: событие не придёт вовсе,
