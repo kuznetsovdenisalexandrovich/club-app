@@ -23,6 +23,52 @@
      останется на системном шрифте, а не зависнет в ожидании) -->
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;600;700&display=swap"></noscript>
+<!-- ⚠️ АВАРИЙНЫЙ ЭКРАН ОШИБКИ (14.08.2026). Ставится ПЕРВЫМ, до всех прочих
+     скриптов, иначе не поймает падение того, что грузится раньше.
+
+     Зачем: в чужом WebView (MAX, ВК, Telegram на телефоне) до консоли не
+     добраться, и любая ошибка выглядит как БЕЛЫЙ ЭКРАН — без единой подсказки,
+     что случилось. Мы уже потратили на такой белый экран целую переписку с
+     диагностической страницей. Теперь ошибка сама выводится поверх, и её
+     достаточно сфотографировать.
+
+     Написано нарочито просто (var, никаких стрелок и шаблонных строк): этот
+     код обязан работать даже там, где не работает основной. -->
+<script>
+(function(){
+  var shown = false;
+  function paint(title, text){
+    if (shown) return;          // первая ошибка важнее последующих
+    shown = true;
+    try {
+      var box = document.createElement('div');
+      box.setAttribute('style',
+        'position:fixed;left:0;right:0;top:0;bottom:0;z-index:2147483647;' +
+        'background:#0c0a15;color:#f0eefc;padding:22px 18px;overflow:auto;' +
+        'font:13px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;word-break:break-word');
+      box.innerHTML =
+        '<div style="font-size:16px;font-weight:700;margin-bottom:8px">Приложение не запустилось</div>' +
+        '<div style="color:#a29dc2;margin-bottom:14px">Покажи этот экран Денису — тут написано, что сломалось.</div>' +
+        '<div style="background:rgba(255,255,255,.06);border-radius:12px;padding:12px;white-space:pre-wrap">' +
+        String(title || '') + '\n\n' + String(text || '') + '</div>' +
+        '<div style="color:#655f80;margin-top:12px">' + String(navigator.userAgent || '') + '</div>';
+      (document.body || document.documentElement).appendChild(box);
+    } catch(e){}
+  }
+  window.addEventListener('error', function(ev){
+    // Ошибки загрузки картинок и прочих ресурсов не показываем: они не мешают
+    // приложению работать, а экран заняли бы собой
+    if (ev && ev.target && ev.target !== window && ev.target.tagName) return;
+    paint((ev && ev.message) || 'Ошибка',
+          ((ev && ev.filename) || '') + ':' + ((ev && ev.lineno) || '') +
+          '\n' + (ev && ev.error && ev.error.stack ? ev.error.stack : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function(ev){
+    var r = ev && ev.reason;
+    paint('Необработанный сбой', (r && (r.stack || r.message)) || String(r));
+  });
+})();
+</script>
 <script src="https://telegram.org/js/telegram-web-app.js" id="tg-sdk-script"></script>
 <!-- VK Bridge. Нужен даже для минимальной работы внутри ВК: без VKWebAppInit
      мобильные клиенты открывают мини-приложение со второго раза или не
