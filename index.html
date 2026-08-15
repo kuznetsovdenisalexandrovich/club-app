@@ -4885,7 +4885,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         </div>
       </div>
     </div>
-    <button class="lec-link-btn access-btn" onclick="openAccessPage()">Получить доступ</button>
+    <button class="lec-link-btn access-btn" onclick="openAccessPage()" data-text="club.buy">Получить доступ</button>
+    <!-- ⚠️ ОСМОТРЕТЬСЯ ПРЕДЛАГАЕМ ЗДЕСЬ, А НЕ ПОД ФИЛЬМОМ. [stated] Denis:
+         «на странице информации о клубе можно уже дать возможность
+         осмотреться в приложении». Кнопка нужна только тому, кто ещё не
+         вошёл, — участнику осматриваться незачем, он уже внутри -->
+    <button class="lec-link-btn" id="club-info-browse" style="display:none" onclick="clubInfoBrowse()" data-text="club.browse">Осмотреться в приложении</button>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -4899,6 +4904,18 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:10px">ВОТ ЭТО НАСТРОЙ!</div>
       <div class="access-intro">Выбирай комфортный для тебя вариант, спокойно оплачивай, все бонусы твои.<br><br>А, и на всякий случай: оплата обрабатывается 1-2 минуты, бот проведёт тебя за ручку через регистрацию и выдаст и доступы, и бонусы.<br><br>Добро пожаловать!</div>
       <div id="access-buttons"><div class="loading">Готовим ссылки...</div></div>
+    </div>
+    <!-- ⚠️ ВЫХОД С ЭКРАНА ЦЕНЫ ОБЯЗАТЕЛЕН. Нечаянно нажал «получить доступ» —
+         и дальше либо плати, либо закрывай приложение: тупик здесь стоит
+         дороже всего, человек уходит не подумав, а обидевшись -->
+    <div class="payment-help-link" onclick="openClubInfoPage()" data-text="access.about">Сначала узнать подробнее о клубе</div>
+
+    <!-- ОКОШКО ЗАСТРЯВШЕГО. Появляется, когда человек вернулся с оплаты
+         несколько раз подряд без результата — см. noteAccessReturn() -->
+    <div class="stuck-box" id="access-stuck" style="display:none">
+      <div class="stuck-title" data-text="access.stuck_title">Проблема с оплатой?</div>
+      <button class="lec-link-btn access-btn" style="margin-bottom:8px" onclick="openPaymentTrouble()" data-text="access.stuck_yes">Да, не могу оплатить</button>
+      <div class="payment-help-link" style="margin:0" onclick="hideAccessStuck()" data-text="access.stuck_no">Нет, всё в порядке</div>
     </div>
     <div class="scroll-spacer"></div>
   </div>
@@ -5032,9 +5049,14 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
        никто не смотрит -->
   <div class="funnel-film-slot" id="funnel-film-slot" style="display:none"></div>
 
+  <!-- ⚠️ ДВЕ ДОРОГИ, А НЕ ТРИ. [stated] Denis 15.08: «на этом экране должно быть
+       два выбора — купить или узнать подробнее». Осматриваться предлагаем НЕ
+       вместо описания клуба, а ПОСЛЕ него — там для этого своя кнопка.
+       Причина: описание — второй по силе продавец, часть людей покупает
+       именно с него, не досмотрев фильм. -->
   <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:16px">
     <button class="lec-link-btn access-btn" id="funnel-buy" onclick="funnelBuy()" data-text="funnel.buy">Получить доступ в клуб</button>
-    <button class="lec-link-btn funnel-secondary" id="funnel-browse" onclick="funnelBrowse()" data-text="funnel.browse">Осмотреться в приложении</button>
+    <button class="lec-link-btn funnel-secondary" id="funnel-about" onclick="funnelAbout()" data-text="funnel.about">Узнать подробнее о клубе</button>
   </div>
   <div class="payment-help-link" id="funnel-login" style="margin-top:16px" onclick="funnelToLogin()" data-text="funnel.login">Уже участник — войти</div>
   <div id="funnel-requisites" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
@@ -5045,14 +5067,16 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      по приложению», экраном целиком. Показывается по событию окончания от
      плеера, а если оно не пришло — по кнопке возврата из фильма. -->
 <div class="center-msg funnel-screen" id="funnel-after" style="display:none">
+  <!-- [stated] Denis: «надпись „пересмотреть фильм“ можно сделать как стрелочку
+       в верхнем левом углу, типа вернуться назад» -->
+  <button class="funnel-back" onclick="funnelRewatch()" data-text="funnel.after_again">← Пересмотреть фильм</button>
   <div class="mark">БП</div>
   <h2 id="funnel-after-title" data-text="funnel.after_title">Ну что, всё понятно?</h2>
   <p id="funnel-after-sub" data-text="funnel.after_sub">Внутри — библиотека занятий, живые эфиры каждую неделю, разборы твоих ситуаций и личный план обучения под твои задачи.</p>
   <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:10px">
     <button class="lec-link-btn access-btn" onclick="funnelBuy()" data-text="funnel.after_buy">Вступить в клуб</button>
-    <button class="lec-link-btn funnel-secondary" onclick="funnelBrowse()" data-text="funnel.after_browse">Сначала осмотрюсь</button>
+    <button class="lec-link-btn funnel-secondary" onclick="funnelAbout()" data-text="funnel.after_about">Узнать подробнее о клубе</button>
   </div>
-  <div class="payment-help-link" style="margin-top:16px" onclick="funnelRewatch()" data-text="funnel.after_again">Пересмотреть фильм</div>
 </div>
 
 <div class="center-msg" id="web-login-screen" style="display:none">
@@ -6540,6 +6564,26 @@ body.api-override-on #api-override-bar{display:block}
 .tg-fallback-notice{max-width:320px;margin:0 0 12px;padding:10px 12px;border-radius:12px;
   background:rgba(232,97,74,.12);border:1px solid rgba(232,97,74,.35);
   font-size:12.5px;line-height:1.45;color:var(--text);text-align:center}
+
+/* Стрелка «назад» на экране после фильма (15.08.2026) */
+.funnel-back{position:absolute;left:16px;top:calc(var(--safe-top, 0px) + 14px);
+  background:none;border:none;color:var(--text-dim);font-size:13px;font-family:inherit;
+  cursor:pointer;padding:6px 4px;z-index:2}
+
+/* Окошко «проблема с оплатой» для застрявшего (15.08.2026) */
+.stuck-box{border:1px solid var(--warm);background:rgba(232,97,74,.1);border-radius:16px;
+  padding:14px;margin:12px 0 0}
+.stuck-title{font-family:var(--disp);font-weight:700;font-size:14px;margin-bottom:10px}
+
+/* Окошко поверх идущего эфира (15.08.2026). Плеер под ним продолжает играть */
+.live-gate{position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-end;
+  justify-content:center;background:rgba(0,0,0,.55);padding:0 14px calc(18px + env(safe-area-inset-bottom))}
+.live-gate-box{position:relative;width:100%;max-width:420px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:20px;padding:18px 16px 16px;box-shadow:var(--shadow)}
+.live-gate-title{font-family:var(--disp);font-weight:800;font-size:16px;margin-bottom:6px}
+.live-gate-sub{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:14px}
+.live-gate-close{position:absolute;right:10px;top:8px;background:none;border:none;
+  color:var(--text-faint);font-size:15px;cursor:pointer;padding:4px 6px}
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -9781,6 +9825,54 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'funnel.about': {
+    c:'Первый экран', l:'Кнопка «узнать подробнее» под фильмом', w:'Экран воронки', i:false,
+    t:'Узнать подробнее о клубе' },
+  'funnel.after_about': {
+    c:'Первый экран', l:'Кнопка «узнать подробнее» после фильма', w:'Экран после фильма', i:false,
+    t:'Узнать подробнее о клубе' },
+  'club.buy': {
+    c:'О клубе', l:'Кнопка оплаты на странице описания', w:'Страница «О клубе»', i:false,
+    t:'Получить доступ' },
+  'club.browse': {
+    c:'О клубе', l:'Кнопка «осмотреться» на странице описания', w:'Страница «О клубе», видна не участнику', i:false,
+    t:'Осмотреться в приложении' },
+  'access.about': {
+    c:'Оплата', l:'Выход с экрана оплаты в описание клуба', w:'Экран «Получить доступ»', i:false,
+    t:'Сначала узнать подробнее о клубе' },
+  'access.stuck_title': {
+    c:'Оплата', l:'Заголовок окошка для застрявшего', w:'Экран оплаты, после нескольких неудачных заходов', i:false,
+    t:'Проблема с оплатой?' },
+  'access.stuck_yes': {
+    c:'Оплата', l:'Кнопка «не могу оплатить»', w:'Окошко застрявшего', i:false,
+    t:'Да, не могу оплатить' },
+  'access.stuck_no': {
+    c:'Оплата', l:'Отказ от помощи', w:'Окошко застрявшего', i:false,
+    t:'Нет, всё в порядке' },
+  'access.trouble_text': {
+    c:'Оплата', l:'Текст, который подставляется в переписку с Денисом', w:'Личка Telegram', i:false,
+    t:'Не получается оплатить доступ' },
+  'live.gate.buy': {
+    c:'Эфир', l:'Кнопка доступа в окошке поверх эфира', w:'Окошко на эфире', i:false,
+    t:'Получить доступ' },
+  'live.gate.chat_title': {
+    c:'Эфир', l:'Заголовок, когда гость ткнул в чат', w:'Окошко на эфире', i:false,
+    t:'Чат — для участников клуба' },
+  'live.gate.chat_sub': {
+    c:'Эфир', l:'Пояснение под заголовком', w:'Окошко на эфире', i:false,
+    t:'Эфир идёт дальше — его можно смотреть без подписки. А вот спрашивать и разбирать свои ситуации могут участники.' },
+  'live.gate.chat_second': {
+    c:'Эфир', l:'Вторая кнопка: уже участник', w:'Окошко на эфире', i:false,
+    t:'Я уже участник' },
+  'live.gate.end_title': {
+    c:'Эфир', l:'Заголовок в конце бесплатной части', w:'Окошко на эфире', i:false,
+    t:'Бесплатная часть закончилась' },
+  'live.gate.end_sub': {
+    c:'Эфир', l:'Пояснение в конце бесплатной части', w:'Окошко на эфире', i:false,
+    t:'Дальше эфир продолжается для участников клуба.' },
+  'live.gate.end_second': {
+    c:'Эфир', l:'Вторая кнопка в конце бесплатной части', w:'Окошко на эфире', i:false,
+    t:'Узнать о клубе' },
   'login.tg_fallback': {
     c:'Вход', l:'Почему в Telegram спрашивают номер', w:'Экран входа, когда не удалось связаться с Telegram', i:false,
     t:'Не удалось связаться с Telegram — узнать тебя автоматически не вышло. Это бывает при проблемах со связью. Войди по номеру телефона, всё на месте.' },
@@ -10359,6 +10451,9 @@ function dismissOnboardingBanner(){
 const CHANNEL_JOIN_LINK = 'https://t.me/+tqAEu2fTTfU0N2Ey';
 const CHAT_JOIN_LINK = 'https://t.me/+TxNRziNPk2hkZmVi';
 const BOT_LINK = 'https://t.me/youselllikeagod_bot';
+/* Личка Denis'а — сюда ведёт окошко «не могу оплатить». Отдельно от бота:
+   человеку, у которого не проходит платёж, нужен ЖИВОЙ собеседник */
+const SUPPORT_DM_LINK = 'https://t.me/kuznetsov_denis';
 // Общий фоллбек для любого зависшего раунд-трипа (Salebot не ответил/недоступен) —
 // человек не должен упираться в тупик, поэтому даём выход прямо в бота (сворачивает
 // апп и открывает чат с ботом внутри Telegram, не во внешнем браузере — см. openUrl)
@@ -10750,6 +10845,17 @@ async function openStepsPopup(){
 // Colбек от Salebot может прийти не мгновенно (задержка на их стороне), поэтому если статус
 // ещё не подтвердился — запускаем несколько повторных проверок с паузой (pollForJoinUpdate),
 // а не одну попытку.
+/* ⚠️ ВОЗВРАТ ПОСЛЕ ОПЛАТЫ ЛОВИМ ОТДЕЛЬНО ОТ ПРОВЕРКИ УЧАСТНИКА НИЖЕ:
+   у той стоит `!isMember → выходим`, а нам нужен ровно ОБРАТНЫЙ случай —
+   вернулся и участником так и не стал. Ставим до неё, чтобы не зависеть от
+   её условий */
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState !== 'visible') return;
+  // Профиль мог ещё не обновиться — даём ему секунду, иначе засчитаем
+  // неудачу тому, кто на самом деле только что оплатил
+  setTimeout(function(){ if (typeof noteAccessReturn === 'function') noteAccessReturn(); }, 1200);
+});
+
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !isMember) return;
   await refreshOnboardStatus();
@@ -11513,9 +11619,12 @@ function showFreeVersion(lec){
   const tg = (lec.free_tg_url || '').trim();
   const vk = (lec.free_vk_url || '').trim();
   if (!tg && !vk){
-    // Бесплатной версии нет — честная стена и приглашение осмотреться
+    /* ⚠️ БЕЗ ОТКРЫТОЙ ВЕРСИИ — СРАЗУ НА ОПЛАТУ, БЕЗ ПРОМЕЖУТОЧНОЙ СТЕНЫ.
+       [stated] Denis 15.08: «страница „это для участников клуба“ лишняя,
+       лучше вести сразу на страницу оплаты. Там человек разберётся, платить
+       или ковыряться дальше» */
     box.style.display = 'none';
-    openPaywall();
+    openAccessPage();
     return;
   }
   box.innerHTML =
@@ -14203,6 +14312,53 @@ async function pollLiveChat(){
   }
 }
 
+/* ══ ОКОШКО ПОВЕРХ ЭФИРА ══════════════════════════════════════════════════
+   Два повода с одинаковым устройством и разной второй кнопкой:
+     'chat'     — гость ткнул в чат: доступ + «я уже участник»
+     'free_end' — кончилась бесплатная часть: доступ + «узнать о клубе»
+   ⚠️ ЭФИР ПРИ ЭТОМ ИДЁТ. Ничего не сворачиваем и не ставим на паузу — окошко
+   только слой сверху. Раньше попытка написать в чат стоила человеку эфира. */
+
+var liveGateReason = '';
+
+function openLiveGate(reason){
+  liveGateReason = reason || 'chat';
+  var box = document.getElementById('live-gate');
+  if (!box) return;
+  document.getElementById('live-gate-title').textContent =
+    t(liveGateReason === 'free_end' ? 'live.gate.end_title' : 'live.gate.chat_title');
+  document.getElementById('live-gate-sub').textContent =
+    t(liveGateReason === 'free_end' ? 'live.gate.end_sub' : 'live.gate.chat_sub');
+  document.getElementById('live-gate-second').textContent =
+    t(liveGateReason === 'free_end' ? 'live.gate.end_second' : 'live.gate.chat_second');
+  box.style.display = 'flex';
+  track('live_gate_shown', { reason: liveGateReason });
+}
+
+function closeLiveGate(){
+  var box = document.getElementById('live-gate');
+  if (box) box.style.display = 'none';
+}
+
+/* Здесь эфир свернуть ПРИДЁТСЯ: оплата открывается своим экраном, и оставлять
+   плеер поверх неё нельзя — он перекроет кнопки */
+function liveGateBuy(){
+  closeLiveGate();
+  collapseLiveFull();
+  openAccessPage();
+}
+
+function liveGateSecond(){
+  closeLiveGate();
+  if (liveGateReason === 'free_end'){
+    collapseLiveFull();
+    openClubInfoPage();
+  } else {
+    collapseLiveFull();
+    funnelToLogin();          // «я уже участник» — обычный вход
+  }
+}
+
 function startLiveChat(){
   chatLastId = 0;
   renderChatMessages([], true);
@@ -15138,6 +15294,35 @@ function funnelLeave(){
   funnelPlayerReady = false;
 }
 
+/* ⚠️ ИЗ ВОРОНКИ ТЕПЕРЬ ВЕДЁМ В ОПИСАНИЕ, А НЕ СРАЗУ В ДЕМО (15.08.2026).
+   Описание клуба — второй по силе продавец: часть людей покупает именно с
+   него, не досмотрев фильм. Раньше входа туда с экранов воронки не было
+   вовсе — только изнутри приложения, через два лишних шага.
+
+   ⚠️ ВОРОНКУ ГАСИМ ЧЕРЕЗ ОБЩИЙ ВЫХОД `funnelLeave()`: он снимает таймер,
+   выгружает плеер и ставит отметку показа. Своё скрытие здесь городить
+   нельзя — ровно на этом мы уже спотыкались, когда кнопка забыла половину
+   шагов и фильм продолжал играть под открытой страницей. */
+function funnelAbout(){
+  funnelLeave();
+  track('funnel_about');
+  enterDemoMode();          // поднимаем оболочку, иначе страница ляжет под воронкой
+  openClubInfoPage();
+  refreshClubInfoButtons();
+}
+
+/* Осмотреться предлагаем уже ПОСЛЕ описания — кнопка живёт на самой странице */
+function clubInfoBrowse(){
+  track('club_info_browse');
+  switchView('portal');
+}
+
+/* Кнопка «осмотреться» нужна только тому, кто ещё не участник */
+function refreshClubInfoButtons(){
+  var btn = document.getElementById('club-info-browse');
+  if (btn) btn.style.display = isMember ? 'none' : '';
+}
+
 function funnelBrowse(){
   funnelLeave();
   track('funnel_browse');
@@ -15216,6 +15401,7 @@ function closePaywall(){
 
 function openClubInfoPage(){
   switchView('club-info');
+  refreshClubInfoButtons();
   track('club_info_open');
 }
 
@@ -15372,6 +15558,73 @@ function renderAccessButtons(result){
   ).join('') + `<div class="payment-help-link" onclick="switchView('payment-help')">Оплата не из РФ/Проблема с оплатой</div>`;
 }
 
+/* ══ ЧЕЛОВЕК ЗАСТРЯЛ НА ОПЛАТЕ (15.08.2026) ═══════════════════════════════
+   [stated] Denis: «ловим людей, которые несколько раз возвращаются на
+   страницу оплаты или трижды нажимают на ссылку оплаты — даём маленькое
+   окошко „Проблема с оплатой?“».
+
+   ⚠️ СЧИТАЕМ НЕ КЛИКИ, А ВОЗВРАТЫ БЕЗ ОПЛАТЫ. Клики врут: человек мог нажать
+   один раз и спокойно заплатить, а мог промахнуться трижды. Настоящий признак
+   беды — ушёл на оплату, вернулся в приложение, подписки нет. Механизм
+   возврата уже стоит: приложение и так проверяет статус при каждом
+   возвращении, чтобы поймать платёж. Тот же обработчик, обратный исход.
+
+   ⚠️ СЧЁТЧИК ЖИВЁТ В localStorage, А НЕ В ПАМЯТИ: человек уходит в браузер и
+   возвращается, вкладка может перезапуститься — в памяти счёт обнулился бы,
+   и окошко не появилось бы никогда. */
+
+var ACCESS_STUCK_KEY = 'club_app_pay_returns';
+var ACCESS_STUCK_AFTER = 3;      // на третьем возврате без оплаты
+
+function accessReturns(){
+  try { return parseInt(localStorage.getItem(ACCESS_STUCK_KEY) || '0', 10) || 0; }
+  catch(e){ return 0; }
+}
+function setAccessReturns(n){
+  try { localStorage.setItem(ACCESS_STUCK_KEY, String(n)); } catch(e){}
+}
+
+/* Человек ушёл платить — запоминаем, чтобы узнать его при возвращении */
+function noteAccessLeave(){
+  try { localStorage.setItem('club_app_pay_left_at', String(Date.now())); } catch(e){}
+}
+
+/* Вернулся. Если подписки так и нет — засчитываем неудачный заход */
+function noteAccessReturn(){
+  var left = 0;
+  try { left = parseInt(localStorage.getItem('club_app_pay_left_at') || '0', 10) || 0; } catch(e){}
+  if (!left) return;
+  try { localStorage.removeItem('club_app_pay_left_at'); } catch(e){}
+  if (isMember) { setAccessReturns(0); return; }   // оплатил — счёт сбрасываем
+
+  var n = accessReturns() + 1;
+  setAccessReturns(n);
+  if (n >= ACCESS_STUCK_AFTER){
+    showAccessStuck();
+    // Сервер должен знать, сколько людей упирается: без этого они просто
+    // не появляются в платежах, и причина невидима
+    track('payment_stuck', { returns: n });
+  }
+}
+
+function showAccessStuck(){
+  var box = document.getElementById('access-stuck');
+  if (box) box.style.display = 'block';
+}
+function hideAccessStuck(){
+  var box = document.getElementById('access-stuck');
+  if (box) box.style.display = 'none';
+  setAccessReturns(0);          // сказал «всё в порядке» — не пристаём снова
+}
+
+/* Личка с уже подставленным текстом: человеку не надо ничего формулировать.
+   ⚠️ Текст кодируем — в адресе кириллица */
+function openPaymentTrouble(){
+  track('payment_trouble_click');
+  var msg = t('access.trouble_text') || 'Не получается оплатить доступ';
+  openUrl(SUPPORT_DM_LINK + '?text=' + encodeURIComponent(msg));
+}
+
 function goToPayment(i){
   const b = window._paymentLinks[i];
   if (!b) return;
@@ -15383,6 +15636,7 @@ function goToPayment(i){
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id: telegramId })
   }).catch(() => {});
+  noteAccessLeave();          // ушёл платить — ждём возвращения
   openUrl(b.link);
   openPostPay();
   startPaymentWatch();
@@ -20639,9 +20893,28 @@ plInit();
     </div>
     <!-- Гостю поля ввода не показываем вовсе. Отказ ПОСЛЕ набранного текста
          обиднее, чем честная стена до него -->
+    <!-- ⚠️ ЭФИР НЕ ПРЕРЫВАЕМ. [stated] Denis 15.08: попап показывается,
+         «не выключая эфир на фоне». Раньше эта кнопка сворачивала плеер и
+         уводила в пейвол — то есть за попытку написать в чат человек терял
+         сам эфир. Теперь окошко ложится поверх, звук идёт дальше -->
     <button class="live-btn live-btn-main" id="live-chat-paywall" style="display:none"
-            onclick="closeLiveEntryPopup();collapseLiveFull();openPaywall()"
+            onclick="openLiveGate('chat')"
             data-text="live.chat.join">Чат — для участников клуба</button>
+  </div>
+</div>
+
+<!-- ══ ОКОШКО ПОВЕРХ ЭФИРА ═══════════════════════════════════════════════
+     Два повода, одно устройство: гость ткнул в чат — предлагаем доступ и
+     даём войти тому, кто уже участник; кончилась бесплатная часть — та же
+     кнопка доступа, но вторая ведёт в описание клуба.
+     ⚠️ z-index выше плеера, но плеер НЕ останавливаем и не сворачиваем -->
+<div class="live-gate" id="live-gate" style="display:none">
+  <div class="live-gate-box">
+    <div class="live-gate-title" id="live-gate-title"></div>
+    <div class="live-gate-sub" id="live-gate-sub"></div>
+    <button class="lec-link-btn access-btn" style="margin-bottom:8px" onclick="liveGateBuy()" data-text="live.gate.buy">Получить доступ</button>
+    <div class="payment-help-link" style="margin:0" id="live-gate-second" onclick="liveGateSecond()"></div>
+    <button class="live-gate-close" onclick="closeLiveGate()" aria-label="Закрыть">✕</button>
   </div>
 </div>
 
