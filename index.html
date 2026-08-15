@@ -5057,6 +5057,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
+  <div id="tg-fallback-notice" class="tg-fallback-notice" style="display:none"></div>
   <h2 id="web-login-title">Вход по номеру телефона</h2>
   <p id="web-login-subtitle" data-text="pay.a4">Укажи номер телефона, использованный для оплаты подписки.</p>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px;margin-top:6px">
@@ -6534,6 +6535,11 @@ body.api-override-on #api-override-bar{display:block}
 .dl-banner-btns .lec-link-btn{flex:1;max-width:none}
 /* Пометка «слушаешь ознакомительную часть» в плеере */
 .pl-preview-note{font-size:11.5px;line-height:1.4;color:var(--warm);padding:2px 0 0;text-align:center}
+
+/* Объяснение, почему в Telegram вдруг спрашивают номер (15.08.2026) */
+.tg-fallback-notice{max-width:320px;margin:0 0 12px;padding:10px 12px;border-radius:12px;
+  background:rgba(232,97,74,.12);border:1px solid rgba(232,97,74,.35);
+  font-size:12.5px;line-height:1.45;color:var(--text);text-align:center}
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -9775,6 +9781,9 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'login.tg_fallback': {
+    c:'Вход', l:'Почему в Telegram спрашивают номер', w:'Экран входа, когда не удалось связаться с Telegram', i:false,
+    t:'Не удалось связаться с Telegram — узнать тебя автоматически не вышло. Это бывает при проблемах со связью. Войди по номеру телефона, всё на месте.' },
   'deeplink.free_title': {
     c:'Ссылки на контент', l:'Заголовок над бесплатной версией занятия', w:'Приход по ссылке на занятие', i:false,
     t:'Открытая часть занятия' },
@@ -15701,6 +15710,59 @@ function vkUserId(){
   catch(e){ return ''; }
 }
 
+/* ══ ЗАПАСНОЕ ОПОЗНАНИЕ В TELEGRAM (15.08.2026) ═══════════════════════════
+   ⚠️ ПОЧЕМУ ЭТО ПОНАДОБИЛОСЬ. Личность в Telegram определял ИСКЛЮЧИТЕЛЬНО
+   клиентский SDK (`initDataUnsafe.user`), а грузится он с telegram.org —
+   домена, доступного из России не всегда. Не ответил за 3.5 секунды —
+   приложение шло веб-путём: показывало воронку с фильмом и просило номер
+   телефона ВНУТРИ ЖЕ Telegram. Denis поймал это живьём 15.08 и решил, что
+   виноват экран фильма; фильм оказался следствием, а не причиной.
+
+   ⚠️ НО ПАРАМЕТРЫ ЗАПУСКА ЛЕЖАТ В АДРЕСЕ И БЕЗ SDK — Telegram кладёт их в
+   хеш при открытии. Подпись у них настоящая, проверяет её СЕРВЕР по токену
+   бота (в адрес можно дописать что угодно). Тот же приём, что уже работает
+   для ВК и MAX. */
+
+/* Явное объяснение вместо молчаливого «введите номер». Denis 15.08: «никакого
+   предупреждения не было» — и это было худшей частью: непонятно, сломалось
+   приложение, слетел аккаунт или так и надо */
+function showTgFallbackNotice(){
+  try {
+    const box = document.getElementById('tg-fallback-notice');
+    if (box){ box.textContent = t('login.tg_fallback'); box.style.display = 'block'; }
+  } catch(e){}
+}
+
+function tgLaunchData(){
+  try {
+    const h = location.hash || '';
+    return h.indexOf('tgWebAppData') >= 0 ? h.replace(/^#/, '') : '';
+  } catch(e){ return ''; }
+}
+function isInsideTelegram(){ return !!tgLaunchData(); }
+
+async function startTgSessionFallback(){
+  const data = tgLaunchData();
+  if (!data) return false;
+  try {
+    const r = await fetch(`${API_URL}/auth/tg/session`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: data })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.found){
+      if (d.session_token) rememberSessionToken(d.session_token);
+      telegramId = Number(d.telegram_id) || d.telegram_id;
+      flushPendingAttribution();
+      startApp();
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
 /* ══ ОБОЛОЧКА MAX (14.08.2026) ═══════════════════════════════════════════
    ⚠️ MAX КЛАДЁТ ПАРАМЕТРЫ ЗАПУСКА В ХЕШ АДРЕСА, а не в строку запроса, как
    ВК. Внутри хеша — `WebAppData=<...>`, и уже внутри него свои пары. Отдаём
@@ -16462,6 +16524,23 @@ async function init(){
     flushPendingAttribution();
     startApp();
     openFromStartParam();
+  } else if (isInsideTelegram()) {
+    /* ⚠️ МЫ ВНУТРИ TELEGRAM, НО SDK НЕ ДОЕХАЛ. Не гоним человека на веб-вход:
+       сначала пробуем узнать его по подписанным параметрам запуска. Экран
+       воронки в этой ветке не показываем вовсе — человек пришёл в приложение,
+       а не с рекламы. */
+    applyWebSafeArea();
+    setTimeout(applyWebSafeArea, 300);
+    funnelSuppressed = true;
+    startTgSessionFallback().then(function(ok){
+      if (!ok){
+        // Не узнали (или сервер недоступен) — обычный вход по телефону, но с
+        // честным объяснением, почему он вдруг понадобился
+        showTgFallbackNotice();
+        startWebSession();
+      }
+      openFromStartParam();
+    });
   } else {
     // Замеряем сразу и ещё раз чуть позже: в первый момент после запуска iOS
     // нередко отдаёт нули, и именно это лечила ручная прокрутка
