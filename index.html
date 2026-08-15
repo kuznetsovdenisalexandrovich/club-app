@@ -4532,7 +4532,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="payment-help-link" style="margin:-4px 0 12px" onclick="openAskDenisPopup()" data-text="quiz.a1">Или задать вопрос прямо Денису →</div>
     <div id="saved-banner" class="saved-banner" style="display:none"></div>
     <div id="tag-filter-row" class="tag-filter-row"></div>
-    <div id="lib-list"><div class="loading">Загрузка...</div></div>
+    <div id="dl-banner" class="dl-banner" style="display:none"></div>
+<div id="lib-list"><div class="loading">Загрузка...</div></div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -5149,6 +5150,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="mp-meta">
       <div class="mp-t" id="mp-title">—</div>
       <div class="mp-s" id="mp-sub">—</div>
+      <div class="pl-preview-note" id="mp-preview-note" style="display:none"></div>
     </div>
   </div>
 
@@ -5201,6 +5203,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="fp-cover" id="fp-cover"></div>
     <div class="fp-title" id="fp-title">—</div>
     <div class="fp-sub" id="fp-sub">—</div>
+    <div class="pl-preview-note" id="fp-preview-note" style="display:none"></div>
 
     <div class="fp-progress">
       <div class="mp-bar" id="fp-bar">
@@ -6521,6 +6524,16 @@ body.api-override-on #api-override-bar{display:block}
   .fade-rise{animation:none!important;opacity:1!important;transform:none!important}
 }
 
+
+/* Баннер бесплатной версии по ссылке на занятие (15.08.2026) */
+.dl-banner{background:var(--card2);border:1px solid var(--border);border-radius:16px;
+  padding:16px 16px 14px;margin:0 0 14px}
+.dl-banner-title{font-family:var(--disp);font-weight:900;font-size:15px;margin-bottom:6px}
+.dl-banner-text{font-size:13px;line-height:1.5;color:var(--text-dim);margin-bottom:12px}
+.dl-banner-btns{display:flex;gap:8px;align-items:stretch}
+.dl-banner-btns .lec-link-btn{flex:1;max-width:none}
+/* Пометка «слушаешь ознакомительную часть» в плеере */
+.pl-preview-note{font-size:11.5px;line-height:1.4;color:var(--warm);padding:2px 0 0;text-align:center}
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -9762,6 +9775,24 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'deeplink.free_title': {
+    c:'Ссылки на контент', l:'Заголовок над бесплатной версией занятия', w:'Приход по ссылке на занятие', i:false,
+    t:'Открытая часть занятия' },
+  'deeplink.free_text': {
+    c:'Ссылки на контент', l:'Пояснение под заголовком', w:'Приход по ссылке на занятие', i:false,
+    t:'Это короткая версия — её можно смотреть без подписки. Полное занятие открывается участникам клуба.' },
+  'deeplink.free_tg': {
+    c:'Ссылки на контент', l:'Кнопка открытой версии в Telegram', w:'Приход по ссылке на занятие', i:false,
+    t:'Смотреть в Telegram' },
+  'deeplink.free_vk': {
+    c:'Ссылки на контент', l:'Кнопка открытой версии во ВКонтакте', w:'Приход по ссылке на занятие', i:false,
+    t:'Смотреть в VK' },
+  'deeplink.not_found': {
+    c:'Ссылки на контент', l:'Занятие по ссылке не найдено', w:'Приход по битой ссылке', i:false,
+    t:'Такого занятия не нашлось — вот вся библиотека' },
+  'player.preview_note': {
+    c:'Плеер', l:'Пометка, что играет ознакомительная часть', w:'Плеер — под названием', i:false,
+    t:'Ознакомительная часть, {n} мин. Дальше — для участников клуба' },
   'player.tab_queue': {
     c:'Плеер', l:'Вкладка со списком занятий', w:'Плеер — вкладки', i:true,
     t:'Очередь' },
@@ -11386,7 +11417,7 @@ const DEEPLINKS = {
   // куском payload (`film_<код единицы>`), см. unitFromUrl: в Telegram параметр
   // запуска один и в нём можно только латиницу с цифрами, обычные utm туда не
   // положить — они живут в карточке единицы атрибуции на нашей стороне
-  'film':        { go: () => showFunnelScreen(),          guests: true  },
+  'film':        { go: () => openFilmRoute(),             guests: true  },
   'live':        { go: () => openLiveEntry(),             guests: true  },
   'efir':        { go: () => openLiveEntry(),             guests: true  },
   'club':        { go: () => switchView('club-info'),     guests: true  },
@@ -11415,6 +11446,167 @@ const DEEPLINKS = {
   'ai':          { go: () => openAiPopup(),               guests: false },
   'access':      { go: () => switchView('access'),        guests: false },
 };
+
+/* ═══ ДИПЛИНКИ НА КОНТЕНТ ══════════════════════════════════════════════════
+   Таблица DEEPLINKS ведёт на ЭКРАНЫ, а тут — на конкретную единицу:
+
+     l_<занятие>    карточка занятия
+     la_<занятие>   занятие + сразу аудио
+     li_<занятие>   занятие + сразу выжимка
+     mag_<выпуск>   выпуск журнала
+
+   ⚠️ КЛЮЧ В ССЫЛКЕ «БЕЗОПАСНЫЙ», А НЕ СЫРОЙ SLUG. У части занятий номер
+   дробный (`_l07.2_`), а параметр запуска принимает только латиницу, цифры,
+   дефис и подчёркивание — точку Telegram и MAX молча выбрасывают, и ссылка
+   ведёт в никуда без всякого следа. Поэтому в ссылке точка заменена дефисом,
+   а ищем занятие сравнением ПО ТАКОМУ ЖЕ ключу.
+
+   ⚠️ ГОСТЮ ПОКАЗЫВАЕМ БЕСПЛАТНУЮ ВЕРСИЮ, ЕСЛИ ОНА ЕСТЬ. Поля `free_tg_url` и
+   `free_vk_url` заполнены у части занятий — это и есть готовый вход холодной
+   воронки. Нет бесплатной версии — пейвол и предложение осмотреться в демо. */
+
+function safeContentKey(s){
+  return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+function lectureBySafeKey(key){
+  const want = safeContentKey(key);
+  const all = (typeof allLectures !== 'undefined' && allLectures.length) ? allLectures : [];
+  for (let i = 0; i < all.length; i++){
+    if (safeContentKey(all[i].slug) === want) return all[i];
+  }
+  return null;
+}
+
+/* Библиотека могла ещё не грузиться: по ссылке человек попадает сразу сюда,
+   минуя вкладку «Что посмотреть» */
+async function ensureLibrary(){
+  if (typeof allLectures !== 'undefined' && allLectures.length) return;
+  if (typeof loadLibrary === 'function'){ try { await loadLibrary(); } catch(e){} }
+}
+
+/* Показываем ОДНУ карточку занятия — переиспользуем обычный рендер библиотеки,
+   поэтому у карточки сразу все родные кнопки: ТГ, ВК, «Главные идеи»,
+   «Слушать», закладка. Своего экрана заводить не пришлось */
+function showSingleLecture(lec){
+  switchView('library');
+  if (typeof renderLibrary === 'function') renderLibrary([lec]);
+  const banner = document.getElementById('dl-banner');
+  if (banner) banner.style.display = 'none';
+  const list = document.getElementById('lib-list');
+  if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* Гостю — бесплатная версия занятия, если она заведена */
+function showFreeVersion(lec){
+  const box = document.getElementById('dl-banner');
+  if (!box) { openPaywall(); return; }
+  const tg = (lec.free_tg_url || '').trim();
+  const vk = (lec.free_vk_url || '').trim();
+  if (!tg && !vk){
+    // Бесплатной версии нет — честная стена и приглашение осмотреться
+    box.style.display = 'none';
+    openPaywall();
+    return;
+  }
+  box.innerHTML =
+      '<div class="dl-banner-title">' + escapeHtml(t('deeplink.free_title')) + '</div>'
+    + '<div class="dl-banner-text">' + escapeHtml(t('deeplink.free_text')) + '</div>'
+    + '<div class="dl-banner-btns">'
+    + (tg ? '<button class="lec-link-btn access-btn" style="margin-bottom:0" onclick="openUrl(' + jsArg(tg) + ')">' + escapeHtml(t('deeplink.free_tg')) + '</button>' : '')
+    + (vk ? '<button class="lec-link-btn" style="margin-bottom:0" onclick="openUrl(' + jsArg(vk) + ')">' + escapeHtml(t('deeplink.free_vk')) + '</button>' : '')
+    + '</div>';
+  box.style.display = 'block';
+}
+
+/* mode: '' | 'audio' | 'insights' */
+async function openLectureByKey(key, mode){
+  await ensureLibrary();
+  const lec = lectureBySafeKey(key);
+  if (!lec){
+    switchView('library');
+    showToast(t('deeplink.not_found'));
+    return;
+  }
+  showSingleLecture(lec);
+
+  if (!isMember){
+    // ⚠️ ВЫЖИМКУ ГОСТЮ ПОКАЗЫВАЕМ — так было задумано и до диплинков
+    // (`openInsightsModal` пускает демо сознательно): именно ей и прогреваем
+    if (mode === 'insights' && (lec.key_insights || []).length){
+      setTimeout(function(){ openInsightsModal(0); }, 120);
+      return;
+    }
+    // Аудио гостю тоже даём: сервер отдаст урезанное превью, дальше пейвол
+    if (mode === 'audio' && (lec.audio_url || '').trim()){
+      setTimeout(function(){ playLecture(0); }, 120);
+      return;
+    }
+    showFreeVersion(lec);
+    return;
+  }
+
+  if (mode === 'audio' && (lec.audio_url || '').trim()){
+    setTimeout(function(){ playLecture(0); }, 120);
+  } else if (mode === 'insights' && (lec.key_insights || []).length){
+    setTimeout(function(){ openInsightsModal(0); }, 120);
+  }
+}
+
+/* Разбор точки входа на контент. Возвращает true, если ссылка наша */
+function contentFromUrl(){
+  const param = appStartParam();
+  const pairs = [['la_', 'audio'], ['li_', 'insights'], ['l_', '']];
+  for (let i = 0; i < pairs.length; i++){
+    const pref = pairs[i][0];
+    if (param.indexOf(pref) === 0){
+      const key = param.slice(pref.length);
+      if (!key) return false;
+      const shell = document.getElementById('app-shell');
+      const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+      if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+      rememberEntrySource('link_' + param);
+      // ⚠️ ЖДЁМ ПРОФИЛЬ, А НЕ ПАУЗУ: `isMember` решает, что показать, и до
+      // ответа `/users/me` он ложный — участник увидел бы гостевой путь
+      (async function(){ await waitProfile(); openLectureByKey(key, pairs[i][1]); })();
+      return true;
+    }
+  }
+  if (param.indexOf('mag_') === 0){
+    const key = param.slice(4);
+    if (!key) return false;
+    const shell = document.getElementById('app-shell');
+    const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+    if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+    rememberEntrySource('link_' + param);
+    (async function(){
+      await waitProfile();
+      switchView('magazine');
+      if (typeof loadMagazine === 'function') await loadMagazine();
+      if (typeof openMagazineIssue === 'function') openMagazineIssue(key);
+    })();
+    return true;
+  }
+  return false;
+}
+
+/* Фильм о клубе: неузнанному — экран воронки, всем остальным — занятие с
+   фильмом из библиотеки.
+   ⚠️ ПРИЧИНА ПРАВКИ (проверено по коду 15.08.2026): экран воронки — обычный
+   блок в потоке страницы и лежит НИЖЕ оболочки приложения. У участника
+   оболочка поднята, `showFunnelScreen()` её не прячет — фильм честно
+   показывался, но ПОД приложением, за краем экрана. Denis видел просто
+   главную. Тот же класс, что ловили 14.08 с кнопкой «Получить доступ». */
+function openFilmRoute(){
+  const shell = document.getElementById('app-shell');
+  const shellVisible = shell && shell.style.display && shell.style.display !== 'none';
+  const slug = (appSettings.film_lecture_slug || '').trim();
+  if (!shellVisible && !isMember){ showFunnelScreen(); return; }
+  if (slug){ openLectureByKey(slug, ''); return; }
+  // Занятие с фильмом не назначено в дашборде — показываем воронку как раньше,
+  // это честнее, чем молча ничего не сделать
+  showFunnelScreen();
+}
 
 /* Разбор простого диплинка по таблице выше */
 function routeFromUrl(){
@@ -16176,6 +16368,9 @@ async function init(){
       }
       // Мягкая метка источника — отмечаем и идём дальше, ничего не решаем за человека
       if (typeof unitFromUrl === 'function') unitFromUrl();
+      // Ссылка на конкретную единицу контента (занятие, аудио, выжимка, выпуск).
+      // СТОИТ ПЕРЕД таблицей маршрутов: ключи с параметром она не знает
+      if (typeof contentFromUrl === 'function' && contentFromUrl()) return;
       // Простые маршруты по таблице DEEPLINKS: schedule, library, cards и т.д.
       // Стоит ПОСЛЕ разборов с параметром и ПЕРЕД тестом: `quiz` есть и в
       // таблице, но `quiz_КОД` со своим экраном результата должен победить
@@ -19886,15 +20081,46 @@ function plMount(){
    доигрывает полуторачасовую лекцию и переживает перемотку.
    Если сервер почему-то не ответил — пробуем сохранённый адрес: у части
    лекций он может вести не в наше хранилище. */
+/* Какие занятия сейчас играют урезанной версией: slug → true.
+   ⚠️ ЗНАТЬ ЭТО ОБЯЗАТЕЛЬНО ДО КОНЦА ФАЙЛА: обрыв превью и настоящий конец
+   занятия — одно и то же событие `ended`, и без пометки мы бы перелистывали
+   гостя на следующий трек вместо того, чтобы предложить подписку. */
+let plPreview = {};
+
 async function plResolveAudioUrl(lec){
   try {
-    const r = await fetch(`${API_URL}/lectures/${encodeURIComponent(lec.slug)}/audio`);
+    // ⚠️ ТЕПЕРЬ С `telegram_id`: сервер по нему решает, отдать полное занятие
+    // или урезанное превью. Без него участник получал бы превью на своей же
+    // подписке
+    const q = telegramId ? ('?telegram_id=' + encodeURIComponent(telegramId)) : '';
+    const r = await fetch(`${API_URL}/lectures/${encodeURIComponent(lec.slug)}/audio${q}`);
     if (r.ok){
       const d = await r.json();
-      if (d && d.url) return d.url;
+      if (d && d.url){
+        if (d.full === false) plPreview[lec.slug] = d.preview_minutes || 0;
+        else delete plPreview[lec.slug];
+        plRenderPreviewNote();
+        return d.url;
+      }
     }
+    if (r.status === 402){ delete plPreview[lec.slug]; openPaywall(); return ''; }
   } catch(e){}
-  return lec.audio_url || '';
+  // ⚠️ ОТКАТА НА `lec.audio_url` БОЛЬШЕ НЕТ. Раньше при осечке сети плеер брал
+  // сохранённый адрес хранилища — сейчас бакет закрыт, такой адрес всё равно
+  // отдаёт отказ, а для гостя это была бы попытка достать полный файл в обход
+  // превью. Пусто честнее.
+  return '';
+}
+
+function plRenderPreviewNote(){
+  const lec = plQueue[plIndex];
+  const on = lec && plPreview[lec.slug];
+  ['mp-preview-note','fp-preview-note'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = on ? tf('player.preview_note', { n: plPreview[lec.slug] }) : '';
+    el.style.display = on ? 'block' : 'none';
+  });
 }
 
 function plLoadCurrent(autoplay){
@@ -19914,7 +20140,8 @@ function plLoadCurrent(autoplay){
     }
   });
 
-  plAudio.src = lec.audio_url;
+  // ⚠️ СЫРОЙ АДРЕС ИЗ БАЗЫ БОЛЬШЕ НЕ СТАВИМ: бакет закрыт, он даёт отказ, а у
+  // гостя это ещё и обход превью. Ждём подписанный из plResolveAudioUrl выше
   plAudio.playbackRate = plSpeeds[plSpeedIdx];
 
   var sub = plSourceLabel + ' · ' + (plIndex + 1) + '/' + plQueue.length;
@@ -20241,6 +20468,21 @@ function plInit(){
   });
   plAudio.addEventListener('ended', function(){
     var lec = plQueue[plIndex];
+    /* ⚠️ У ПРЕВЬЮ КОНЕЦ ФАЙЛА — ЭТО НЕ КОНЕЦ ЗАНЯТИЯ. Позицию здесь НАДО
+       сохранить (обычно на конце мы её как раз стираем), иначе после оплаты
+       продолжать будет неоткуда — а обещание «купи и слушай дальше» держится
+       именно на ней. Пишем прямо в хранилище мимо plSavePosition: та по
+       построению выбрасывает хвост записи. */
+    if (lec && plPreview[lec.slug]){
+      try {
+        var all = plPositions();
+        all[lec.slug] = Math.floor(plAudio.currentTime || 0);
+        localStorage.setItem(PL_POS_KEY, JSON.stringify(all));
+      } catch(e){}
+      plSetPlayIcon(false);
+      openPaywall();
+      return;
+    }
     if (lec) plSavePosition(lec.slug, 0);
     if (plIndex < plQueue.length - 1) plNext();
     else plSetPlayIcon(false);
