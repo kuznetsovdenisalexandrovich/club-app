@@ -10,6 +10,25 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- ═══════════════════════════════════════════════════════════════════════
+     ⚠️⚠️⚠️ SDK TELEGRAM — ОБЫЧНЫМ ТЕГОМ, СО СВОЕГО ДОМЕНА, ДО ВСЕГО КОДА.
+     ═══════════════════════════════════════════════════════════════════════
+     Пять правок подряд не работали по одной причине: `Telegram.WebApp`
+     появлялся ПОЗЖЕ запуска. Скрипт грузился с telegram.org (доступ из России
+     рвётся, [stated] Denis сидит в Telegram через VPN), запуск ждал его 3.5 с
+     и уходил в запасную ветку — без подписок, без безопасной зоны, с мёртвой
+     кнопкой «назад». Диагностика с телефона показывала это дословно:
+     «Bot API 9.6» и рядом «SDK Telegram: не доехал».
+     Динамическая загрузка со сторожем эту гонку не выиграла — так что гонки
+     больше нет: копия лежит рядом с приложением и подключается обычным тегом.
+     К моменту запуска объект существует ВСЕГДА, ветка всегда основная.
+
+     ⚠️ Почему блокирующий тег здесь безопасен, хотя это записанные грабли
+     («внешний скрипт в <head> = белый экран на урезанной сети»): файл СВОЙ, с
+     того же домена, что и сам апп. Если он недоступен — недоступна и
+     страница, терять нечего. Именно поэтому адрес относительный, а не
+     telegram.org. -->
+<script src="telegram-web-app.js"></script>
 <link rel="manifest" href="manifest.json">
 <!-- iOS берёт ИМЕННО apple-touch-icon: манифест для «Добавить на экран Домой»
      он не читает. Нативный размер 180×180 — другой система отмасштабирует сама,
@@ -9116,6 +9135,8 @@ function diagShowEnv(){
     `Platform (tg.platform): ${tg?.platform ?? '—'}`,
     `Версия Bot API: ${tg?.version ?? '—'}`,
     `SDK Telegram: ${typeof tgSdkWhen !== 'undefined' ? tgSdkWhen : '—'}`,
+    `SDK подключён: ${document.querySelector('head script[src*="telegram-web-app"]') ? 'тегом в head' : 'динамически'} · объект ${window.Telegram?.WebApp ? 'есть' : 'нет'}`,
+    `Сторож SDK: попыток ${typeof tgLateTries !== 'undefined' ? tgLateTries : '—'}`,
     `Окно: innerHeight ${window.innerHeight} · экран ${window.screen?.height ?? '—'} · зона сверху ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
     `Режим и отступ сверху: ${typeof tgSafeWhy !== 'undefined' && tgSafeWhy ? tgSafeWhy : '(не считался)'}`,
     `--safe-top сейчас: ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
@@ -17163,13 +17184,21 @@ let tgSafeWhy = '';
 function tgIsFullscreen(){
   const tg = window.Telegram?.WebApp;
   if (!tg) return false;
+  /* ⚠️⚠️ ТЕПЕРЬ SDK ПОДКЛЮЧЁН ВСЕГДА — ЗНАЧИТ `Telegram.WebApp` ЕСТЬ И В
+     ОБЫЧНОМ БРАУЗЕРЕ, с пустыми данными. Без этой проверки приложение,
+     добавленное на домашний экран, попало бы под геометрическое правило
+     («окно во весь экран») и получило бы отступ под кнопки Telegram, которых
+     там нет и в помине. Признак настоящего запуска из Telegram — непустой
+     `initData` либо данные запуска в адресе. */
+  const real = !!(tg.initData || (typeof isInsideTelegram === 'function' && isInsideTelegram()));
+  if (!real) return false;
   if (tg.isFullscreen === true) return true;
   try {
     const scr = window.screen && window.screen.height;
     const vh  = tg.viewportHeight || window.innerHeight;
     /* Полосы Telegram нет и вебвью ростом почти во весь экран */
     const noHeader = !(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top > 0);
-    if (scr && vh && noHeader && vh >= scr - 8) return true;
+    if (scr && vh && noHeader && vh >= scr - 40) return true;
   } catch(e){}
   return false;
 }
@@ -18187,6 +18216,10 @@ function loadPlatformSdk(){
   var src = '';
   var fallbackSrc = '';
   if (hash.indexOf('tgWebAppData') >= 0){
+    /* ⚠️ ОБЫЧНО СЮДА УЖЕ НЕ ПОПАДАЕМ: SDK подключён тегом в <head> и к этому
+       моменту готов. Ветка остаётся на случай, если своей копии в раздаче нет
+       (например, файл не выложили) — тогда работает прежний путь */
+    if (window.Telegram && window.Telegram.WebApp) return Promise.resolve(true);
     src = 'telegram-web-app.js';                                  // своя копия
     fallbackSrc = 'https://telegram.org/js/telegram-web-app.js';  // запасной путь
   }
@@ -18333,8 +18366,17 @@ async function init(){
      надёжных */
   /* ⚠️ ВСЯ ТЕЛЕГРАМНАЯ НАСТРОЙКА — ОДНИМ ВЫЗОВОМ, и он же стоит в стороже
      ниже: если SDK опоздал, настройка догонит его сама */
-  if (tg) tgSetupWhenReady();
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+  /* ⚠️⚠️ ТОЛЬКО ПРИ НАСТОЯЩЕМ ЗАПУСКЕ ИЗ TELEGRAM. Раз SDK подключён тегом,
+     объект `Telegram.WebApp` есть теперь ВЕЗДЕ — и в ВК, и в MAX, и в обычном
+     браузере. Проверки `if (tg)` стало недостаточно: телеграмная настройка
+     (ready/expand, запрет вертикальных свайпов, подписки, кнопка «назад»)
+     полезла бы в чужие площадки. Признак настоящего запуска — непустой
+     `initData` либо данные запуска в адресе.
+     ⚠️ Ветка ВК стоит НИЖЕ этой строки, поэтому без условия сюда попадал бы
+     и запуск из ВК. */
+  const tgReal = !!(tg && (tg.initData || isInsideTelegram()));
+  if (tgReal) tgSetupWhenReady();
+  if (tgReal && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     syncTgBackButton('portal');   // стартовый экран — кнопки быть не должно
     telegramId = tg.initDataUnsafe.user.id;
     flushPendingAttribution();
