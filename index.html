@@ -7361,8 +7361,7 @@ body.api-override-on #api-override-bar{display:block}
 
 /* ── Поле ввода на две строки + предупреждение о длине ── */
 #gg-root .gg-input-wrap{flex:1;min-width:0;position:relative;display:flex;flex-direction:column}
-#gg-root .gg-input{width:100%;resize:none;overflow-y:auto;line-height:1.4;
-  padding:6px 0;max-height:58px;font:500 15px var(--gg-font-body)}
+
 /* ⚠️ ПРЕДУПРЕЖДЕНИЕ — ПОД ВСЕЙ ПЛАШКОЙ, ПО ЦЕНТРУ. Внутри плашки оно
    отъедало место у текста и наезжало на строку; над полем — закрывало
    написанное. Снаружи снизу оно не мешает ничему. */
@@ -7478,7 +7477,7 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 /* ── ⚠️ ПОЛЕ СТАРТУЕТ РОВНО В ОДНУ СТРОКУ. Высота задаётся явно: без неё
    textarea считает свою по `rows`, а с нашими паддингами это давало запас на
    вторую строку ещё до первого символа. Дальше высоту ведёт ggAutoGrow ── */
-#gg-root .gg-input{height:26px;min-height:26px;max-height:none;line-height:1.4;padding:2px 0}
+
 /* ⚠️ ВЫСОТУ ПЛАШКИ ЗАДАВАЛО НЕ ПОЛЕ, А КНОПКИ: при одной строке текста
    отправка в 58 px и отступы держали плашку размером с двухстрочную. Кнопки
    по высоте строки ввода — тогда плашка растёт только вместе с текстом. */
@@ -7521,13 +7520,12 @@ html[data-gg-nohead] .shell > header{display:none !important}
 #gg-root .gg-composer .gg-send{width:40px;height:40px}
 #gg-root .gg-composer .gg-send svg{width:19px;height:19px}
 #gg-root .gg-input-wrap{justify-content:center}
-#gg-root .gg-input{height:22px;min-height:22px;line-height:22px;padding:0;
-  display:block;vertical-align:middle}
+
 
 /* ── ⚠️ ДЛИННОЕ СЛОВО БЕЗ ПРОБЕЛОВ НЕ ПЕРЕНОСИТСЯ и уезжает вбок: строка
    остаётся одна, `scrollHeight` не растёт, поле не увеличивается. Разрешаем
    рвать слово в любом месте — тогда вторая строка появляется как надо ── */
-#gg-root .gg-input{overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
+
 
 /* Предупреждение чуть ниже плашки */
 #gg-root .gg-input-warn{top:calc(100% + 11px)}
@@ -7601,6 +7599,30 @@ html[data-gg="1"]{overflow-x:clip}
 /* Лента тянется до плашки ввода — тогда при короткой переписке поле стоит
    внизу экрана, а не липнет к последней реплике */
 html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;min-height:0}
+
+/* ── ⚠️ АРБИТР ЛИПНЕТ С УЧЁТОМ ВЫРЕЗА ЭКРАНА. Порог был жёстким (74px), а
+   шапка партии сама отступает на `safe-area`: на телефоне с вырезом она
+   занимает на полсотни пикселей больше, и арбитр уплывал под неё. Считаем
+   от той же переменной, что и шапка ── */
+#gg-root .gg-arbiter{top:calc(var(--safe-top, 0px) + 74px)}
+@media(max-width:480px){ #gg-root .gg-arbiter{top:calc(var(--safe-top, 0px) + 68px)} }
+
+/* ═══ ПОЛЕ ВВОДА — ЕДИНСТВЕННОЕ ПРАВИЛО ════════════════════════════════════
+   ⚠️⚠️ ЗДЕСЬ НАКОПИЛОСЬ ЧЕТЫРЕ ПРАВИЛА ЗА ЧЕТЫРЕ ПРАВКИ: одно ставило
+   `max-height:58px`, другое `none`, одно `line-height:1.4`, другое `22px`,
+   одно `height:26px`, другое `22px`. Каскад складывал из них химеру, и
+   поведение зависело от того, что чем перебилось. Теперь ОДНО правило — оно
+   же единственное место, где высоту поля вообще трогают из стилей.
+   Дальше высотой командует только `ggAutoGrow`.
+   ⚠️ `min-height` НЕ ЗАДАЁМ: он мешает полю схлопываться обратно к одной
+   строке после отправки. ⚠️ `overflow-y` не задаём тоже — им управляет
+   `ggAutoGrow`, включая прокрутку лишь на потолке роста. */
+#gg-root .gg-input{
+  width:100%; resize:none; display:block;
+  font:500 15px/1.4 var(--gg-font-body);
+  padding:2px 0; height:25px; max-height:none;
+  overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap;
+}
 
 </style>
 
@@ -10889,6 +10911,8 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
+
 
 
 
@@ -22246,7 +22270,12 @@ async function ggStart(key){
       inp.value = '';
       inp.style.height = '';
       ggInputChanged(inp);
-      inp.focus();
+      /* ⚠️⚠️ ФОКУС САМ ПРОКРУЧИВАЕТ СТРАНИЦУ К ПОЛЮ, а поле у нас внизу — из-за
+         этого партия открывалась уже проскроллённой, и арбитр наполовину
+         уходил под верхний край. `preventScroll` даёт фокус без прокрутки;
+         где он не поддержан, фокус не ставим вовсе — курсор в поле при
+         открытии не так важен, как целый экран. */
+      try { inp.focus({ preventScroll: true }); } catch(e){}
     }
   } catch(e){
     showToast('Сеть недоступна');
@@ -22541,13 +22570,19 @@ function ggLineH(el){
 
 function ggAutoGrow(el){
   if (!el) return 0;
-  /* высоту сбрасываем перед замером: иначе поле умеет только расти */
-  el.style.height = 'auto';
   const cs = getComputedStyle(el);
   const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-  const max = Math.round(ggLineH(el) * GG_GROW_LINES + pad);
+  const line = ggLineH(el);
+  const max = Math.round(line * GG_GROW_LINES + pad);
+  /* ⚠️⚠️ ЗАМЕР ДЕЛАЕМ ПРИ ВЫСОТЕ 0, А НЕ `auto`. С `auto` Safari нередко
+     отдаёт `scrollHeight` от ПРЕЖНЕЙ высоты — поле «залипало» на одной
+     строке, хотя текст уже перенёсся на вторую. С нулевой высотой браузеру
+     нечего вспоминать, и он честно меряет содержимое. */
+  el.style.height = '0px';
   const need = el.scrollHeight;
-  el.style.height = Math.min(need, max) + 'px';
+  /* одна строка — это строка плюс поля; ниже не опускаемся */
+  const one = Math.round(line + pad);
+  el.style.height = Math.max(one, Math.min(need, max)) + 'px';
   /* прокрутка появляется ТОЛЬКО когда поле упёрлось в потолок роста */
   el.style.overflowY = need > max ? 'auto' : 'hidden';
   return need;
@@ -22594,11 +22629,10 @@ function ggKeyboardFollow(){
   inp.addEventListener('focus', function(){
     setTimeout(ggKeyboardFollow, 60);
     setTimeout(ggKeyboardFollow, 320);
-    /* ⚠️ ПОСЛЕ ФОКУСА ДОВОДИМ ЛЕНТУ ДО НИЗА. Браузер сам прокручивает к полю,
-       но останавливается где придётся; лента прижата книзу, поэтому «в самый
-       низ» — это и есть последние реплики над клавиатурой. Два вызова: сразу
-       и после того, как клавиатура доехала. */
-    setTimeout(ggScrollDown, 120);
+    /* ⚠️ СВОЮ ПРОКРУТКУ ПОСЛЕ ФОКУСА УБРАЛИ. Браузер прокручивает к полю сам,
+       а наши два вызова добавлялись сверху — экран уезжал вдвое дальше нужного
+       (Denis: «оказывается выше необходимого, причём как будто на ту же
+       высоту»). Достаточно один раз довести ленту, когда клавиатура доехала. */
     setTimeout(ggScrollDown, 380);
   });
   inp.addEventListener('blur', function(){ setTimeout(ggKeyboardFollow, 60); });
