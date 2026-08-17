@@ -7140,6 +7140,109 @@ body.api-override-on #api-override-bar{display:block}
   .gg-score{font-size:44px}
 }
 
+/* ═══ КРОМКА: НЕОНОВЫЙ ПЕРИМЕТР ═════════════════════════════════════════════
+   Приём с утверждённого макета («broken neon edge»): цвет живёт ТОЛЬКО на
+   границе панели, центр остаётся чистым. В тёмной теме это conic-градиент,
+   положенный в `border-box` под прозрачную рамку; в светлой — радиальные
+   пятна на псевдоэлементе, вырезанные маской в тонкое кольцо.
+
+   ⚠️ КРОМКА НАМЕРЕННО ПРЕРЫВИСТАЯ: сплошная светящаяся обводка читается как
+   «выделено/ошибка», а рваная — как материал. Углы старта у соседних панелей
+   разные, иначе все островки света выстраиваются в одну линию и это видно.
+   ⚠️ У всех этих классов ДОЛЖЕН БЫТЬ СВОБОДЕН ::after — у .gg-skel он занят
+   бегунком, поэтому скелетам кромку не даём. ═══════════════════════════════ */
+:root{
+  --gg-edge-conic:conic-gradient(from 218deg,
+      transparent 0 24deg, rgba(126,88,255,.25) 31deg, #875fff 39deg,
+      transparent 52deg 116deg, rgba(212,93,255,.25) 127deg, rgba(240,99,255,.62) 139deg,
+      transparent 153deg 231deg, rgba(255,171,99,.16) 241deg, #ffad67 250deg,
+      transparent 264deg 327deg, rgba(139,91,255,.22) 340deg, transparent 352deg 360deg);
+  --gg-edge-conic-b:conic-gradient(from 96deg,
+      transparent 0 30deg, rgba(120,181,247,.30) 38deg, #6fa2ff 47deg,
+      transparent 60deg 148deg, rgba(196,156,255,.30) 158deg, #b07dff 168deg,
+      transparent 182deg 296deg, rgba(255,171,99,.22) 306deg, #ffad67 314deg,
+      transparent 328deg 360deg);
+  --gg-edge-radial:radial-gradient(110px 78px at 0% 30%, rgba(160,133,255,.70), transparent 70%),
+      radial-gradient(125px 74px at 42% 0%, rgba(125,182,255,.36), transparent 72%),
+      radial-gradient(120px 76px at 72% 100%, rgba(235,159,220,.36), transparent 72%),
+      radial-gradient(105px 80px at 100% 70%, rgba(255,187,128,.52), transparent 72%);
+  --gg-edge-w:1.4px;
+  --gg-edge-op:.84;
+}
+[data-theme="dark"]{ --gg-edge-op:1; }
+
+/* ── СВЕТЛАЯ: кольцо на псевдоэлементе, центр панели чистый ── */
+[data-theme="light"] .gg-arbiter::after,
+[data-theme="light"] .gg-gm-card::after,
+[data-theme="light"] .gg-bubble::after,
+[data-theme="light"] .gg-feedback::after,
+[data-theme="light"] .gg-block::after,
+[data-theme="light"] .gg-upsell::after,
+[data-theme="light"] .gg-modal::after,
+[data-theme="light"] .gg-composer::after,
+[data-theme="light"] .gg-exit::after,
+[data-theme="light"] .gg-spark::after,
+[data-theme="light"] .gg-btn-ghost::after{
+  content:"";position:absolute;inset:0;padding:var(--gg-edge-w);border-radius:inherit;
+  pointer-events:none;z-index:0;background:var(--gg-edge-radial);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  filter:drop-shadow(0 0 7px rgba(158,136,255,.10));opacity:var(--gg-edge-op);
+}
+/* ⚠️ КРОМКЕ НУЖЕН position И СЛОЙ НАД НЕЙ: без этого кольцо ляжет поверх
+   текста, а у статичных панелей уедет в угол страницы */
+#gg-root .gg-gm-card,#gg-root .gg-bubble,#gg-root .gg-feedback,#gg-root .gg-block,
+#gg-root .gg-upsell,#gg-root .gg-modal,#gg-root .gg-composer,#gg-root .gg-exit,
+#gg-root .gg-spark,#gg-root .gg-btn-ghost,#gg-pops .gg-modal,#gg-pops .gg-btn-ghost{position:relative}
+#gg-root .gg-gm-card>*,#gg-root .gg-block>*,#gg-root .gg-upsell>*,
+#gg-root .gg-modal>*,#gg-pops .gg-modal>*{position:relative;z-index:1}
+
+/* ── ТЁМНАЯ: conic прямо в border-box, псевдоэлемент не нужен ── */
+[data-theme="dark"] #gg-root .gg-arbiter{
+  background:var(--gg-panel) padding-box, var(--gg-edge-conic) border-box;
+  border:1px solid transparent;
+}
+[data-theme="dark"] #gg-root .gg-gm-card,
+[data-theme="dark"] #gg-root .gg-block,
+[data-theme="dark"] #gg-pops .gg-modal,
+[data-theme="dark"] #gg-root .gg-modal{
+  background:var(--gg-card) padding-box, var(--gg-edge-conic-b) border-box;
+  border:1px solid transparent;
+}
+[data-theme="dark"] #gg-root .gg-bubble,
+[data-theme="dark"] #gg-root .gg-feedback{
+  background:var(--gg-bubble) padding-box, var(--gg-edge-conic-b) border-box;
+  border:1px solid transparent;
+}
+[data-theme="dark"] #gg-root .gg-upsell,
+[data-theme="dark"] #gg-root .gg-composer{
+  background:var(--gg-panel) padding-box, var(--gg-edge-conic) border-box;
+  border:1px solid transparent;
+}
+[data-theme="dark"] #gg-root .gg-exit,
+[data-theme="dark"] #gg-root .gg-spark,
+[data-theme="dark"] #gg-root .gg-btn-ghost{
+  background:var(--gg-pill) padding-box, var(--gg-edge-conic-b) border-box;
+  border:1px solid transparent;
+}
+/* Своя реплика остаётся сплошной заливкой: кромка на ней спорит с градиентом */
+[data-theme="dark"] #gg-root .gg-msg.gg-me .gg-bubble{
+  background:var(--gg-me);border:1px solid var(--gg-me-brd);
+}
+[data-theme="light"] .gg-msg.gg-me .gg-bubble::after{display:none}
+
+/* ── Игровые акценты, которых в макете чата не было ── */
+#gg-root .gg-gm-num{position:relative;overflow:hidden}
+#gg-root .gg-gm-card.gg-locked{opacity:.92}
+[data-theme="dark"] #gg-root .gg-gm-card.gg-locked{
+  background:var(--gg-card) padding-box,
+    conic-gradient(from 218deg,transparent 0 90deg,rgba(140,150,190,.22) 120deg,transparent 160deg 360deg) border-box;
+}
+[data-theme="light"] .gg-gm-card.gg-locked::after{opacity:.32;filter:none}
+/* Лесенка трека: пройденные ступени светятся, текущая ярче остальных */
+#gg-root .gg-track-dots i.done{box-shadow:var(--gg-good-glow)}
+#gg-root .gg-track-dots i.now{box-shadow:var(--gg-fill-glow);transform:scaleY(1.5)}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -8270,8 +8373,6 @@ function switchView(name) {
     markCardsSeen();
   }
   if (name === 'games') { ggOpen(); }
-  /* ⚠️ УХОДЯ С ИГР — ВЕРНУТЬ ХРОМ: иначе мастер-бар и пилюля остались бы
-     скрытыми на других экранах, если человек ушёл из партии свайпом назад */
   else if (typeof ggChrome === 'function') ggChrome(false);
   if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
@@ -10422,6 +10523,7 @@ const APP_TEXTS = {
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
   'funnel.about': {
     c:'Первый экран', l:'Кнопка «узнать подробнее» под фильмом', w:'Экран воронки', i:false,
