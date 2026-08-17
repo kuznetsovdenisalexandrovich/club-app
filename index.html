@@ -7663,6 +7663,19 @@ html[data-gg-web] #gg-play-wrap{min-height:100svh}
 html[data-gg-web] #gg-root .gg-composer-wrap{bottom:calc(6px + env(safe-area-inset-bottom))}
 #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){padding-bottom:18px}
 
+/* ── ⚠️ ЦВЕТ СИСТЕМНОЙ КЛАВИАТУРЫ ЗАДАЁТСЯ `color-scheme`, А ОН У КОРНЯ НЕ
+   ЗАДАН ВОВСЕ — браузер берёт схему устройства. Отсюда тёмная полоса
+   предсказаний под светлым экраном: телефон в тёмной теме, приложение в
+   светлой. Сообщаем браузеру нашу тему — и клавиатура, и её панель
+   подстраиваются ── */
+html[data-gg="1"][data-theme="light"]{color-scheme:light}
+html[data-gg="1"][data-theme="dark"]{color-scheme:dark}
+
+/* ── Плашка ввода при открытой клавиатуре — вплотную к низу ── */
+html[data-gg-web][data-gg-kbd] #gg-root .gg-composer-wrap{
+  bottom:0; padding-bottom:2px}
+html[data-gg-kbd] #gg-root .gg-input-warn{top:calc(100% + 6px)}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10950,6 +10963,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22641,8 +22655,11 @@ function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.
    Ограничение длины теперь не запрет, а подсказка: перевалил за мягкий порог —
    под плашкой появляется «лучше отвечай коротко», но писать никто не мешает.
    Жёсткий потолок только на уровне сервера (он режет на 600). */
-const GG_GROW_LINES = 5;       // до скольких строк растёт поле
-const GG_SOFT_CHARS = 160;     // после этого мягко советуем быть короче
+/* [stated] Denis 17.08: «количество текста можно в два раза уменьшить —
+   про ограничитель и предупреждение». Пять строк оказались избыточными: в
+   игре ответ должен быть репликой, а не письмом. */
+const GG_GROW_LINES = 3;       // до скольких строк растёт поле
+const GG_SOFT_CHARS = 80;      // после этого мягко советуем быть короче
 
 function ggLineH(el){
   const cs = getComputedStyle(el);
@@ -22731,6 +22748,10 @@ function ggKeyboardFollow(){
     window.visualViewport.addEventListener('scroll', ggKeyboardFollow);
   }
   inp.addEventListener('focus', function(){
+    /* ⚠️ ПРИ ОТКРЫТОЙ КЛАВИАТУРЕ ПЛАШКА ПРИЖИМАЕТСЯ К САМОМУ НИЗУ. В вебе
+       Safari сам поднимает её над клавиатурой, и наш собственный отступ
+       складывался с этим подъёмом — поле висело заметно выше нужного */
+    document.documentElement.toggleAttribute('data-gg-kbd', true);
     setTimeout(ggKeyboardFollow, 60);
     setTimeout(ggKeyboardFollow, 320);
     /* ⚠️⚠️ ПОСЛЕ ФОКУСА НЕ ПРОКРУЧИВАЕМ ВООБЩЕ. Партия ставит курсор в поле
@@ -22739,7 +22760,10 @@ function ggKeyboardFollow(){
        арбитра. Прокрутка нужна ПОСЛЕ ХОДА, а не по факту фокуса: там она и
        осталась. */
   });
-  inp.addEventListener('blur', function(){ setTimeout(ggKeyboardFollow, 60); });
+  inp.addEventListener('blur', function(){
+    document.documentElement.toggleAttribute('data-gg-kbd', false);
+    setTimeout(ggKeyboardFollow, 60);
+  });
   inp.addEventListener('keydown', function(e){
     /* Enter отправляет, Shift+Enter — перенос строки */
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
