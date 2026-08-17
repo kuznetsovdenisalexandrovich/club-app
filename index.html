@@ -59,7 +59,16 @@
     // Ошибки загрузки картинок и прочих ресурсов не показываем: они не мешают
     // приложению работать, а экран заняли бы собой
     if (ev && ev.target && ev.target !== window && ev.target.tagName) return;
-    paint((ev && ev.message) || 'Ошибка',
+    // ⚠️⚠️ «Script error.» БЕЗ ФАЙЛА И СТРОКИ — ЭТО ЧУЖОЙ СКРИПТ С ДРУГОГО
+    // ДОМЕНА. Браузер по соображениям безопасности не отдаёт подробности, и
+    // такая ошибка почти никогда не про нас: у нас на странице сторонние
+    // плееры и SDK. Раньше любая их икота закрывала приложение аварийным
+    // экраном — на iPhone в браузере это выглядело как «ничего не работает»,
+    // хотя на компьютере всё открывалось. Диагностировать тут всё равно
+    // нечего, поэтому просто не мешаем человеку.
+    var msg = (ev && ev.message) || '';
+    if (/^Script error\.?$/i.test(msg) && !(ev && ev.filename) && !(ev && ev.error)) return;
+    paint(msg || 'Ошибка',
           ((ev && ev.filename) || '') + ':' + ((ev && ev.lineno) || '') +
           '\n' + (ev && ev.error && ev.error.stack ? ev.error.stack : ''));
   }, true);
@@ -7515,6 +7524,28 @@ html[data-gg-nohead] .shell > header{display:none !important}
 #gg-root .gg-input{height:22px;min-height:22px;line-height:22px;padding:0;
   display:block;vertical-align:middle}
 
+/* ── ⚠️ ДЛИННОЕ СЛОВО БЕЗ ПРОБЕЛОВ НЕ ПЕРЕНОСИТСЯ и уезжает вбок: строка
+   остаётся одна, `scrollHeight` не растёт, поле не увеличивается. Разрешаем
+   рвать слово в любом месте — тогда вторая строка появляется как надо ── */
+#gg-root .gg-input{overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap}
+
+/* Предупреждение чуть ниже плашки */
+#gg-root .gg-input-warn{top:calc(100% + 11px)}
+
+/* ── ⚠️ МАСТЕР-БАР ОСТАЁТСЯ НА ВКЛАДКЕ (решение Denis'а), но он `fixed` и
+   накрывал начало списка — под ним пропадал заголовок трека. Опускаем список
+   ниже его нижнего края. Бар стоит на `safe-top + 88px` и высотой примерно
+   68 px вместе с отступами ── */
+#gg-root #gg-list{margin-top:88px}
+
+/* ── ⚠️ ПОД КЛАВИАТУРОЙ ВИДЕН СТАРЫЙ ФОН ПРИЛОЖЕНИЯ. Подложка вкладки была
+   ровно во весь экран, а при появлении клавиатуры видимая область смещается —
+   снизу и сверху вылезала полоска чужого фона. Растягиваем с запасом ── */
+#gg-root::before,#gg-root::after{
+  inset:-120px -40px -260px;   /* запас со всех сторон, чтобы при сдвиге
+                                  видимой области не вылезал фон приложения */
+  position:fixed}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10800,6 +10831,8 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
+
 
 
 
@@ -22437,6 +22470,17 @@ function ggKeyboardFollow(){
   const vv = window.visualViewport;
   const wrap = document.querySelector('#gg-root .gg-composer-wrap');
   if (!vv || !wrap) return;
+  /* ⚠️⚠️ ТОЛЬКО ВНУТРИ TELEGRAM. В обычном браузере Safari сам поднимает
+     `fixed`-элемент над клавиатурой — наш сдвиг накладывался на его и уводил
+     плашку выше, а каретка при этом оставалась рисоваться на прежнем месте
+     (Safari не перерисовывает её при смене позиции у сфокусированного поля).
+     Отсюда «поле подскакивает» и курсор отдельно от плашки. В мини-аппе
+     Telegram такого подъёма нет, там сдвиг нужен. */
+  const inTelegram = !!(window.Telegram && window.Telegram.WebApp
+                        && window.Telegram.WebApp.initData !== undefined
+                        && window.Telegram.WebApp.platform
+                        && window.Telegram.WebApp.platform !== 'unknown');
+  if (!inTelegram){ wrap.style.setProperty('--gg-kb', '0px'); return; }
   const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   wrap.style.setProperty('--gg-kb', hidden + 'px');
 }
