@@ -17273,6 +17273,10 @@ const VK_ADS_ENTRY_EVENTS = {
 };
 const VK_ADS_SENT_KEY  = 'club_app_vk_ads_sent';
 const VK_ADS_REPEAT_MS = 24 * 60 * 60 * 1000;
+const VK_ADS_WAIT_MS   = 5000;           // сколько ждём ответ моста
+const VK_ADS_QUIET_MS  = 10 * 60 * 1000; // пауза после молчания клиента ВК
+let   vkAdsQuietUntil  = 0;
+function vkAdsQuiet(){ vkAdsQuietUntil = Date.now() + VK_ADS_QUIET_MS; }
 
 function vkAdsSentMap(){
   try { return JSON.parse(localStorage.getItem(VK_ADS_SENT_KEY) || '{}') || {}; }
@@ -17295,6 +17299,7 @@ async function vkTrack(entry){
     if (!name) return false;
     const last = vkAdsSentMap()[name] || 0;
     if (last && (Date.now() - last) < VK_ADS_REPEAT_MS) return false;
+    if (Date.now() < vkAdsQuietUntil) return false;
     if (!(window.vkBridge && vkBridge.send)) return false;
     const params = { event_name: name };
     // `user_id` необязателен, но с ним ВК связывает событие с человеком, а не
@@ -17302,10 +17307,20 @@ async function vkTrack(entry){
     // на всех площадках
     const uid = (typeof telegramId !== 'undefined' && telegramId) ? telegramId : vkUserId();
     if (uid) params.user_id = String(uid);
-    const res = await vkBridge.send('VKWebAppTrackEvent', params);
+    /* ⚠️⚠️ ПОТОЛОК ОЖИДАНИЯ ОБЯЗАТЕЛЕН (17.08.2026, проверено живьём).
+       Пока трекинг мини-приложений не включён на стороне ВК, клиент НЕ ОТВЕЧАЕТ
+       на этот метод ВООБЩЕ: ни успехом, ни ошибкой — промис висит вечно.
+       Без потолка каждый вход в воронку оставлял бы висящее обещание, а функция
+       никогда бы не досчитывала до отметки «отправлено». */
+    const res = await Promise.race([
+      vkBridge.send('VKWebAppTrackEvent', params),
+      new Promise(r => setTimeout(() => r(null), VK_ADS_WAIT_MS))
+    ]);
     // ⚠️ ПОМЕЧАЕМ ОТПРАВЛЕННЫМ ТОЛЬКО ПО ПОДТВЕРЖДЕНИЮ. Записать заранее значит
-    // потерять событие навсегда, если мост ответил отказом
+    // потерять событие навсегда, если мост ответил отказом или промолчал
     if (res && res.result){ vkAdsRemember(name); return true; }
+    // Метод молчит — не долбимся в него на каждом экране, ждём несколько минут
+    vkAdsQuiet();
   } catch(e){}
   return false;
 }
