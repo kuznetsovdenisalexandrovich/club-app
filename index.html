@@ -4581,8 +4581,18 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
       <!-- Список игр -->
       <div id="gg-list-wrap">
-        <div class="gg-section-h" data-text="games.title">Игры</div>
-        <div class="gg-section-sub" data-text="games.sub">Тренировка на живом собеседнике</div>
+        <!-- Своя шапка вкладки: шапка приложения на играх скрыта целиком,
+             поэтому переключатель темы переезжает сюда -->
+        <div class="gg-head">
+          <div>
+            <div class="gg-head-title" data-text="games.title">Игры</div>
+            <div class="gg-head-sub" data-text="games.sub">Тренировка на живом собеседнике</div>
+          </div>
+          <div class="gg-head-acts">
+            <button class="gg-round" onclick="toggleTheme()" aria-label="Тема">◐</button>
+            <button class="gg-round" onclick="ggPop('gg-m-howto')" aria-label="Как устроено">?</button>
+          </div>
+        </div>
         <div id="gg-list"></div>
       </div>
 
@@ -4597,8 +4607,6 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <section class="gg-arbiter">
           <div class="gg-robot-wrap"><div class="gg-robot"></div></div>
           <div class="gg-arb-content">
-            <div class="gg-kicker" data-text="games.arbiter">Арбитр</div>
-            <div class="gg-arb-copy" data-text="games.arbiter_copy">Арбитр наблюдает за разговором и взвешивает каждую реплику.</div>
             <div class="gg-success-label">
               <span class="gg-scale-name" id="gg-scale-name"></span>
               <strong class="gg-chance" id="gg-chance">0%</strong>
@@ -5399,8 +5407,16 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggClose('gg-m-fail')" data-text="games.fail_retry">Повторить ход</button>
     </div>
   </div>
-</div>
 
+  <div class="gg-overlay" id="gg-m-howto" onclick="if(event.target===this)ggClose('gg-m-howto')">
+    <div class="gg-modal gg-modal-left" style="position:relative">
+      <button class="gg-modal-close" onclick="ggClose('gg-m-howto')">✕</button>
+      <div class="gg-modal-h" data-text="games.howto_h">Как устроены игры</div>
+      <div class="gg-modal-p" data-text="games.howto_p">Ты переписываешься с клиентом, которого играет модель. Арбитр наверху следит за разговором и двигает шкалу после каждого твоего хода. Выиграть можно раньше пяти ходов — если сформулируешь удачно с первого раза.</div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggClose('gg-m-howto')" data-text="games.ok">Понятно</button>
+    </div>
+  </div>
+</div>
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v10h5v-6h2v6h5V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
@@ -7343,6 +7359,71 @@ body.api-override-on #api-override-bar{display:block}
   box-shadow:0 4px 12px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.22) inset;
   padding:3px 9px !important}
 
+/* ═══ РЕЖИМ ИГР: ПЕРЕКРАШИВАЕМ ЧУЖИЕ ЭЛЕМЕНТЫ ══════════════════════════════
+   ⚠️ Пилюля и мастер-бар принадлежат приложению и живут ВНЕ вкладки. Правила
+   ниже действуют только при `data-gg="1"` на корне — атрибут ставится на входе
+   на игры и снимается на выходе. На остальных экранах не срабатывает ничего.
+   ═════════════════════════════════════════════════════════════════════════ */
+html[data-gg="1"] .tabbar{
+  background:var(--gg-panel);border:1px solid var(--gg-panel-brd);
+  box-shadow:var(--gg-panel-sh);border-radius:30px;
+  backdrop-filter:blur(24px) saturate(115%);-webkit-backdrop-filter:blur(24px) saturate(115%);
+}
+html[data-gg="1"][data-theme="dark"] .tabbar{
+  background:var(--gg-panel) padding-box, var(--gg-edge-conic-b) border-box;
+  border:1px solid transparent;
+}
+html[data-gg="1"] .tab-item{color:var(--gg-tab);font-family:var(--gg-font-body)}
+html[data-gg="1"] .tab-item.active{color:var(--gg-tab-on);text-shadow:var(--gg-tab-glow)}
+html[data-gg="1"] .tab-item.active .tab-icon{filter:drop-shadow(var(--gg-dot-glow))}
+html[data-gg="1"] .tab-item.active .tab-underline{background:var(--gg-tab-on);
+  box-shadow:var(--gg-dot-glow)}
+html[data-gg="1"] .scroll-fade{background:linear-gradient(to bottom,transparent,var(--gg-bg))}
+
+html[data-gg="1"] .level-card{
+  background:var(--gg-card);border:1px solid var(--gg-card-brd);
+  box-shadow:var(--gg-card-sh);border-radius:20px;
+  font-family:var(--gg-font-body);color:var(--gg-ink)}
+html[data-gg="1"][data-theme="dark"] .level-card{
+  background:var(--gg-card) padding-box, var(--gg-edge-conic-b) border-box;
+  border:1px solid transparent}
+html[data-gg="1"] .level-card-title{color:var(--gg-ink)}
+html[data-gg="1"] .level-card-frac{color:var(--gg-muted)}
+html[data-gg="1"] .level-bar-track{background:var(--gg-track);box-shadow:var(--gg-track-sh);
+  border:1px solid var(--gg-track-brd)}
+html[data-gg="1"] .level-bar-fill{background:var(--gg-fill);box-shadow:var(--gg-fill-glow)}
+html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
+  box-shadow:var(--gg-me-sh),var(--gg-num-glow);font-family:var(--gg-font-disp)}
+
+/* ── Своя шапка вкладки вместо шапки приложения ── */
+#gg-root .gg-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:calc(max(var(--safe-top,0px),8px) + 14px) 0 14px}
+#gg-root .gg-head-title{font-family:var(--gg-font-disp);font-weight:700;font-size:22px;
+  letter-spacing:-.02em;color:var(--gg-ink)}
+#gg-root .gg-head-sub{font-size:12.5px;color:var(--gg-muted);margin-top:4px}
+#gg-root .gg-head-acts{display:flex;gap:8px;flex:none}
+#gg-root .gg-round{width:38px;height:38px;border-radius:50%;cursor:pointer;
+  border:1px solid var(--gg-pill-brd);background:var(--gg-pill);color:var(--gg-ink-3);
+  font-size:15px;box-shadow:var(--gg-pill-sh);backdrop-filter:blur(14px);
+  display:grid;place-items:center}
+#gg-root .gg-round:active{transform:scale(.92)}
+
+/* ── ⚠️ АРБИТР СЖАТ. [stated] Denis: «у арбитра слишком крупный блок»,
+   слово «арбитр» и пояснение убраны. Осталось то, что меняется по ходу
+   партии: лицо и шкала. Робот меньше, плашка ниже вдвое ── */
+#gg-root .gg-arbiter{min-height:0;padding:14px 18px;gap:14px;
+  grid-template-columns:74px 1fr;border-radius:26px}
+#gg-root .gg-robot{width:70px}
+#gg-root .gg-robot-wrap::before{width:84px;height:84px}
+#gg-root .gg-success-label{margin-bottom:7px}
+#gg-root .gg-scale-legend{margin-top:5px}
+@media(max-width:480px){
+  #gg-root .gg-arbiter{grid-template-columns:62px 1fr;padding:12px 14px;gap:12px}
+  #gg-root .gg-robot{width:58px}
+  #gg-root .gg-robot-wrap::before{width:70px;height:70px}
+  #gg-root .gg-head-title{font-size:20px}
+}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -8473,7 +8554,7 @@ function switchView(name) {
     markCardsSeen();
   }
   if (name === 'games') { ggOpen(); }
-  else if (typeof ggChrome === 'function') ggChrome(false);
+  else if (typeof ggChrome === 'function'){ ggChrome(false); ggHideAppHeader(false); ggMode(false); }
   if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
   if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
@@ -10585,7 +10666,9 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    i — важный (идёт в раздел, а не в общий список), t — сам текст.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const APP_TEXTS = {  'games.too_long': { c:'Игры', l:'Предупреждение о длине ответа', w:'Экран партии', i:false, t:'Лучше отвечай коротко' },
+const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «как устроено»', w:'Попап', i:false, t:'Как устроены игры' },
+  'games.howto_p': { c:'Игры', l:'Текст «как устроено»', w:'Попап', i:false, t:'Ты переписываешься с клиентом, которого играет модель. Арбитр наверху следит за разговором и двигает шкалу после каждого твоего хода. Выиграть можно раньше пяти ходов — если сформулируешь удачно с первого раза.' },
+  'games.too_long': { c:'Игры', l:'Предупреждение о длине ответа', w:'Экран партии', i:false, t:'Лучше отвечай коротко' },
   'games.note_open': { c:'Игры', l:'Кнопка «показать разбор хода»', w:'Экран партии', i:false, t:'Разбор хода' },
   'games.note_locked': { c:'Игры', l:'Кнопка разбора у гостя', w:'Экран партии', i:false, t:'Разбор — участникам' },
 
@@ -10626,6 +10709,8 @@ const APP_TEXTS = {  'games.too_long': { c:'Игры', l:'Предупрежде
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
+
 
 
 
@@ -21681,7 +21766,18 @@ function ggGuestKey(){
   return k;
 }
 
+/* ⚠️ ПРИЗНАК РЕЖИМА НА КОРНЕ ДОКУМЕНТА. Пилюля и мастер-бар живут вне вкладки
+   и принадлежат приложению — перекрашивать их насовсем нельзя. Атрибут
+   ставится на входе и снимается на выходе, а весь новый вид описан
+   селекторами `[data-gg="1"] .tabbar` в блоке игр: на других экранах не
+   срабатывает ни одно правило. */
+function ggMode(on){
+  const r = document.documentElement;
+  if (on) r.setAttribute('data-gg', '1'); else r.removeAttribute('data-gg');
+}
+
 async function ggOpen(){
+  ggMode(true);
   /* ⚠️⚠️ СНАЧАЛА ЖДЁМ ПРОФИЛЬ, ПОТОМ СПРАШИВАЕМ СЕРВЕР. Профиль грузится
      асинхронно, и до его прихода `telegramId` равен null — запрос уходил бы с
      гостевым ключом, сервер честно отвечал «не участник», и человек с активной
@@ -21830,16 +21926,7 @@ function ggRules(){
 function ggChrome(hide){
   const fade = document.querySelector('.scroll-fade');
   if (fade) fade.style.display = hide ? 'none' : '';
-  const head = document.querySelector('.shell > header');
-  if (head){
-    if (hide){
-      if (head.dataset.ggPrev === undefined) head.dataset.ggPrev = head.style.display || '';
-      head.style.display = 'none';
-    } else if (head.dataset.ggPrev !== undefined){
-      head.style.display = head.dataset.ggPrev;
-      delete head.dataset.ggPrev;
-    }
-  }
+
   ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -21871,6 +21958,24 @@ function ggShow(which){
 function ggBackToList(){
   ggS = null;
   ggShow('list');
+  /* ⚠️ Возврат к списку возвращает пилюлю, но НЕ шапку приложения: на вкладке
+     игр её нет вовсе — вместо неё своя, с переключателем темы */
+  ggMode(true);
+  ggHideAppHeader(true);
+}
+
+/* Шапка приложения прячется на всей вкладке. Отдельно от ggChrome, потому что
+   у той своя задача — полноэкранная партия */
+function ggHideAppHeader(hide){
+  const head = document.querySelector('.shell > header');
+  if (!head) return;
+  if (hide){
+    if (head.dataset.ggPrev === undefined) head.dataset.ggPrev = head.style.display || '';
+    head.style.display = 'none';
+  } else if (head.dataset.ggPrev !== undefined){
+    head.style.display = head.dataset.ggPrev;
+    delete head.dataset.ggPrev;
+  }
 }
 
 async function ggStart(key){
