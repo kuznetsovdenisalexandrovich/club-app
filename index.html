@@ -4574,6 +4574,58 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
   </div>
 
+
+  <!-- ── Игры ── -->
+  <div class="view" id="view-games">
+    <div id="gg-root">
+
+      <!-- Список игр -->
+      <div id="gg-list-wrap">
+        <div class="gg-section-h" data-text="games.title">Игры</div>
+        <div class="gg-section-sub" data-text="games.sub">Тренировка на живом собеседнике</div>
+        <div id="gg-list"></div>
+      </div>
+
+      <!-- Партия. ⚠️ Мастер-бар и пилюля на этом экране скрыты -->
+      <div id="gg-play-wrap" style="display:none">
+        <div class="gg-topbar">
+          <button class="gg-exit" onclick="ggQuitAsk()" data-text="games.exit">← Выйти</button>
+          <div class="gg-title" id="gg-play-title"></div>
+          <div class="gg-turn" id="gg-play-turn"></div>
+        </div>
+
+        <section class="gg-arbiter">
+          <div class="gg-robot-wrap"><div class="gg-robot"></div></div>
+          <div class="gg-arb-content">
+            <div class="gg-kicker" data-text="games.arbiter">Арбитр</div>
+            <div class="gg-arb-copy" data-text="games.arbiter_copy">Арбитр наблюдает за разговором и взвешивает каждую реплику.</div>
+            <div class="gg-success-label">
+              <span class="gg-scale-name" id="gg-scale-name"></span>
+              <strong class="gg-chance" id="gg-chance">0%</strong>
+            </div>
+            <div class="gg-progress"><div class="gg-progress-clip"><i id="gg-fill"></i></div></div>
+            <div class="gg-scale-legend"><span>0%</span><span>50%</span><span>100%</span></div>
+          </div>
+        </section>
+
+        <div class="gg-feed" id="gg-feed"></div>
+
+        <div class="gg-composer-wrap" id="gg-composer">
+          <div class="gg-composer">
+            <button class="gg-spark" onclick="ggRules()" aria-label="Правила">✦</button>
+            <input class="gg-input" id="gg-input" autocomplete="off" data-text-ph="games.placeholder" placeholder="Твой ответ клиенту...">
+            <button class="gg-send" id="gg-send" onclick="ggSend()" aria-label="Отправить">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Финал -->
+      <div id="gg-final-wrap" style="display:none"></div>
+    </div>
+  </div>
+
   <!-- ── Профиль ── -->
   <div class="view" id="view-profile">
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -5289,6 +5341,62 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 <div class="scroll-fade"></div>
 
+
+<!-- ── Попапы игр. Живут ВНЕ .shell, как остальные оверлеи приложения ── -->
+<div id="gg-pops">
+  <div class="gg-overlay" id="gg-m-level" onclick="if(event.target===this)ggClose('gg-m-level')">
+    <div class="gg-modal" style="position:relative">
+      <button class="gg-modal-close" onclick="ggClose('gg-m-level')">✕</button>
+      <div class="gg-robot"></div>
+      <div class="gg-modal-h" id="gg-level-h"></div>
+      <div class="gg-modal-p" id="gg-level-p"></div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
+              onclick="ggClose('gg-m-level');switchView('points-info')" data-text="games.level_points">Как получить баллы</button>
+      <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggClose('gg-m-level')" data-text="games.ok">Понятно</button>
+    </div>
+  </div>
+
+  <div class="gg-overlay" id="gg-m-member" onclick="if(event.target===this)ggClose('gg-m-member')">
+    <div class="gg-modal" style="position:relative">
+      <button class="gg-modal-close" onclick="ggClose('gg-m-member')">✕</button>
+      <div class="gg-robot"></div>
+      <div class="gg-modal-h" data-text="games.member_h">Эта игра — для участников</div>
+      <div class="gg-modal-p" data-text="games.member_p">Первую игру можно пройти бесплатно. Остальные открываются вместе с клубом — вместе с разбором каждого хода по базе занятий.</div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
+              onclick="ggClose('gg-m-member');switchView('club-info')" data-text="games.member_cta">Что в клубе</button>
+      <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggClose('gg-m-member')" data-text="games.later">Позже</button>
+    </div>
+  </div>
+
+  <div class="gg-overlay" id="gg-m-rules" onclick="if(event.target===this)ggClose('gg-m-rules')">
+    <div class="gg-modal gg-modal-left" style="position:relative">
+      <button class="gg-modal-close" onclick="ggClose('gg-m-rules')">✕</button>
+      <div class="gg-modal-h" id="gg-rules-h"></div>
+      <div class="gg-modal-p" id="gg-rules-p"></div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" id="gg-rules-go" data-text="games.start">Начать партию</button>
+    </div>
+  </div>
+
+  <div class="gg-overlay" id="gg-m-quit" onclick="if(event.target===this)ggClose('gg-m-quit')">
+    <div class="gg-modal">
+      <div class="gg-modal-h" data-text="games.quit_h">Выйти из партии?</div>
+      <div class="gg-modal-p" data-text="games.quit_p">Партия останется незаконченной, вернуться к ней не получится.</div>
+      <div class="gg-btn-row">
+        <button class="gg-btn gg-btn-ghost gg-btn-md" onclick="ggClose('gg-m-quit')" data-text="games.quit_stay">Играю дальше</button>
+        <button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggClose('gg-m-quit');ggBackToList()" data-text="games.quit_go">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="gg-overlay" id="gg-m-fail" onclick="if(event.target===this)ggClose('gg-m-fail')">
+    <div class="gg-modal">
+      <div class="gg-modal-h" data-text="games.fail_h">Клиент задумался слишком надолго</div>
+      <div class="gg-modal-p" id="gg-fail-p" data-text="games.fail_p">Ход не дошёл. Отправь ещё раз — счёт и история сохранены.</div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggClose('gg-m-fail')" data-text="games.fail_retry">Повторить ход</button>
+    </div>
+  </div>
+</div>
+
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v10h5v-6h2v6h5V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
@@ -5298,6 +5406,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="tab-item" onclick="switchView('library')" id="tab-library">
     <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
     <span>Что посмотреть?</span>
+    <div class="tab-underline"></div>
+  </div>
+  <div class="tab-item" onclick="switchView('games')" id="tab-games">
+    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6.5h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H11l-4 3v-3H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="11.5" r="1" fill="currentColor"/><circle cx="12" cy="11.5" r="1" fill="currentColor"/><circle cx="15" cy="11.5" r="1" fill="currentColor"/></svg></span>
+    <span>Игры</span>
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
@@ -6584,6 +6697,445 @@ body.api-override-on #api-override-bar{display:block}
 .live-gate-sub{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:14px}
 .live-gate-close{position:absolute;right:10px;top:8px;background:none;border:none;
   color:var(--text-faint);font-size:15px;cursor:pointer;padding:4px 6px}
+
+/* ═══ ВКЛАДКА «ИГРЫ»: ЛОКАЛЬНЫЕ СТИЛИ ═══════════════════════════════════
+   ⚠️ ИЗОЛЯЦИЯ ДЕРЖИТСЯ НА ПРЕФИКСАХ: классы `.gg-*`, переменные `--gg-*`,
+   анимации `gg_*`. Без них `--bg`, `--card`, `.bubble`, `.row`, `.chip`
+   перебили бы тему и вёрстку всего приложения.
+   Переменные объявлены на `#gg-root` — наружу они не текут по построению.
+   Палитра снята с утверждённого макета GPT, обе темы. Фон страницы и
+   световые полосы не переносим: у приложения они уже свои.
+   ⚠️ БЛОК СТОИТ В САМОМ КОНЦЕ ТАБЛИЦЫ СТИЛЕЙ — правки поверх перенесённого
+   чужого CSS иначе перебиваются фигма-редизайном. ══════════════════════ */
+/* ══════════ РОЛИ ЦВЕТА. Светлая — значения утверждённого макета ══════════ */
+#gg-root{
+  --gg-font-disp:'Unbounded',system-ui,sans-serif;
+  --gg-font-body:'Manrope',system-ui,sans-serif;
+
+  --gg-bg:#f3f5fc;
+  --gg-page:radial-gradient(780px 520px at 8% 7%,rgba(255,255,255,.96),transparent 62%),
+         radial-gradient(540px 430px at 95% 8%,rgba(215,226,255,.64),transparent 63%),
+         radial-gradient(620px 420px at 12% 72%,rgba(243,229,255,.40),transparent 66%),
+         linear-gradient(180deg,#f6f7fc 0%,#edf1fb 48%,#e9edf8 100%);
+  /* ⚠️ СВЕТОВЫЕ ПОЛОСЫ ВЗЯТЫ ИЗ ОСНОВНОГО АППА ОДИН В ОДИН (там это
+     `body::before` фигма-редизайна): косые лучи + солнце из угла. Свой
+     вариант развёл бы игры и остальное приложение по «погоде» на фоне */
+  --gg-sheen:linear-gradient(216deg,transparent 0 11%,rgba(255,255,255,.46) 12% 16%,transparent 17% 31%,rgba(255,252,235,.30) 32% 37%,transparent 38% 54%,rgba(255,255,255,.22) 55% 59%,transparent 60%),
+          radial-gradient(520px 420px at 0% 0%,rgba(255,242,204,.42),transparent 72%);
+  --gg-sheen-op:.68;
+  --gg-sheen-blur:blur(.35px);
+
+  --gg-ink:#313c65;          /* заголовки */
+  --gg-ink-2:#394568;        /* текст в пузыре */
+  --gg-ink-3:#657092;        /* пояснения */
+  --gg-muted:#8994b8;        /* подписи */
+  --gg-muted-2:#aab5d2;      /* время, мелочь */
+
+  --gg-panel:linear-gradient(180deg,rgba(255,255,255,.56),rgba(255,255,255,.38));
+  --gg-panel-brd:rgba(255,255,255,.96);
+  --gg-panel-sh:0 18px 44px rgba(145,160,210,.14), inset 0 1px 0 rgba(255,255,255,.95);
+  --gg-panel-glow:radial-gradient(220px 120px at 22% 14%,rgba(255,255,255,.75),transparent 70%),
+               radial-gradient(260px 170px at 82% 20%,rgba(224,230,255,.42),transparent 70%);
+  --gg-panel-blur:blur(24px) saturate(115%);
+
+  --gg-card:rgba(255,255,255,.62);
+  --gg-card-brd:rgba(255,255,255,.96);
+  --gg-card-sh:0 12px 28px rgba(151,164,211,.10), inset 0 1px 0 rgba(255,255,255,.95);
+
+  --gg-bubble:rgba(255,255,255,.76);
+  --gg-bubble-brd:rgba(255,255,255,.95);
+  --gg-bubble-sh:0 12px 28px rgba(151,164,211,.12), inset 0 1px 0 rgba(255,255,255,.95);
+  --gg-me:linear-gradient(135deg,#7db4f7 0%,#89a3f5 48%,#9b8df2 100%);
+  --gg-me-brd:rgba(255,255,255,.58);
+  --gg-me-sh:0 14px 30px rgba(119,143,232,.18), inset 0 1px 0 rgba(255,255,255,.30);
+  --gg-me-ink:#fff;
+
+  --gg-pill:rgba(255,255,255,.42);
+  --gg-pill-brd:rgba(255,255,255,.82);
+  --gg-pill-ink:#8f9abe;
+  --gg-pill-sh:0 12px 28px rgba(151,163,205,.12), inset 0 1px 0 rgba(255,255,255,.95);
+
+  --gg-track:rgba(213,219,237,.55);
+  --gg-track-h:16px;
+  --gg-track-pad:2px;
+  --gg-track-sh:inset 0 1px 3px rgba(133,147,194,.14), inset 0 -1px 0 rgba(255,255,255,.75);
+  --gg-track-brd:transparent;
+  --gg-fill:linear-gradient(90deg,#c49cff 0%,#9ca4ff 46%,#78b5f7 100%);
+  /* ⚠️ СВЕЧЕНИЕ ЕСТЬ И В СВЕТЛОЙ ТЕМЕ. [stated] Denis: «чтоб не так всё было
+     стерильно» — без него светлая читалась как бумажный макет. В светлой оно
+     мягче и цветное, в тёмной остаётся неоновым */
+  --gg-fill-glow:0 0 10px rgba(145,153,255,.55), 0 0 22px rgba(196,156,255,.38), 0 0 38px rgba(120,181,247,.20);
+  --gg-halo-op:.55;                     /* ореол под шкалой — теперь в обеих */
+  --gg-dot-glow:0 0 8px rgba(145,153,255,.45);
+  --gg-good-glow:0 0 10px rgba(40,184,121,.30);
+  --gg-bad-glow:0 0 10px rgba(239,94,107,.28);
+  --gg-num-glow:0 0 14px rgba(137,163,245,.42);
+
+  --gg-accent:#7f8ff0;                  /* надпись AI ARBITER */
+  --gg-accent-2:#8d80ee;                /* иконки-акценты */
+  --gg-chance:#34406a;
+  --gg-chance-sz:23px;
+
+  --gg-good-bg:rgba(117,222,175,.20); --gg-good:#28b879;
+  --gg-bad-bg:rgba(255,133,147,.22);  --gg-bad:#ef5e6b;
+  --gg-lock-bg:rgba(213,219,237,.55); --gg-lock:#8994b8;
+
+  --gg-send:linear-gradient(135deg,#78b4f8,#8f9bf4 52%,#9e88ee);
+  --gg-send-sh:0 14px 26px rgba(122,143,234,.24), inset 0 1px 0 rgba(255,255,255,.34);
+  --gg-tab:#a7b1cd; --gg-tab-on:#718ef4; --gg-tab-glow:none;
+
+  --gg-robot-sh:drop-shadow(0 14px 22px rgba(139,157,239,.20));
+  --gg-robot-fx:none;
+  --gg-robot-halo:0;
+  --gg-hair:linear-gradient(90deg,transparent,#cbd3e8);
+  --gg-note:rgba(223,226,246,.68);
+  --gg-note-brd:rgba(255,255,255,.80);
+  --gg-veil:rgba(243,245,252,.72);
+}
+
+/* ══════════ ТЁМНАЯ — значения утверждённого тёмного макета ══════════ */
+[data-theme="dark"] #gg-root{
+  --gg-bg:#0c1227;
+  --gg-page:radial-gradient(760px 520px at 8% 5%,rgba(67,87,167,.16),transparent 62%),
+         radial-gradient(660px 500px at 102% 18%,rgba(87,69,162,.14),transparent 65%),
+         radial-gradient(680px 460px at 16% 86%,rgba(38,68,143,.10),transparent 70%),
+         linear-gradient(180deg,#111933 0%,#0c142b 46%,#091125 100%);
+  --gg-sheen:linear-gradient(126deg,transparent 0 9%,rgba(152,125,255,.075) 10% 14%,transparent 15% 30%,rgba(80,118,255,.045) 31% 36%,transparent 37%),
+          radial-gradient(540px 420px at 0% 0%,rgba(140,99,255,.13),transparent 72%);
+  --gg-sheen-op:.72;
+  --gg-sheen-blur:none;
+
+  --gg-ink:#f0f3ff; --gg-ink-2:#edf1ff; --gg-ink-3:#bdc4df;
+  --gg-muted:#9ea8cc; --gg-muted-2:#6f7a9c;
+
+  --gg-panel:radial-gradient(250px 150px at 16% 16%,rgba(78,129,255,.13),transparent 70%),
+          radial-gradient(260px 160px at 82% 0%,rgba(160,117,255,.10),transparent 72%),
+          linear-gradient(180deg,rgba(28,36,67,.74),rgba(18,27,53,.79));
+  --gg-panel-brd:rgba(160,181,255,.14);
+  --gg-panel-sh:0 24px 58px rgba(0,0,0,.33), 0 0 34px rgba(80,111,225,.055),
+             inset 0 1px 0 rgba(255,255,255,.055), inset 0 -1px 0 rgba(61,82,152,.10);
+  --gg-panel-glow:linear-gradient(145deg,rgba(255,255,255,.055),transparent 26%,transparent 76%,rgba(119,97,255,.04)),
+               radial-gradient(260px 130px at 22% 10%,rgba(114,198,255,.06),transparent 72%);
+  --gg-panel-blur:blur(28px) saturate(130%);
+
+  --gg-card:linear-gradient(180deg,rgba(30,39,67,.78),rgba(25,34,60,.74));
+  --gg-card-brd:rgba(157,174,232,.10);
+  --gg-card-sh:0 12px 28px rgba(0,0,0,.17), inset 0 1px 0 rgba(255,255,255,.04);
+
+  --gg-bubble:linear-gradient(180deg,rgba(38,47,76,.84),rgba(31,40,68,.80));
+  --gg-bubble-brd:rgba(157,174,232,.10);
+  --gg-bubble-sh:0 12px 28px rgba(0,0,0,.19), inset 0 1px 0 rgba(255,255,255,.045);
+  --gg-me:linear-gradient(135deg,rgba(61,111,230,.95) 0%,rgba(82,78,202,.96) 49%,rgba(111,71,192,.96) 100%);
+  --gg-me-brd:rgba(126,168,255,.50);
+  --gg-me-sh:0 14px 30px rgba(35,55,135,.28), 0 0 18px rgba(80,130,255,.15),
+          0 0 31px rgba(108,74,231,.11), inset 0 1px 0 rgba(255,255,255,.13);
+  --gg-me-ink:#f7f8ff;
+
+  --gg-pill:rgba(255,255,255,.036);
+  --gg-pill-brd:rgba(182,195,237,.16);
+  --gg-pill-ink:#b7c0de;
+  --gg-pill-sh:0 12px 28px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.055);
+
+  --gg-track:rgba(82,98,150,.28);
+  --gg-track-h:12px;
+  --gg-track-pad:0px;
+  --gg-track-brd:rgba(144,162,228,.12);
+  --gg-track-sh:inset 0 2px 5px rgba(0,0,0,.30), 0 0 12px rgba(83,166,255,.18),
+             0 0 28px rgba(135,103,255,.17), 0 0 44px rgba(99,127,255,.08);
+  --gg-fill:linear-gradient(90deg,#5ed4ff 0%,#6fa2ff 38%,#8e85ff 68%,#d98dff 100%);
+  --gg-fill-glow:0 0 7px rgba(95,216,255,.82), 0 0 16px rgba(96,178,255,.65),
+              0 0 29px rgba(142,113,255,.55), 0 0 44px rgba(211,126,255,.28);
+  --gg-halo-op:.95;
+  --gg-dot-glow:0 0 10px rgba(110,180,255,.55);
+  --gg-good-glow:0 0 12px rgba(105,214,165,.35);
+  --gg-bad-glow:0 0 12px rgba(255,132,149,.32);
+  --gg-num-glow:0 0 18px rgba(110,150,255,.50);
+
+  --gg-accent:#c8caec; --gg-accent-2:#b2b6dc;
+  --gg-chance:#caaaff; --gg-chance-sz:28px;
+
+  --gg-good-bg:rgba(60,193,137,.13); --gg-good:#69d6a5;
+  --gg-bad-bg:rgba(255,92,111,.12);  --gg-bad:#ff8495;
+  --gg-lock-bg:rgba(82,98,150,.24);  --gg-lock:#8d98bc;
+
+  --gg-send:linear-gradient(135deg,#61c2ff 0%,#718fff 43%,#9f70ff 100%);
+  --gg-send-sh:0 0 12px rgba(87,196,255,.36), 0 0 26px rgba(124,107,255,.30),
+            0 13px 28px rgba(52,69,160,.30), inset 0 1px 0 rgba(255,255,255,.20);
+  --gg-tab:#646e91; --gg-tab-on:#9bc4ff; --gg-tab-glow:0 0 12px rgba(104,174,255,.30);
+
+  --gg-robot-sh:none;
+  --gg-robot-fx:saturate(1.25) brightness(.78) contrast(1.06)
+             drop-shadow(0 0 11px rgba(74,186,255,.39)) drop-shadow(0 0 27px rgba(137,104,255,.29));
+  --gg-robot-halo:.96;
+  --gg-hair:linear-gradient(90deg,transparent,rgba(135,150,199,.32));
+  --gg-note:rgba(38,47,75,.72);
+  --gg-note-brd:rgba(158,174,232,.08);
+  --gg-veil:rgba(12,18,39,.74);
+}
+
+/* ══════════ КАРКАС ══════════ */
+
+
+
+
+
+
+
+
+
+
+
+.gg-topbar{height:72px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;
+  position:sticky;top:44px;z-index:20;
+  background:linear-gradient(180deg,var(--gg-bg) 62%,transparent);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.gg-exit{justify-self:start;border:1px solid var(--gg-pill-brd);background:var(--gg-pill);color:var(--gg-pill-ink);
+  border-radius:999px;padding:12px 18px;font:600 15px var(--gg-font-body);box-shadow:var(--gg-pill-sh);
+  backdrop-filter:blur(16px);cursor:pointer}
+.gg-title{font-family:var(--gg-font-disp);font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--gg-ink)}
+.gg-turn{justify-self:end;font-size:14px;font-weight:600;color:var(--gg-muted)}
+
+.gg-section-h{font-family:var(--gg-font-disp);font-weight:700;font-size:15px;color:var(--gg-ink);
+  letter-spacing:-.01em;margin:26px 0 4px}
+.gg-section-sub{font-size:12px;color:var(--gg-muted);margin-bottom:12px}
+
+/* ══════════ АРБИТР ══════════ */
+.gg-arbiter{position:relative;min-height:224px;border-radius:34px;padding:26px 26px 22px;
+  display:grid;grid-template-columns:128px 1fr;gap:22px;align-items:center;
+  background:var(--gg-panel);border:1px solid var(--gg-panel-brd);box-shadow:var(--gg-panel-sh);
+  overflow:hidden;backdrop-filter:var(--gg-panel-blur);-webkit-backdrop-filter:var(--gg-panel-blur)}
+.gg-arbiter::before{content:"";position:absolute;inset:0;border-radius:inherit;
+  background:var(--gg-panel-glow);pointer-events:none}
+.gg-robot-wrap{position:relative;display:grid;place-items:center;z-index:2}
+.gg-robot-wrap::before{content:"";position:absolute;width:128px;height:128px;border-radius:50%;
+  pointer-events:none;opacity:var(--gg-robot-halo);filter:blur(8px);
+  background:radial-gradient(circle,rgba(82,188,255,.27) 0%,rgba(113,104,255,.15) 42%,transparent 72%)}
+/* ⚠️ ПОПРАВКА ПОЛОЖЕНИЯ: в файле голова стоит не по центру (сверху 130 px,
+   снизу 72 из 1254) — без сдвига она тонет в нижней части плашки */
+.gg-robot{width:112px;aspect-ratio:1;position:relative;z-index:1;
+  background:url('robot.gg-png') center/contain no-repeat;
+  transform:translateY(-2%);
+  filter:var(--gg-robot-sh);animation:gg_float 5.5s ease-in-out infinite}
+[data-theme="dark"] .gg-robot{filter:var(--gg-robot-fx)}
+@keyframes gg_float{50%{transform:translateY(calc(-2% - 5px))}}
+.gg-arb-content{position:relative;z-index:2;min-width:0}
+.gg-kicker{font-size:12px;letter-spacing:.22em;color:var(--gg-accent);font-weight:700;
+  margin-bottom:8px;text-transform:uppercase}
+.gg-arb-copy{font-size:15px;line-height:1.32;color:var(--gg-ink-3);margin-bottom:17px;max-width:240px}
+.gg-success-label{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:8px}
+/* ⚠️ Имя шкалы приходит из карточки игры, у каждой своё: до 24 символов,
+   допускается вторая строка. Ничего не зашивать */
+.gg-scale-name{font-size:11px;letter-spacing:.12em;font-weight:650;color:var(--gg-muted);
+  text-transform:uppercase;line-height:1.25}
+.gg-chance{font-family:var(--gg-font-disp);font-size:var(--gg-chance-sz);font-weight:700;
+  letter-spacing:-.02em;color:var(--gg-chance)}
+.gg-progress{position:relative;height:var(--gg-track-h);border-radius:999px;background:var(--gg-track);
+  padding:var(--gg-track-pad);border:1px solid var(--gg-track-brd);box-shadow:var(--gg-track-sh)}
+.gg-progress::before{content:"";position:absolute;inset:-12px -8px;pointer-events:none;
+  opacity:var(--gg-halo-op);filter:blur(13px);border-radius:999px;
+  background:var(--gg-fill)}
+/* ⚠️ УПРУГОСТЬ НА scaleX ПРИ ПОДРЕЗАННОЙ ДОРОЖКЕ: перелёт пружины не вылезает
+   за край даже на сотне, а число в подписи считается отдельно и не перелетает */
+.gg-progress-clip{position:absolute;inset:var(--gg-track-pad);border-radius:999px;overflow:hidden}
+.gg-progress>.gg-progress-clip>i{display:block;height:100%;width:100%;border-radius:999px;
+  background:var(--gg-fill);box-shadow:var(--gg-fill-glow);
+  transform-origin:left center;transform:scaleX(.72);
+  transition:transform .62s cubic-bezier(.34,1.56,.64,1)}
+.gg-scale-legend{display:flex;justify-content:space-between;margin-top:7px;padding:0 2px;
+  font-size:10px;color:var(--gg-muted-2)}
+
+/* ══════════ ЛЕНТА ══════════ */
+.gg-day{display:flex;align-items:center;gap:18px;justify-content:center;color:var(--gg-muted-2);
+  font-size:12px;margin:20px 0}
+.gg-day::before,.gg-day::after{content:"";width:50px;height:1px;background:var(--gg-hair)}
+.gg-day::after{transform:scaleX(-1)}
+.gg-feed{display:flex;flex-direction:column;gap:18px;padding-bottom:22px}
+.gg-msg{display:flex;gap:10px;max-width:88%;align-items:flex-start;
+  animation:gg_msgIn .34s cubic-bezier(.34,1.56,.64,1) both}
+.gg-msg.gg-me{align-self:flex-end;max-width:82%;flex-direction:row-reverse}
+@keyframes gg_msgIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.gg-ava{width:32px;aspect-ratio:1;background:url('robot.gg-png') center/contain no-repeat;
+  flex:0 0 auto;margin-top:4px;filter:var(--gg-robot-sh)}
+[data-theme="dark"] .gg-ava{filter:var(--gg-robot-fx)}
+.gg-bubble{background:var(--gg-bubble);border:1px solid var(--gg-bubble-brd);box-shadow:var(--gg-bubble-sh);
+  border-radius:24px;padding:14px 17px 13px;font-size:16px;line-height:1.37;color:var(--gg-ink-2);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.gg-msg.gg-me .gg-bubble{background:var(--gg-me);color:var(--gg-me-ink);border-color:var(--gg-me-brd);box-shadow:var(--gg-me-sh)}
+.gg-time{font-size:11px;color:var(--gg-muted-2);margin:5px 5px 0}
+.gg-msg.gg-me .gg-time{text-align:right}
+.gg-ticks{color:var(--gg-accent);margin-left:5px;letter-spacing:-3px}
+.gg-feedback{align-self:flex-end;max-width:84%;background:var(--gg-card);border:1px solid var(--gg-card-brd);
+  border-radius:24px;padding:14px 16px 15px;box-shadow:var(--gg-card-sh);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.gg-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px}
+.gg-tag{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.gg-good{background:var(--gg-good-bg);color:var(--gg-good);box-shadow:var(--gg-good-glow)}
+.gg-bad{background:var(--gg-bad-bg);color:var(--gg-bad);box-shadow:var(--gg-bad-glow)}
+.gg-feedback p{color:var(--gg-ink-3);font-size:14px;line-height:1.42}
+.gg-typing-note{align-self:center;color:var(--gg-muted);background:var(--gg-note);border:1px solid var(--gg-note-brd);
+  border-radius:999px;padding:7px 14px;font-size:11px}
+.gg-typing{display:flex;gap:10px;align-items:flex-end}
+.gg-typing .gg-bubble{display:flex;gap:5px;padding:16px 18px}
+.gg-dot{width:6px;height:6px;border-radius:50%;background:var(--gg-accent);box-shadow:var(--gg-dot-glow);
+  animation:gg_dot 1.1s ease-in-out infinite}
+.gg-dot:nth-child(2){animation-delay:.16s}.gg-dot:nth-child(3){animation-delay:.32s}
+@keyframes gg_dot{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+/* Замок на разборе для гостя — тот же стеклянный язык */
+.gg-veil{position:relative;overflow:hidden}
+.gg-veil>.gg-veil-in{filter:blur(4px);opacity:.55;pointer-events:none;user-select:none}
+.gg-veil-over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:9px;text-align:center;padding:14px;background:var(--gg-veil)}
+.gg-veil-txt{font-size:12.5px;color:var(--gg-ink-3);line-height:1.4;max-width:250px}
+
+/* ══════════ КАРТОЧКА ИГРЫ — его стеклянная плашка в новой роли ══════════ */
+.gg-gm-card{position:relative;border-radius:28px;padding:18px 20px;margin-bottom:14px;
+  background:var(--gg-card);border:1px solid var(--gg-card-brd);box-shadow:var(--gg-card-sh);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);cursor:pointer;
+  transition:transform .14s cubic-bezier(.2,.8,.2,1)}
+.gg-gm-card:active{transform:scale(.985)}
+.gg-gm-top{display:flex;gap:14px;align-items:flex-start}
+.gg-gm-num{width:46px;height:46px;flex:none;border-radius:16px;display:grid;place-items:center;
+  font-family:var(--gg-font-disp);font-weight:700;font-size:15px;color:#fff;
+  background:var(--gg-me);box-shadow:var(--gg-me-sh),var(--gg-num-glow)}
+.gg-gm-name{font-family:var(--gg-font-disp);font-weight:700;font-size:15px;color:var(--gg-ink);margin-bottom:5px}
+.gg-gm-desc{font-size:13.5px;line-height:1.45;color:var(--gg-ink-3)}
+.gg-gm-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.gg-chip{padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;
+  background:var(--gg-lock-bg);color:var(--gg-lock)}
+.gg-chip.gg-win{background:var(--gg-good-bg);color:var(--gg-good);box-shadow:var(--gg-good-glow)}
+.gg-chip.gg-stage{background:rgba(126,143,240,.16);color:var(--gg-accent);box-shadow:var(--gg-dot-glow)}
+.gg-gm-done{position:absolute;top:16px;right:18px;font-size:11px;font-weight:700;color:var(--gg-good)}
+.gg-gm-card.gg-locked .gg-gm-num,.gg-gm-card.gg-locked .gg-gm-name,.gg-gm-card.gg-locked .gg-gm-desc{opacity:.5}
+.gg-lock-row{display:flex;align-items:center;gap:9px;margin-top:14px;padding-top:13px;
+  border-top:1px solid var(--gg-card-brd)}
+.gg-lock-ico{width:24px;height:24px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--gg-lock-bg);color:var(--gg-lock);font-size:12px}
+.gg-lock-txt{font-size:12px;font-weight:600;color:var(--gg-muted)}
+.gg-track-dots{display:flex;gap:6px;margin:0 0 14px}
+.gg-track-dots i{flex:1;height:4px;border-radius:3px;background:var(--gg-track)}
+.gg-track-dots i.gg-done{background:var(--gg-good);box-shadow:var(--gg-good-glow)}
+.gg-track-dots i.gg-now{background:var(--gg-fill);box-shadow:var(--gg-fill-glow)}
+
+/* ══════════ ФИНАЛ ══════════ */
+.gg-final-hero{text-align:center;padding:10px 0 24px}
+.gg-final-robot{margin:0 auto 18px;width:120px;height:120px;position:relative;display:grid;place-items:center}
+.gg-final-robot .gg-robot{width:120px}
+.gg-verdict{font-family:var(--gg-font-disp);font-weight:700;font-size:22px;color:var(--gg-ink);margin-bottom:10px}
+.gg-score{font-family:var(--gg-font-disp);font-weight:900;font-size:52px;line-height:1;
+  background:var(--gg-fill);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(145,153,255,.35))}
+.gg-score-max{font-size:15px;color:var(--gg-muted);font-weight:700;margin-left:6px}
+.gg-final-sub{font-size:14px;color:var(--gg-ink-3);line-height:1.5;max-width:330px;margin:12px auto 0}
+.gg-block{border-radius:26px;padding:18px 20px;margin-bottom:14px;background:var(--gg-card);
+  border:1px solid var(--gg-card-brd);box-shadow:var(--gg-card-sh);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.gg-block-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--gg-muted);margin-bottom:13px}
+.gg-row{display:flex;gap:11px;padding:10px 0;font-size:14px;line-height:1.45;color:var(--gg-ink-2);
+  border-bottom:1px solid var(--gg-card-brd)}
+.gg-row:last-child{border-bottom:none}
+.gg-row-mark{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-size:11px;font-weight:700;margin-top:1px}
+.gg-row-mark.gg-plus{background:var(--gg-good-bg);color:var(--gg-good);box-shadow:var(--gg-good-glow)}
+.gg-row-mark.gg-miss{background:var(--gg-lock-bg);color:var(--gg-lock)}
+.gg-material{display:flex;gap:14px;align-items:center;cursor:pointer}
+.gg-material-thumb{width:56px;height:56px;flex:none;border-radius:18px;display:grid;place-items:center;
+  background:var(--gg-track);color:var(--gg-muted);font-size:11px;font-weight:700}
+.gg-material-name{font-weight:700;font-size:14px;color:var(--gg-ink);margin-bottom:4px}
+.gg-material-why{font-size:12.5px;color:var(--gg-ink-3);line-height:1.4}
+.gg-upsell{border-radius:26px;padding:22px 20px;margin-bottom:14px;text-align:center;
+  background:var(--gg-panel);border:1px solid var(--gg-panel-brd);box-shadow:var(--gg-panel-sh);
+  backdrop-filter:var(--gg-panel-blur);-webkit-backdrop-filter:var(--gg-panel-blur)}
+.gg-upsell-h{font-family:var(--gg-font-disp);font-weight:700;font-size:16px;color:var(--gg-ink);margin-bottom:9px}
+.gg-upsell-p{font-size:13px;color:var(--gg-ink-3);line-height:1.5;margin-bottom:16px}
+
+/* ══════════ КНОПКИ ══════════ */
+.gg-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;
+  border-radius:22px;font-family:var(--gg-font-body);font-weight:700;cursor:pointer;
+  transition:transform .14s cubic-bezier(.2,.8,.2,1)}
+.gg-btn:active{transform:scale(.975)}
+.gg-btn-lg{padding:18px;font-size:15px}
+.gg-btn-md{padding:14px;font-size:14px}
+.gg-btn-sm{padding:10px 16px;font-size:12.5px;width:auto;border-radius:999px}
+.gg-btn-primary{background:var(--gg-send);color:#fff;box-shadow:var(--gg-send-sh)}
+.gg-btn-ghost{background:var(--gg-pill);border:1px solid var(--gg-pill-brd);color:var(--gg-ink);
+  box-shadow:var(--gg-pill-sh);backdrop-filter:blur(16px)}
+.gg-btn-quiet{background:transparent;color:var(--gg-muted)}
+.gg-btn-row{display:flex;gap:12px;margin-bottom:12px}
+.gg-btn-row .gg-btn{flex:1}
+
+/* ══════════ СЛУЖЕБНЫЕ СОСТОЯНИЯ ══════════ */
+.gg-skel{border-radius:28px;height:104px;margin-bottom:14px;background:var(--gg-card);
+  border:1px solid var(--gg-card-brd);position:relative;overflow:hidden}
+.gg-skel::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
+  animation:gg_shimmer 1.4s linear infinite}
+@keyframes gg_shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.gg-empty{text-align:center;padding:44px 20px;color:var(--gg-muted);font-size:13.5px;line-height:1.5}
+.gg-err{border-radius:22px;padding:15px 18px;margin-bottom:14px;font-size:13px;line-height:1.45;
+  color:var(--gg-ink-2);background:var(--gg-bad-bg);border:1px solid var(--gg-bad-bg)}
+
+/* ══════════ ПОЛЕ ВВОДА И ПИЛЮЛЯ ══════════ */
+.gg-composer-wrap{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(14px + env(safe-area-inset-bottom));width:min(calc(100% - 36px),584px);z-index:30}
+.gg-composer{height:76px;border-radius:38px;padding:9px 9px 9px 14px;display:flex;align-items:center;gap:10px;
+  background:var(--gg-panel);border:1px solid var(--gg-panel-brd);box-shadow:var(--gg-panel-sh);
+  backdrop-filter:blur(26px) saturate(115%);-webkit-backdrop-filter:blur(26px) saturate(115%)}
+.gg-spark{width:54px;height:54px;flex:none;border-radius:50%;border:1px solid var(--gg-pill-brd);
+  background:var(--gg-pill);display:grid;place-items:center;color:var(--gg-accent-2);font-size:22px;cursor:pointer}
+.gg-input{flex:1;border:0;outline:0;background:transparent;color:var(--gg-ink-2);
+  font:500 15px var(--gg-font-body);min-width:0}
+.gg-input::placeholder{color:var(--gg-muted-2)}
+.gg-send{width:58px;height:58px;flex:none;border:0;border-radius:50%;display:grid;place-items:center;
+  cursor:pointer;color:#fff;background:var(--gg-send);box-shadow:var(--gg-send-sh),var(--gg-num-glow)}
+.gg-send svg{width:24px;height:24px}
+.gg-send:disabled{opacity:.45;cursor:default}
+
+.gg-tabs{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(10px + env(safe-area-inset-bottom));width:min(calc(100% - 36px),584px);height:62px;
+  border-radius:30px;display:flex;align-items:center;justify-content:space-around;
+  background:var(--gg-panel);border:1px solid var(--gg-panel-brd);box-shadow:var(--gg-panel-sh);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);z-index:29}
+.gg-tab{width:25%;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--gg-tab);font-size:10px;cursor:pointer}
+.gg-tab svg{width:22px;height:22px}
+.gg-tab.gg-active{color:var(--gg-tab-on);font-weight:650;text-shadow:var(--gg-tab-glow)}
+.gg-tab.gg-active svg{filter:drop-shadow(var(--gg-dot-glow))}
+
+/* ══════════ ПОПАПЫ ══════════ */
+.gg-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;
+  padding:24px;background:rgba(20,26,52,.42);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.gg-overlay.gg-open{display:flex}
+.gg-modal{width:100%;max-width:380px;border-radius:32px;padding:26px 24px;text-align:center;
+  background:var(--gg-panel);border:1px solid var(--gg-panel-brd);box-shadow:var(--gg-panel-sh);
+  backdrop-filter:var(--gg-panel-blur);-webkit-backdrop-filter:var(--gg-panel-blur);
+  animation:gg_pop .3s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes gg_pop{from{transform:translateY(60px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.gg-modal-h{font-family:var(--gg-font-disp);font-weight:700;font-size:17px;color:var(--gg-ink);margin-bottom:10px}
+.gg-modal-p{font-size:13.5px;color:var(--gg-ink-3);line-height:1.5;margin-bottom:18px}
+.gg-modal .gg-robot{width:78px;margin:0 auto 14px}
+.gg-modal-close{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--gg-pill-brd);background:var(--gg-pill);color:var(--gg-muted);cursor:pointer}
+.gg-modal-left{text-align:left}
+
+/* ══════════ ПАНЕЛЬ СТЕНДА (в боевой файл не переносится) ══════════ */
+
+
+
+
+
+@media(max-width:480px){
+  
+  .gg-topbar{height:64px}.gg-exit{padding:10px 14px;font-size:14px}.gg-title{font-size:16px}.gg-turn{font-size:12px}
+  .gg-arbiter{grid-template-columns:100px 1fr;gap:14px;min-height:198px;padding:20px 18px}
+  .gg-robot{width:94px}.gg-robot-wrap::before{width:104px;height:104px}
+  .gg-arb-copy{font-size:13px;margin-bottom:13px}
+  .gg-bubble{font-size:14px}.gg-feedback p{font-size:13px}
+  .gg-composer-wrap,.gg-tabs{width:calc(100% - 24px)}
+  .gg-score{font-size:44px}
+}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -7713,6 +8265,10 @@ function switchView(name) {
     // раньше, чем человек их заметит
     markCardsSeen();
   }
+  if (name === 'games') { ggOpen(); }
+  /* ⚠️ УХОДЯ С ИГР — ВЕРНУТЬ ХРОМ: иначе мастер-бар и пилюля остались бы
+     скрытыми на других экранах, если человек ушёл из партии свайпом назад */
+  else if (typeof ggChrome === 'function') ggChrome(false);
   if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
   if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
@@ -9825,6 +10381,43 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'games.title': { c:'Игры', l:'Заголовок вкладки', w:'Вкладка «Игры»', i:false, t:'Игры' },
+  'games.sub': { c:'Игры', l:'Подпись под заголовком', w:'Вкладка «Игры»', i:false, t:'Тренировка на живом собеседнике' },
+  'games.exit': { c:'Игры', l:'Кнопка выхода из партии', w:'Экран партии', i:false, t:'← Выйти' },
+  'games.arbiter': { c:'Игры', l:'Подпись арбитра', w:'Экран партии', i:false, t:'Арбитр' },
+  'games.arbiter_copy': { c:'Игры', l:'Что делает арбитр', w:'Экран партии', i:false, t:'Арбитр наблюдает за разговором и взвешивает каждую реплику.' },
+  'games.placeholder': { c:'Игры', l:'Подсказка в поле ввода', w:'Экран партии', i:false, t:'Твой ответ клиенту...' },
+  'games.empty': { c:'Игры', l:'Когда игр нет', w:'Список игр', i:false, t:'Игр пока нет. Загляни позже — они появятся.' },
+  'games.load_err': { c:'Игры', l:'Список не загрузился', w:'Список игр', i:false, t:'Игры не загрузились. Потяни экран вниз или зайди позже.' },
+  'games.other': { c:'Игры', l:'Заголовок игр вне треков', w:'Список игр', i:false, t:'Отдельные игры' },
+  'games.lock_step': { c:'Игры', l:'Тап по закрытой ступени', w:'Список игр', i:false, t:'Сначала пройди предыдущую ступень' },
+  'games.locked_note': { c:'Игры', l:'Замок на разборе хода у гостя', w:'Экран партии', i:false, t:'Разбор хода открыт участникам клуба' },
+  'games.locked_cta': { c:'Игры', l:'Кнопка на замке разбора', w:'Экран партии', i:false, t:'Что это даёт' },
+  'games.member_h': { c:'Игры', l:'Заголовок «только участникам»', w:'Попап', i:false, t:'Эта игра — для участников' },
+  'games.member_p': { c:'Игры', l:'Текст «только участникам»', w:'Попап', i:false, t:'Первую игру можно пройти бесплатно. Остальные открываются вместе с клубом — вместе с разбором каждого хода по базе занятий.' },
+  'games.member_cta': { c:'Игры', l:'Кнопка «что в клубе»', w:'Попап', i:false, t:'Что в клубе' },
+  'games.later': { c:'Игры', l:'Кнопка «позже»', w:'Попап', i:false, t:'Позже' },
+  'games.ok': { c:'Игры', l:'Кнопка «понятно»', w:'Попап', i:false, t:'Понятно' },
+  'games.level_points': { c:'Игры', l:'Кнопка про баллы в попапе уровня', w:'Попап', i:false, t:'Как получить баллы' },
+  'games.start': { c:'Игры', l:'Кнопка старта партии', w:'Попап правил', i:false, t:'Начать партию' },
+  'games.quit_h': { c:'Игры', l:'Заголовок выхода', w:'Попап', i:false, t:'Выйти из партии?' },
+  'games.quit_p': { c:'Игры', l:'Текст выхода', w:'Попап', i:false, t:'Партия останется незаконченной, вернуться к ней не получится.' },
+  'games.quit_stay': { c:'Игры', l:'Кнопка «остаться»', w:'Попап', i:false, t:'Играю дальше' },
+  'games.quit_go': { c:'Игры', l:'Кнопка «выйти»', w:'Попап', i:false, t:'Выйти' },
+  'games.fail_h': { c:'Игры', l:'Заголовок ошибки хода', w:'Попап', i:false, t:'Клиент задумался слишком надолго' },
+  'games.fail_p': { c:'Игры', l:'Текст ошибки хода', w:'Попап', i:false, t:'Ход не дошёл. Отправь ещё раз — счёт и история сохранены.' },
+  'games.fail_retry': { c:'Игры', l:'Кнопка повтора хода', w:'Попап', i:false, t:'Повторить ход' },
+  'games.win': { c:'Игры', l:'Победа', w:'Финал партии', i:false, t:'Клиент купил' },
+  'games.win_perfect': { c:'Игры', l:'Победа на сто', w:'Финал партии', i:false, t:'Безупречно' },
+  'games.lost': { c:'Игры', l:'Поражение', w:'Финал партии', i:false, t:'В этот раз не сложилось' },
+  'games.artifact': { c:'Игры', l:'Заголовок формулировки', w:'Финал партии', i:false, t:'Твоя формулировка' },
+  'games.missing': { c:'Игры', l:'Чего не хватило', w:'Финал партии', i:false, t:'Что ещё бывает' },
+  'games.material': { c:'Игры', l:'Заголовок занятия', w:'Финал партии', i:false, t:'Разобрать теорию' },
+  'games.material_why': { c:'Игры', l:'Подпись занятия', w:'Финал партии', i:false, t:'Ровно про то, где ты просел' },
+  'games.upsell_h': { c:'Игры', l:'Заголовок приглашения гостю', w:'Финал партии', i:false, t:'Это была бесплатная версия' },
+  'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
+  'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
+  'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
   'funnel.about': {
     c:'Первый экран', l:'Кнопка «узнать подробнее» под фильмом', w:'Экран воронки', i:false,
     t:'Узнать подробнее о клубе' },
@@ -20849,6 +21442,489 @@ function plInit(){
 }
 
 plInit();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ВКЛАДКА «ИГРЫ» — интерфейс игрока для движка `app/games.py`.
+   Экраны: список → партия → финал. Всё внутри одного view-games.
+
+   ⚠️ ТРИ ЗАМКА, ТРИ РАЗНЫХ ПОПАПА. Сервер возвращает не «нельзя», а ПРИЧИНУ
+   (`lock`: level | member | step) — по ней и выбираем, что показать. По булеву
+   значению получилось бы одно невнятное «недоступно».
+   ═══════════════════════════════════════════════════════════════════════════ */
+let ggList = null;          // ответ /games/list
+let ggS = null;             // текущая партия
+let ggBusy = false;
+let ggLoadedOnce = false;
+
+/* Гость опознаётся ключом из localStorage: без него каждый заход считался бы
+   новым человеком и лестница гостя сбрасывалась бы после перезагрузки */
+function ggGuestKey(){
+  let k = '';
+  try { k = localStorage.getItem('gg_guest') || ''; } catch(e){}
+  if (!k){
+    k = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem('gg_guest', k); } catch(e){}
+  }
+  return k;
+}
+
+function ggOpen(){
+  /* ⚠️ СПИСОК ПЕРЕЧИТЫВАЕМ ПРИ КАЖДОМ ЗАХОДЕ: уровень мог вырасти, ступень —
+     открыться. Данные, загруженные один раз при старте, устаревают молча */
+  ggBackToList();
+  ggLoad();
+}
+
+async function ggLoad(){
+  const box = document.getElementById('gg-list');
+  if (!ggLoadedOnce) box.innerHTML = '<div class="gg-skel"></div><div class="gg-skel"></div>';
+  try {
+    const q = telegramId ? ('telegram_id=' + encodeURIComponent(telegramId))
+                         : ('guest_key=' + encodeURIComponent(ggGuestKey()));
+    const r = await fetch(API_URL + '/games/list?' + q);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    ggList = await r.json();
+    ggLoadedOnce = true;
+    ggRenderList();
+  } catch(e){
+    box.innerHTML = '<div class="gg-err">' + escapeHtml(t('games.load_err') || 'Игры не загрузились. Потяни экран вниз или зайди позже.') + '</div>';
+  }
+}
+
+function ggRenderList(){
+  const box = document.getElementById('gg-list');
+  const games = (ggList && ggList.games) || [];
+  if (!games.length){
+    box.innerHTML = '<div class="gg-empty">' + escapeHtml(t('games.empty') || 'Игр пока нет. Загляни позже — они появятся.') + '</div>';
+    return;
+  }
+  /* Группируем по треку: у трека своя лесенка ступеней, сквозные игры идут
+     отдельной группой в конце */
+  const tracks = [];
+  games.forEach(function(g){
+    const key = g.track || '';
+    let tr = tracks.find(function(x){ return x.key === key; });
+    if (!tr){ tr = { key: key, games: [] }; tracks.push(tr); }
+    tr.games.push(g);
+  });
+
+  let h = '';
+  tracks.forEach(function(tr){
+    if (tr.key){
+      const done = tr.games.filter(function(g){ return (g.best || 0) > 0; }).length;
+      h += '<div class="gg-section-h">' + escapeHtml(ggTrackName(tr.key)) + '</div>'
+         + '<div class="gg-section-sub">' + tr.games.length + ' ' + ggStepWord(tr.games.length) + '</div>'
+         + '<div class="gg-track-dots">'
+         + tr.games.map(function(g, i){
+             const cls = (g.best || 0) > 0 ? 'done' : (i === done ? 'now' : '');
+             return '<i class="' + cls + '"></i>';
+           }).join('')
+         + '</div>';
+    } else if (tracks.length > 1){
+      h += '<div class="gg-section-h">' + escapeHtml(t('games.other') || 'Отдельные игры') + '</div>';
+    }
+    tr.games.forEach(function(g){ h += ggCardHtml(g); });
+  });
+  box.innerHTML = h;
+}
+
+function ggTrackName(key){
+  const map = { presentation: 'Презентация', objections: 'Возражения', questions: 'Вопросы' };
+  return map[key] || key;
+}
+function ggStepWord(n){
+  return n === 1 ? 'ступень' : (n < 5 ? 'ступени' : 'ступеней');
+}
+
+function ggCardHtml(g){
+  const best = g.best || 0;
+  let foot = '<div class="gg-gm-foot">';
+  if (best) foot += '<span class="gg-chip gg-win">' + best + '%</span>';
+  if (g.max_turns) foot += '<span class="gg-chip">' + g.max_turns + ' ' + (g.max_turns === 1 ? 'ход' : (g.max_turns < 5 ? 'хода' : 'ходов')) + '</span>';
+  if (g.step && g.track) foot += '<span class="gg-chip gg-stage">Ступень ' + g.step + '</span>';
+  foot += '</div>';
+
+  /* Замок: подпись зависит от ПРИЧИНЫ, пришедшей с сервера */
+  let lock = '';
+  if (g.locked){
+    const texts = {
+      level:  ['◆', 'Откроется на ' + ((g.lock_info || {}).need_level || '?') + ' уровне'],
+      member: ['★', 'Игра для участников клуба'],
+      step:   ['→', 'Сначала пройди предыдущую ступень']
+    };
+    const pair = texts[g.lock] || ['◆', 'Пока недоступна'];
+    lock = '<div class="gg-lock-row"><div class="gg-lock-ico">' + pair[0] + '</div>'
+         + '<div class="gg-lock-txt">' + escapeHtml(pair[1]) + '</div></div>';
+  }
+
+  return '<div class="gg-gm-card' + (g.locked ? ' gg-locked' : '') + '" onclick="ggTap(' + jsArg(g.key) + ')">'
+    + (best >= 100 ? '<div class="gg-gm-done">Пройдена</div>' : '')
+    + '<div class="gg-gm-top">'
+      + '<div class="gg-gm-num">' + escapeHtml(String(g.step || 1)) + '</div>'
+      + '<div><div class="gg-gm-name">' + escapeHtml(g.title || '') + '</div>'
+      + '<div class="gg-gm-desc">' + escapeHtml(g.description || '') + '</div></div>'
+    + '</div>'
+    + (g.locked ? lock : foot)
+    + '</div>';
+}
+
+function ggFind(key){
+  return ((ggList && ggList.games) || []).find(function(g){ return g.key === key; });
+}
+
+/* Тап по карточке: закрытая открывает СВОЙ попап, открытая — правила */
+function ggTap(key){
+  const g = ggFind(key);
+  if (!g) return;
+  if (g.locked){
+    if (g.lock === 'level'){
+      const need = (g.lock_info || {}).need_level || '?';
+      document.getElementById('gg-level-h').textContent = 'Игра откроется на ' + need + ' уровне';
+      document.getElementById('gg-level-p').textContent =
+        'Сейчас у тебя ' + ((g.lock_info || {}).level || ggList.level || 0) + ' уровень.';
+      ggPop('gg-m-level');
+    } else if (g.lock === 'step'){
+      showToast(t('games.lock_step') || 'Сначала пройди предыдущую ступень');
+    } else {
+      ggPop('gg-m-member');
+    }
+    return;
+  }
+  ggRulesFor(g);
+}
+
+function ggRulesFor(g){
+  document.getElementById('gg-rules-h').textContent = g.title || '';
+  document.getElementById('gg-rules-p').textContent = g.intro || g.description || '';
+  document.getElementById('gg-rules-go').onclick = function(){ ggClose('gg-m-rules'); ggStart(g.key); };
+  ggPop('gg-m-rules');
+}
+function ggRules(){
+  if (ggS) { const g = ggFind(ggS.game_key); if (g) ggRulesFor(g); }
+}
+
+/* ═══ ПАРТИЯ ═══════════════════════════════════════════════════════════════ */
+
+/* ⚠️ Мастер-бар, значок уровня и пилюлю прячем ТЕМ ЖЕ СПИСКОМ id, что уже
+   используется в приложении, и запоминаем прежний display: у бара и значка он
+   зависит от уровня, вернуть «как было» иначе не получится */
+function ggChrome(hide){
+  const fade = document.querySelector('.scroll-fade');
+  if (fade) fade.style.display = hide ? 'none' : '';
+  ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (hide){
+      if (el.dataset.ggPrev === undefined) el.dataset.ggPrev = el.style.display || '';
+      el.style.display = 'none';
+    } else if (el.dataset.ggPrev !== undefined){
+      el.style.display = el.dataset.ggPrev;
+      delete el.dataset.ggPrev;
+    }
+  });
+  /* ⚠️ БЕЗ ЭТОГО СВАЙП ВНИЗ ПО ЛЕНТЕ ЗАКРЫВАЕТ МИНИ-АПП ПОСРЕДИ ПАРТИИ */
+  try {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.disableVerticalSwipes){
+      if (hide) tg.disableVerticalSwipes(); else tg.enableVerticalSwipes && tg.enableVerticalSwipes();
+    }
+  } catch(e){}
+}
+
+function ggShow(which){
+  document.getElementById('gg-list-wrap').style.display  = which === 'list'  ? '' : 'none';
+  document.getElementById('gg-play-wrap').style.display  = which === 'play'  ? '' : 'none';
+  document.getElementById('gg-final-wrap').style.display = which === 'final' ? '' : 'none';
+  ggChrome(which === 'play');
+  window.scrollTo(0, 0);
+}
+
+function ggBackToList(){
+  ggS = null;
+  ggShow('list');
+}
+
+async function ggStart(key){
+  if (ggBusy) return;
+  ggBusy = true;
+  try {
+    const body = { game_key: key, source: 'app' };
+    if (telegramId) body.telegram_id = telegramId; else body.guest_key = ggGuestKey();
+    const r = await fetch(API_URL + '/games/session/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json().catch(function(){ return {}; });
+    if (!r.ok){
+      /* Сервер отвечает разными кодами на разные отказы — показываем разное */
+      if (r.status === 402) ggPop('gg-m-member');
+      else if (r.status === 403) showToast(d.detail || 'Нужен уровень повыше');
+      else if (r.status === 429) showToast(d.detail || 'На сегодня партии закончились');
+      else showToast(d.detail || 'Не удалось начать партию');
+      return;
+    }
+    const g = ggFind(key) || {};
+    ggS = { session_id: d.session_id, game_key: key, title: g.title || '',
+            score: d.score, max_turns: d.max_turns, turn_no: 0,
+            scale_name: d.scale_name || g.scale_name || '', member: !!d.member };
+    document.getElementById('gg-feed').innerHTML = '';
+    document.getElementById('gg-play-title').textContent = ggS.title;
+    document.getElementById('gg-scale-name').textContent = ggS.scale_name;
+    ggTurnLabel();
+    ggScale(ggS.score);
+    ggShow('play');
+    /* Вводные показываем репликой клиента: так человек сразу в разговоре, а
+       не читает инструкцию поверх пустого чата */
+    if (d.intro) ggMsg(d.intro, false);
+    if (d.artifact) ggMsg('Твоя фраза с прошлой ступени: «' + d.artifact + '»', false);
+    const inp = document.getElementById('gg-input');
+    if (inp) inp.focus();
+  } catch(e){
+    showToast('Сеть недоступна');
+  } finally { ggBusy = false; }
+}
+
+function ggTurnLabel(){
+  const el = document.getElementById('gg-play-turn');
+  if (el && ggS) el.textContent = 'Ход ' + Math.min(ggS.turn_no + 1, ggS.max_turns) + ' из ' + ggS.max_turns;
+}
+
+/* ⚠️ УПРУГОСТЬ НА scaleX ПРИ ПОДРЕЗАННОЙ ДОРОЖКЕ: перелёт пружины не вылезает
+   за край даже на сотне. Число в подписи считается отдельно и не перелетает —
+   иначе на миг видно «104%» */
+function ggScale(v){
+  const f = document.getElementById('gg-fill');
+  const n = Math.max(0, Math.min(100, Number(v) || 0));
+  if (f) f.style.transform = 'scaleX(' + (n / 100) + ')';
+  const c = document.getElementById('gg-chance');
+  if (c) c.textContent = n + '%';
+}
+
+function ggMsg(text, mine){
+  const feed = document.getElementById('gg-feed');
+  const wrap = document.createElement('div');
+  wrap.className = 'gg-msg' + (mine ? ' gg-me' : '');
+  const ava = document.createElement('div'); ava.className = 'gg-ava';
+  const col = document.createElement('div');
+  const b = document.createElement('div'); b.className = 'gg-bubble'; b.textContent = text;
+  const tm = document.createElement('div'); tm.className = 'gg-time';
+  const d = new Date();
+  tm.textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+  col.appendChild(b); col.appendChild(tm);
+  wrap.appendChild(ava); wrap.appendChild(col);
+  feed.appendChild(wrap);
+  return wrap;
+}
+
+function ggTyping(on){
+  let el = document.getElementById('gg-typing');
+  if (on){
+    if (el) return;
+    el = document.createElement('div');
+    el.id = 'gg-typing'; el.className = 'gg-typing';
+    el.innerHTML = '<div class="gg-ava"></div><div class="gg-bubble">'
+      + '<i class="gg-dot"></i><i class="gg-dot"></i><i class="gg-dot"></i></div>';
+    document.getElementById('gg-feed').appendChild(el);
+    ggScrollDown();
+  } else if (el) el.remove();
+}
+
+function ggScrollDown(){
+  setTimeout(function(){ window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 40);
+}
+
+/* Разбор хода. Гостю «почему упало» не приходит вовсе — сервер его не
+   отдаёт, — поэтому вместо пустого блока показываем замок с приглашением */
+function ggNote(d){
+  const feed = document.getElementById('gg-feed');
+  const box = document.createElement('div');
+  box.className = 'gg-feedback';
+  if (ggS && ggS.member){
+    let h = '';
+    const why = d.why || [], stops = d.stops || [];
+    if (why.length || stops.length){
+      h += '<div class="gg-tags">'
+        + why.map(function(w){
+            return '<span class="gg-tag ' + ((w.delta || 0) >= 0 ? 'gg-good' : 'gg-bad') + '">'
+                 + escapeHtml(w.label || '') + '</span>'; }).join('')
+        + stops.map(function(s){
+            return '<span class="gg-tag gg-bad">' + escapeHtml(s.phrase || '') + '</span>'; }).join('')
+        + '</div>';
+    }
+    if (d.hint) h += '<p>' + escapeHtml(d.hint) + '</p>';
+    const first = (stops[0] || {});
+    if (!d.hint && first.why) h += '<p>' + escapeHtml(first.why) + '</p>';
+    if (!h) return;
+    box.innerHTML = h;
+  } else {
+    box.className = 'gg-feedback gg-veil';
+    box.innerHTML = '<div class="gg-veil-in"><div class="gg-tags">'
+      + '<span class="gg-tag gg-good">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
+      + '<span class="gg-tag gg-bad">&nbsp;&nbsp;&nbsp;&nbsp;</span></div>'
+      + '<p>&nbsp;</p></div>'
+      + '<div class="gg-veil-over"><div class="gg-veil-txt">'
+      + escapeHtml(t('games.locked_note') || 'Разбор хода открыт участникам клуба')
+      + '</div><button class="gg-btn gg-btn-primary gg-btn-sm" onclick="ggPop(\'gg-m-member\')">'
+      + escapeHtml(t('games.locked_cta') || 'Что это даёт') + '</button></div>';
+  }
+  feed.appendChild(box);
+}
+
+/* ⚠️ ХОД ПРИХОДИТ ОДНИМ ОТВЕТОМ: реплика клиента, дельта шкалы и разбор
+   вместе. Поэтому «печатает» гаснет один раз, и всё появляется разом — двух
+   моментов появления быть не должно */
+async function ggSend(){
+  if (!ggS || ggBusy) return;
+  const inp = document.getElementById('gg-input');
+  const text = (inp.value || '').trim();
+  if (!text) return;
+
+  ggBusy = true;
+  document.getElementById('gg-send').disabled = true;
+  ggMsg(text, true);
+  inp.value = '';
+  ggTyping(true);
+  ggScrollDown();
+
+  try {
+    const r = await fetch(API_URL + '/games/session/turn', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: ggS.session_id, text: text })
+    });
+    const d = await r.json().catch(function(){ return {}; });
+    ggTyping(false);
+    if (!r.ok){
+      const p = document.getElementById('gg-fail-p');
+      if (p && d.detail) p.textContent = d.detail;
+      ggPop('gg-m-fail');
+      return;
+    }
+    /* ⚠️ МУСОР СЕРВЕР ОТБИВАЕТ БЕЗ ВЫЗОВА МОДЕЛИ: ход не засчитан, шкала
+       стоит, номер хода не растёт. Проверено по коду движка — поле там
+       `client`, а не `message`, и `kind` бывает только `garbage`.
+       Стоп-фразы отдельным ответом НЕ приходят: они внутри обычного хода */
+    if (d.kind === 'garbage'){
+      if (d.client) ggMsg(d.client, false);
+      ggScrollDown();
+      return;
+    }
+    if (d.client) ggMsg(d.client, false);
+    if (typeof d.score === 'number'){ ggS.score = d.score; ggScale(d.score); }
+    ggS.turn_no = d.turn_no || (ggS.turn_no + 1);
+    ggTurnLabel();
+    ggNote(d);
+    ggScrollDown();
+    if (d.finished && d.final) setTimeout(function(){ ggFinal(d.final); }, 900);
+  } catch(e){
+    ggTyping(false);
+    ggPop('gg-m-fail');
+  } finally {
+    ggBusy = false;
+    const s = document.getElementById('gg-send');
+    if (s) s.disabled = false;
+  }
+}
+
+/* ═══ ФИНАЛ ════════════════════════════════════════════════════════════════
+   Здесь живёт вся воронка: материал занятия участнику, приглашение гостю,
+   следующая ступень. Текст приглашения приходит с сервера дословно — его
+   пишет Denis, а не модель. */
+function ggFinal(f){
+  const won = f.status === 'won';
+  let h = '<div class="gg-final-hero">'
+    + '<div class="gg-final-robot"><div class="gg-robot"></div></div>'
+    + '<div class="gg-verdict">' + escapeHtml(
+        won ? (f.perfect ? (t('games.win_perfect') || 'Безупречно') : (f.win_text || t('games.win') || 'Клиент купил'))
+            : (t('games.lost') || 'В этот раз не сложилось')) + '</div>'
+    + '<div><span class="gg-score">' + (f.score || 0) + '</span><span class="gg-score-max">/ 100</span></div>';
+  if (f.comment) h += '<div class="gg-final-sub">' + escapeHtml(f.comment) + '</div>';
+  h += '</div>';
+
+  if (f.artifact){
+    h += '<div class="gg-block"><div class="gg-block-h">' + escapeHtml(t('games.artifact') || 'Твоя формулировка')
+      + '</div><div class="gg-row"><div>' + escapeHtml(f.artifact) + '</div></div></div>';
+  }
+
+  /* «Вот что ещё бывает» вместо «ты недобрал» — формулировка Denis'а */
+  if ((f.missing || []).length){
+    h += '<div class="gg-block"><div class="gg-block-h">' + escapeHtml(t('games.missing') || 'Что ещё бывает') + '</div>'
+      + f.missing.map(function(m){
+          return '<div class="gg-row"><div class="gg-row-mark gg-miss">?</div><div>' + escapeHtml(m) + '</div></div>';
+        }).join('') + '</div>';
+  }
+
+  if (f.material){
+    const m = f.material;
+    h += '<div class="gg-block"><div class="gg-block-h">' + escapeHtml(t('games.material') || 'Разобрать теорию') + '</div>'
+      + '<div class="gg-material" onclick="ggOpenMaterial(' + jsArg(m.slug || '') + ')">'
+      + '<div class="gg-material-thumb">' + escapeHtml(m.timecode || '▶') + '</div>'
+      + '<div><div class="gg-material-name">' + escapeHtml(m.title || 'Занятие') + '</div>'
+      + '<div class="gg-material-why">' + escapeHtml(t('games.material_why') || 'Ровно про то, где ты просел') + '</div></div>'
+      + '</div></div>';
+  }
+
+  if (f.upsell){
+    h += '<div class="gg-upsell"><div class="gg-upsell-h">' + escapeHtml(t('games.upsell_h') || 'Это была бесплатная версия') + '</div>'
+      + '<div class="gg-upsell-p">' + escapeHtml(f.upsell) + '</div>'
+      + '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="switchView(\'club-info\')">'
+      + escapeHtml(t('games.upsell_cta') || 'Посмотреть, что в клубе') + '</button></div>';
+  }
+
+  h += '<div class="gg-btn-row">'
+    + '<button class="gg-btn gg-btn-ghost gg-btn-md" onclick="ggAfterFinal()">' + escapeHtml(t('games.to_list') || 'К играм') + '</button>';
+  if (f.next_game){
+    h += '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggNext(' + jsArg(f.next_game.key) + ')">'
+      + escapeHtml(f.next_game.title || 'Дальше') + '</button>';
+  } else {
+    h += '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggRetry()">' + escapeHtml(t('games.again') || 'Сыграть ещё') + '</button>';
+  }
+  h += '</div>';
+
+  document.getElementById('gg-final-wrap').innerHTML = h;
+  ggShow('final');
+}
+
+/* ⚠️ ЗАНЯТИЕ ОТКРЫВАЕМ ШТАТНОЙ ФУНКЦИЕЙ ПРИЛОЖЕНИЯ, а не своим плеером: она
+   умеет и пейвол для гостя, и выжимку, и засчитывает просмотр. Ключ у неё —
+   safeContentKey(slug), тот же, что в диплинках `l_` */
+function ggOpenMaterial(slug){
+  if (!slug) return;
+  if (typeof openLectureByKey === 'function' && typeof safeContentKey === 'function'){
+    openLectureByKey(safeContentKey(slug), 'video');
+  } else switchView('library');
+}
+
+async function ggAfterFinal(){
+  ggS = null;
+  ggShow('list');
+  await ggLoad();          /* уровень и открытые ступени могли измениться */
+}
+
+async function ggNext(key){
+  await ggLoad();
+  const g = ggFind(key);
+  ggS = null;
+  if (g && !g.locked) ggStart(key); else ggShow('list');
+}
+
+function ggRetry(){
+  const key = ggS && ggS.game_key;
+  ggS = null;
+  if (key) ggStart(key); else ggShow('list');
+}
+
+function ggQuitAsk(){ ggPop('gg-m-quit'); }
+function ggPop(id){ const e = document.getElementById(id); if (e) e.classList.add('open'); }
+function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.remove('open'); }
+
+/* Отправка по Enter — на телефоне это привычнее кнопки */
+document.addEventListener('DOMContentLoaded', function(){
+  const inp = document.getElementById('gg-input');
+  if (inp) inp.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
+  });
+});
+
 </script>
 <!-- ПЛЕЕР ЭФИРА. Лежит вне переключаемых экранов и НИКОГДА не переезжает
      по документу: перенос узла с iframe перезагружает поток. Меняются
