@@ -7618,10 +7618,27 @@ html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;min-height:0}
    строке после отправки. ⚠️ `overflow-y` не задаём тоже — им управляет
    `ggAutoGrow`, включая прокрутку лишь на потолке роста. */
 #gg-root .gg-input{
-  width:100%; resize:none; display:block;
+  /* ⚠️ `flex:1` из базового правила здесь ВРЕДЕН: поле лежит в колоночном
+     контейнере, и растягивание по главной оси мешает высоте, которую ставит
+     JS. Сбрасываем явно. */
+  flex:none;
+  width:100%; max-width:100%; box-sizing:border-box;
+  resize:none; display:block;
   font:500 15px/1.4 var(--gg-font-body);
   padding:2px 0; height:25px; max-height:none;
-  overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap;
+  /* ⚠️ ГОРИЗОНТАЛЬНОЙ ПРОКРУТКИ БЫТЬ НЕ ДОЛЖНО: именно она уводила текст
+     влево вместо переноса на вторую строку */
+  overflow-x:hidden;
+  white-space:pre-wrap; overflow-wrap:anywhere;
+}
+/* Скрытый двойник — по нему меряем высоту текста. Держим ровно те же метрики,
+   что у поля, иначе замер соврёт */
+#gg-root .gg-input-ghost{
+  position:absolute; left:0; top:0; visibility:hidden; pointer-events:none;
+  z-index:-1; height:auto; min-height:0; max-height:none;
+  width:100%; max-width:100%; box-sizing:border-box;
+  font:500 15px/1.4 var(--gg-font-body); padding:2px 0;
+  white-space:pre-wrap; overflow-wrap:anywhere;
 }
 
 /* ── ⚠️ В ПАРТИИ ДОКУМЕНТ НЕ ДОЛЖЕН БЫТЬ ВЫШЕ ЭКРАНА. У `.shell` снизу
@@ -10933,6 +10950,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22633,22 +22651,43 @@ function ggLineH(el){
   return lh || Math.round((parseFloat(cs.fontSize) || 15) * 1.4);
 }
 
+/* ⚠️⚠️ ВЫСОТУ МЕРЯЕМ СКРЫТЫМ ДВОЙНИКОМ, А НЕ `scrollHeight` ПОЛЯ.
+   `scrollHeight` у textarea в мобильном Safari врал третий заход подряд: то
+   отдавал прежнее значение, то значение до переноса — поле оставалось в одну
+   строку, а текст уезжал влево. Двойник — обычный `div` той же ширины и с тем
+   же шрифтом: кладём в него тот же текст и берём его настоящую высоту.
+   Никаких причуд textarea в этом пути нет. */
+function ggGhost(el){
+  let g = document.getElementById('gg-input-ghost');
+  if (!g){
+    g = document.createElement('div');
+    g.id = 'gg-input-ghost';
+    g.className = 'gg-input-ghost';
+    g.setAttribute('aria-hidden', 'true');
+    (el.parentNode || document.body).appendChild(g);
+  }
+  return g;
+}
+
 function ggAutoGrow(el){
   if (!el) return 0;
   const cs = getComputedStyle(el);
   const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
   const line = ggLineH(el);
   const max = Math.round(line * GG_GROW_LINES + pad);
-  /* ⚠️⚠️ ЗАМЕР ДЕЛАЕМ ПРИ ВЫСОТЕ 0, А НЕ `auto`. С `auto` Safari нередко
-     отдаёт `scrollHeight` от ПРЕЖНЕЙ высоты — поле «залипало» на одной
-     строке, хотя текст уже перенёсся на вторую. С нулевой высотой браузеру
-     нечего вспоминать, и он честно меряет содержимое. */
-  el.style.height = '0px';
-  const need = el.scrollHeight;
-  /* одна строка — это строка плюс поля; ниже не опускаемся */
   const one = Math.round(line + pad);
+
+  const g = ggGhost(el);
+  /* ⚠️ ширину двойника равняем по полю ЯВНО: он лежит абсолютом и сам её не
+     унаследует, а от ширины зависит, где ляжет перенос */
+  const w = el.clientWidth || el.offsetWidth;
+  if (w) g.style.width = w + 'px';
+  /* ⚠️ хвостовой перенос строки браузер не рисует — добавляем пробел, иначе
+     при вводе Enter высота не увеличится */
+  g.textContent = (el.value || '') + ' ';
+  const need = g.offsetHeight + pad;
+
   el.style.height = Math.max(one, Math.min(need, max)) + 'px';
-  /* прокрутка появляется ТОЛЬКО когда поле упёрлось в потолок роста */
   el.style.overflowY = need > max ? 'auto' : 'hidden';
   return need;
 }
