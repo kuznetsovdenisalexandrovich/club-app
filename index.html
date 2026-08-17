@@ -7544,19 +7544,13 @@ html[data-gg-nohead] .shell > header{display:none !important}
                                   видимой области не вылезал фон приложения */
   position:fixed}
 
-/* ═══ ВЕБ-РЕЖИМ: ПАРТИЯ БЕЗ ФИКСИРОВАННОЙ ПЛАШКИ ══════════════════════════
-   ⚠️⚠️ Только при `data-gg-web` (браузер, не Telegram). Плашка переходит в
-   поток и становится липкой — тогда Safari при клавиатуре прокручивает
-   документ, каретка остаётся на своём месте, и под плашкой наш фон, а не
-   чужой. В Telegram всё как было: там фиксация нужна. */
-html[data-gg-web] #gg-play-wrap{display:flex;flex-direction:column;
-  min-height:100vh;min-height:100dvh}
-html[data-gg-web] #gg-root .gg-feed{flex:1 0 auto}
-html[data-gg-web] #gg-root .gg-composer-wrap{
-  position:sticky;left:auto;right:auto;transform:none;
-  width:100%;max-width:none;margin-top:auto;
-  bottom:calc(10px + env(safe-area-inset-bottom));
-  padding-bottom:0}
+/* ═══ ВЕБ-РЕЖИМ ОТМЕНЁН В v209 ═════════════════════════════════════════════
+   Здесь жила отдельная раскладка партии для браузера (липкая плашка в потоке).
+   Вместе с телеграмной веткой (fixed + подъём по --gg-kb) она давала три
+   разных поведения и восемь правок поверх друг друга. Заменено ОДНОЙ моделью
+   для всех сред — см. блок «ПАРТИЯ — СЛОЙ ПО ВИДИМОЙ ОБЛАСТИ» в конце файла.
+   ⚠️ Признак `data-gg-web` больше НЕ ставится, `data-gg-kbd` тоже. Не
+   возвращать их правилами — химера собиралась именно так. */
 /* ⚠️ ФОН СТРАНИЦЫ НА ВРЕМЯ ИГР — ИГРОВОЙ. Любая щель (под клавиатурой, при
    оттяжке прокрутки) показывает фон `body`; пока он был картонным от
    приложения, снизу вылезала чужая полоса. */
@@ -7595,7 +7589,6 @@ html[data-gg="1"]{
    ⚠️ Именно `margin-top:auto` первому элементу, а НЕ `justify-content:flex-end`
    у контейнера: при переполнении flex-end обрезает верх ленты, и до первых
    сообщений уже не долистать. ── */
-html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;display:flex;flex-direction:column}
 #gg-root .gg-feed > *:first-child{margin-top:auto}
 
 /* ── ⚠️⚠️ ГЛАВНАЯ ПРИЧИНА, ПО КОТОРОЙ АРБИТР НЕ ЗАКРЕПЛЯЛСЯ: у `body` стоит
@@ -7611,9 +7604,6 @@ html[data-gg="1"]{overflow-x:clip}
    подлезала под поле ввода, а экран будто «приподнимался» при открытии.
    Сообщения снова идут сверху вниз, а до низа доводит прокрутка. */
 #gg-root .gg-feed > *:first-child{margin-top:0}
-/* Лента тянется до плашки ввода — тогда при короткой переписке поле стоит
-   внизу экрана, а не липнет к последней реплике */
-html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;min-height:0}
 
 /* ── ⚠️ АРБИТР ЛИПНЕТ С УЧЁТОМ ВЫРЕЗА ЭКРАНА. Порог был жёстким (74px), а
    шапка партии сама отступает на `safe-area`: на телефоне с вырезом она
@@ -7663,19 +7653,12 @@ html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;min-height:0}
 html[data-gg-notabs] .shell{padding-bottom:0}
 html[data-gg-notabs] body{padding-bottom:0}
 
-/* ── ⚠️ ЛИШНИЕ ПИКСЕЛИ ПРОКРУТКИ. `100dvh` включает высоту динамических
-   панелей браузера, поэтому блок партии оказывался на несколько пикселей выше
-   экрана — и появлялась та самая прокрутка, от которой первая реплика чуть
-   заплывала под арбитра. `svh` берёт САМУЮ МАЛУЮ высоту окна, при ней
-   документ гарантированно не выше экрана ── */
-html[data-gg-web] #gg-play-wrap{min-height:100svh}
 
 /* ── ⚠️ ЗАЗОР МЕЖДУ ПОЛЕМ И КЛАВИАТУРОЙ. Плашка отступала снизу на 26 px —
    запас закладывался под предупреждение о длине, но оно появляется редко, а
    зазор был виден всегда. Отступ по safe-area, а место под предупреждение
    добавляется только когда оно показано ── */
 #gg-root .gg-composer-wrap{bottom:calc(10px + env(safe-area-inset-bottom) + var(--gg-kb, 0px))}
-html[data-gg-web] #gg-root .gg-composer-wrap{bottom:calc(6px + env(safe-area-inset-bottom))}
 #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){padding-bottom:18px}
 
 /* ── ⚠️ ЦВЕТ СИСТЕМНОЙ КЛАВИАТУРЫ ЗАДАЁТСЯ `color-scheme`, А ОН У КОРНЯ НЕ
@@ -7686,22 +7669,67 @@ html[data-gg-web] #gg-root .gg-composer-wrap{bottom:calc(6px + env(safe-area-ins
 html[data-gg="1"][data-theme="light"]{color-scheme:light}
 html[data-gg="1"][data-theme="dark"]{color-scheme:dark}
 
-/* ── Плашка ввода при открытой клавиатуре — вплотную к низу ── */
-html[data-gg-web][data-gg-kbd] #gg-root .gg-composer-wrap{
-  bottom:0; padding-bottom:2px}
-html[data-gg-kbd] #gg-root .gg-input-warn{top:calc(100% + 6px)}
 
-/* ── ⚠️⚠️ ПРИ ОТКРЫТОЙ КЛАВИАТУРЕ СНИМАЕМ ВЫСОТУ В ЦЕЛЫЙ ЭКРАН.
-   `min-height:100dvh` держит документ ростом с экран, а видимая область при
-   клавиатуре вдвое меньше — получается, что прокручивать ЕСТЬ КУДА, и Safari
-   этим пользуется: скручивает страницу до упора к полю, унося арбитра и
-   первую реплику вверх, а снизу показывая кромку страницы.
-   Убираем высоту — документ сжимается до содержимого, прокручивать нечего,
-   и плашка сама встаёт вплотную над клавиатурой. В Telegram этого не
-   происходит вовсе, поэтому правило только для веб-режима. ── */
-html[data-gg-web][data-gg-kbd] #gg-play-wrap{min-height:0}
-html[data-gg-web][data-gg-kbd] #gg-root .gg-feed{flex:0 0 auto}
-html[data-gg-web][data-gg-kbd] #gg-root .gg-arbiter{position:static}
+/* ═══════════════════════════════════════════════════════════════════════════
+   ПАРТИЯ — СЛОЙ ПО ВИДИМОЙ ОБЛАСТИ (v209). ОДНА МОДЕЛЬ ДЛЯ ВСЕХ СРЕД.
+   ═══════════════════════════════════════════════════════════════════════════
+   ⚠️⚠️ ПОЧЕМУ ПЕРЕДЕЛАНО ЦЕЛИКОМ. Предыдущие восемь заходов лечили один и тот
+   же симптом («тапнул по полю — экран улетел вниз, клавиатура ниже границы
+   страницы») по-разному в трёх средах: Telegram, standalone с домашнего
+   экрана и обычный Safari. Общая причина у всех одна: ДОКУМЕНТ ПРОКРУЧИВАЕТСЯ.
+   Пока браузеру есть куда прокрутить, он при фокусе прокрутит к полю — и
+   утащит шапку, арбитра и ленту за верхний край.
+   Мессенджеры так не делают: у них прокручивается ЛЕНТА, а страница — никогда.
+
+   МОДЕЛЬ:
+   1. пока открыта партия, документ прокручивать НЕЛЬЗЯ (`overflow:hidden`
+      у html и body, высота ровно в экран) — прокручивать нечего;
+   2. сама партия — фиксированный слой, размер и положение которого JS берёт
+      из `visualViewport` (`--gg-vvh`, `--gg-vvtop`). Что бы iOS ни сдвинул
+      при появлении клавиатуры, слой ложится ровно на видимую область;
+   3. внутри слоя — обычная колонка: шапка, арбитр, ЛЕНТА С СОБСТВЕННОЙ
+      ПРОКРУТКОЙ, плашка ввода в потоке снизу.
+   ⚠️ Ни `fixed` у плашки, ни `sticky`, ни `--gg-kb`, ни `100dvh` здесь больше
+   не участвуют — если что-то поедет, чинить надо синхронизацию слоя,
+   а не добавлять девятое правило поверх. */
+
+/* 1. Документ на время партии неподвижен */
+html[data-gg-play],
+html[data-gg-play] body{
+  height:100%; max-height:100%; overflow:hidden;
+  overscroll-behavior:none}
+
+/* 2. Слой партии = видимая область */
+html[data-gg-play] #gg-play-wrap{
+  position:fixed; top:0; left:0; right:0;
+  height:var(--gg-vvh, 100svh);
+  transform:translateY(var(--gg-vvtop, 0px));
+  max-width:520px; margin:0 auto; padding:0 16px;
+  box-sizing:border-box; z-index:30;
+  display:flex; flex-direction:column; min-height:0}
+@media(max-width:400px){
+  html[data-gg-play] #gg-play-wrap{padding:0 12px}
+}
+
+/* 3. Внутренности слоя. Шапка и арбитр — фиксированной высоты, лента забирает
+   остаток и прокручивается сама, плашка ввода стоит в потоке под ней.
+   ⚠️ `position:static` арбитру и плашке — здесь это можно и нужно: липкость и
+   фиксация были нужны только потому, что прокручивался документ. */
+html[data-gg-play] #gg-root .gg-topbar{flex:none}
+html[data-gg-play] #gg-root .gg-arbiter{position:static; top:auto; flex:none}
+html[data-gg-play] #gg-root .gg-feed{
+  flex:1 1 auto; min-height:0;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding-bottom:10px}
+html[data-gg-play] #gg-root .gg-composer-wrap{
+  position:static; flex:none;
+  left:auto; right:auto; bottom:auto; transform:none;
+  width:100%; max-width:none; margin:0;
+  padding-bottom:calc(6px + var(--gg-vvbot, 0px))}
+/* Предупреждение о длине считается от плашки, место под него — тем же запасом */
+html[data-gg-play] #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){
+  padding-bottom:calc(22px + var(--gg-vvbot, 0px))}
 
 </style>
 
@@ -22132,7 +22160,9 @@ function ggPlainBrowser(){ return !ggInTelegram() && !ggStandalone(); }
 function ggMode(on){
   const r = document.documentElement;
   if (on) r.setAttribute('data-gg', '1'); else r.removeAttribute('data-gg');
-  r.toggleAttribute('data-gg-web', !!on && ggPlainBrowser());
+  /* ⚠️ v209: признак `data-gg-web` больше НЕ ставится. Раскладка партии теперь
+     одна для всех сред — слой по `visualViewport`, см. ggViewportSync */
+  if (!on){ r.removeAttribute('data-gg-play'); ggViewportRelease(); }
   /* ⚠️ Браузер помнит позицию прокрутки и возвращает её при показе экрана.
      На вкладке игр это выглядит как «экран сам подпрыгнул», поэтому на время
      игр восстановление выключаем, а на выходе возвращаем как было */
@@ -22326,11 +22356,20 @@ function ggShow(which){
   document.getElementById('gg-list-wrap').style.display  = which === 'list'  ? '' : 'none';
   document.getElementById('gg-play-wrap').style.display  = which === 'play'  ? '' : 'none';
   document.getElementById('gg-final-wrap').style.display = which === 'final' ? '' : 'none';
+  /* ⚠️⚠️ ПАРТИЯ — СЛОЙ ПО ВИДИМОЙ ОБЛАСТИ. Признак включает раскладку, при
+     которой документ неподвижен, а прокручивается только лента. Ставим ДО
+     первой отрисовки экрана, иначе браузер успеет прокрутить страницу */
+  if (which === 'play'){ document.documentElement.setAttribute('data-gg-play',''); ggViewportSync(); }
+  else { document.documentElement.removeAttribute('data-gg-play'); ggViewportRelease(); }
   /* ⚠️ НА ФИНАЛЕ ПИЛЮЛЮ ОСТАВЛЯЕМ, А МАСТЕР-БАР УБИРАЕМ: экран длинный, и с
      баром наверху вердикт со счётом начинался у середины, а материал занятия
      и кнопка следующей ступени уходили под нижний край */
   ggChrome(which === 'play', which === 'final');
-  ggToTop();
+  /* ⚠️ v209: В ПАРТИИ ДОВОДКА ПОЗИЦИИ НЕ НУЖНА И ВРЕДНА. Документ там
+     неподвижен, а слой сам ложится на видимую область — три `scrollTo` от
+     ggToTop только дёргали экран (это и есть то «моргание», которое было
+     заметно в Telegram). На списке и финале страница обычная, там оставляем */
+  if (which !== 'play') ggToTop();
 }
 
 function ggBackToList(){
@@ -22449,8 +22488,16 @@ function ggTyping(on){
 
 function ggScrollDown(){
   setTimeout(function(){
-    /* ⚠️ ПРОКРУЧИВАЕМ, ТОЛЬКО ЕСЛИ ЛЕНТА ДЛИННЕЕ ЭКРАНА. Иначе на короткой
-       переписке вызов утягивал страницу в пустоту под лентой */
+    /* ⚠️⚠️ v209: В ПАРТИИ ПРОКРУЧИВАЕТСЯ ЛЕНТА, А НЕ СТРАНИЦА. Страница на
+       этом экране вообще неподвижна — прокрутка окна тут не сработала бы, а
+       раньше именно она утягивала экран в пустоту */
+    const feed = document.getElementById('gg-feed');
+    if (document.documentElement.hasAttribute('data-gg-play') && feed){
+      try { feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' }); }
+      catch(e){ feed.scrollTop = feed.scrollHeight; }
+      return;
+    }
+    /* ⚠️ ВНЕ ПАРТИИ: прокручиваем, только если документ длиннее экрана */
     const doc = document.documentElement;
     if (doc.scrollHeight - window.innerHeight < 24) return;
     window.scrollTo({ top: doc.scrollHeight, behavior: 'smooth' });
@@ -22754,38 +22801,65 @@ function ggInputChanged(el){
    исходной высоты, поэтому плашка ввода остаётся ПОД клавиатурой, а курсор
    выглядит «улетевшим выше поля». Настоящую видимую область даёт
    `visualViewport` — по нему и приподнимаем плашку. */
-function ggKeyboardFollow(){
+/* ═══ СИНХРОНИЗАЦИЯ СЛОЯ ПАРТИИ С ВИДИМОЙ ОБЛАСТЬЮ (v209) ══════════════════
+   ⚠️⚠️ Единственное место, где раскладка партии реагирует на клавиатуру.
+   `visualViewport.height` — сколько реально видно, `offsetTop` — насколько
+   система сдвинула видимую область относительно страницы. Кладём оба в
+   переменные, слой ложится ровно на видимое. Заодно возвращаем страницу в
+   ноль: если iOS всё же успел её прокрутить, слой поедет вместе с ней. */
+function ggViewportSync(){
+  const r = document.documentElement;
+  if (!r.hasAttribute('data-gg-play')) return;
   const vv = window.visualViewport;
-  const wrap = document.querySelector('#gg-root .gg-composer-wrap');
-  if (!vv || !wrap) return;
-  /* ⚠️⚠️ ТОЛЬКО ВНУТРИ TELEGRAM. В обычном браузере Safari сам поднимает
-     `fixed`-элемент над клавиатурой — наш сдвиг накладывался на его и уводил
-     плашку выше, а каретка при этом оставалась рисоваться на прежнем месте
-     (Safari не перерисовывает её при смене позиции у сфокусированного поля).
-     Отсюда «поле подскакивает» и курсор отдельно от плашки. В мини-аппе
-     Telegram такого подъёма нет, там сдвиг нужен. */
-  if (ggPlainBrowser()){ wrap.style.setProperty('--gg-kb', '0px'); return; }
-  const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  wrap.style.setProperty('--gg-kb', hidden + 'px');
+  const h   = vv ? vv.height    : window.innerHeight;
+  const top = vv ? vv.offsetTop : 0;
+  r.style.setProperty('--gg-vvh', Math.round(h) + 'px');
+  r.style.setProperty('--gg-vvtop', Math.round(top) + 'px');
+  /* Запас снизу под «домашнюю» полосу — только когда клавиатуры нет:
+     при открытой клавиатуре safe-area внизу уже не действует */
+  const kbOpen = vv ? (window.innerHeight - vv.height - vv.offsetTop > 80) : false;
+  r.style.setProperty('--gg-vvbot', kbOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+  try { if (window.scrollY) window.scrollTo(0, 0); } catch(e){}
 }
+
+function ggViewportRelease(){
+  const r = document.documentElement;
+  r.style.removeProperty('--gg-vvh');
+  r.style.removeProperty('--gg-vvtop');
+  r.style.removeProperty('--gg-vvbot');
+}
+
+/* ⚠️ ОСТАВЛЕНО РАДИ СОВМЕСТИМОСТИ ВЫЗОВОВ. Прежний подъём плашки на высоту
+   клавиатуры (`--gg-kb`) больше не нужен: плашка лежит в потоке слоя, который
+   и так равен видимой области. Функция только синхронизирует слой и гасит
+   старую переменную, чтобы прежние правила ничего не сдвигали. */
+function ggKeyboardFollow(){
+  const wrap = document.querySelector('#gg-root .gg-composer-wrap');
+  if (wrap) wrap.style.setProperty('--gg-kb', '0px');
+  ggViewportSync();
+}
+
+/* ⚠️ v209: прежняя ggKeyboardFollow (подъём плашки на высоту клавиатуры по
+   visualViewport) УДАЛЕНА вместе с веб-режимом. Не возвращать: подъём имел
+   смысл, только пока плашка была fixed поверх прокручиваемого документа. */
 
 (function(){
   const inp = document.getElementById('gg-input');
   if (!inp) return;
   if (window.visualViewport){
-    window.visualViewport.addEventListener('resize', ggKeyboardFollow);
-    window.visualViewport.addEventListener('scroll', ggKeyboardFollow);
+    window.visualViewport.addEventListener('resize', ggViewportSync);
+    window.visualViewport.addEventListener('scroll', ggViewportSync);
   }
+  window.addEventListener('orientationchange', function(){ setTimeout(ggViewportSync, 120); });
+  window.addEventListener('resize', ggViewportSync);
   inp.addEventListener('focus', function(){
-    /* ⚠️ ПРИ ОТКРЫТОЙ КЛАВИАТУРЕ ПЛАШКА ПРИЖИМАЕТСЯ К САМОМУ НИЗУ. В вебе
-       Safari сам поднимает её над клавиатурой, и наш собственный отступ
-       складывался с этим подъёмом — поле висело заметно выше нужного */
-    document.documentElement.toggleAttribute('data-gg-kbd', true);
-    setTimeout(ggKeyboardFollow, 60);
-    setTimeout(ggKeyboardFollow, 320);
-    /* ⚠️ После сжатия документа страница может остаться проскроллённой с
-       прошлого состояния — возвращаем её к верху, иначе видно кромку снизу */
-    setTimeout(function(){ if (!ggInTelegram()) window.scrollTo(0, 0); }, 340);
+    /* ⚠️⚠️ v209: НИКАКИХ ПРИЗНАКОВ И СДВИГОВ НА ФОКУСЕ. Клавиатура меняет
+       видимую область — слой пересчитывается по ней сам. Догоняем несколько
+       раз, потому что iOS сообщает конечный размер не сразу */
+    ggViewportSync();
+    setTimeout(ggViewportSync, 60);
+    setTimeout(ggViewportSync, 200);
+    setTimeout(ggViewportSync, 380);
     /* ⚠️⚠️ ПОСЛЕ ФОКУСА НЕ ПРОКРУЧИВАЕМ ВООБЩЕ. Партия ставит курсор в поле
        сама, при открытии — и эта доводка срабатывала на автофокусе, утягивая
        свежий экран вниз ровно настолько, чтобы первая реплика заползла под
@@ -22793,8 +22867,9 @@ function ggKeyboardFollow(){
        осталась. */
   });
   inp.addEventListener('blur', function(){
-    document.documentElement.toggleAttribute('data-gg-kbd', false);
-    setTimeout(ggKeyboardFollow, 60);
+    ggViewportSync();
+    setTimeout(ggViewportSync, 60);
+    setTimeout(ggViewportSync, 280);
   });
   inp.addEventListener('keydown', function(e){
     /* Enter отправляет, Shift+Enter — перенос строки */
