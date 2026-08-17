@@ -4613,7 +4613,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="gg-composer-wrap" id="gg-composer">
           <div class="gg-composer">
             <button class="gg-spark" onclick="ggRules()" aria-label="Правила">✦</button>
-            <input class="gg-input" id="gg-input" autocomplete="off" data-text-ph="games.placeholder" placeholder="Твой ответ клиенту...">
+            <div class="gg-input-wrap">
+              <textarea class="gg-input" id="gg-input" rows="1" autocomplete="off"
+                        data-text-ph="games.placeholder" placeholder="Твой ответ клиенту..."></textarea>
+              <div class="gg-input-warn" id="gg-input-warn"></div>
+            </div>
             <button class="gg-send" id="gg-send" onclick="ggSend()" aria-label="Отправить">
               <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -7316,6 +7320,28 @@ body.api-override-on #api-override-bar{display:block}
 
 /* Плашка замка больше не используется в ленте — оставлена для попапов */
 #gg-root .gg-lockednote{align-self:stretch;max-width:none}
+
+/* ── Поле ввода на две строки + предупреждение о длине ── */
+#gg-root .gg-input-wrap{flex:1;min-width:0;position:relative;display:flex;flex-direction:column}
+#gg-root .gg-input{width:100%;resize:none;overflow-y:auto;line-height:1.4;
+  padding:6px 0;max-height:58px;font:500 15px var(--gg-font-body)}
+#gg-root .gg-input-warn{position:absolute;left:0;bottom:100%;margin-bottom:6px;
+  font-size:10.5px;font-weight:600;color:var(--gg-bad);white-space:nowrap;
+  opacity:0;transform:translateY(4px);pointer-events:none;
+  transition:opacity .2s,transform .2s}
+#gg-root .gg-input-warn.gg-on{opacity:1;transform:none}
+/* ⚠️ Поле выросло — композер обязан расти вместе с ним, иначе вторая строка
+   уедет под край плашки */
+#gg-root .gg-composer{height:auto;min-height:76px;align-items:flex-end;padding:9px}
+#gg-root .gg-composer .gg-spark,#gg-root .gg-composer .gg-send{margin-bottom:0}
+
+/* ⚠️ ПЛАШКА «БОНУС» УТОНУЛА В КАРТОЧКЕ: она висела на `top:-8px` и жила
+   только за счёт `overflow:visible`, который перебивается обрезкой плитки.
+   Кладём её ВНУТРЬ, поверх картинки — теперь видна при любом overflow.
+   Тень нужна, чтобы читалась на светлых обложках. */
+.bonus-badge{top:8px !important;right:8px !important;z-index:3 !important;
+  box-shadow:0 4px 12px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.22) inset;
+  padding:3px 9px !important}
 
 </style>
 
@@ -10559,7 +10585,8 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    i — важный (идёт в раздел, а не в общий список), t — сам текст.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const APP_TEXTS = {  'games.note_open': { c:'Игры', l:'Кнопка «показать разбор хода»', w:'Экран партии', i:false, t:'Разбор хода' },
+const APP_TEXTS = {  'games.too_long': { c:'Игры', l:'Предупреждение о длине ответа', w:'Экран партии', i:false, t:'Лучше отвечай коротко' },
+  'games.note_open': { c:'Игры', l:'Кнопка «показать разбор хода»', w:'Экран партии', i:false, t:'Разбор хода' },
   'games.note_locked': { c:'Игры', l:'Кнопка разбора у гостя', w:'Экран партии', i:false, t:'Разбор — участникам' },
 
   'games.title': { c:'Игры', l:'Заголовок вкладки', w:'Вкладка «Игры»', i:false, t:'Игры' },
@@ -10599,6 +10626,7 @@ const APP_TEXTS = {  'games.note_open': { c:'Игры', l:'Кнопка «пок
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22012,6 +22040,8 @@ async function ggSend(){
   document.getElementById('gg-send').disabled = true;
   ggMsg(text, true);
   inp.value = '';
+  ggAutoGrow(inp);
+  ggInputWarn(inp);
   ggTyping(true);
   ggScrollDown();
 
@@ -22146,10 +22176,44 @@ function ggQuitAsk(){ ggPop('gg-m-quit'); }
 function ggPop(id){ const e = document.getElementById(id); if (e) e.classList.add('gg-open'); }
 function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.remove('gg-open'); }
 
-/* Отправка по Enter — на телефоне это привычнее кнопки */
+/* ═══ ПОЛЕ ВВОДА ══════════════════════════════════════════════════════════
+   ⚠️ ДВЕ СТРОКИ — ЭТО И ПОТОЛОК РОСТА, И ПОТОЛОК ДЛИНЫ. Длинные простыни в
+   игре вредны: клиент отвечает на последнюю мысль, а судья ищет одну
+   формулировку. Поэтому поле растёт до двух строк и дальше не растёт, а
+   счётчик не даёт написать больше, чем в эти строки помещается.
+   ⚠️ Предупреждение показываем НЕ на потолке, а на подходе к нему (85%):
+   упереться в лимит на полуслове неприятно, а увидеть заранее — нормально. */
+const GG_MAX_CHARS = 180;      // ≈ две строки на телефоне
+const GG_WARN_AT = 0.85;
+
+function ggAutoGrow(el){
+  if (!el) return;
+  /* высоту сбрасываем перед замером: иначе поле умеет только расти */
+  el.style.height = 'auto';
+  const line = 21;                       // высота строки при 15px/1.4
+  el.style.height = Math.min(el.scrollHeight, line * 2 + 16) + 'px';
+}
+
+function ggInputWarn(el){
+  const warn = document.getElementById('gg-input-warn');
+  if (!warn || !el) return;
+  const n = (el.value || '').length;
+  if (n >= Math.floor(GG_MAX_CHARS * GG_WARN_AT)){
+    warn.textContent = (t('games.too_long') || 'Лучше отвечай коротко')
+      + ' · ' + n + '/' + GG_MAX_CHARS;
+    warn.classList.add('gg-on');
+  } else {
+    warn.classList.remove('gg-on');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   const inp = document.getElementById('gg-input');
-  if (inp) inp.addEventListener('keydown', function(e){
+  if (!inp) return;
+  inp.setAttribute('maxlength', String(GG_MAX_CHARS));
+  inp.addEventListener('input', function(){ ggAutoGrow(this); ggInputWarn(this); });
+  inp.addEventListener('keydown', function(e){
+    /* Enter отправляет, Shift+Enter — перенос строки */
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
   });
 });
