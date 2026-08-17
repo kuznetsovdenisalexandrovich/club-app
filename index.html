@@ -7478,10 +7478,15 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 #gg-root .gg-composer .gg-send{width:44px;height:44px}
 #gg-root .gg-composer .gg-send svg{width:20px;height:20px}
 
-/* ⚠️ Плашке ввода нужно место ПОД собой для предупреждения — иначе оно
-   упрётся в нижний край экрана и его не будет видно */
-#gg-root .gg-composer-wrap{position:relative;
-  bottom:calc(26px + env(safe-area-inset-bottom))}
+/* ⚠️⚠️ ЗДЕСЬ НЕЛЬЗЯ ТРОГАТЬ `position`. Плашка ввода прибита к низу экрана
+   через `position:fixed`; я дописал ей `position:relative` ради предупреждения
+   — и она мгновенно встала в поток, сразу под лентой сообщений (у Denis'а
+   уехала под первую реплику). Подпирать снизу можно только сдвигом `bottom`:
+   элемент и так позиционирован, значит абсолютное предупреждение внутри него
+   считается от него же.
+   КЛАСС: дописывая правило существующему элементу, НЕ переопределять
+   `position`, `display` и `overflow` — на них держится вся его раскладка. */
+#gg-root .gg-composer-wrap{bottom:calc(26px + env(safe-area-inset-bottom))}
 
 </style>
 
@@ -10768,6 +10773,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
