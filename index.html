@@ -350,6 +350,12 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .scroll-fade{position:fixed;bottom:0;left:0;right:0;height:110px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:49}
 .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text-faint);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s}
 .tab-icon{font-size:20px;transition:filter .15s;display:flex;align-items:center;justify-content:center}
+/* Знак бога вместо человечка в пилюле: спрайт 4x4 работает МАСКОЙ,
+   поэтому цвет берётся из currentColor и тема красит его сама */
+.god-sign{display:block;width:20px;height:20px;background-color:currentColor;
+  -webkit-mask-image:url('images/god-signs.png');mask-image:url('images/god-signs.png');
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-size:400% 400%;mask-size:400% 400%}
 .tab-item.active{color:var(--warm)}
 .tab-item.active .tab-icon{filter:drop-shadow(0 0 4px var(--warm))}
 .tab-underline{width:20px;height:2px;border-radius:2px;background:transparent;margin-top:4px}
@@ -5469,7 +5475,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+    <span class="tab-icon" id="tab-profile-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
     <span>Профиль</span>
     <div class="tab-underline"></div>
   </div>
@@ -9594,6 +9600,7 @@ async function loadProfile() {
         }));
       } catch(e){}
     }
+    try { applyGodSign(); } catch(e){}
     const prevRewardLevel = rewardLevel;
     rewardLevel = u.reward_level || 3;
     lifetimePoints = u.lifetime_points || 0;
@@ -21366,6 +21373,40 @@ let quizResult  = null;
 
 function quizStorageKey(){ return 'quiz_result_v1'; }
 
+/* ЗНАК БОГА В ПИЛЮЛЕ.
+   Индекс — позиция знака в спрайте images/god-signs.png (сетка 4x4, слева направо).
+   Читаем результат ИЗ localStorage, а не из quizResult: глобальная переменная
+   заполняется только при открытии экрана теста, а значок нужен сразу при старте. */
+var GOD_SIGNS = {
+  'Зевс':0, 'Гера':1, 'Посейдон':2, 'Аид':3,
+  'Афина':4, 'Аполлон':5, 'Артемида':6, 'Афродита':7,
+  'Арес':8, 'Деметра':9, 'Гермес':10, 'Дионис':11,
+  'Гефест':12, 'Плутос':13, 'Прометей':14, 'Мом':15
+};
+var GOD_SIGN_FALLBACK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none">'
+  + '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>'
+  + '<path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+function godSignIndex(){
+  var saved = null;
+  try { saved = savedQuizResult(); } catch(e){}
+  var code = saved && saved.code;
+  var rec  = code && QUIZ_RESULTS[code];
+  var god  = rec && rec.god;
+  return (god && GOD_SIGNS[god] !== undefined) ? GOD_SIGNS[god] : -1;
+}
+
+function applyGodSign(){
+  var host = document.getElementById('tab-profile-icon');
+  if (!host) return;
+  var idx = godSignIndex();
+  if (idx < 0){ host.innerHTML = GOD_SIGN_FALLBACK; return; }
+  var col = idx % 4, row = Math.floor(idx / 4);
+  var pos = (col * 100 / 3) + '% ' + (row * 100 / 3) + '%';
+  host.innerHTML = '<i class="god-sign" style="-webkit-mask-position:' + pos
+                 + ';mask-position:' + pos + '"></i>';
+}
+
 function savedQuizResult(){
   try { return JSON.parse(localStorage.getItem(quizStorageKey()) || 'null'); }
   catch(e){ return null; }
@@ -21482,6 +21523,7 @@ function finishQuiz(){
   quizResult = { code: score.code, secondCode: score.secondCode,
                  axes: score.axes, at: Date.now() };
   try { localStorage.setItem(quizStorageKey(), JSON.stringify(quizResult)); } catch(e){}
+  try { applyGodSign(); } catch(e){}
   track('quiz_done', score.code);
   // В профиль — чтобы результат не терялся при смене устройства/браузера и
   // чтобы со временем из него можно было собрать личный план. Без телеграм-id
@@ -23308,6 +23350,15 @@ function ggKeyboardFollow(){
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
   });
   ggAutoGrow(inp);
+})();
+
+/* Знак бога ставим и при обычном запуске — отдельно от init(), потому что тот
+   ветвится (просмотр глазами / MAX / ВК / Telegram / веб) и половина веток
+   возвращается раньше. Профиль потом вызовет applyGodSign ещё раз. */
+(function(){
+  function go(){ try { applyGodSign(); } catch(e){} }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+  else go();
 })();
 
 </script>
