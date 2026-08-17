@@ -7565,6 +7565,26 @@ html[data-gg-web] #gg-root .gg-composer-wrap{
 html[data-gg="1"] body{background:var(--gg-bg)}
 html[data-gg="1"] body::before{opacity:0}
 
+/* ── ⚠️ ЧЁРНАЯ ПОЛОСА ЗА КЛАВИАТУРОЙ. Красили только `body`, а область за его
+   пределами (в standalone с домашнего экрана её видно особенно) берёт цвет
+   корневого элемента. Красим и его ── */
+html[data-gg="1"]{background:var(--gg-bg)}
+
+/* ── ⚠️ АРБИТР ЗАКРЕПЛЁН: диалог плывёт под ним, шкала всегда на виду.
+   Липнет под шапкой партии, поэтому `top` считается от её высоты ── */
+#gg-root .gg-arbiter{position:sticky;top:74px;z-index:15}
+@media(max-width:480px){ #gg-root .gg-arbiter{top:68px} }
+
+/* ── ⚠️ ЛЕНТА ПРИЖАТА КНИЗУ, КАК В МЕССЕНДЖЕРЕ. Раньше сообщения лежали
+   сверху, снизу зияла пустота — и прокрутка к полю уносила экран в эту
+   пустоту, диалог пропадал из виду. Теперь последние реплики всегда стоят
+   вплотную над полем ввода.
+   ⚠️ Именно `margin-top:auto` первому элементу, а НЕ `justify-content:flex-end`
+   у контейнера: при переполнении flex-end обрезает верх ленты, и до первых
+   сообщений уже не долистать. ── */
+html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;display:flex;flex-direction:column}
+#gg-root .gg-feed > *:first-child{margin-top:auto}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10850,6 +10870,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22526,6 +22547,12 @@ function ggKeyboardFollow(){
   inp.addEventListener('focus', function(){
     setTimeout(ggKeyboardFollow, 60);
     setTimeout(ggKeyboardFollow, 320);
+    /* ⚠️ ПОСЛЕ ФОКУСА ДОВОДИМ ЛЕНТУ ДО НИЗА. Браузер сам прокручивает к полю,
+       но останавливается где придётся; лента прижата книзу, поэтому «в самый
+       низ» — это и есть последние реплики над клавиатурой. Два вызова: сразу
+       и после того, как клавиатура доехала. */
+    setTimeout(ggScrollDown, 120);
+    setTimeout(ggScrollDown, 380);
   });
   inp.addEventListener('blur', function(){ setTimeout(ggKeyboardFollow, 60); });
   inp.addEventListener('keydown', function(e){
