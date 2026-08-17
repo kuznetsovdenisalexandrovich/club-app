@@ -7424,6 +7424,27 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
   #gg-root .gg-head-title{font-size:20px}
 }
 
+/* ── Поле: растёт от одной строки, скролла внутри нет (мы не даём перелить) ── */
+#gg-root .gg-input{max-height:none;overflow-y:hidden;padding:5px 0}
+#gg-root .gg-composer{min-height:70px}
+
+/* ── ⚠️ ФИНАЛ: экран был «бедный сверху, обрезанный снизу». Верх сжат, низ
+   получил отступ под пилюлю, робот меньше — вердикт со счётом виден сразу ── */
+#gg-root #gg-final-wrap{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+#gg-root .gg-final{padding:calc(max(var(--safe-top,0px),8px) + 10px) 0 0}
+#gg-root .gg-final-hero{padding:0 0 18px}
+#gg-root .gg-final-robot{width:92px;height:92px;margin-bottom:10px}
+#gg-root .gg-final-robot .gg-robot{width:92px}
+#gg-root .gg-verdict{font-size:20px;margin-bottom:6px}
+#gg-root .gg-score{font-size:46px}
+#gg-root .gg-final-sub{margin-top:10px;font-size:13.5px}
+#gg-root .gg-block{padding:15px 18px;margin-bottom:12px}
+@media(max-width:480px){
+  #gg-root .gg-final-robot,#gg-root .gg-final-robot .gg-robot{width:78px;height:78px}
+  #gg-root .gg-score{font-size:40px}
+  #gg-root .gg-verdict{font-size:18.5px}
+}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10709,6 +10730,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -21923,14 +21945,16 @@ function ggRules(){
 /* ⚠️ Мастер-бар, значок уровня и пилюлю прячем ТЕМ ЖЕ СПИСКОМ id, что уже
    используется в приложении, и запоминаем прежний display: у бара и значка он
    зависит от уровня, вернуть «как было» иначе не получится */
-function ggChrome(hide){
+function ggChrome(hide, keepTabs){
   const fade = document.querySelector('.scroll-fade');
   if (fade) fade.style.display = hide ? 'none' : '';
 
+  const hideBar = hide || keepTabs;      // мастер-бар прячем и на финале
   ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
     const el = document.getElementById(id);
     if (!el) return;
-    if (hide){
+    const hideThis = (id === 'tabbar') ? hide : hideBar;
+    if (hideThis){
       if (el.dataset.ggPrev === undefined) el.dataset.ggPrev = el.style.display || '';
       el.style.display = 'none';
     } else if (el.dataset.ggPrev !== undefined){
@@ -21951,7 +21975,10 @@ function ggShow(which){
   document.getElementById('gg-list-wrap').style.display  = which === 'list'  ? '' : 'none';
   document.getElementById('gg-play-wrap').style.display  = which === 'play'  ? '' : 'none';
   document.getElementById('gg-final-wrap').style.display = which === 'final' ? '' : 'none';
-  ggChrome(which === 'play');
+  /* ⚠️ НА ФИНАЛЕ ПИЛЮЛЮ ОСТАВЛЯЕМ, А МАСТЕР-БАР УБИРАЕМ: экран длинный, и с
+     баром наверху вердикт со счётом начинался у середины, а материал занятия
+     и кнопка следующей ступени уходили под нижний край */
+  ggChrome(which === 'play', which === 'final');
   window.scrollTo(0, 0);
 }
 
@@ -22145,8 +22172,8 @@ async function ggSend(){
   document.getElementById('gg-send').disabled = true;
   ggMsg(text, true);
   inp.value = '';
-  ggAutoGrow(inp);
-  ggInputWarn(inp);
+  ggLastGood = '';
+  ggInputWarn(inp, ggAutoGrow(inp));
   ggTyping(true);
   ggScrollDown();
 
@@ -22288,35 +22315,66 @@ function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.
    счётчик не даёт написать больше, чем в эти строки помещается.
    ⚠️ Предупреждение показываем НЕ на потолке, а на подходе к нему (85%):
    упереться в лимит на полуслове неприятно, а увидеть заранее — нормально. */
-const GG_MAX_CHARS = 180;      // ≈ две строки на телефоне
-const GG_WARN_AT = 0.85;
+/* ⚠️⚠️ ПОТОЛОК МЕРЯЕТСЯ СТРОКАМИ, А НЕ СИМВОЛАМИ. Символьный лимит врёт:
+   при узком поле 180 символов — это четыре строки, при широком — полторы.
+   Denis так и поймал: дописал четвёртую строку и ни во что не упёрся, а
+   начало текста уехало под верхний край. Меряем ФАКТИЧЕСКУЮ высоту: пока
+   текст влезает в две строки — пускаем, перестал влезать — откатываем
+   последний ввод. Тогда «ровно строчки на две» верно на любом экране.
+   Символьный потолок оставлен только как страховка от вставки простыни. */
+const GG_MAX_LINES = 2;
+const GG_HARD_CHARS = 400;
+let ggLastGood = '';
 
-function ggAutoGrow(el){
-  if (!el) return;
-  /* высоту сбрасываем перед замером: иначе поле умеет только расти */
-  el.style.height = 'auto';
-  const line = 21;                       // высота строки при 15px/1.4
-  el.style.height = Math.min(el.scrollHeight, line * 2 + 16) + 'px';
+function ggMaxH(el){
+  /* одна строка = высота пустого поля; потолок = она же плюс ещё строки */
+  const cs = getComputedStyle(el);
+  const line = parseFloat(cs.lineHeight) || 21;
+  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  return Math.round(line * GG_MAX_LINES + pad);
 }
 
-function ggInputWarn(el){
+function ggAutoGrow(el){
+  if (!el) return el ? 0 : 0;
+  /* высоту сбрасываем перед замером: иначе поле умеет только расти */
+  el.style.height = 'auto';
+  const max = ggMaxH(el);
+  const need = el.scrollHeight;
+  el.style.height = Math.min(need, max) + 'px';
+  return need;
+}
+
+function ggInputWarn(el, need){
   const warn = document.getElementById('gg-input-warn');
   if (!warn || !el) return;
-  const n = (el.value || '').length;
-  if (n >= Math.floor(GG_MAX_CHARS * GG_WARN_AT)){
-    warn.textContent = (t('games.too_long') || 'Лучше отвечай коротко')
-      + ' · ' + n + '/' + GG_MAX_CHARS;
+  const max = ggMaxH(el);
+  /* предупреждаем на подходе к концу второй строки, а не на самом потолке */
+  if ((el.value || '') && need >= max * 0.8){
+    warn.textContent = t('games.too_long') || 'Лучше отвечай коротко';
     warn.classList.add('gg-on');
   } else {
     warn.classList.remove('gg-on');
   }
 }
 
+function ggInputChanged(el){
+  const need = ggAutoGrow(el);
+  const max = ggMaxH(el);
+  /* ⚠️ ОТКАТ ПОСЛЕДНЕГО ВВОДА, А НЕ ОБРЕЗКА ХВОСТА: обрезка съедала бы текст
+     при вставке из буфера посреди строки */
+  if (need > max + 2 || (el.value || '').length > GG_HARD_CHARS){
+    el.value = ggLastGood;
+    ggAutoGrow(el);
+  } else {
+    ggLastGood = el.value;
+  }
+  ggInputWarn(el, ggAutoGrow(el));
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   const inp = document.getElementById('gg-input');
   if (!inp) return;
-  inp.setAttribute('maxlength', String(GG_MAX_CHARS));
-  inp.addEventListener('input', function(){ ggAutoGrow(this); ggInputWarn(this); });
+  inp.addEventListener('input', function(){ ggInputChanged(this); });
   inp.addEventListener('keydown', function(e){
     /* Enter отправляет, Shift+Enter — перенос строки */
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
