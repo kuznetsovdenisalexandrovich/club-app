@@ -7546,6 +7546,25 @@ html[data-gg-nohead] .shell > header{display:none !important}
                                   видимой области не вылезал фон приложения */
   position:fixed}
 
+/* ═══ ВЕБ-РЕЖИМ: ПАРТИЯ БЕЗ ФИКСИРОВАННОЙ ПЛАШКИ ══════════════════════════
+   ⚠️⚠️ Только при `data-gg-web` (браузер, не Telegram). Плашка переходит в
+   поток и становится липкой — тогда Safari при клавиатуре прокручивает
+   документ, каретка остаётся на своём месте, и под плашкой наш фон, а не
+   чужой. В Telegram всё как было: там фиксация нужна. */
+html[data-gg-web] #gg-play-wrap{display:flex;flex-direction:column;
+  min-height:100vh;min-height:100dvh}
+html[data-gg-web] #gg-root .gg-feed{flex:1 0 auto}
+html[data-gg-web] #gg-root .gg-composer-wrap{
+  position:sticky;left:auto;right:auto;transform:none;
+  width:100%;max-width:none;margin-top:auto;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  padding-bottom:0}
+/* ⚠️ ФОН СТРАНИЦЫ НА ВРЕМЯ ИГР — ИГРОВОЙ. Любая щель (под клавиатурой, при
+   оттяжке прокрутки) показывает фон `body`; пока он был картонным от
+   приложения, снизу вылезала чужая полоса. */
+html[data-gg="1"] body{background:var(--gg-bg)}
+html[data-gg="1"] body::before{opacity:0}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10831,6 +10850,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -21902,9 +21922,24 @@ function ggGuestKey(){
    ставится на входе и снимается на выходе, а весь новый вид описан
    селекторами `[data-gg="1"] .tabbar` в блоке игр: на других экранах не
    срабатывает ни одно правило. */
+/* ⚠️⚠️ ПРИЗНАК «МЫ В БРАУЗЕРЕ, А НЕ В TELEGRAM». В вебе плашка ввода не
+   может быть `fixed`: Safari при клавиатуре рисует фиксированный слой
+   относительно НЕизменившейся области, а каретку — по реальному положению
+   поля, и они разъезжаются (курсор висит выше плашки). Там же из-под
+   фиксированной подложки вылезает фон приложения. В браузере переводим
+   партию на обычный поток: колонка во всю высоту и липкая плашка внизу —
+   тогда Safari прокручивает документ, и всё сходится само. */
+function ggInTelegram(){
+  try {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    return !!(tg && tg.initData !== undefined && tg.platform && tg.platform !== 'unknown');
+  } catch(e){ return false; }
+}
+
 function ggMode(on){
   const r = document.documentElement;
   if (on) r.setAttribute('data-gg', '1'); else r.removeAttribute('data-gg');
+  r.toggleAttribute('data-gg-web', !!on && !ggInTelegram());
 }
 
 async function ggOpen(){
@@ -22476,11 +22511,7 @@ function ggKeyboardFollow(){
      (Safari не перерисовывает её при смене позиции у сфокусированного поля).
      Отсюда «поле подскакивает» и курсор отдельно от плашки. В мини-аппе
      Telegram такого подъёма нет, там сдвиг нужен. */
-  const inTelegram = !!(window.Telegram && window.Telegram.WebApp
-                        && window.Telegram.WebApp.initData !== undefined
-                        && window.Telegram.WebApp.platform
-                        && window.Telegram.WebApp.platform !== 'unknown');
-  if (!inTelegram){ wrap.style.setProperty('--gg-kb', '0px'); return; }
+  if (!ggInTelegram()){ wrap.style.setProperty('--gg-kb', '0px'); return; }
   const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   wrap.style.setProperty('--gg-kb', hidden + 'px');
 }
