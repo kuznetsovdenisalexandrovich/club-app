@@ -9137,6 +9137,7 @@ function diagShowEnv(){
     `SDK Telegram: ${typeof tgSdkWhen !== 'undefined' ? tgSdkWhen : '—'}`,
     `SDK подключён: ${document.querySelector('head script[src*="telegram-web-app"]') ? 'тегом в head' : 'динамически'} · объект ${window.Telegram?.WebApp ? 'есть' : 'нет'}`,
     `Сторож SDK: попыток ${typeof tgLateTries !== 'undefined' ? tgLateTries : '—'}`,
+    `Ветка запуска: ${typeof initBranch !== 'undefined' ? initBranch : '—'} · настройка Telegram: ${typeof tgBootWhy !== 'undefined' ? tgBootWhy : '—'}`,
     `Окно: innerHeight ${window.innerHeight} · экран ${window.screen?.height ?? '—'} · зона сверху ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
     `Режим и отступ сверху: ${typeof tgSafeWhy !== 'undefined' && tgSafeWhy ? tgSafeWhy : '(не считался)'}`,
     `--safe-top сейчас: ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
@@ -17280,6 +17281,28 @@ function tgSetupWhenReady(){
   return true;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚠️⚠️⚠️ ТЕЛЕГРАМНАЯ НАСТРОЙКА НЕ ДОЛЖНА ЗАВИСЕТЬ ОТ ВЕТКИ ЗАПУСКА.
+   ═══════════════════════════════════════════════════════════════════════════
+   Она жила ВНУТРИ `init()`, а `init()` ветвится: просмотр глазами участника,
+   MAX, ВК, Telegram, веб — и половина веток завершается возвратом раньше.
+   Диагностика с телефона: «SDK подключён тегом · объект есть», но рядом
+   «Сторож SDK: попыток 0», «Режим и отступ: (не считался)», «Кнопка назад:
+   привязка (нет)». Объект был, а до строки настройки выполнение не дошло.
+   Теперь настройка вызывается ДО `init()` и живёт отдельно от его развилок.
+   КЛАСС: код, который обязан выполниться всегда, нельзя класть внутрь
+   функции с ранними возвратами. */
+let tgBootWhy = 'не запускался';
+let initBranch = '—';
+function tgBootstrap(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg){ tgBootWhy = 'объекта нет — жду'; tgWatchSdk(); return; }
+  const real = !!(tg.initData || (typeof isInsideTelegram === 'function' && isInsideTelegram()));
+  if (!real){ tgBootWhy = 'не Telegram, настройка не нужна'; return; }
+  tgSetupWhenReady();
+  tgBootWhy = 'выполнена';
+}
+
 /* Сторож: опрашивает окно, пока SDK не появится. Полминуты с запасом —
    дальше ждать бессмысленно, значит домен недоступен совсем */
 function tgWatchSdk(){
@@ -18316,6 +18339,7 @@ async function init(){
      ни телеграмный initData, ни веб-сессия здесь не при чём — кто мы сейчас,
      говорит сервер по токену из адреса */
   if (VIEW_TOKEN){
+    initBranch = 'просмотр глазами участника';
     startViewMode();
     return;
   }
@@ -18324,6 +18348,7 @@ async function init(){
      (`WebAppData` в хеше), пересечься они не могут, но порядок держим тот же —
      сначала мессенджеры, потом Telegram, потом веб. */
   if (isInsideMax()) {
+    initBranch = 'MAX';
     applyWebSafeArea();
     setTimeout(applyWebSafeArea, 300);
     window.addEventListener('resize', applyWebSafeArea);
@@ -18342,6 +18367,7 @@ async function init(){
      initData здесь нет, а вот безопасные отступы и веб-логика нужны те же, что
      в вебе — поэтому дальше идём его дорогой, если человек не опознан */
   if (isInsideVk()) {
+    initBranch = 'ВК';
     applyWebSafeArea();
     setTimeout(applyWebSafeArea, 300);
     window.addEventListener('resize', applyWebSafeArea);
@@ -18377,12 +18403,14 @@ async function init(){
   const tgReal = !!(tg && (tg.initData || isInsideTelegram()));
   if (tgReal) tgSetupWhenReady();
   if (tgReal && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    initBranch = 'Telegram, опознан сразу';
     syncTgBackButton('portal');   // стартовый экран — кнопки быть не должно
     telegramId = tg.initDataUnsafe.user.id;
     flushPendingAttribution();
     startApp();
     openFromStartParam();
   } else if (isInsideTelegram()) {
+    initBranch = 'Telegram, опознание по подписи';
     /* ⚠️ МЫ ВНУТРИ TELEGRAM, НО SDK НЕ ДОЕХАЛ. Не гоним человека на веб-вход:
        сначала пробуем узнать его по подписанным параметрам запуска. Экран
        воронки в этой ветке не показываем вовсе — человек пришёл в приложение,
@@ -18413,6 +18441,7 @@ async function init(){
     setTimeout(applyWebSafeArea, 300);
     window.addEventListener('resize', applyWebSafeArea);
     window.addEventListener('orientationchange', function(){ setTimeout(applyWebSafeArea, 200); });
+    initBranch = 'обычный веб';
     startWebSession();
     openFromStartParam();
   }
@@ -18422,6 +18451,11 @@ async function init(){
    ловим сами: без этого падение внутри `init` стало бы необработанным
    отказом промиса, а это опять белый экран без объяснения */
 loadPlatformSdk().then(function(){
+  /* ⚠️ СНАЧАЛА ТЕЛЕГРАМНАЯ НАСТРОЙКА, ПОТОМ ЗАПУСК. Порядок именно такой:
+     что бы ни решил `init()` дальше и в какую бы ветку ни ушёл, безопасная
+     зона, подписки и кнопка «назад» уже на месте. Своя ошибка здесь не должна
+     мешать запуску — потому отдельный `try` */
+  try { tgBootstrap(); } catch(e){ tgBootWhy = 'ошибка: ' + (e && e.message ? e.message : e); }
   try { init(); } catch(e){
     console.error('[init]', e);
     throw e;                       // пусть аварийный экран покажет причину
