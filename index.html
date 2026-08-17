@@ -7257,6 +7257,66 @@ body.api-override-on #api-override-bar{display:block}
 #gg-root .gg-lockednote-bars i:nth-child(3){width:74%}
 #gg-root .gg-lockednote-txt{font-size:13px;color:var(--gg-ink-3);line-height:1.4}
 
+/* ═══ ПРАВКИ ПО ЖИВОМУ ПРОГОНУ 17.08 ════════════════════════════════════════ */
+
+/* ⚠️ 1. ФОН ВКЛАДКИ — ИЗ МАКЕТА GPT. [stated] Denis: «наш смотрится тут
+   грязно». Подложка фиксирована и лежит ПОД содержимым вкладки (z-index:-1
+   внутри .shell), поэтому перекрывает картонный фон приложения только на
+   экране игр и только пока вкладка открыта. */
+#gg-root{position:relative}
+#gg-root::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:var(--gg-page)}
+#gg-root::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:var(--gg-sheen);mix-blend-mode:screen;opacity:var(--gg-sheen-op);
+  filter:var(--gg-sheen-blur,none)}
+
+/* ⚠️ 2. ШАПКА ПАРТИИ НАЕЗЖАЛА НА АРБИТРА: она липкая и была полупрозрачной,
+   поэтому карточка просвечивала прямо сквозь заголовок. Непрозрачная подложка
+   по всей ширине + собственный отступ снизу. */
+#gg-root .gg-topbar{
+  min-height:64px;height:auto;padding-bottom:10px;margin:0 -18px 4px;padding-left:18px;padding-right:18px;
+  background:linear-gradient(180deg,var(--gg-bg) 0,var(--gg-bg) 72%,transparent);
+  backdrop-filter:blur(18px) saturate(120%);-webkit-backdrop-filter:blur(18px) saturate(120%)}
+[data-theme="dark"] #gg-root .gg-topbar{
+  background:linear-gradient(180deg,var(--gg-bg) 0,var(--gg-bg) 74%,transparent)}
+#gg-root .gg-arbiter{margin-top:2px}
+
+/* ⚠️ 3. РАЗБОР ЗА КНОПКОЙ. Чип встаёт под своей репликой и не спорит с ней
+   по весу: у него нет заливки-градиента, только кромка и мелкий текст. */
+#gg-root .gg-notebtn{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;
+  border:1px solid var(--gg-card-brd);background:var(--gg-card);color:var(--gg-ink-3);
+  font:600 12.5px var(--gg-font-body);padding:8px 14px 8px 9px;border-radius:999px;
+  cursor:pointer;box-shadow:var(--gg-card-sh);backdrop-filter:blur(14px);
+  transition:transform .14s cubic-bezier(.2,.8,.2,1),color .2s}
+#gg-root .gg-notebtn:active{transform:scale(.96)}
+#gg-root .gg-notebtn-ico{width:20px;height:20px;flex:none;border-radius:50%;
+  display:grid;place-items:center;font-weight:800;font-size:12px;color:#fff;
+  background:var(--gg-me);box-shadow:var(--gg-dot-glow)}
+#gg-root .gg-notebtn.gg-open{color:var(--gg-ink)}
+#gg-root .gg-notebtn.gg-open .gg-notebtn-ico{transform:rotate(180deg)}
+/* Заперто — то же место, но без зова: тусклая иконка вместо яркой */
+#gg-root .gg-notebtn-locked .gg-notebtn-ico{background:var(--gg-lock-bg);
+  color:var(--gg-lock);box-shadow:none}
+/* Раскрытый разбор — плотнее прежнего блока: он теперь по запросу */
+#gg-root .gg-feedback{padding:12px 14px 13px}
+
+/* ⚠️ 4. ПОПАП: крестик налезал на заголовок, а сам он был пустоват и мутен.
+   Крестик уводим в свой ряд, фон делаем плотнее, поля — меньше. */
+#gg-root .gg-modal,#gg-pops .gg-modal{padding:20px 20px 22px;max-width:360px}
+#gg-pops .gg-modal-close,#gg-root .gg-modal-close{position:static;float:right;
+  margin:-6px -6px 0 8px;width:32px;height:32px}
+#gg-pops .gg-modal-h,#gg-root .gg-modal-h{margin-top:2px;clear:none}
+#gg-pops .gg-modal-p,#gg-root .gg-modal-p{margin-bottom:16px;clear:both}
+[data-theme="light"] #gg-pops .gg-modal,[data-theme="light"] #gg-root .gg-modal{
+  background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(246,248,253,.96))}
+[data-theme="dark"] #gg-pops .gg-modal,[data-theme="dark"] #gg-root .gg-modal{
+  background:linear-gradient(180deg,rgba(26,32,58,.97),rgba(18,23,45,.98)) padding-box,
+             var(--gg-edge-conic-b) border-box}
+#gg-pops .gg-overlay{background:rgba(16,20,40,.55)}
+
+/* Плашка замка больше не используется в ленте — оставлена для попапов */
+#gg-root .gg-lockednote{align-self:stretch;max-width:none}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10499,7 +10559,9 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    i — важный (идёт в раздел, а не в общий список), t — сам текст.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const APP_TEXTS = {
+const APP_TEXTS = {  'games.note_open': { c:'Игры', l:'Кнопка «показать разбор хода»', w:'Экран партии', i:false, t:'Разбор хода' },
+  'games.note_locked': { c:'Игры', l:'Кнопка разбора у гостя', w:'Экран партии', i:false, t:'Разбор — участникам' },
+
   'games.title': { c:'Игры', l:'Заголовок вкладки', w:'Вкладка «Игры»', i:false, t:'Игры' },
   'games.sub': { c:'Игры', l:'Подпись под заголовком', w:'Вкладка «Игры»', i:false, t:'Тренировка на живом собеседнике' },
   'games.exit': { c:'Игры', l:'Кнопка выхода из партии', w:'Экран партии', i:false, t:'← Выйти' },
@@ -10537,6 +10599,7 @@ const APP_TEXTS = {
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -21874,10 +21937,45 @@ function ggScrollDown(){
 
 /* Разбор хода. Гостю «почему упало» не приходит вовсе — сервер его не
    отдаёт, — поэтому вместо пустого блока показываем замок с приглашением */
+let ggNoteSeq = 0;
+
+/* ⚠️ РАЗБОР ПРЯЧЕТСЯ ЗА КНОПКУ. [stated] Denis: «блоки с подсказками
+   появляются после каждого ответа, это ту мач» — лента превращалась в
+   чередование реплики и простыни. Теперь под своим ходом стоит компактный
+   чип, и разбор раскрывается по желанию. Гостю тот же чип, но он ведёт в
+   попап: обещать разбор и показать замок — обман, а не воронка. */
 function ggNote(d){
   const feed = document.getElementById('gg-feed');
+  const member = !!(ggS && ggS.member);
+  const id = 'gg-note-' + (++ggNoteSeq);
+
+  const btn = document.createElement('button');
+  btn.className = 'gg-notebtn' + (member ? '' : ' gg-notebtn-locked');
+  btn.type = 'button';
+  btn.innerHTML = '<span class="gg-notebtn-ico">?</span><span>'
+    + escapeHtml(member ? (t('games.note_open') || 'Разбор хода')
+                        : (t('games.note_locked') || 'Разбор — участникам')) + '</span>';
+  if (!member){
+    btn.onclick = function(){ ggPop('gg-m-member'); };
+    feed.appendChild(btn);
+    return;
+  }
+  btn.setAttribute('aria-expanded', 'false');
+  btn.onclick = function(){
+    const el = document.getElementById(id);
+    if (!el) return;
+    const open = el.style.display !== 'none';
+    el.style.display = open ? 'none' : '';
+    btn.classList.toggle('gg-open', !open);
+    btn.setAttribute('aria-expanded', String(!open));
+    if (!open) ggScrollDown();
+  };
+  feed.appendChild(btn);
+
   const box = document.createElement('div');
   box.className = 'gg-feedback';
+  box.id = id;
+  box.style.display = 'none';
   if (ggS && ggS.member){
     let h = '';
     const why = d.why || [], stops = d.stops || [];
@@ -21893,19 +21991,10 @@ function ggNote(d){
     if (d.hint) h += '<p>' + escapeHtml(d.hint) + '</p>';
     const first = (stops[0] || {});
     if (!d.hint && first.why) h += '<p>' + escapeHtml(first.why) + '</p>';
-    if (!h) return;
+    if (!h){ btn.remove(); return; }
     box.innerHTML = h;
   } else {
-    /* ⚠️ БЕЗ АБСОЛЮТНОГО ОВЕРЛЕЯ: он накрывал блок шириной в пару слов, и
-       текст с кнопкой схлопывались в столбик по букве. Обычная плашка на всю
-       ширину ленты, размытая полоска сверху — намёк, что там что-то есть */
-    box.className = 'gg-feedback gg-lockednote';
-    box.innerHTML = '<div class="gg-lockednote-bars">'
-      + '<i></i><i></i><i></i></div>'
-      + '<div class="gg-lockednote-txt">'
-      + escapeHtml(t('games.locked_note') || 'Разбор хода открыт участникам клуба') + '</div>'
-      + '<button class="gg-btn gg-btn-primary gg-btn-sm" onclick="ggPop(\'gg-m-member\')">'
-      + escapeHtml(t('games.locked_cta') || 'Что это даёт') + '</button>';
+    return;   /* гостю вместо разбора — только чип выше */
   }
   feed.appendChild(box);
 }
