@@ -6708,7 +6708,11 @@ body.api-override-on #api-override-bar{display:block}
    ⚠️ БЛОК СТОИТ В САМОМ КОНЦЕ ТАБЛИЦЫ СТИЛЕЙ — правки поверх перенесённого
    чужого CSS иначе перебиваются фигма-редизайном. ══════════════════════ */
 /* ══════════ РОЛИ ЦВЕТА. Светлая — значения утверждённого макета ══════════ */
-#gg-root{
+/* ⚠️ ПЕРЕМЕННЫЕ ОБЪЯВЛЕНЫ НА КОРНЕ ДОКУМЕНТА, А НЕ НА `#gg-root`: попапы игр
+   живут ВНЕ экрана (как все оверлеи приложения), и при объявлении на #gg-root
+   ни одна --gg-* внутри них не разрешилась бы — модалки вышли бы бесцветными.
+   Префикс делает это безопасным: перебить чужие переменные нечем. */
+:root{
   --gg-font-disp:'Unbounded',system-ui,sans-serif;
   --gg-font-body:'Manrope',system-ui,sans-serif;
 
@@ -6794,7 +6798,7 @@ body.api-override-on #api-override-bar{display:block}
 }
 
 /* ══════════ ТЁМНАЯ — значения утверждённого тёмного макета ══════════ */
-[data-theme="dark"] #gg-root{
+[data-theme="dark"]{
   --gg-bg:#0c1227;
   --gg-page:radial-gradient(760px 520px at 8% 5%,rgba(67,87,167,.16),transparent 62%),
          radial-gradient(660px 500px at 102% 18%,rgba(87,69,162,.14),transparent 65%),
@@ -6913,7 +6917,7 @@ body.api-override-on #api-override-bar{display:block}
 /* ⚠️ ПОПРАВКА ПОЛОЖЕНИЯ: в файле голова стоит не по центру (сверху 130 px,
    снизу 72 из 1254) — без сдвига она тонет в нижней части плашки */
 .gg-robot{width:112px;aspect-ratio:1;position:relative;z-index:1;
-  background:url('robot.gg-png') center/contain no-repeat;
+  background:url('images/robot.png') center/contain no-repeat;
   transform:translateY(-2%);
   filter:var(--gg-robot-sh);animation:gg_float 5.5s ease-in-out infinite}
 [data-theme="dark"] .gg-robot{filter:var(--gg-robot-fx)}
@@ -6954,7 +6958,7 @@ body.api-override-on #api-override-bar{display:block}
   animation:gg_msgIn .34s cubic-bezier(.34,1.56,.64,1) both}
 .gg-msg.gg-me{align-self:flex-end;max-width:82%;flex-direction:row-reverse}
 @keyframes gg_msgIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-.gg-ava{width:32px;aspect-ratio:1;background:url('robot.gg-png') center/contain no-repeat;
+.gg-ava{width:32px;aspect-ratio:1;background:url('images/robot.png') center/contain no-repeat;
   flex:0 0 auto;margin-top:4px;filter:var(--gg-robot-sh)}
 [data-theme="dark"] .gg-ava{filter:var(--gg-robot-fx)}
 .gg-bubble{background:var(--gg-bubble);border:1px solid var(--gg-bubble-brd);box-shadow:var(--gg-bubble-sh);
@@ -10418,6 +10422,7 @@ const APP_TEXTS = {
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
   'funnel.about': {
     c:'Первый экран', l:'Кнопка «узнать подробнее» под фильмом', w:'Экран воронки', i:false,
     t:'Узнать подробнее о клубе' },
@@ -21914,8 +21919,8 @@ function ggRetry(){
 }
 
 function ggQuitAsk(){ ggPop('gg-m-quit'); }
-function ggPop(id){ const e = document.getElementById(id); if (e) e.classList.add('open'); }
-function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.remove('open'); }
+function ggPop(id){ const e = document.getElementById(id); if (e) e.classList.add('gg-open'); }
+function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.remove('gg-open'); }
 
 /* Отправка по Enter — на телефоне это привычнее кнопки */
 document.addEventListener('DOMContentLoaded', function(){
