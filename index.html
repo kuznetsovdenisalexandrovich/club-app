@@ -13061,6 +13061,9 @@ async function markBonusOpened(bonusKey, itemKey){
 
 function openBonusLink(bonusKey, itemKey, url){
   markBonusOpened(bonusKey, itemKey);
+  // ⚠️ КЛЮЧ БОНУСА ПРИХОДИТ С СЕРВЕРА — здесь он опознаётся по вхождению
+  // «master». Переименуешь бонус в дашборде — событие перестанет уходить молча
+  if (/master/i.test(String(bonusKey || ''))) vkTrack('masterclass');
   if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openLink) Telegram.WebApp.openLink(url);
   else window.open(url, '_blank');
 }
@@ -16333,6 +16336,7 @@ let funnelPlayerReady = false;   // плеер вставлен на экран
 
 function showFunnelScreen(){
   hideSplash();
+  vkTrack('film');
   /* ⚠️ ПЛЕЕР СТАВИМ СРАЗУ (14.08.2026). Свой постер с кнопкой был нужен, пока
      я собирался запускать фильм командой — тогда наш клик имел смысл. Теперь
      запускает сам плеер (ради звука), и наш постер стал лишним нажатием перед
@@ -17187,6 +17191,69 @@ function vkLaunchQuery(){
   } catch(e){}
   return '';
 }
+/* ══ СОБЫТИЯ ДЛЯ ОБУЧЕНИЯ РЕКЛАМЫ ВК (17.08.2026) ══════════════════════════
+   VK Ads умеет обучать кампанию на действие ВНУТРИ мини-приложения. Событие
+   уходит методом `VKWebAppTrackEvent` через VK Bridge; в кабинете оно само
+   появляется в списке целевых действий, как только начало приходить.
+
+   ⚠️ ИМЕНА СОБЫТИЙ У ВК — ЗАКРЫТЫЙ СПИСОК, и по смыслу к нашей воронке они не
+   подходят. Поэтому берём их КАК ЯРЛЫКИ: важна не надпись, а то, что каждый
+   вход в воронку получил СВОЁ имя и оно больше не менялось. Таблица ниже —
+   единственное место, где хранится соответствие; менять её после запуска
+   кампании нельзя, иначе обучение начнётся заново.
+
+   ⚠️ ШЛЁМ ТОЛЬКО ИЗНУТРИ ВК. В Telegram, MAX и в вебе моста нет вовсе
+   (`loadPlatformSdk` грузит ровно один SDK по признаку площадки) — вызов там
+   просто ничего не делает и в сеть не ходит.
+
+   ⚠️ ОДНО СОБЫТИЕ НА ВХОД В СУТКИ. Без этого пять открытий подряд превратятся
+   в пять конверсий, и алгоритм ВК будет учиться на выдуманных числах. */
+const VK_ADS_ENTRY_EVENTS = {
+  film:       'view_info_page',    // фильм / продающий экран воронки
+  masterclass:'enroll_in_course',  // бесплатная часть мастер-класса
+  magazine:   'download',          // пилотный выпуск журнала
+  quiz:       'take_test',         // «Кто ты из богов»
+  game:       'product_card'       // ЛЮБАЯ игра, включая будущие
+};
+const VK_ADS_SENT_KEY  = 'club_app_vk_ads_sent';
+const VK_ADS_REPEAT_MS = 24 * 60 * 60 * 1000;
+
+function vkAdsSentMap(){
+  try { return JSON.parse(localStorage.getItem(VK_ADS_SENT_KEY) || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function vkAdsRemember(name){
+  try {
+    const m = vkAdsSentMap();
+    m[name] = Date.now();
+    localStorage.setItem(VK_ADS_SENT_KEY, JSON.stringify(m));
+  } catch(e){}
+}
+
+/* Отправка события. Ничего не ждёт и никогда не бросает наружу: рекламная
+   разметка не имеет права уронить экран, ради которого человек пришёл. */
+async function vkTrack(entry){
+  try {
+    if (typeof isInsideVk !== 'function' || !isInsideVk()) return false;
+    const name = VK_ADS_ENTRY_EVENTS[entry];
+    if (!name) return false;
+    const last = vkAdsSentMap()[name] || 0;
+    if (last && (Date.now() - last) < VK_ADS_REPEAT_MS) return false;
+    if (!(window.vkBridge && vkBridge.send)) return false;
+    const params = { event_name: name };
+    // `user_id` необязателен, но с ним ВК связывает событие с человеком, а не
+    // только с показом. Свой идентификатор надёжнее ВК-шного: он один и тот же
+    // на всех площадках
+    const uid = (typeof telegramId !== 'undefined' && telegramId) ? telegramId : vkUserId();
+    if (uid) params.user_id = String(uid);
+    const res = await vkBridge.send('VKWebAppTrackEvent', params);
+    // ⚠️ ПОМЕЧАЕМ ОТПРАВЛЕННЫМ ТОЛЬКО ПО ПОДТВЕРЖДЕНИЮ. Записать заранее значит
+    // потерять событие навсегда, если мост ответил отказом
+    if (res && res.result){ vkAdsRemember(name); return true; }
+  } catch(e){}
+  return false;
+}
+
 function isInsideVk(){ return !!vkLaunchQuery(); }
 function vkUserId(){
   try { return new URLSearchParams(vkLaunchQuery()).get('vk_user_id') || ''; }
@@ -18448,6 +18515,7 @@ function magazineIssueByKey(key){
 
 function openMagazineIssue(key){
   track('magazine_open', key);
+  vkTrack('magazine');
   const it = magazineIssueByKey(key);
   if (!it) return;
   const modal = document.getElementById('mag-issue-modal');
@@ -21033,6 +21101,7 @@ function renderQuizIntro(){
 }
 
 function startQuiz(){
+  vkTrack('quiz');
   quizAnswers = [];
   quizIndex = 0;
   renderQuizQuestion();
@@ -22390,6 +22459,7 @@ function ggHideAppHeader(hide){
 async function ggStart(key){
   if (ggBusy) return;
   ggBusy = true;
+  vkTrack('game');
   try {
     await waitProfile(4000);   // то же и на старте: партия пишется на субъекта
     const body = { game_key: key, source: 'app' };
