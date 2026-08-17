@@ -7712,6 +7712,14 @@ html[data-gg="1"][data-theme="dark"]{color-scheme:dark}
    не участвуют — если что-то поедет, чинить надо синхронизацию слоя,
    а не добавлять девятое правило поверх. */
 
+/* ⚠️ ВНУТРИ TELEGRAM СВОЯ КНОПКА «ВЫЙТИ» В ПАРТИИ НЕ НУЖНА — сверху уже есть
+   штатная «Назад», и две кнопки рядом выглядят ошибкой. Прячем ИМЕННО
+   `visibility`, а не `display`: шапка партии — сетка из трёх колонок
+   (`1fr auto 1fr`), и удаление левой колонки сдвинуло бы заголовок с центра.
+   Признак `data-tg-native-back` ставится только при настоящем запуске из
+   Telegram — в вебе и с домашнего экрана кнопка остаётся единственным выходом. */
+html[data-tg-native-back] #gg-root .gg-exit{visibility:hidden; pointer-events:none}
+
 /* 1. Документ на время партии неподвижен */
 html[data-gg-play],
 html[data-gg-play] body{
@@ -17263,12 +17271,26 @@ function tgSetupWhenReady(){
     if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();
   } catch(e){}
   bindTgBackButton();
+  /* Признак «у нас есть штатная кнопка назад» — по нему прячется своя */
+  document.documentElement.toggleAttribute('data-tg-native-back', true);
+  /* ⚠️ КНОПКА «НАСТРОЙКИ» В МЕНЮ TELEGRAM (три точки справа). Бесплатный вход
+     в профиль, который иначе стоит человеку двух нажатий. Есть с Bot API 6.10,
+     на клиентах постарше вызов просто ничего не сделает */
+  try {
+    if (tg.SettingsButton && tg.SettingsButton.show){
+      tg.SettingsButton.show();
+      if (tg.SettingsButton.onClick) tg.SettingsButton.onClick(function(){
+        try { switchView('profile'); } catch(e){}
+      });
+    }
+  } catch(e){}
   if (tg.onEvent){
     try {
       tg.onEvent('viewportChanged', applyTelegramSafeAreaSoon);
       tg.onEvent('safeAreaChanged', applyTelegramSafeAreaSoon);
       tg.onEvent('contentSafeAreaChanged', applyTelegramSafeAreaSoon);
       tg.onEvent('fullscreenChanged', applyTelegramSafeAreaSoon);
+      tg.onEvent('settingsButtonClicked', function(){ try { switchView('profile'); } catch(e){} });
     } catch(e){}
   }
   applyTelegramSafeAreaSoon();
@@ -22752,6 +22774,16 @@ function ggShow(which){
   else { document.documentElement.removeAttribute('data-gg-play'); ggViewportRelease(); }
   /* Кнопка «назад» Telegram: в партии ведёт к списку игр, на списке её нет */
   if (typeof syncTgBackButton === 'function') syncTgBackButton('games');
+  /* ⚠️ ПАРТИЮ ЖАЛКО ТЕРЯТЬ СЛУЧАЙНЫМ СВАЙПОМ. Telegram умеет переспрашивать
+     перед закрытием мини-аппа — включаем это только на время партии и гасим
+     сразу после: на остальных экранах лишний вопрос раздражает */
+  try {
+    const tgc = window.Telegram && window.Telegram.WebApp;
+    if (tgc && tgc.enableClosingConfirmation){
+      if (which === 'play') tgc.enableClosingConfirmation();
+      else if (tgc.disableClosingConfirmation) tgc.disableClosingConfirmation();
+    }
+  } catch(e){}
   /* ⚠️ НА ФИНАЛЕ ПИЛЮЛЮ ОСТАВЛЯЕМ, А МАСТЕР-БАР УБИРАЕМ: экран длинный, и с
      баром наверху вердикт со счётом начинался у середины, а материал занятия
      и кнопка следующей ступени уходили под нижний край */
