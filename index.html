@@ -7445,6 +7445,19 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
   #gg-root .gg-verdict{font-size:18.5px}
 }
 
+/* ── ⚠️ ПЕРВАЯ РЕПЛИКА ПРИЛИПАЛА К ПЛАШКЕ АРБИТРА: у ленты не было отступа
+   сверху, а «Сегодня» из макета мы не переносили. Отделяем лентой воздуха ── */
+#gg-root .gg-feed{padding-top:16px}
+#gg-root .gg-arbiter{margin-bottom:2px}
+
+/* ── ⚠️ ПОЛЕ СТАРТУЕТ РОВНО В ОДНУ СТРОКУ. Высота задаётся явно: без неё
+   textarea считает свою по `rows`, а с нашими паддингами это давало запас на
+   вторую строку ещё до первого символа. Дальше высоту ведёт ggAutoGrow ── */
+#gg-root .gg-input{height:26px;line-height:1.4;padding:2px 0}
+#gg-root .gg-composer{min-height:0;height:auto;padding:8px}
+#gg-root .gg-composer .gg-spark{width:46px;height:46px;font-size:19px}
+#gg-root .gg-composer .gg-send{width:50px;height:50px}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10730,6 +10743,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22040,7 +22054,17 @@ async function ggStart(key){
     if (d.intro) ggMsg(d.intro, false);
     if (d.artifact) ggMsg('Твоя фраза с прошлой ступени: «' + d.artifact + '»', false);
     const inp = document.getElementById('gg-input');
-    if (inp) inp.focus();
+    if (inp){
+      /* ⚠️ ВЫСОТУ СБРАСЫВАЕМ НА СТАРТЕ ПАРТИИ: после прошлой игры на элементе
+         могла остаться inline-высота в две строки, и новое поле открывалось
+         бы уже расширенным */
+      inp.value = '';
+      ggLastGood = '';
+      inp.style.height = '';
+      ggAutoGrow(inp);
+      ggInputWarn(inp, 0);
+      inp.focus();
+    }
   } catch(e){
     showToast('Сеть недоступна');
   } finally { ggBusy = false; }
