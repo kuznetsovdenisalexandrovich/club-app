@@ -8901,6 +8901,8 @@ function diagShowEnv(){
     `API_URL: ${API_URL}`,
     `telegramId: ${telegramId ?? '(не определён)'}`,
     `В Telegram: ${tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? 'да' : 'нет'}`,
+    `Данные запуска в адресе: ${typeof tgLaunchData === 'function' && tgLaunchData() ? 'есть' : 'нет'}`,
+    `Опознание по подписи: ${typeof tgAuthWhy !== 'undefined' && tgAuthWhy ? ('не прошло — ' + tgAuthWhy) : 'без ошибок'}`,
     `Platform (tg.platform): ${tg?.platform ?? '—'}`,
     `Standalone (веб, добавлено на экран): ${typeof isStandaloneWebApp === 'function' ? isStandaloneWebApp() : '—'}`,
     `User-Agent: ${navigator.userAgent}`,
@@ -10870,6 +10872,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -17054,7 +17057,18 @@ function vkUserId(){
 function showTgFallbackNotice(){
   try {
     const box = document.getElementById('tg-fallback-notice');
-    if (box){ box.textContent = t('login.tg_fallback'); box.style.display = 'block'; }
+    if (box){
+      box.textContent = t('login.tg_fallback');
+      /* мелкой строкой — техническая причина: человеку она ни о чём не
+         говорит, но именно её он пришлёт скриншотом, и это экономит круг */
+      if (tgAuthWhy){
+        const why = document.createElement('div');
+        why.style.cssText = 'margin-top:8px;font-size:11px;opacity:.65';
+        why.textContent = tgAuthWhy;
+        box.appendChild(why);
+      }
+      box.style.display = 'block';
+    }
   } catch(e){}
 }
 
@@ -17066,9 +17080,16 @@ function tgLaunchData(){
 }
 function isInsideTelegram(){ return !!tgLaunchData(); }
 
+/* ⚠️⚠️ ПРИЧИНА ОТКАЗА ЗАПОМИНАЕТСЯ. Раньше здесь был глухой `catch(e){}` и
+   `return false`: человек видел просьбу ввести номер, а ПОЧЕМУ опознание не
+   прошло — не знал никто, включая меня. Разбираться постфактум было нечем:
+   сбой разовый, повторить нельзя. Теперь причина ложится в `tgAuthWhy`, её
+   показывает и экран входа, и «Показать инфо о среде» в профиле. */
+let tgAuthWhy = '';
+
 async function startTgSessionFallback(){
   const data = tgLaunchData();
-  if (!data) return false;
+  if (!data){ tgAuthWhy = 'Telegram не передал данные запуска'; return false; }
   try {
     const r = await fetch(`${API_URL}/auth/tg/session`, {
       method: 'POST',
@@ -17078,13 +17099,21 @@ async function startTgSessionFallback(){
     });
     const d = await r.json().catch(() => ({}));
     if (r.ok && d.found){
+      tgAuthWhy = '';
       if (d.session_token) rememberSessionToken(d.session_token);
       telegramId = Number(d.telegram_id) || d.telegram_id;
       flushPendingAttribution();
       startApp();
       return true;
     }
-  } catch(e){}
+    tgAuthWhy = r.ok
+      ? ('сервер не нашёл участника' + (d.detail ? ': ' + d.detail : ''))
+      : ('сервер ответил ' + r.status + (d.detail ? ': ' + d.detail : ''));
+  } catch(e){
+    /* сюда попадает обрыв сети и заблокированный запрос — самая частая
+       причина разового сбоя на мобильном интернете */
+    tgAuthWhy = 'запрос к серверу не дошёл: ' + (e && e.message ? e.message : e);
+  }
   return false;
 }
 
