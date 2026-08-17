@@ -8799,12 +8799,25 @@ function syncTgBackButton(name){
    не делала. [stated] Denis: «она никуда не ведёт, а нажать её хочется».
    КЛАСС: если элемент показывается безусловно, то и обработчик к нему должен
    вешаться безусловно. */
+/* ⚠️⚠️ ПРИВЯЗКА ДВУМЯ СПОСОБАМИ. У Telegram есть ДВА равноправных пути:
+   событие `backButtonClicked` и метод `BackButton.onClick(fn)`. Оба
+   документированы, но на части клиентов долетает только один — а снаружи это
+   выглядит одинаково: кнопка есть, нажатие проваливается в пустоту. Вешаем
+   оба и защищаемся от двойного срабатывания по времени.
+   ⚠️ `tgBackFired` — счётчик нажатий, он виден в «Показать инфо о среде»:
+   если после нажатия там ноль, значит клик не долетает вовсе, и чинить надо
+   не разбор случаев, а саму привязку. Разовые невоспроизводимые баги лечатся
+   отображением причины, а не догадками. */
 let tgBackBound = false;
-function bindTgBackButton(){
-  const tg = window.Telegram && window.Telegram.WebApp;
-  if (!tg || !tg.onEvent || tgBackBound) return;
-  tgBackBound = true;
-  tg.onEvent('backButtonClicked', function(){
+let tgBackHow = '';
+let tgBackFired = 0;
+let tgBackLast = 0;
+function tgBackHandler(){
+  const now = Date.now();
+  if (now - tgBackLast < 400) return;   // одно нажатие пришло обоими путями
+  tgBackLast = now;
+  tgBackFired++;
+  try {
     /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
     if (document.documentElement.hasAttribute('data-gg-play')){
       if (typeof ggQuitAsk === 'function') ggQuitAsk();
@@ -8818,7 +8831,22 @@ function bindTgBackButton(){
     const reader = document.getElementById('view-magazine-read');
     if (reader && reader.classList.contains('active')){ closeMagazineReader(); return; }
     switchView('portal');
-  });
+  } catch(e){
+    /* ⚠️ МОЛЧА ПРОГЛОЧЕННАЯ ОШИБКА ЗДЕСЬ НЕОТЛИЧИМА ОТ «СОБЫТИЕ НЕ ПРИШЛО».
+       Записываем её, чтобы следующий случай объяснил себя сам */
+    tgBackHow += ' | ошибка: ' + (e && e.message ? e.message : e);
+  }
+}
+function bindTgBackButton(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg || tgBackBound) return;
+  tgBackBound = true;
+  tgBackHow = '';
+  try { if (tg.BackButton && tg.BackButton.onClick){ tg.BackButton.onClick(tgBackHandler); tgBackHow += 'onClick'; } }
+  catch(e){ tgBackHow += 'onClick-ошибка'; }
+  try { if (tg.onEvent){ tg.onEvent('backButtonClicked', tgBackHandler); tgBackHow += (tgBackHow?'+':'') + 'onEvent'; } }
+  catch(e){ tgBackHow += '+onEvent-ошибка'; }
+  if (!tgBackHow) tgBackHow = 'НЕ ПРИВЯЗАНА';
 }
 
 /* Первое открытие «Что посмотреть».
@@ -9086,6 +9114,10 @@ function diagShowEnv(){
     `Данные запуска в адресе: ${typeof tgLaunchData === 'function' && tgLaunchData() ? 'есть' : 'нет'}`,
     `Опознание по подписи: ${typeof tgAuthWhy !== 'undefined' && tgAuthWhy ? ('не прошло — ' + tgAuthWhy) : 'без ошибок'}`,
     `Platform (tg.platform): ${tg?.platform ?? '—'}`,
+    `Версия Bot API: ${tg?.version ?? '—'}`,
+    `Режим и отступ сверху: ${typeof tgSafeWhy !== 'undefined' && tgSafeWhy ? tgSafeWhy : '(не считался)'}`,
+    `--safe-top сейчас: ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
+    `Кнопка «назад»: привязка ${typeof tgBackHow !== 'undefined' && tgBackHow ? tgBackHow : '(нет)'}, нажатий получено ${typeof tgBackFired !== 'undefined' ? tgBackFired : '—'}`,
     `Standalone (веб, добавлено на экран): ${typeof isStandaloneWebApp === 'function' ? isStandaloneWebApp() : '—'}`,
     `User-Agent: ${navigator.userAgent}`,
     `Текущее время: ${new Date().toLocaleString('ru')}`,
@@ -17091,15 +17123,45 @@ function applyWebSafeArea(){
    ⚠️ Инсеты приходят НЕ СРАЗУ после переключения режима, поэтому пересчёт
    идёт ещё дважды по таймеру: событие приходит раньше новых чисел. */
 const TG_FULLSCREEN_TOP = 92;   /* статус-бар + плавающие кнопки Telegram */
+let tgSafeWhy = '';
+
+/* ⚠️⚠️ ФЛАГ `isFullscreen` ЕСТЬ НЕ ВЕЗДЕ. Он появился только в Bot API 8.0:
+   на клиенте постарше поле просто `undefined`, режим не опознаётся, и мы
+   спокойно ставим отступ по инсетам — а кнопки Telegram висят поверх шапки.
+   Поэтому режим определяем ЕЩЁ И ПО ГЕОМЕТРИИ: в полноэкранном вебвью
+   занимает весь экран устройства, в окне сверху остаётся полоса Telegram.
+   Признак по геометрии срабатывает и там, где флага нет вовсе. */
+function tgIsFullscreen(){
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return false;
+  if (tg.isFullscreen === true) return true;
+  try {
+    const scr = window.screen && window.screen.height;
+    const vh  = tg.viewportHeight || window.innerHeight;
+    /* Полосы Telegram нет и вебвью ростом почти во весь экран */
+    const noHeader = !(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top > 0);
+    if (scr && vh && noHeader && vh >= scr - 8) return true;
+  } catch(e){}
+  return false;
+}
+
 function applyTelegramSafeArea(){
   const tg = window.Telegram?.WebApp;
   if (!tg) return;
-  const full = tg.isFullscreen === true;
+  const full = tgIsFullscreen();
   document.documentElement.toggleAttribute('data-tg-full', full);
   const deviceTop = tg.safeAreaInset?.top || 0;
   const contentTop = tg.contentSafeAreaInset?.top || 0;
   let total = deviceTop + contentTop;
   if (full) total = Math.max(total, TG_FULLSCREEN_TOP);
+  /* ⚠️ В ПОЛНОЭКРАННОМ ИНСЕТЫ МОГУТ ПРИЙТИ НУЛЯМИ. Тогда `total` остаётся
+     нулём, прежнее правило «ставим только если больше нуля» ничего не делало,
+     и отступ оставался от `env()` — то есть под кнопками Telegram */
+  if (full && total <= 0) total = TG_FULLSCREEN_TOP;
+  tgSafeWhy = (full ? 'полный экран' : 'окно')
+    + ' · device ' + deviceTop + ' · content ' + contentTop
+    + ' · флаг ' + (tg.isFullscreen === undefined ? 'нет в этом клиенте' : String(tg.isFullscreen))
+    + ' → ' + total + 'px';
   if (total > 0) {
     document.documentElement.style.setProperty('--safe-top', total + 'px');
   }
@@ -18141,6 +18203,12 @@ async function init(){
   }
 
   const tg = window.Telegram?.WebApp;
+  /* ⚠️⚠️ ПРИВЯЗКА КНОПКИ «НАЗАД» — ДО ВЕТВЛЕНИЯ ЗАПУСКА. Кнопку показывает
+     `syncTgBackButton` в любой ветке, а обработчик раньше вешался только в
+     одной — снаружи это выглядит как «кнопка есть, нажатие ничего не делает».
+     Здесь SDK уже загружен (запуск его ждёт), поэтому место самое раннее из
+     надёжных */
+  if (tg) bindTgBackButton();
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.ready();
     tg.expand();
@@ -18149,6 +18217,9 @@ async function init(){
     }
     applyTelegramSafeArea();
     if (tg.onEvent) {
+      /* ⚠️ РЕЖИМ МЕНЯЕТСЯ И БЕЗ СОБЫТИЯ `fullscreenChanged` — на клиентах, где
+         его нет. Изменение высоты вебвью ловит те же переключения */
+      tg.onEvent('viewportChanged', applyTelegramSafeAreaSoon);
       tg.onEvent('safeAreaChanged', applyTelegramSafeAreaSoon);
       tg.onEvent('contentSafeAreaChanged', applyTelegramSafeAreaSoon);
       tg.onEvent('fullscreenChanged', applyTelegramSafeAreaSoon);
