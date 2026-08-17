@@ -9115,6 +9115,7 @@ function diagShowEnv(){
     `Опознание по подписи: ${typeof tgAuthWhy !== 'undefined' && tgAuthWhy ? ('не прошло — ' + tgAuthWhy) : 'без ошибок'}`,
     `Platform (tg.platform): ${tg?.platform ?? '—'}`,
     `Версия Bot API: ${tg?.version ?? '—'}`,
+    `SDK Telegram: ${typeof tgSdkWhen !== 'undefined' ? tgSdkWhen : '—'}`,
     `Режим и отступ сверху: ${typeof tgSafeWhy !== 'undefined' && tgSafeWhy ? tgSafeWhy : '(не считался)'}`,
     `--safe-top сейчас: ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
     `Кнопка «назад»: привязка ${typeof tgBackHow !== 'undefined' && tgBackHow ? tgBackHow : '(нет)'}, нажатий получено ${typeof tgBackFired !== 'undefined' ? tgBackFired : '—'}`,
@@ -17103,6 +17104,24 @@ function applyWebSafeArea(){
       && window.matchMedia('(display-mode: standalone)').matches)
     || window.navigator.standalone === true;
 
+  /* ⚠️⚠️ ВНУТРИ TELEGRAM БЕЗ SDK. Пока скрипт не доехал, про полноэкранный
+     режим спросить некого, а кнопки Telegram уже висят поверх нашей шапки.
+     Признак чисто геометрический: мы внутри Telegram (данные запуска в
+     адресе), а вебвью ростом во весь экран — значит полосы Telegram нет и
+     кнопки плавают над контентом. */
+  try {
+    const inTg = typeof isInsideTelegram === 'function' && isInsideTelegram();
+    const scr = window.screen && window.screen.height;
+    if (inTg && scr && window.innerHeight >= scr - 8){
+      const need = (typeof TG_FULLSCREEN_TOP !== 'undefined') ? TG_FULLSCREEN_TOP : 92;
+      if (measured < need){
+        document.documentElement.style.setProperty('--safe-top', need + 'px');
+        document.documentElement.toggleAttribute('data-tg-full', true);
+        return;
+      }
+    }
+  } catch(e){}
+
   if (measured > 0){
     document.documentElement.style.setProperty('--safe-top', measured + 'px');
   } else if (standalone){
@@ -17167,6 +17186,69 @@ function applyTelegramSafeArea(){
   }
   if (typeof ggViewportSync === 'function') ggViewportSync();
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⚠️⚠️⚠️ SDK TELEGRAM МОЖЕТ ДОЕХАТЬ ПОСЛЕ ЗАПУСКА — И ЭТО НАШ ОБЫЧНЫЙ СЛУЧАЙ.
+   ═══════════════════════════════════════════════════════════════════════════
+   `telegram-web-app.js` грузится с telegram.org, у которого доступ из России
+   рвётся. У загрузки стоит потолок 3.5 с: не успел — запускаемся без него.
+   Дальше `init()` видит, что `Telegram.WebApp` ещё нет, и уходит в запасную
+   ветку: отступы считает по `env()`, подписок на события не делает, кнопку
+   «назад» не привязывает. А СКРИПТ ПРОДОЛЖАЕТ ГРУЗИТЬСЯ и через несколько
+   секунд появляется — человек уже опознан, кнопка Telegram показывается
+   (её включает `syncTgBackButton` при переходе по вкладкам), но обработчика
+   на ней нет, и безопасная зона осталась от браузера.
+
+   Диагностика с телефона Denis'а показала это дословно:
+     «В Telegram: да · Версия Bot API 9.6»  — SDK в итоге есть
+     «Режим и отступ сверху: (не считался)» — applyTelegramSafeArea не звалась
+     «Кнопка «назад»: привязка (нет)»       — bindTgBackButton вышла впустую
+   Три круга правок были в коде, который просто не выполнялся.
+
+   ЛЕЧЕНИЕ: всё телеграмное собрано в ОДНУ функцию, и она вызывается не
+   единожды при старте, а по факту появления SDK — сторож опрашивает окно,
+   пока тот не доедет.
+   КЛАСС: если внешний скрипт может опоздать, инициализацию, которая от него
+   зависит, нельзя делать разовой на старте — она должна догонять. */
+let tgLateDone = false;
+let tgLateTries = 0;
+let tgSdkWhen = 'не доехал';
+function tgSetupWhenReady(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg) return false;
+  if (tgLateDone) return true;
+  tgLateDone = true;
+  tgSdkWhen = tgLateTries ? ('доехал позже, попыток ' + tgLateTries) : 'доехал сразу';
+  try { tg.ready(); tg.expand(); } catch(e){}
+  try {
+    if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+  } catch(e){}
+  bindTgBackButton();
+  if (tg.onEvent){
+    try {
+      tg.onEvent('viewportChanged', applyTelegramSafeAreaSoon);
+      tg.onEvent('safeAreaChanged', applyTelegramSafeAreaSoon);
+      tg.onEvent('contentSafeAreaChanged', applyTelegramSafeAreaSoon);
+      tg.onEvent('fullscreenChanged', applyTelegramSafeAreaSoon);
+    } catch(e){}
+  }
+  applyTelegramSafeAreaSoon();
+  /* Кнопку приводим в соответствие текущему экрану: пока SDK ехал, человек
+     мог уже уйти вглубь */
+  try {
+    const active = document.querySelector('.view.active');
+    syncTgBackButton(active ? active.id.replace(/^view-/, '') : 'portal');
+  } catch(e){}
+  return true;
+}
+
+/* Сторож: опрашивает окно, пока SDK не появится. Полминуты с запасом —
+   дальше ждать бессмысленно, значит домен недоступен совсем */
+function tgWatchSdk(){
+  if (tgSetupWhenReady()) return;
+  if (tgLateTries++ > 60) return;
+  setTimeout(tgWatchSdk, 500);
+}
+
 function applyTelegramSafeAreaSoon(){
   applyTelegramSafeArea();
   setTimeout(applyTelegramSafeArea, 120);
@@ -18208,27 +18290,10 @@ async function init(){
      одной — снаружи это выглядит как «кнопка есть, нажатие ничего не делает».
      Здесь SDK уже загружен (запуск его ждёт), поэтому место самое раннее из
      надёжных */
-  if (tg) bindTgBackButton();
+  /* ⚠️ ВСЯ ТЕЛЕГРАМНАЯ НАСТРОЙКА — ОДНИМ ВЫЗОВОМ, и он же стоит в стороже
+     ниже: если SDK опоздал, настройка догонит его сама */
+  if (tg) tgSetupWhenReady();
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    tg.ready();
-    tg.expand();
-    if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7') && tg.disableVerticalSwipes) {
-      tg.disableVerticalSwipes();
-    }
-    applyTelegramSafeArea();
-    if (tg.onEvent) {
-      /* ⚠️ РЕЖИМ МЕНЯЕТСЯ И БЕЗ СОБЫТИЯ `fullscreenChanged` — на клиентах, где
-         его нет. Изменение высоты вебвью ловит те же переключения */
-      tg.onEvent('viewportChanged', applyTelegramSafeAreaSoon);
-      tg.onEvent('safeAreaChanged', applyTelegramSafeAreaSoon);
-      tg.onEvent('contentSafeAreaChanged', applyTelegramSafeAreaSoon);
-      tg.onEvent('fullscreenChanged', applyTelegramSafeAreaSoon);
-      /* Кнопка «назад» Telegram: спрятана на корневых вкладках (иначе висит
-         поверх шапки и налезает на логотип), а на внутренних экранах возвращает
-         на портал. Поле выбора тем закрываем его же обработчиком — иначе
-         кнопка увела бы на портал, оставив поле открытым под ним */
-      bindTgBackButton();   // см. комментарий у функции: вешается в любой ветке
-    }
     syncTgBackButton('portal');   // стартовый экран — кнопки быть не должно
     telegramId = tg.initDataUnsafe.user.id;
     flushPendingAttribution();
@@ -18241,7 +18306,10 @@ async function init(){
        а не с рекламы. */
     applyWebSafeArea();
     setTimeout(applyWebSafeArea, 300);
-    bindTgBackButton();   /* ⚠️ И В ЭТОЙ ВЕТКЕ ТОЖЕ: кнопка здесь показывалась мёртвой */
+    /* ⚠️⚠️ ЗДЕСЬ SDK ЕЩЁ НЕТ — ИМЕННО ПОЭТОМУ МЫ В ЭТОЙ ВЕТКЕ. Разовая
+       привязка кнопки тут всегда уходила впустую. Ставим сторож: как только
+       скрипт доедет, всё телеграмное настроится само */
+    tgWatchSdk();
     startTgSessionFallback().then(function(ok){
       if (!ok){
         /* ⚠️ ВОРОНКУ ЗДЕСЬ НЕ ГЛУШИМ. Сначала я гасил её на всю эту ветку —
