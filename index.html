@@ -7631,6 +7631,21 @@ html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;min-height:0}
 html[data-gg-notabs] .shell{padding-bottom:0}
 html[data-gg-notabs] body{padding-bottom:0}
 
+/* ── ⚠️ ЛИШНИЕ ПИКСЕЛИ ПРОКРУТКИ. `100dvh` включает высоту динамических
+   панелей браузера, поэтому блок партии оказывался на несколько пикселей выше
+   экрана — и появлялась та самая прокрутка, от которой первая реплика чуть
+   заплывала под арбитра. `svh` берёт САМУЮ МАЛУЮ высоту окна, при ней
+   документ гарантированно не выше экрана ── */
+html[data-gg-web] #gg-play-wrap{min-height:100svh}
+
+/* ── ⚠️ ЗАЗОР МЕЖДУ ПОЛЕМ И КЛАВИАТУРОЙ. Плашка отступала снизу на 26 px —
+   запас закладывался под предупреждение о длине, но оно появляется редко, а
+   зазор был виден всегда. Отступ по safe-area, а место под предупреждение
+   добавляется только когда оно показано ── */
+#gg-root .gg-composer-wrap{bottom:calc(10px + env(safe-area-inset-bottom) + var(--gg-kb, 0px))}
+html[data-gg-web] #gg-root .gg-composer-wrap{bottom:calc(6px + env(safe-area-inset-bottom))}
+#gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){padding-bottom:18px}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10918,6 +10933,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22036,10 +22052,26 @@ function ggInTelegram(){
   } catch(e){ return false; }
 }
 
+/* ⚠️⚠️ ЗАПУСК С ДОМАШНЕГО ЭКРАНА БЛИЖЕ К TELEGRAM, ЧЕМ К БРАУЗЕРУ. Там нет
+   адресной строки, и той беды с кареткой, ради которой вводился веб-режим,
+   тоже нет. Зато есть его побочка: липкая плашка внутри блока высотой в экран
+   зависала заметно выше клавиатуры — `dvh` при её появлении не меняется.
+   Поэтому standalone ведём по «телеграмной» ветке: фиксированная плашка плюс
+   подъём по `visualViewport`. */
+function ggStandalone(){
+  try {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+        || window.navigator.standalone === true;
+  } catch(e){ return false; }
+}
+
+/* Липкая раскладка нужна ТОЛЬКО в обычном браузере */
+function ggPlainBrowser(){ return !ggInTelegram() && !ggStandalone(); }
+
 function ggMode(on){
   const r = document.documentElement;
   if (on) r.setAttribute('data-gg', '1'); else r.removeAttribute('data-gg');
-  r.toggleAttribute('data-gg-web', !!on && !ggInTelegram());
+  r.toggleAttribute('data-gg-web', !!on && ggPlainBrowser());
   /* ⚠️ Браузер помнит позицию прокрутки и возвращает её при показе экрана.
      На вкладке игр это выглядит как «экран сам подпрыгнул», поэтому на время
      игр восстановление выключаем, а на выходе возвращаем как было */
@@ -22355,7 +22387,13 @@ function ggTyping(on){
 }
 
 function ggScrollDown(){
-  setTimeout(function(){ window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }, 40);
+  setTimeout(function(){
+    /* ⚠️ ПРОКРУЧИВАЕМ, ТОЛЬКО ЕСЛИ ЛЕНТА ДЛИННЕЕ ЭКРАНА. Иначе на короткой
+       переписке вызов утягивал страницу в пустоту под лентой */
+    const doc = document.documentElement;
+    if (doc.scrollHeight - window.innerHeight < 24) return;
+    window.scrollTo({ top: doc.scrollHeight, behavior: 'smooth' });
+  }, 40);
 }
 
 /* Разбор хода. Гостю «почему упало» не приходит вовсе — сервер его не
@@ -22641,7 +22679,7 @@ function ggKeyboardFollow(){
      (Safari не перерисовывает её при смене позиции у сфокусированного поля).
      Отсюда «поле подскакивает» и курсор отдельно от плашки. В мини-аппе
      Telegram такого подъёма нет, там сдвиг нужен. */
-  if (!ggInTelegram()){ wrap.style.setProperty('--gg-kb', '0px'); return; }
+  if (ggPlainBrowser()){ wrap.style.setProperty('--gg-kb', '0px'); return; }
   const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   wrap.style.setProperty('--gg-kb', hidden + 'px');
 }
@@ -22656,11 +22694,11 @@ function ggKeyboardFollow(){
   inp.addEventListener('focus', function(){
     setTimeout(ggKeyboardFollow, 60);
     setTimeout(ggKeyboardFollow, 320);
-    /* ⚠️ СВОЮ ПРОКРУТКУ ПОСЛЕ ФОКУСА УБРАЛИ. Браузер прокручивает к полю сам,
-       а наши два вызова добавлялись сверху — экран уезжал вдвое дальше нужного
-       (Denis: «оказывается выше необходимого, причём как будто на ту же
-       высоту»). Достаточно один раз довести ленту, когда клавиатура доехала. */
-    setTimeout(ggScrollDown, 380);
+    /* ⚠️⚠️ ПОСЛЕ ФОКУСА НЕ ПРОКРУЧИВАЕМ ВООБЩЕ. Партия ставит курсор в поле
+       сама, при открытии — и эта доводка срабатывала на автофокусе, утягивая
+       свежий экран вниз ровно настолько, чтобы первая реплика заползла под
+       арбитра. Прокрутка нужна ПОСЛЕ ХОДА, а не по факту фокуса: там она и
+       осталась. */
   });
   inp.addEventListener('blur', function(){ setTimeout(ggKeyboardFollow, 60); });
   inp.addEventListener('keydown', function(e){
