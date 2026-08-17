@@ -4622,8 +4622,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <div class="gg-composer">
             <button class="gg-spark" onclick="ggRules()" aria-label="Правила">✦</button>
             <div class="gg-input-wrap">
+              <!-- ⚠️ oninput ПРЯМО В РАЗМЕТКЕ, а не только слушателем из
+                   DOMContentLoaded: если событие уже прошло к моменту нашего
+                   кода, слушатель не навесится, поле перестанет расти, и текст
+                   молча уедет под верхний край. Атрибут работает всегда. -->
               <textarea class="gg-input" id="gg-input" rows="1" autocomplete="off"
+                        oninput="ggInputChanged(this)"
                         data-text-ph="games.placeholder" placeholder="Твой ответ клиенту..."></textarea>
+              <!-- Предупреждение стоит ПОД полем и по центру — над полем оно
+                   налезало на первую строку текста -->
               <div class="gg-input-warn" id="gg-input-warn"></div>
             </div>
             <button class="gg-send" id="gg-send" onclick="ggSend()" aria-label="Отправить">
@@ -7347,11 +7354,13 @@ body.api-override-on #api-override-bar{display:block}
 #gg-root .gg-input-wrap{flex:1;min-width:0;position:relative;display:flex;flex-direction:column}
 #gg-root .gg-input{width:100%;resize:none;overflow-y:auto;line-height:1.4;
   padding:6px 0;max-height:58px;font:500 15px var(--gg-font-body)}
-#gg-root .gg-input-warn{position:absolute;left:0;bottom:100%;margin-bottom:6px;
-  font-size:10.5px;font-weight:600;color:var(--gg-bad);white-space:nowrap;
-  opacity:0;transform:translateY(4px);pointer-events:none;
-  transition:opacity .2s,transform .2s}
-#gg-root .gg-input-warn.gg-on{opacity:1;transform:none}
+/* ⚠️ ПРЕДУПРЕЖДЕНИЕ — В ПОТОКЕ ПОД ПОЛЕМ, ПО ЦЕНТРУ. Абсолютное над полем
+   ложилось на первую строку текста и делало её нечитаемой. В потоке оно
+   раздвигает плашку, а не закрывает написанное. */
+#gg-root .gg-input-warn{font-size:10.5px;font-weight:600;color:var(--gg-bad);
+  text-align:center;line-height:1.2;max-height:0;overflow:hidden;opacity:0;
+  pointer-events:none;transition:max-height .18s ease,opacity .18s ease,margin-top .18s ease}
+#gg-root .gg-input-warn.gg-on{max-height:16px;opacity:1;margin-top:4px}
 /* ⚠️ Поле выросло — композер обязан расти вместе с ним, иначе вторая строка
    уедет под край плашки */
 #gg-root .gg-composer{height:auto;min-height:76px;align-items:flex-end;padding:9px}
@@ -7459,7 +7468,7 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 /* ── ⚠️ ПОЛЕ СТАРТУЕТ РОВНО В ОДНУ СТРОКУ. Высота задаётся явно: без неё
    textarea считает свою по `rows`, а с нашими паддингами это давало запас на
    вторую строку ещё до первого символа. Дальше высоту ведёт ggAutoGrow ── */
-#gg-root .gg-input{height:26px;line-height:1.4;padding:2px 0}
+#gg-root .gg-input{height:26px;min-height:26px;line-height:1.4;padding:2px 0}
 /* ⚠️ ВЫСОТУ ПЛАШКИ ЗАДАВАЛО НЕ ПОЛЕ, А КНОПКИ: при одной строке текста
    отправка в 58 px и отступы держали плашку размером с двухстрочную. Кнопки
    по высоте строки ввода — тогда плашка растёт только вместе с текстом. */
@@ -10753,6 +10762,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22406,15 +22416,19 @@ function ggInputChanged(el){
   ggInputWarn(el, ggAutoGrow(el));
 }
 
-document.addEventListener('DOMContentLoaded', function(){
+/* ⚠️ НЕ ЖДЁМ DOMContentLoaded: скрипт стоит в конце документа, и событие
+   могло уже пройти — тогда слушатель не навешивался вовсе. Элемент к этому
+   моменту уже разобран, вешаем сразу. Ввод продублирован атрибутом oninput в
+   разметке, так что рост поля не зависит ни от событий, ни от порядка. */
+(function(){
   const inp = document.getElementById('gg-input');
   if (!inp) return;
-  inp.addEventListener('input', function(){ ggInputChanged(this); });
   inp.addEventListener('keydown', function(e){
     /* Enter отправляет, Shift+Enter — перенос строки */
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
   });
-});
+  ggAutoGrow(inp);
+})();
 
 </script>
 <!-- ПЛЕЕР ЭФИРА. Лежит вне переключаемых экранов и НИКОГДА не переезжает
