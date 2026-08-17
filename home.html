@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Добавь клуб на экран «Домой»</title>
 <meta name="description" content="Как добавить приложение клуба «Ты боженька продаж» на главный экран телефона">
+
+<!-- ⚠️⚠️ ЭТОТ СКРИПТ СТОИТ ПЕРВЫМ И БЕЗ ОТЛОЖЕННОЙ ЗАГРУЗКИ НЕ СЛУЧАЙНО.
+     iOS запоминает в ярлыке ТОТ адрес, который открыт в момент добавления, —
+     то есть саму эту инструкцию. Человек добавлял приложение, а получал
+     страницу «как добавить приложение», и так каждый запуск.
+     Здесь мы ловим именно запуск С ЯРЛЫКА и молча уводим на приложение.
+     В обычном браузере признак не срабатывает — инструкция открывается как
+     раньше.
+     ⚠️ `location.replace`, а не переход: иначе «назад» возвращало бы человека
+     на инструкцию, из которой он только что ушёл.
+     ⚠️ Выполняется ДО отрисовки тела, чтобы инструкция не мелькала. -->
+<script>
+(function(){
+  try {
+    var standalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || window.navigator.standalone === true;
+    if (standalone) location.replace('./');
+  } catch(e){}
+})();
+</script>
+
+<!-- ⚠️ МАНИФЕСТ И ИКОНКИ НУЖНЫ И ЗДЕСЬ. Без них ярлык, добавленный с этой
+     страницы, получает вместо логотипа уменьшенный снимок экрана, а на
+     Android — ещё и адрес самой инструкции вместо приложения: `start_url`
+     система берёт из манифеста той страницы, с которой добавляли. -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="БП Клуб">
+<meta name="theme-color" content="#0b0b12">
+<link rel="apple-touch-icon" sizes="180x180" href="images/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
 <!-- ⚠️ ОФОРМЛЕНИЕ ВЗЯТО ИЗ САМОГО ПРИЛОЖЕНИЯ (14.08.2026). [stated] Denis:
      «у нас же был довольно симпатичный дизайн этой страницы в приложении,
      может его скопируем?» — разметка шагов и правила `.hs-*`, `.center-msg`,

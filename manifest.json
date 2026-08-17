@@ -1,12 +1,336 @@
 {
-  "name": "Ты Боженька Продаж",
-  "short_name": "БП Клуб",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#0b0b12",
-  "theme_color": "#0b0b12",
-  "icons": [
-    { "src": "images/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "images/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  "master": "double_crescent_slower",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "frames": 96,
+  "fps": 60,
+  "duration_seconds": 1.6,
+  "alpha": true,
+  "characters": [
+    {
+      "key": "zeus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "zeus-dark.png",
+          "bytes": 25601485,
+          "sha256": "6badd8cc99ef4c0028ee6dde6bf2c0cd681e8f54153a5f00c0a37ec36aacdacd"
+        },
+        {
+          "mode": "light",
+          "name": "zeus-light.png",
+          "bytes": 40640089,
+          "sha256": "86eb46d7d762e2b916489bc41e9999c3160a57b751a4f62658e9dadea3b950b2"
+        }
+      ]
+    },
+    {
+      "key": "hera",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "hera-dark.png",
+          "bytes": 25788325,
+          "sha256": "7423c4716ed0a662ba05c00d1b64fc392ff95b33cb32c927230789772d526e38"
+        },
+        {
+          "mode": "light",
+          "name": "hera-light.png",
+          "bytes": 42964222,
+          "sha256": "9eedd89d0228399f29787799145860ccf998698b6c0a13a02b2109ab94cb2704"
+        }
+      ]
+    },
+    {
+      "key": "poseidon",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "poseidon-dark.png",
+          "bytes": 25561953,
+          "sha256": "29682b9b7dbadc4458fdfb9d6d3c1434f93337766df141cf4134eb7249179b66"
+        },
+        {
+          "mode": "light",
+          "name": "poseidon-light.png",
+          "bytes": 44206262,
+          "sha256": "0cca8cc65449af798dd00155553040407957be3a25341ffc2f9dd3f22ea21e70"
+        }
+      ]
+    },
+    {
+      "key": "hades",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "hades-dark.png",
+          "bytes": 30423395,
+          "sha256": "68bd2f5a5355ac4a51d2950c48c2192ba1b7dd1e9435d278f63e9bc18f993f21"
+        },
+        {
+          "mode": "light",
+          "name": "hades-light.png",
+          "bytes": 57364376,
+          "sha256": "b5ee4d793826257a2363f2a0e03859583a58c8c35e2285f30c9bc5ddb246a17c"
+        }
+      ]
+    },
+    {
+      "key": "athena",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "athena-dark.png",
+          "bytes": 25656711,
+          "sha256": "d8a4e8f6c53777ff872d024b46e260fc0998d5623df1c806dbcf5054ef6f0a31"
+        },
+        {
+          "mode": "light",
+          "name": "athena-light.png",
+          "bytes": 40749359,
+          "sha256": "742dd92133e472f1a129e922b1385cfcbe6a338a35db4a2046acd2c162062982"
+        }
+      ]
+    },
+    {
+      "key": "apollo",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "apollo-dark.png",
+          "bytes": 27174498,
+          "sha256": "d4da1991f807f809225295817d652f3aaa0e3ce45bffa0712f5f3f67dec2168a"
+        },
+        {
+          "mode": "light",
+          "name": "apollo-light.png",
+          "bytes": 43919341,
+          "sha256": "1295ab3f503d53a6f10a65fdc1dd6d11567aec36e3799db324d604e07f974630"
+        }
+      ]
+    },
+    {
+      "key": "artemis",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "artemis-dark.png",
+          "bytes": 27676977,
+          "sha256": "cdc68b41bb2d10a94f9b2f8fa429770f34d10e58134637e5cbc256b00172d497"
+        },
+        {
+          "mode": "light",
+          "name": "artemis-light.png",
+          "bytes": 45101473,
+          "sha256": "5f8b66ce7067e6361ef71e78acc9bc8f995baec0f8d6cf46ae1d0ed06638d0aa"
+        }
+      ]
+    },
+    {
+      "key": "aphrodite",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "aphrodite-dark.png",
+          "bytes": 25662206,
+          "sha256": "30383f094b5f13146cf37396fd07e1d15e993561ab4ae591e9f405e04b8d6e46"
+        },
+        {
+          "mode": "light",
+          "name": "aphrodite-light.png",
+          "bytes": 54006243,
+          "sha256": "57b3217ef7aac084059c13ab5a889de9a658847e97a568576c31bfc4c19e849a"
+        }
+      ]
+    },
+    {
+      "key": "ares",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "ares-dark.png",
+          "bytes": 28476972,
+          "sha256": "b0ddead3f0d21577beeb43ce3fd61e422abaab57d3725ebb04aecfaa55c4b1ac"
+        },
+        {
+          "mode": "light",
+          "name": "ares-light.png",
+          "bytes": 47362969,
+          "sha256": "8b5eb79d13044511d46e60d0f7075175ae42dfe718e90a51d98d79148f9d59d2"
+        }
+      ]
+    },
+    {
+      "key": "demeter",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "demeter-dark.png",
+          "bytes": 25670617,
+          "sha256": "c3859ad409f4cee4ee455a2b2c3524e6ac51217e739b4a70cb5a77b17c538c44"
+        },
+        {
+          "mode": "light",
+          "name": "demeter-light.png",
+          "bytes": 41190192,
+          "sha256": "ac78aeba8bea14b2576511629447079b8f4a4d640bd205c9d95dc8f304520c87"
+        }
+      ]
+    },
+    {
+      "key": "hermes",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "hermes-dark.png",
+          "bytes": 25604178,
+          "sha256": "107944cf9b7a11d9725a756f871f2c4d9fecfbf7f08c0610b3938c56b266a7a6"
+        },
+        {
+          "mode": "light",
+          "name": "hermes-light.png",
+          "bytes": 40152532,
+          "sha256": "87e49ac4963d8133f96026fc9bfce1e9e974af23690e9082462f3eebf30c0109"
+        }
+      ]
+    },
+    {
+      "key": "dionysus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "dionysus-dark.png",
+          "bytes": 25740566,
+          "sha256": "2b95b27768800f3618a992923e5c38bda87cb2cdbbf0d969291560a9b3479632"
+        },
+        {
+          "mode": "light",
+          "name": "dionysus-light.png",
+          "bytes": 56777757,
+          "sha256": "89bbaa9348057067fb347fff24725a19a657a30aa9b4f27beb012f26539476ef"
+        }
+      ]
+    },
+    {
+      "key": "hephaestus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "hephaestus-dark.png",
+          "bytes": 26923126,
+          "sha256": "166405b113b0fc747a0d04ad3d052345af221ec30249ed5bdb7e64814201af6d"
+        },
+        {
+          "mode": "light",
+          "name": "hephaestus-light.png",
+          "bytes": 47044311,
+          "sha256": "9bb3fb784d0140e1f3a55525033790251a1e8d9b3fd33f481d043916a63b6c97"
+        }
+      ]
+    },
+    {
+      "key": "plutus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "plutus-dark.png",
+          "bytes": 25789935,
+          "sha256": "0283b564277061b77d2acddb23f0b49bc149b6997d8218c99dc26ee55df17b36"
+        },
+        {
+          "mode": "light",
+          "name": "plutus-light.png",
+          "bytes": 46100024,
+          "sha256": "68b8eabff6b27d73912e5d5b034d7c6c678e186bd9358adcc64a3ff43d7e97ab"
+        }
+      ]
+    },
+    {
+      "key": "prometheus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "prometheus-dark.png",
+          "bytes": 26547626,
+          "sha256": "986eeae2e71a47d9b66d7e5adbab3f0d841c905bfaeba05f74a935f1de8e2f13"
+        },
+        {
+          "mode": "light",
+          "name": "prometheus-light.png",
+          "bytes": 40746372,
+          "sha256": "6c9e0c3f81a62c644664e2f401b92d9e820c0505ee1c4aa64315c392162d1858"
+        }
+      ]
+    },
+    {
+      "key": "momus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "momus-dark.png",
+          "bytes": 27118907,
+          "sha256": "3578ce895d69871bd51401c656546589cfff0afde88cd93e0686b3d8412ce841"
+        },
+        {
+          "mode": "light",
+          "name": "momus-light.png",
+          "bytes": 51478830,
+          "sha256": "6af2aaf0dafc4c82cc4b48f7831ff8fea87bad164c7d7b951bf424d10caf003d"
+        }
+      ]
+    },
+    {
+      "key": "heracles",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "heracles-dark.png",
+          "bytes": 28355111,
+          "sha256": "6886dc03171fdfbde1835b74efd16bac6d5e6038852e64bd62553aaeaff95100"
+        },
+        {
+          "mode": "light",
+          "name": "heracles-light.png",
+          "bytes": 53676491,
+          "sha256": "b0215fb6f99e7d2812e71b9127fdd8e68905c29995b082012f8cb8de879bcc92"
+        }
+      ]
+    },
+    {
+      "key": "theseus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "theseus-dark.png",
+          "bytes": 25645088,
+          "sha256": "edca43e9565c85b86a48829fe4be8ea9bdbb3eda3588d640cccd06911ad62b1c"
+        },
+        {
+          "mode": "light",
+          "name": "theseus-light.png",
+          "bytes": 44588726,
+          "sha256": "405f00a1711eaaae267669e2abe2d90c1c3ba0d4a3c06e954b0ccfa2f1ecf504"
+        }
+      ]
+    },
+    {
+      "key": "perseus",
+      "files": [
+        {
+          "mode": "dark",
+          "name": "perseus-dark.png",
+          "bytes": 25995945,
+          "sha256": "0db3319bc295a2dc06ebb515ee91c0c5801777d252bac1bd1c632fc1b7284aee"
+        },
+        {
+          "mode": "light",
+          "name": "perseus-light.png",
+          "bytes": 43703676,
+          "sha256": "eabcded9ed9400cb80840e24269700b1817c657e18ebe699bcbfdb75527fd6c1"
+        }
+      ]
+    }
   ]
 }
