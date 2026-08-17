@@ -352,6 +352,14 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .tab-icon{font-size:20px;transition:filter .15s;display:flex;align-items:center;justify-content:center}
 /* Знак бога вместо человечка в пилюле: спрайт 4x4 работает МАСКОЙ,
    поэтому цвет берётся из currentColor и тема красит его сама */
+.tab-sign{display:block;width:20px;height:20px;background-color:currentColor;
+  -webkit-mask-image:url('images/tab-signs.png');mask-image:url('images/tab-signs.png');
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-size:400% 100%;mask-size:400% 100%}
+.tab-sign[data-i="0"]{-webkit-mask-position:0% 0;mask-position:0% 0}
+.tab-sign[data-i="1"]{-webkit-mask-position:33.333% 0;mask-position:33.333% 0}
+.tab-sign[data-i="2"]{-webkit-mask-position:66.667% 0;mask-position:66.667% 0}
+.tab-sign[data-i="3"]{-webkit-mask-position:100% 0;mask-position:100% 0}
 .god-sign{display:block;width:20px;height:20px;background-color:currentColor;
   -webkit-mask-image:url('images/god-signs.png');mask-image:url('images/god-signs.png');
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
@@ -5460,22 +5468,22 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 </div>
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v10h5v-6h2v6h5V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+    <span class="tab-icon"><i class="tab-sign" data-i="0"></i></span>
     <span>Главное меню</span>
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('library')" id="tab-library">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5v-18Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+    <span class="tab-icon"><i class="tab-sign" data-i="1"></i></span>
     <span>Что посмотреть?</span>
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('games')" id="tab-games">
-    <span class="tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 6.5h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H11l-4 3v-3H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="11.5" r="1" fill="currentColor"/><circle cx="12" cy="11.5" r="1" fill="currentColor"/><circle cx="15" cy="11.5" r="1" fill="currentColor"/></svg></span>
+    <span class="tab-icon"><i class="tab-sign" data-i="2"></i></span>
     <span>Игры</span>
     <div class="tab-underline"></div>
   </div>
   <div class="tab-item" onclick="switchView('profile')" id="tab-profile">
-    <span class="tab-icon" id="tab-profile-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+    <span class="tab-icon" id="tab-profile-icon"><i class="tab-sign" data-i="3"></i></span>
     <span>Профиль</span>
     <div class="tab-underline"></div>
   </div>
@@ -9145,6 +9153,16 @@ function diagShowEnv(){
     `telegramId: ${telegramId ?? '(не определён)'}`,
     `В Telegram: ${tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? 'да' : 'нет'}`,
     `Данные запуска в адресе: ${typeof tgLaunchData === 'function' && tgLaunchData() ? 'есть' : 'нет'}`,
+    /* только ИМЕНА ключей: в значениях лежит подпись, её в скриншот не отдаём */
+    `Ключи в адресе: ${(function(){
+      try {
+        const h = (location.hash || '').replace(/^#/, '');
+        const q = (location.search || '').replace(/^\?/, '');
+        const keys = (h + (h && q ? '&' : '') + q).split('&')
+          .map(function(p){ return p.split('=')[0]; }).filter(Boolean);
+        return keys.length ? keys.join(', ') : '(пусто)';
+      } catch(e){ return '(не прочитались)'; }
+    })()}`,
     `Опознание по подписи: ${typeof tgAuthWhy !== 'undefined' && tgAuthWhy ? ('не прошло — ' + tgAuthWhy) : 'без ошибок'}`,
     `Platform (tg.platform): ${tg?.platform ?? '—'}`,
     `Версия Bot API: ${tg?.version ?? '—'}`,
@@ -17661,7 +17679,17 @@ async function startTgSessionFallback(){
 function maxLaunchData(){
   try {
     const h = (location.hash || '').replace(/^#/, '');
-    return h.indexOf('WebAppData=') >= 0 ? h : '';
+    if (!h) return '';
+    /* ⚠️⚠️ КЛЮЧ СВЕРЯЕМ ЦЕЛИКОМ, А НЕ ПОДСТРОКОЙ. Здесь стоял
+       `h.indexOf('WebAppData=') >= 0`, и запуск из Telegram уезжал в ветку MAX:
+       телеграмный ключ называется `tgWebAppData` и СОДЕРЖИТ `WebAppData` внутри
+       себя. Ветка MAX стоит выше телеграмной, поэтому человека внутри Telegram
+       встречал вход по номеру. Ловилось только при открытии кнопкой в боте —
+       там Telegram кладёт данные запуска в хеш. Denis поймал 17.08 и 18.08,
+       диагностика показала `Ветка запуска: MAX` при `Platform: tdesktop`. */
+    return h.split('&').some(function(pair){
+      return pair.split('=')[0] === 'WebAppData';
+    }) ? h : '';
   } catch(e){ return ''; }
 }
 function isInsideMax(){ return !!maxLaunchData(); }
@@ -21383,9 +21411,7 @@ var GOD_SIGNS = {
   'Арес':8, 'Деметра':9, 'Гермес':10, 'Дионис':11,
   'Гефест':12, 'Плутос':13, 'Прометей':14, 'Мом':15
 };
-var GOD_SIGN_FALLBACK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none">'
-  + '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>'
-  + '<path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+var GOD_SIGN_FALLBACK = '<i class="tab-sign" data-i="3"></i>';
 
 function godSignIndex(){
   var saved = null;
