@@ -6889,8 +6889,8 @@ body.api-override-on #api-override-bar{display:block}
 
 
 
-.gg-topbar{height:72px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;
-  position:sticky;top:44px;z-index:20;
+.gg-topbar{height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:20;padding-top:max(var(--safe-top,0px),8px);
   background:linear-gradient(180deg,var(--gg-bg) 62%,transparent);
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .gg-exit{justify-self:start;border:1px solid var(--gg-pill-brd);background:var(--gg-pill);color:var(--gg-pill-ink);
@@ -7242,6 +7242,20 @@ body.api-override-on #api-override-bar{display:block}
 /* Лесенка трека: пройденные ступени светятся, текущая ярче остальных */
 #gg-root .gg-track-dots i.done{box-shadow:var(--gg-good-glow)}
 #gg-root .gg-track-dots i.now{box-shadow:var(--gg-fill-glow);transform:scaleY(1.5)}
+
+/* ⚠️ ЗАМОК НА РАЗБОРЕ — ПЛАШКА, А НЕ ОВЕРЛЕЙ. Прежний вариант накрывал блок
+   шириной в пару слов, и текст рассыпался по букве в столбик (видно на
+   скриншоте Denis'а). Здесь ширина своя, а «что-то скрыто» показывают
+   размытые полоски вместо настоящего разбора. */
+#gg-root .gg-lockednote{align-self:stretch;max-width:none;display:flex;
+  flex-direction:column;align-items:flex-start;gap:11px}
+#gg-root .gg-lockednote-bars{display:flex;flex-direction:column;gap:6px;width:100%;
+  filter:blur(2.5px);opacity:.5}
+#gg-root .gg-lockednote-bars i{height:9px;border-radius:999px;background:var(--gg-track)}
+#gg-root .gg-lockednote-bars i:nth-child(1){width:42%;background:var(--gg-good-bg)}
+#gg-root .gg-lockednote-bars i:nth-child(2){width:100%}
+#gg-root .gg-lockednote-bars i:nth-child(3){width:74%}
+#gg-root .gg-lockednote-txt{font-size:13px;color:var(--gg-ink-3);line-height:1.4}
 
 </style>
 
@@ -10523,6 +10537,7 @@ const APP_TEXTS = {
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
   'funnel.about': {
@@ -21575,10 +21590,16 @@ function ggGuestKey(){
   return k;
 }
 
-function ggOpen(){
+async function ggOpen(){
+  /* ⚠️⚠️ СНАЧАЛА ЖДЁМ ПРОФИЛЬ, ПОТОМ СПРАШИВАЕМ СЕРВЕР. Профиль грузится
+     асинхронно, и до его прихода `telegramId` равен null — запрос уходил бы с
+     гостевым ключом, сервер честно отвечал «не участник», и человек с активной
+     подпиской упирался в пейвол. Ровно тот класс, что записан уроком:
+     решение по флагу, который ещё не загружен. Ждём ГОТОВНОСТИ, не паузы. */
+  ggBackToList();
+  await waitProfile(4000);
   /* ⚠️ СПИСОК ПЕРЕЧИТЫВАЕМ ПРИ КАЖДОМ ЗАХОДЕ: уровень мог вырасти, ступень —
      открыться. Данные, загруженные один раз при старте, устаревают молча */
-  ggBackToList();
   ggLoad();
 }
 
@@ -21718,6 +21739,16 @@ function ggRules(){
 function ggChrome(hide){
   const fade = document.querySelector('.scroll-fade');
   if (fade) fade.style.display = hide ? 'none' : '';
+  const head = document.querySelector('.shell > header');
+  if (head){
+    if (hide){
+      if (head.dataset.ggPrev === undefined) head.dataset.ggPrev = head.style.display || '';
+      head.style.display = 'none';
+    } else if (head.dataset.ggPrev !== undefined){
+      head.style.display = head.dataset.ggPrev;
+      delete head.dataset.ggPrev;
+    }
+  }
   ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -21755,6 +21786,7 @@ async function ggStart(key){
   if (ggBusy) return;
   ggBusy = true;
   try {
+    await waitProfile(4000);   // то же и на старте: партия пишется на субъекта
     const body = { game_key: key, source: 'app' };
     if (telegramId) body.telegram_id = telegramId; else body.guest_key = ggGuestKey();
     const r = await fetch(API_URL + '/games/session/start', {
@@ -21864,15 +21896,16 @@ function ggNote(d){
     if (!h) return;
     box.innerHTML = h;
   } else {
-    box.className = 'gg-feedback gg-veil';
-    box.innerHTML = '<div class="gg-veil-in"><div class="gg-tags">'
-      + '<span class="gg-tag gg-good">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
-      + '<span class="gg-tag gg-bad">&nbsp;&nbsp;&nbsp;&nbsp;</span></div>'
-      + '<p>&nbsp;</p></div>'
-      + '<div class="gg-veil-over"><div class="gg-veil-txt">'
-      + escapeHtml(t('games.locked_note') || 'Разбор хода открыт участникам клуба')
-      + '</div><button class="gg-btn gg-btn-primary gg-btn-sm" onclick="ggPop(\'gg-m-member\')">'
-      + escapeHtml(t('games.locked_cta') || 'Что это даёт') + '</button></div>';
+    /* ⚠️ БЕЗ АБСОЛЮТНОГО ОВЕРЛЕЯ: он накрывал блок шириной в пару слов, и
+       текст с кнопкой схлопывались в столбик по букве. Обычная плашка на всю
+       ширину ленты, размытая полоска сверху — намёк, что там что-то есть */
+    box.className = 'gg-feedback gg-lockednote';
+    box.innerHTML = '<div class="gg-lockednote-bars">'
+      + '<i></i><i></i><i></i></div>'
+      + '<div class="gg-lockednote-txt">'
+      + escapeHtml(t('games.locked_note') || 'Разбор хода открыт участникам клуба') + '</div>'
+      + '<button class="gg-btn gg-btn-primary gg-btn-sm" onclick="ggPop(\'gg-m-member\')">'
+      + escapeHtml(t('games.locked_cta') || 'Что это даёт') + '</button>';
   }
   feed.appendChild(box);
 }
