@@ -7354,13 +7354,14 @@ body.api-override-on #api-override-bar{display:block}
 #gg-root .gg-input-wrap{flex:1;min-width:0;position:relative;display:flex;flex-direction:column}
 #gg-root .gg-input{width:100%;resize:none;overflow-y:auto;line-height:1.4;
   padding:6px 0;max-height:58px;font:500 15px var(--gg-font-body)}
-/* ⚠️ ПРЕДУПРЕЖДЕНИЕ — В ПОТОКЕ ПОД ПОЛЕМ, ПО ЦЕНТРУ. Абсолютное над полем
-   ложилось на первую строку текста и делало её нечитаемой. В потоке оно
-   раздвигает плашку, а не закрывает написанное. */
-#gg-root .gg-input-warn{font-size:10.5px;font-weight:600;color:var(--gg-bad);
-  text-align:center;line-height:1.2;max-height:0;overflow:hidden;opacity:0;
-  pointer-events:none;transition:max-height .18s ease,opacity .18s ease,margin-top .18s ease}
-#gg-root .gg-input-warn.gg-on{max-height:16px;opacity:1;margin-top:4px}
+/* ⚠️ ПРЕДУПРЕЖДЕНИЕ — ПОД ВСЕЙ ПЛАШКОЙ, ПО ЦЕНТРУ. Внутри плашки оно
+   отъедало место у текста и наезжало на строку; над полем — закрывало
+   написанное. Снаружи снизу оно не мешает ничему. */
+#gg-root .gg-input-warn{position:absolute;left:0;right:0;top:calc(100% + 5px);
+  font-size:11px;font-weight:600;color:var(--gg-bad);text-align:center;
+  opacity:0;transform:translateY(-3px);pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease}
+#gg-root .gg-input-warn.gg-on{opacity:1;transform:none}
 /* ⚠️ Поле выросло — композер обязан расти вместе с ним, иначе вторая строка
    уедет под край плашки */
 #gg-root .gg-composer{height:auto;min-height:76px;align-items:flex-end;padding:9px}
@@ -7440,7 +7441,7 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 }
 
 /* ── Поле: растёт от одной строки, скролла внутри нет (мы не даём перелить) ── */
-#gg-root .gg-input{max-height:none;overflow-y:hidden;padding:5px 0}
+/* прокруткой поля управляет ggAutoGrow: включает её только на потолке */
 #gg-root .gg-composer{min-height:70px}
 
 /* ── ⚠️ ФИНАЛ: экран был «бедный сверху, обрезанный снизу». Верх сжат, низ
@@ -7468,7 +7469,7 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 /* ── ⚠️ ПОЛЕ СТАРТУЕТ РОВНО В ОДНУ СТРОКУ. Высота задаётся явно: без неё
    textarea считает свою по `rows`, а с нашими паддингами это давало запас на
    вторую строку ещё до первого символа. Дальше высоту ведёт ggAutoGrow ── */
-#gg-root .gg-input{height:26px;min-height:26px;line-height:1.4;padding:2px 0}
+#gg-root .gg-input{height:26px;min-height:26px;max-height:none;line-height:1.4;padding:2px 0}
 /* ⚠️ ВЫСОТУ ПЛАШКИ ЗАДАВАЛО НЕ ПОЛЕ, А КНОПКИ: при одной строке текста
    отправка в 58 px и отступы держали плашку размером с двухстрочную. Кнопки
    по высоте строки ввода — тогда плашка растёт только вместе с текстом. */
@@ -7476,6 +7477,11 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 #gg-root .gg-composer .gg-spark{width:38px;height:38px;font-size:17px}
 #gg-root .gg-composer .gg-send{width:44px;height:44px}
 #gg-root .gg-composer .gg-send svg{width:20px;height:20px}
+
+/* ⚠️ Плашке ввода нужно место ПОД собой для предупреждения — иначе оно
+   упрётся в нижний край экрана и его не будет видно */
+#gg-root .gg-composer-wrap{position:relative;
+  bottom:calc(26px + env(safe-area-inset-bottom))}
 
 </style>
 
@@ -10762,6 +10768,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22080,10 +22087,8 @@ async function ggStart(key){
          могла остаться inline-высота в две строки, и новое поле открывалось
          бы уже расширенным */
       inp.value = '';
-      ggLastGood = '';
       inp.style.height = '';
-      ggAutoGrow(inp);
-      ggInputWarn(inp, 0);
+      ggInputChanged(inp);
       inp.focus();
     }
   } catch(e){
@@ -22217,8 +22222,7 @@ async function ggSend(){
   document.getElementById('gg-send').disabled = true;
   ggMsg(text, true);
   inp.value = '';
-  ggLastGood = '';
-  ggInputWarn(inp, ggAutoGrow(inp));
+  ggInputChanged(inp);
   ggTyping(true);
   ggScrollDown();
 
@@ -22360,66 +22364,50 @@ function ggClose(id){ const e = document.getElementById(id); if (e) e.classList.
    счётчик не даёт написать больше, чем в эти строки помещается.
    ⚠️ Предупреждение показываем НЕ на потолке, а на подходе к нему (85%):
    упереться в лимит на полуслове неприятно, а увидеть заранее — нормально. */
-/* ⚠️⚠️ ПОТОЛОК МЕРЯЕТСЯ СТРОКАМИ, А НЕ СИМВОЛАМИ. Символьный лимит врёт:
-   при узком поле 180 символов — это четыре строки, при широком — полторы.
-   Denis так и поймал: дописал четвёртую строку и ни во что не упёрся, а
-   начало текста уехало под верхний край. Меряем ФАКТИЧЕСКУЮ высоту: пока
-   текст влезает в две строки — пускаем, перестал влезать — откатываем
-   последний ввод. Тогда «ровно строчки на две» верно на любом экране.
-   Символьный потолок оставлен только как страховка от вставки простыни. */
-const GG_MAX_LINES = 2;
-const GG_HARD_CHARS = 400;
-let ggLastGood = '';
+/* ═══ ПОЛЕ ВВОДА — КАК В МЕССЕНДЖЕРЕ ══════════════════════════════════════
+   ⚠️⚠️ ОТКАТ ВВОДА УБРАН СОВСЕМ. Идея «не пускать дальше двух строк» на
+   практике оказалась хуже болезни: печатаешь — а буквы пропадают. В любом
+   мессенджере поле просто растёт до нескольких строк, дальше прокручивается
+   внутри себя, и НИЧЕГО не отнимает у пишущего. Делаем так же.
+   Ограничение длины теперь не запрет, а подсказка: перевалил за мягкий порог —
+   под плашкой появляется «лучше отвечай коротко», но писать никто не мешает.
+   Жёсткий потолок только на уровне сервера (он режет на 600). */
+const GG_GROW_LINES = 5;       // до скольких строк растёт поле
+const GG_SOFT_CHARS = 160;     // после этого мягко советуем быть короче
 
-function ggMaxH(el){
-  /* одна строка = высота пустого поля; потолок = она же плюс ещё строки */
+function ggLineH(el){
   const cs = getComputedStyle(el);
-  const line = parseFloat(cs.lineHeight) || 21;
-  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-  return Math.round(line * GG_MAX_LINES + pad);
+  const lh = parseFloat(cs.lineHeight);
+  /* ⚠️ `line-height:normal` даёт NaN — тогда считаем от кегля */
+  return lh || Math.round((parseFloat(cs.fontSize) || 15) * 1.4);
 }
 
 function ggAutoGrow(el){
-  if (!el) return el ? 0 : 0;
+  if (!el) return 0;
   /* высоту сбрасываем перед замером: иначе поле умеет только расти */
   el.style.height = 'auto';
-  const max = ggMaxH(el);
+  const cs = getComputedStyle(el);
+  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  const max = Math.round(ggLineH(el) * GG_GROW_LINES + pad);
   const need = el.scrollHeight;
   el.style.height = Math.min(need, max) + 'px';
+  /* прокрутка появляется ТОЛЬКО когда поле упёрлось в потолок роста */
+  el.style.overflowY = need > max ? 'auto' : 'hidden';
   return need;
 }
 
-function ggInputWarn(el, need){
+function ggInputWarn(el){
   const warn = document.getElementById('gg-input-warn');
   if (!warn || !el) return;
-  const max = ggMaxH(el);
-  /* предупреждаем на подходе к концу второй строки, а не на самом потолке */
-  if ((el.value || '') && need >= max * 0.8){
-    warn.textContent = t('games.too_long') || 'Лучше отвечай коротко';
-    warn.classList.add('gg-on');
-  } else {
-    warn.classList.remove('gg-on');
-  }
+  warn.textContent = t('games.too_long') || 'Лучше отвечай коротко';
+  warn.classList.toggle('gg-on', (el.value || '').length >= GG_SOFT_CHARS);
 }
 
 function ggInputChanged(el){
-  const need = ggAutoGrow(el);
-  const max = ggMaxH(el);
-  /* ⚠️ ОТКАТ ПОСЛЕДНЕГО ВВОДА, А НЕ ОБРЕЗКА ХВОСТА: обрезка съедала бы текст
-     при вставке из буфера посреди строки */
-  if (need > max + 2 || (el.value || '').length > GG_HARD_CHARS){
-    el.value = ggLastGood;
-    ggAutoGrow(el);
-  } else {
-    ggLastGood = el.value;
-  }
-  ggInputWarn(el, ggAutoGrow(el));
+  ggAutoGrow(el);
+  ggInputWarn(el);
 }
 
-/* ⚠️ НЕ ЖДЁМ DOMContentLoaded: скрипт стоит в конце документа, и событие
-   могло уже пройти — тогда слушатель не навешивался вовсе. Элемент к этому
-   моменту уже разобран, вешаем сразу. Ввод продублирован атрибутом oninput в
-   разметке, так что рост поля не зависит ни от событий, ни от порядка. */
 (function(){
   const inp = document.getElementById('gg-input');
   if (!inp) return;
