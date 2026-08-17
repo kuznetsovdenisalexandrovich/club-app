@@ -7488,6 +7488,33 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
    `position`, `display` и `overflow` — на них держится вся его раскладка. */
 #gg-root .gg-composer-wrap{bottom:calc(26px + env(safe-area-inset-bottom))}
 
+/* ═══ СКРЫТИЕ ЧУЖИХ ЭЛЕМЕНТОВ ПРИЗНАКОМ НА КОРНЕ ══════════════════════════
+   ⚠️⚠️ `!important` здесь не прихоть: приложение само перерисовывает
+   мастер-бар и значок уровня (возврат из фона, начисление баллов) и ставит им
+   inline-стиль заново. Инлайн перебивается только этим. */
+html[data-gg-nobar] #level-card,
+html[data-gg-nobar] #reward-level-badge{display:none !important}
+html[data-gg-notabs] #tabbar,
+html[data-gg-notabs] .scroll-fade{display:none !important}
+html[data-gg-nohead] .shell > header{display:none !important}
+
+/* ⚠️ Плашка ввода поднимается над клавиатурой: --gg-kb ставит JS по
+   visualViewport, в обычном состоянии он ноль */
+#gg-root .gg-composer-wrap{
+  bottom:calc(26px + env(safe-area-inset-bottom) + var(--gg-kb, 0px));
+  transition:bottom .18s ease}
+
+/* ── ⚠️ ПЛАШКА БЫЛА ВЫСОКОЙ ДЛЯ ОДНОЙ СТРОКИ. Высоту держали кнопка отправки
+   и отступы; заодно поле было выровнено по нижнему краю, из-за чего курсор
+   стоял выше строки. Всё по центру, размеры — от строки текста ── */
+#gg-root .gg-composer{align-items:center;padding:6px 6px 6px 14px;gap:10px;border-radius:26px}
+#gg-root .gg-composer .gg-spark{width:34px;height:34px;font-size:15px}
+#gg-root .gg-composer .gg-send{width:40px;height:40px}
+#gg-root .gg-composer .gg-send svg{width:19px;height:19px}
+#gg-root .gg-input-wrap{justify-content:center}
+#gg-root .gg-input{height:22px;min-height:22px;line-height:22px;padding:0;
+  display:block;vertical-align:middle}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10773,6 +10800,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -21993,23 +22021,18 @@ function ggRules(){
 /* ⚠️ Мастер-бар, значок уровня и пилюлю прячем ТЕМ ЖЕ СПИСКОМ id, что уже
    используется в приложении, и запоминаем прежний display: у бара и значка он
    зависит от уровня, вернуть «как было» иначе не получится */
+/* ⚠️⚠️ ПРЯЧЕМ ПРИЗНАКОМ НА КОРНЕ, А НЕ `style.display`. Мастер-бар и значок
+   уровня приложение перерисовывает само — при возврате из фона, после
+   начисления баллов, по таймеру. Любая такая перерисовка ставила им
+   `display` заново, и спрятанный бар выныривал поверх партии (ровно это
+   Denis и поймал). Атрибут на `<html>` чужой код не трогает, а правило с
+   `!important` в блоке игр перебивает любой inline-стиль.
+   Заодно исчезла возня с запоминанием прежнего `display`. */
 function ggChrome(hide, keepTabs){
-  const fade = document.querySelector('.scroll-fade');
-  if (fade) fade.style.display = hide ? 'none' : '';
-
-  const hideBar = hide || keepTabs;      // мастер-бар прячем и на финале
-  ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
-    const el = document.getElementById(id);
-    if (!el) return;
-    const hideThis = (id === 'tabbar') ? hide : hideBar;
-    if (hideThis){
-      if (el.dataset.ggPrev === undefined) el.dataset.ggPrev = el.style.display || '';
-      el.style.display = 'none';
-    } else if (el.dataset.ggPrev !== undefined){
-      el.style.display = el.dataset.ggPrev;
-      delete el.dataset.ggPrev;
-    }
-  });
+  const r = document.documentElement;
+  const hideBar = hide || keepTabs;     // мастер-бар прячем и на финале
+  r.toggleAttribute('data-gg-nobar', !!hideBar);
+  r.toggleAttribute('data-gg-notabs', !!hide);
   /* ⚠️ БЕЗ ЭТОГО СВАЙП ВНИЗ ПО ЛЕНТЕ ЗАКРЫВАЕТ МИНИ-АПП ПОСРЕДИ ПАРТИИ */
   try {
     const tg = window.Telegram && window.Telegram.WebApp;
@@ -22042,15 +22065,7 @@ function ggBackToList(){
 /* Шапка приложения прячется на всей вкладке. Отдельно от ggChrome, потому что
    у той своя задача — полноэкранная партия */
 function ggHideAppHeader(hide){
-  const head = document.querySelector('.shell > header');
-  if (!head) return;
-  if (hide){
-    if (head.dataset.ggPrev === undefined) head.dataset.ggPrev = head.style.display || '';
-    head.style.display = 'none';
-  } else if (head.dataset.ggPrev !== undefined){
-    head.style.display = head.dataset.ggPrev;
-    delete head.dataset.ggPrev;
-  }
+  document.documentElement.toggleAttribute('data-gg-nohead', !!hide);
 }
 
 async function ggStart(key){
@@ -22414,9 +22429,30 @@ function ggInputChanged(el){
   ggInputWarn(el);
 }
 
+/* ⚠️⚠️ КЛАВИАТУРА В iOS НЕ СЖИМАЕТ ОКНО. `position:fixed` считается от
+   исходной высоты, поэтому плашка ввода остаётся ПОД клавиатурой, а курсор
+   выглядит «улетевшим выше поля». Настоящую видимую область даёт
+   `visualViewport` — по нему и приподнимаем плашку. */
+function ggKeyboardFollow(){
+  const vv = window.visualViewport;
+  const wrap = document.querySelector('#gg-root .gg-composer-wrap');
+  if (!vv || !wrap) return;
+  const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  wrap.style.setProperty('--gg-kb', hidden + 'px');
+}
+
 (function(){
   const inp = document.getElementById('gg-input');
   if (!inp) return;
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', ggKeyboardFollow);
+    window.visualViewport.addEventListener('scroll', ggKeyboardFollow);
+  }
+  inp.addEventListener('focus', function(){
+    setTimeout(ggKeyboardFollow, 60);
+    setTimeout(ggKeyboardFollow, 320);
+  });
+  inp.addEventListener('blur', function(){ setTimeout(ggKeyboardFollow, 60); });
   inp.addEventListener('keydown', function(e){
     /* Enter отправляет, Shift+Enter — перенос строки */
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ggSend(); }
