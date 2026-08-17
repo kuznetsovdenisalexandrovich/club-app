@@ -7726,7 +7726,9 @@ html[data-gg-play] #gg-root .gg-composer-wrap{
   position:static; flex:none;
   left:auto; right:auto; bottom:auto; transform:none;
   width:100%; max-width:none; margin:0;
-  padding-bottom:calc(6px + var(--gg-vvbot, 0px))}
+  /* ⚠️ 3px — это весь зазор между плашкой и клавиатурой. Больше не нужно:
+     запас под «домашнюю» полосу добавляется только когда клавиатуры нет */
+  padding-bottom:calc(3px + var(--gg-vvbot, 0px))}
 /* Предупреждение о длине считается от плашки, место под него — тем же запасом */
 html[data-gg-play] #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){
   padding-bottom:calc(22px + var(--gg-vvbot, 0px))}
@@ -8775,14 +8777,48 @@ function comingSoon() {
    Теперь на корневых вкладках её нет вовсе, а на внутренних экранах она
    показывается и делает осмысленное — возвращает на портал. Заодно перехватываем
    аппаратную кнопку «назад» на Android */
-const TG_ROOT_VIEWS = ['portal', 'library', 'profile'];
+/* ⚠️ `games` — ТОЖЕ КОРНЕВАЯ ВКЛАДКА: она стоит в пилюле рядом с остальными,
+   и кнопка «назад» на ней обещала возврат, которого не бывает. В самой партии
+   кнопку показываем отдельно — там ей есть куда вести (к списку игр) */
+const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
 function syncTgBackButton(name){
   const tg = window.Telegram && window.Telegram.WebApp;
   if (!tg || !tg.BackButton) return;
   try {
-    if (TG_ROOT_VIEWS.indexOf(name) !== -1) tg.BackButton.hide();
+    /* В партии кнопка нужна: она возвращает к списку игр */
+    const inGame = document.documentElement.hasAttribute('data-gg-play');
+    if (!inGame && TG_ROOT_VIEWS.indexOf(name) !== -1) tg.BackButton.hide();
     else tg.BackButton.show();
   } catch(e){}
+}
+
+/* ⚠️⚠️ ОБРАБОТЧИК КНОПКИ «НАЗАД» ВЕШАЕТСЯ ОТДЕЛЬНО ОТ ВЕТКИ ЗАПУСКА.
+   Он висел ВНУТРИ ветки «Telegram передал данные пользователя», а показывает
+   кнопку `syncTgBackButton` в любой ветке — значит при входе по запасному
+   опознанию (или когда SDK доехал позже) кнопка исправно появлялась и НИЧЕГО
+   не делала. [stated] Denis: «она никуда не ведёт, а нажать её хочется».
+   КЛАСС: если элемент показывается безусловно, то и обработчик к нему должен
+   вешаться безусловно. */
+let tgBackBound = false;
+function bindTgBackButton(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg || !tg.onEvent || tgBackBound) return;
+  tgBackBound = true;
+  tg.onEvent('backButtonClicked', function(){
+    /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
+    if (document.documentElement.hasAttribute('data-gg-play')){
+      if (typeof ggQuitAsk === 'function') ggQuitAsk();
+      else if (typeof ggBackToList === 'function') ggBackToList();
+      return;
+    }
+    const field = document.getElementById('plan-field');
+    if (field && field.classList.contains('show')){ closePlanField(); return; }
+    const live = document.getElementById('live-full');
+    if (live && live.style.display === 'flex'){ collapseLiveFull(); return; }
+    const reader = document.getElementById('view-magazine-read');
+    if (reader && reader.classList.contains('active')){ closeMagazineReader(); return; }
+    switchView('portal');
+  });
 }
 
 /* Первое открытие «Что посмотреть».
@@ -17044,15 +17080,35 @@ function applyWebSafeArea(){
   }
 }
 
+/* ⚠️⚠️ ПОЛНОЭКРАННЫЙ РЕЖИМ TELEGRAM. В окне Telegram рисует свою полосу с
+   заголовком НАД нашим документом, и `contentSafeAreaInset` её описывает. В
+   полноэкранном режиме полосы нет: кнопки «назад/закрыть» слева и «свернуть/
+   меню» справа ПЛАВАЮТ ПОВЕРХ нашего экрана. [stated] Denis: в окне и в вебе
+   апп встраивается идеально, в полноэкранном — конфликтует со встроенными
+   кнопками.
+   Различаем режим по `tg.isFullscreen` и ставим признак `data-tg-full` —
+   под ним верхняя зона гарантированно не меньше высоты этих кнопок.
+   ⚠️ Инсеты приходят НЕ СРАЗУ после переключения режима, поэтому пересчёт
+   идёт ещё дважды по таймеру: событие приходит раньше новых чисел. */
+const TG_FULLSCREEN_TOP = 92;   /* статус-бар + плавающие кнопки Telegram */
 function applyTelegramSafeArea(){
   const tg = window.Telegram?.WebApp;
   if (!tg) return;
+  const full = tg.isFullscreen === true;
+  document.documentElement.toggleAttribute('data-tg-full', full);
   const deviceTop = tg.safeAreaInset?.top || 0;
   const contentTop = tg.contentSafeAreaInset?.top || 0;
-  const total = deviceTop + contentTop;
+  let total = deviceTop + contentTop;
+  if (full) total = Math.max(total, TG_FULLSCREEN_TOP);
   if (total > 0) {
     document.documentElement.style.setProperty('--safe-top', total + 'px');
   }
+  if (typeof ggViewportSync === 'function') ggViewportSync();
+}
+function applyTelegramSafeAreaSoon(){
+  applyTelegramSafeArea();
+  setTimeout(applyTelegramSafeArea, 120);
+  setTimeout(applyTelegramSafeArea, 500);
 }
 
 function startApp(){
@@ -18078,22 +18134,14 @@ async function init(){
     }
     applyTelegramSafeArea();
     if (tg.onEvent) {
-      tg.onEvent('safeAreaChanged', applyTelegramSafeArea);
-      tg.onEvent('contentSafeAreaChanged', applyTelegramSafeArea);
-      tg.onEvent('fullscreenChanged', applyTelegramSafeArea);
+      tg.onEvent('safeAreaChanged', applyTelegramSafeAreaSoon);
+      tg.onEvent('contentSafeAreaChanged', applyTelegramSafeAreaSoon);
+      tg.onEvent('fullscreenChanged', applyTelegramSafeAreaSoon);
       /* Кнопка «назад» Telegram: спрятана на корневых вкладках (иначе висит
          поверх шапки и налезает на логотип), а на внутренних экранах возвращает
          на портал. Поле выбора тем закрываем его же обработчиком — иначе
          кнопка увела бы на портал, оставив поле открытым под ним */
-      tg.onEvent('backButtonClicked', function(){
-        const field = document.getElementById('plan-field');
-        if (field && field.classList.contains('show')){ closePlanField(); return; }
-        // Из читалки журнала логично возвращаться на полку, а не на портал
-        const reader = document.getElementById('view-magazine-read');
-        if (reader && reader.classList.contains('active')){ closeMagazineReader(); return; }
-        if (document.getElementById('view-magazine').classList.contains('active')){ switchView('portal'); return; }
-        switchView('portal');
-      });
+      bindTgBackButton();   // см. комментарий у функции: вешается в любой ветке
     }
     syncTgBackButton('portal');   // стартовый экран — кнопки быть не должно
     telegramId = tg.initDataUnsafe.user.id;
@@ -18107,6 +18155,7 @@ async function init(){
        а не с рекламы. */
     applyWebSafeArea();
     setTimeout(applyWebSafeArea, 300);
+    bindTgBackButton();   /* ⚠️ И В ЭТОЙ ВЕТКЕ ТОЖЕ: кнопка здесь показывалась мёртвой */
     startTgSessionFallback().then(function(ok){
       if (!ok){
         /* ⚠️ ВОРОНКУ ЗДЕСЬ НЕ ГЛУШИМ. Сначала я гасил её на всю эту ветку —
@@ -22430,6 +22479,8 @@ function ggShow(which){
      первой отрисовки экрана, иначе браузер успеет прокрутить страницу */
   if (which === 'play'){ document.documentElement.setAttribute('data-gg-play',''); ggViewportSync(); }
   else { document.documentElement.removeAttribute('data-gg-play'); ggViewportRelease(); }
+  /* Кнопка «назад» Telegram: в партии ведёт к списку игр, на списке её нет */
+  if (typeof syncTgBackButton === 'function') syncTgBackButton('games');
   /* ⚠️ НА ФИНАЛЕ ПИЛЮЛЮ ОСТАВЛЯЕМ, А МАСТЕР-БАР УБИРАЕМ: экран длинный, и с
      баром наверху вердикт со счётом начинался у середины, а материал занятия
      и кнопка следующей ступени уходили под нижний край */
@@ -22877,20 +22928,28 @@ function ggInputChanged(el){
    система сдвинула видимую область относительно страницы. Кладём оба в
    переменные, слой ложится ровно на видимое. Заодно возвращаем страницу в
    ноль: если iOS всё же успел её прокрутить, слой поедет вместе с ней. */
+/* ⚠️⚠️ ПРИЗНАК «КЛАВИАТУРА ОТКРЫТА» СЧИТАЕТСЯ ОТ САМОЙ БОЛЬШОЙ ВИДЕННОЙ
+   ВЫСОТЫ, А НЕ ОТ `innerHeight`. С домашнего экрана `innerHeight` при
+   клавиатуре не меняется вовсе — разность выходила нулевой, признак не
+   срабатывал, и под полем оставался запас в «домашнюю» полосу (~34 px).
+   Это и есть «поле висит высоковато». Максимум же честно показывает,
+   насколько видимая область сжалась. */
+let ggVVMax = 0;
 function ggViewportSync(){
   const r = document.documentElement;
   if (!r.hasAttribute('data-gg-play')) return;
   const vv = window.visualViewport;
   const h   = vv ? vv.height    : window.innerHeight;
   const top = vv ? vv.offsetTop : 0;
+  if (h > ggVVMax) ggVVMax = h;
   r.style.setProperty('--gg-vvh', Math.round(h) + 'px');
   r.style.setProperty('--gg-vvtop', Math.round(top) + 'px');
-  /* Запас снизу под «домашнюю» полосу — только когда клавиатуры нет:
-     при открытой клавиатуре safe-area внизу уже не действует */
-  const kbOpen = vv ? (window.innerHeight - vv.height - vv.offsetTop > 80) : false;
+  const kbOpen = (ggVVMax - h) > 100;
   r.style.setProperty('--gg-vvbot', kbOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)');
   try { if (window.scrollY) window.scrollTo(0, 0); } catch(e){}
 }
+/* Поворот экрана меняет высоту насовсем — прежний максимум врал бы */
+window.addEventListener('orientationchange', function(){ ggVVMax = 0; });
 
 function ggViewportRelease(){
   const r = document.documentElement;
