@@ -7624,6 +7624,13 @@ html[data-gg-web] #gg-root .gg-feed{flex:1 1 auto;min-height:0}
   overflow-wrap:anywhere; word-break:break-word; white-space:pre-wrap;
 }
 
+/* ── ⚠️ В ПАРТИИ ДОКУМЕНТ НЕ ДОЛЖЕН БЫТЬ ВЫШЕ ЭКРАНА. У `.shell` снизу
+   отступ под пилюлю (около сотни пикселей), а в партии пилюли нет — этот
+   запас превращался в пустоту, ради которой появлялась прокрутка. Раз есть
+   куда прокручивать, браузер этим пользуется: при открытии и при фокусе. ── */
+html[data-gg-notabs] .shell{padding-bottom:0}
+html[data-gg-notabs] body{padding-bottom:0}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -10911,6 +10918,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.upsell_cta': { c:'Игры', l:'Кнопка приглашения', w:'Финал партии', i:false, t:'Посмотреть, что в клубе' },
   'games.to_list': { c:'Игры', l:'Кнопка «к играм»', w:'Финал партии', i:false, t:'К играм' },
   'games.again': { c:'Игры', l:'Кнопка «сыграть ещё»', w:'Финал партии', i:false, t:'Сыграть ещё' },
+
 
 
 
@@ -22032,6 +22040,12 @@ function ggMode(on){
   const r = document.documentElement;
   if (on) r.setAttribute('data-gg', '1'); else r.removeAttribute('data-gg');
   r.toggleAttribute('data-gg-web', !!on && !ggInTelegram());
+  /* ⚠️ Браузер помнит позицию прокрутки и возвращает её при показе экрана.
+     На вкладке игр это выглядит как «экран сам подпрыгнул», поэтому на время
+     игр восстановление выключаем, а на выходе возвращаем как было */
+  try {
+    if ('scrollRestoration' in history) history.scrollRestoration = on ? 'manual' : 'auto';
+  } catch(e){}
 }
 
 async function ggOpen(){
@@ -22202,6 +22216,19 @@ function ggChrome(hide, keepTabs){
   } catch(e){}
 }
 
+/* ⚠️⚠️ ПРОКРУТКА ПРИ ОТКРЫТИИ ПРИХОДИТ ИЗ ТРЁХ МЕСТ, И ОДНОГО `scrollTo(0,0)`
+   МАЛО. Во-первых, браузер сам ВОССТАНАВЛИВАЕТ прежнюю позицию прокрутки —
+   особенно заметно с домашнего экрана, где страница не перезагружается.
+   Во-вторых, один вызов уходит ДО того, как экран отрисован: прокручивать
+   ещё нечего, а потом высота меняется. В-третьих, липкая шапка и клавиатура
+   двигают позицию уже после. Поэтому: отключаем восстановление и доводим
+   позицию трижды — сразу, следующим кадром и после отрисовки. */
+function ggToTop(){
+  try { window.scrollTo(0, 0); } catch(e){}
+  if (window.requestAnimationFrame) requestAnimationFrame(function(){ window.scrollTo(0, 0); });
+  setTimeout(function(){ window.scrollTo(0, 0); }, 160);
+}
+
 function ggShow(which){
   document.getElementById('gg-list-wrap').style.display  = which === 'list'  ? '' : 'none';
   document.getElementById('gg-play-wrap').style.display  = which === 'play'  ? '' : 'none';
@@ -22210,7 +22237,7 @@ function ggShow(which){
      баром наверху вердикт со счётом начинался у середины, а материал занятия
      и кнопка следующей ступени уходили под нижний край */
   ggChrome(which === 'play', which === 'final');
-  window.scrollTo(0, 0);
+  ggToTop();
 }
 
 function ggBackToList(){
