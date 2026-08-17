@@ -9116,6 +9116,7 @@ function diagShowEnv(){
     `Platform (tg.platform): ${tg?.platform ?? '—'}`,
     `Версия Bot API: ${tg?.version ?? '—'}`,
     `SDK Telegram: ${typeof tgSdkWhen !== 'undefined' ? tgSdkWhen : '—'}`,
+    `Окно: innerHeight ${window.innerHeight} · экран ${window.screen?.height ?? '—'} · зона сверху ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
     `Режим и отступ сверху: ${typeof tgSafeWhy !== 'undefined' && tgSafeWhy ? tgSafeWhy : '(не считался)'}`,
     `--safe-top сейчас: ${getComputedStyle(document.documentElement).getPropertyValue('--safe-top').trim() || '—'}`,
     `Кнопка «назад»: привязка ${typeof tgBackHow !== 'undefined' && tgBackHow ? tgBackHow : '(нет)'}, нажатий получено ${typeof tgBackFired !== 'undefined' ? tgBackFired : '—'}`,
@@ -17109,10 +17110,19 @@ function applyWebSafeArea(){
      Признак чисто геометрический: мы внутри Telegram (данные запуска в
      адресе), а вебвью ростом во весь экран — значит полосы Telegram нет и
      кнопки плавают над контентом. */
+  /* ⚠️⚠️ ПРИЗНАК ПОЛНОГО ЭКРАНА БЕЗ SDK — ПО СТАТУС-БАРУ, А НЕ ПО ВЫСОТЕ
+     ОКНА. Сравнение `innerHeight` с высотой экрана оказалось слишком
+     придирчивым (допуск 8 px), и признак не срабатывал.
+     Надёжнее так: в ОКОННОМ режиме вебвью начинается ПОД шапкой Telegram, и
+     `env(safe-area-inset-top)` там ноль. В полноэкранном вебвью занимает весь
+     экран, включая статус-бар, — зона измеряется (у Denis'а 54 px), а кнопки
+     Telegram плавают прямо над нашей шапкой. Значит: внутри Telegram есть
+     измеримая верхняя зона ИЛИ окно почти во весь экран → нужен запас. */
   try {
     const inTg = typeof isInsideTelegram === 'function' && isInsideTelegram();
     const scr = window.screen && window.screen.height;
-    if (inTg && scr && window.innerHeight >= scr - 8){
+    const tall = scr ? (window.innerHeight >= scr - 40) : false;
+    if (inTg && (measured >= 20 || tall)){
       const need = (typeof TG_FULLSCREEN_TOP !== 'undefined') ? TG_FULLSCREEN_TOP : 92;
       if (measured < need){
         document.documentElement.style.setProperty('--safe-top', need + 'px');
@@ -17245,7 +17255,11 @@ function tgSetupWhenReady(){
    дальше ждать бессмысленно, значит домен недоступен совсем */
 function tgWatchSdk(){
   if (tgSetupWhenReady()) return;
-  if (tgLateTries++ > 60) return;
+  /* ⚠️ ПОЛМИНУТЫ БЫЛО МАЛО. С VPN скрипт с telegram.org приезжал позже, и
+     сторож успевал сдаться — снаружи это выглядело как «опять ничего не
+     работает». Ждём до десяти минут: цена ожидания — один тик в полсекунды,
+     цена сдачи — мёртвая кнопка и разъехавшаяся вёрстка на весь сеанс */
+  if (tgLateTries++ > 1200) return;
   setTimeout(tgWatchSdk, 500);
 }
 
@@ -18154,8 +18168,28 @@ function loadPlatformSdk(){
   var query = '';
   try { hash = location.hash || ''; query = location.search || ''; } catch(e){}
 
+  /* ⚠️⚠️⚠️ SDK TELEGRAM ГРУЗИМ СО СВОЕГО ДОМЕНА, А НЕ С telegram.org.
+     ═══════════════════════════════════════════════════════════════════════
+     ЭТО ПРИЧИНА, ПО КОТОРОЙ ТРИ ПРАВКИ ПОДРЯД «НЕ РАБОТАЛИ». Диагностика с
+     телефона: «В Telegram: да · Bot API 9.6», но рядом «SDK Telegram: не
+     доехал», «Режим и отступ: (не считался)», «Кнопка назад: привязка (нет)».
+     Объект в итоге появлялся, но НАМНОГО позже запуска: доступ к telegram.org
+     из России рвётся, а [stated] Denis сидит в Telegram через VPN — там
+     загрузка растягивается настолько, что её не дожидается никакой разумный
+     потолок. Всё, что настраивается на старте (безопасная зона, подписки,
+     кнопка «назад»), проходило впустую.
+
+     Копия лежит рядом с приложением на том же GitHub Pages: она приходит за
+     миллисекунды и не зависит ни от VPN, ни от блокировок. Сам скрипт
+     общается с клиентом Telegram через нативный мост, а не по сети, поэтому
+     работает точно так же.
+     ⚠️ Если копии почему-то нет — падаем обратно на telegram.org, как было. */
   var src = '';
-  if (hash.indexOf('tgWebAppData') >= 0) src = 'https://telegram.org/js/telegram-web-app.js';
+  var fallbackSrc = '';
+  if (hash.indexOf('tgWebAppData') >= 0){
+    src = 'telegram-web-app.js';                                  // своя копия
+    fallbackSrc = 'https://telegram.org/js/telegram-web-app.js';  // запасной путь
+  }
   else if (query.indexOf('vk_user_id') >= 0 && query.indexOf('sign') >= 0)
     src = 'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
   // MAX и обычный веб: ни один SDK не нужен — сразу дальше
@@ -18165,11 +18199,18 @@ function loadPlatformSdk(){
   return new Promise(function(resolve){
     var done = false;
     function finish(ok){ if (!done){ done = true; resolve(ok); } }
-    var el = document.createElement('script');
-    el.src = src;
-    el.onload = function(){ finish(true); };
-    el.onerror = function(){ finish(false); };   // домен недоступен — идём без него
-    document.head.appendChild(el);
+    function load(url, onFail){
+      var el = document.createElement('script');
+      el.src = url;
+      el.onload = function(){ finish(true); };
+      el.onerror = onFail;
+      document.head.appendChild(el);
+    }
+    load(src, function(){
+      /* Своя копия не нашлась — пробуем исходный адрес */
+      if (fallbackSrc) load(fallbackSrc, function(){ finish(false); });
+      else finish(false);
+    });
     setTimeout(function(){ finish(false); }, 3500);
   });
 }
