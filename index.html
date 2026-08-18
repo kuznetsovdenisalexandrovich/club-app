@@ -4264,6 +4264,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .mag-lock-text{font-size:11px;font-weight:600;color:#fff;text-align:center;line-height:1.35}
 .mag-new{position:absolute;top:8px;right:8px;background:var(--warm);color:#fff;font-size:10px;
   font-weight:700;letter-spacing:.06em;padding:3px 7px;border-radius:20px;z-index:2}
+/* Плашка свежего выпуска. СЛЕВА вверху, чтобы не столкнуться с «НОВОЕ» справа:
+   у только что вышедшего выпуска обе метки стоят одновременно */
+.mag-fresh{position:absolute;top:8px;left:8px;background:rgba(20,18,16,.82);color:#fff;
+  font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 7px;border-radius:20px;z-index:2;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mag-fresh-until{font-size:11px;color:var(--warm);font-weight:600;margin-top:2px}
 .mag-item.is-new .mag-cover{box-shadow:0 0 0 2px var(--warm),0 8px 24px rgba(232,97,74,.28)}
 .mag-name{font-size:12.5px;font-weight:600;line-height:1.35;margin-top:8px}
 .mag-sub{font-size:11px;color:var(--text-faint);margin-top:2px}
@@ -11648,6 +11654,21 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'deeplink.free_vk': {
     c:'Ссылки на контент', l:'Кнопка открытой версии во ВКонтакте', w:'Приход по ссылке на занятие', i:false,
     t:'Смотреть в VK' },
+  'magazine.fresh_badge': {
+    c:'Журнал', l:'Плашка на обложке свежего выпуска', w:'Полка журнала', i:true,
+    t:'СВЕЖИЙ' },
+  'magazine.fresh_until': {
+    c:'Журнал', l:'Строка со сроком под свежим выпуском', w:'Полка журнала', i:true,
+    t:'Открыт до {d}' },
+  'magazine.fresh_note': {
+    c:'Журнал', l:'Пояснение в попапе свежего выпуска', w:'Попап выпуска', i:false,
+    t:'Свежий выпуск открыт всем участникам до {d}. Потом он уйдёт в архив — но у тебя останется открытым.' },
+  'magazine.teaser_btn': {
+    c:'Журнал', l:'Кнопка чтения начала выпуска', w:'Попап закрытого выпуска у гостя', i:false,
+    t:'Прочитать начало' },
+  'magazine.teaser_note': {
+    c:'Журнал', l:'Пояснение под кнопкой начала выпуска', w:'Попап закрытого выпуска у гостя', i:false,
+    t:'Начало выпуска можно прочитать без подписки.' },
   'deeplink.not_found': {
     c:'Ссылки на контент', l:'Занятие по ссылке не найдено', w:'Приход по битой ссылке', i:false,
     t:'Такого занятия не нашлось — вот вся библиотека' },
@@ -13869,6 +13890,32 @@ function contentFromUrl(){
       return true;
     }
   }
+  /* `magpay_<ключ>` — возврат кнопкой «Читать целиком» из тизера. Ключ
+     запоминаем и ведём сразу на оплату: человек уже прочитал начало, стена
+     «это для участников» ему ничего не добавит.
+     ⚠️ ПРОВЕРЯЕМ ЭТОТ ПРЕФИКС ПЕРВЫМ и сравниваем целиком (урок 137): ключи
+     разных маршрутов начинаются одинаково, и подстрочная проверка увела бы
+     `magpay_` в ветку `mag_` */
+  if (param.indexOf('magpay_') === 0){
+    const key = param.slice(7);
+    if (!key) return false;
+    const shell = document.getElementById('app-shell');
+    const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+    if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+    rememberEntrySource('link_' + param);
+    (async function(){
+      await waitProfile();
+      if (typeof claimMagazineTeaser === 'function') await claimMagazineTeaser(key);
+      // Участник по этой ссылке тоже может прийти — ему открываем сам выпуск,
+      // предлагать оплату тому, кто уже платит, незачем
+      switchView('magazine');
+      if (typeof loadMagazine === 'function') await loadMagazine();
+      const it = magazineIssueByKey(key);
+      if (it && it.unlocked) { openMagazineIssue(key); return; }
+      if (typeof openAccessPage === 'function') openAccessPage();
+    })();
+    return true;
+  }
   if (param.indexOf('mag_') === 0){
     const key = param.slice(4);
     if (!key) return false;
@@ -13880,6 +13927,14 @@ function contentFromUrl(){
       await waitProfile();
       switchView('magazine');
       if (typeof loadMagazine === 'function') await loadMagazine();
+      /* ⚠️ ГОСТЮ С ЗАКРЫТЫМ ВЫПУСКОМ ОТКРЫВАЕМ ТИЗЕР СРАЗУ, а не попап с
+         обложкой. Ссылку он увидел в канале и пришёл читать — попап с одной
+         кнопкой «Получить доступ» здесь работает как дверь перед носом */
+      const it = magazineIssueByKey(key);
+      if (it && !it.unlocked && !isMember && it.has_teaser){
+        if (typeof readMagazineTeaser === 'function') readMagazineTeaser(key);
+        return;
+      }
       if (typeof openMagazineIssue === 'function') openMagazineIssue(key);
     })();
     return true;
@@ -19859,6 +19914,13 @@ function renderMagazineShelf(){
     }
 
     const badge = it.is_new ? '<div class="mag-new">НОВОЕ</div>' : '';
+    // Свежий выпуск открыт всем участникам, пока не вышел срок. Срок показываем
+    // ЯВНО: он и есть повод открыть выпуск сегодня, а не «когда-нибудь потом»
+    const fresh = it.open_now
+      ? `<div class="mag-fresh">${escapeHtml(t('magazine.fresh_badge'))}</div>` : '';
+    const until = (it.open_now && it.open_until_text)
+      ? `<div class="mag-fresh-until">${escapeHtml(tf('magazine.fresh_until', { d: it.open_until_text }))}</div>`
+      : '';
     const cover = it.cover_url
       ? `<img src="${escapeHtml(it.cover_url)}" alt="" onerror="this.style.visibility='hidden'">`
       : '';
@@ -19868,9 +19930,10 @@ function renderMagazineShelf(){
 
     return `
       <div class="${cls.join(' ')}" onclick="openMagazineIssue(${jsArg(it.issue_key)})">
-        <div class="mag-cover">${cover}${lock}${badge}</div>
+        <div class="mag-cover">${cover}${lock}${badge}${fresh}</div>
         <div class="mag-name">${escapeHtml(it.title || it.issue_key)}</div>
         <div class="mag-sub">${escapeHtml(it.published_at || '')}</div>
+        ${until}
         ${progress}
       </div>`;
   }).join('');
@@ -19899,11 +19962,24 @@ function openMagazineIssue(key){
       ${it.has_pc ? `<button class="lec-link-btn" style="flex:0 0 72px;max-width:none;margin-bottom:0;padding-left:0;padding-right:0" onclick="readMagazineIssue(${jsArg(key)},'pc')">ПК</button>` : ''}
     </div>`;
   } else if (!isMember){
-    action = `<button class="lec-link-btn access-btn" style="width:100%" onclick="closeMagazineIssue();openPaywall()">Получить доступ</button>`;
+    /* ⚠️ ТИЗЕР ПОКАЗЫВАЕМ ТОЛЬКО НЕ-УЧАСТНИКУ. Обрыв на середине — честная
+       дразнилка для того, кто ещё не платил, но у оплатившего он читается как
+       обман ожидания: заплатил и всё равно уткнулся в стену. Участнику с
+       закрытым архивным выпуском тизер не предлагаем вовсе */
+    const teaser = it.has_teaser
+      ? `<button class="lec-link-btn" style="width:100%;margin-bottom:8px" onclick="readMagazineTeaser(${jsArg(key)})">${escapeHtml(t('magazine.teaser_btn'))}</button>`
+      : '';
+    action = teaser
+      + `<button class="lec-link-btn access-btn" style="width:100%" onclick="closeMagazineIssue();openPaywall()">Получить доступ</button>`;
   }
 
   const savedLabel = it.saved ? 'Убрать из отложенного' : 'Отложить на попозже';
-  const note = it.unlocked ? ''
+  // У свежего выпуска пояснение своё: срок плюс обещание, что он останется
+  const note = (it.unlocked && it.open_now && it.open_until_text)
+    ? `<div class="mag-modal-note">${escapeHtml(tf('magazine.fresh_note', { d: it.open_until_text }))}</div>`
+    : (!it.unlocked && !isMember && it.has_teaser)
+    ? `<div class="mag-modal-note">${escapeHtml(t('magazine.teaser_note'))}</div>`
+    : it.unlocked ? ''
     : `<div class="mag-modal-note">${it.unlock_date
         ? 'Откроется ' + escapeHtml(it.unlock_date) + ' — со следующим платежом.'
         : 'Откроется позже: каждый платёж открывает следующий выпуск.'}</div>`;
@@ -19965,6 +20041,35 @@ function rememberMagazineRead(it){
       key: it.issue_key, title: it.title || it.issue_key, ts: Date.now()
     }));
   } catch(e){}
+}
+
+/* Запомнить, ЧЕЙ тизер привёл человека. Решение принимает сервер: он же
+   проверяет, что человек ещё не участник и что запись не перезаписывается */
+async function claimMagazineTeaser(key){
+  if (!telegramId || !key) return;
+  try {
+    await fetch(`${API_URL}/magazine/teaser-claim`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, issue_key: key })
+    });
+  } catch(e){}
+}
+
+/* Тизер — обрыв выпуска на самом интересном месте.
+
+   ⚠️ БИЛЕТ ЗДЕСЬ НЕ ПРОСИМ И `telegramId` НЕ ТРЕБУЕМ. Адрес публичный
+   сознательно: ссылки на тизер живут в открытых каналах, и человек может
+   открыть их через год, вообще не будучи знакомым клубу. Билет сделал бы
+   такую ссылку мёртвой ровно через четверть часа */
+async function readMagazineTeaser(key){
+  if (!key) return;
+  claimMagazineTeaser(key);
+  closeMagazineIssue();
+  track('magazine_teaser', key);
+  const ctx = (window.Telegram && window.Telegram.WebApp
+               && window.Telegram.WebApp.initDataUnsafe
+               && window.Telegram.WebApp.initDataUnsafe.user) ? 'tg' : 'pwa';
+  openUrl(`${API_URL}/magazine/teaser/${encodeURIComponent(key)}?c=${encodeURIComponent(ctx)}`);
 }
 
 async function readMagazineIssue(key, variant){
