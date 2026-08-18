@@ -5441,6 +5441,27 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <!-- Попап разбора хода — ГОСТЬ УЖЕ ИГРАЕТ, и говорить ему «игра для
        участников» — враньё. Здесь речь только про разбор, и вторая кнопка
        возвращает в партию, а не откладывает «на потом» -->
+  <!-- Куда отправить ссылку. Показывается только в вебе и в MAX — см. shareWithChoice -->
+  <div class="gg-overlay" id="share-where-overlay" onclick="if(event.target===this)shareWhereClose()">
+    <div class="gg-modal" style="position:relative">
+      <button class="gg-modal-close" onclick="shareWhereClose()">✕</button>
+      <div class="gg-modal-h" data-text="share.where_h">Куда отправляешь?</div>
+      <div class="gg-modal-p" data-text="share.where_p">Ссылка откроется прямо в том приложении, которое выберешь.</div>
+      <div class="share-where-row">
+        <button class="share-where-btn" type="button" onclick="shareWherePick('tg')">
+          <span class="share-where-ico">TG</span><span data-text="share.where_tg">Telegram</span></button>
+        <button class="share-where-btn" type="button" onclick="shareWherePick('vk')">
+          <span class="share-where-ico">ВК</span><span data-text="share.where_vk">ВКонтакте</span></button>
+        <button class="share-where-btn" type="button" onclick="shareWherePick('max')">
+          <span class="share-where-ico">MAX</span><span data-text="share.where_max">MAX</span></button>
+        <button class="share-where-btn" type="button" onclick="shareWherePick('web')">
+          <span class="share-where-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>
+          </span><span data-text="share.where_web">Просто ссылка</span></button>
+      </div>
+    </div>
+  </div>
+
   <div class="gg-overlay" id="gg-m-note" onclick="if(event.target===this)ggClose('gg-m-note')">
     <div class="gg-modal" style="position:relative">
       <button class="gg-modal-close" onclick="ggClose('gg-m-note')">✕</button>
@@ -7160,6 +7181,35 @@ body.api-override-on #api-override-bar{display:block}
   box-shadow:var(--gg-pill-sh);backdrop-filter:blur(16px)}
 .gg-btn-quiet{background:transparent;color:var(--gg-muted)}
 .gg-btn-row{display:flex;gap:12px;margin-bottom:12px}
+/* Круглая кнопка шеринга в углу карточки игры. Зона нажатия 34px —
+   меньше берётся мимо пальцем и вместо шеринга открывается партия */
+.gg-share-btn{position:absolute;top:10px;right:10px;width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;padding:0;
+  border-radius:999px;border:1px solid var(--gg-line,rgba(255,255,255,.14));
+  background:var(--gg-card2,rgba(255,255,255,.06));color:var(--gg-dim,#9aa4bf);
+  cursor:pointer;z-index:2}
+.gg-share-btn svg{width:17px;height:17px}
+.gg-share-btn:active{transform:scale(.92)}
+.gg-gm-card{position:relative}
+/* Полновесная строка на финале партии */
+.gg-share-line{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px;margin-bottom:12px;border-radius:14px;
+  border:1px solid var(--gg-line,rgba(255,255,255,.14));background:transparent;
+  color:var(--gg-dim,#9aa4bf);font-size:13px;font-weight:700;cursor:pointer}
+.gg-share-line svg{width:16px;height:16px}
+.gg-share-line:active{transform:scale(.98)}
+/* Четыре варианта в два ряда: в один ряд подписи не влезают на узком телефоне */
+.share-where-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.share-where-btn{display:flex;flex-direction:column;align-items:center;gap:7px;
+  padding:14px 8px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--gg-line,rgba(255,255,255,.14));
+  background:var(--gg-card2,rgba(255,255,255,.06));
+  color:var(--gg-text,#e8ecf6);font-size:12px;font-weight:700}
+.share-where-btn:active{transform:scale(.97)}
+.share-where-ico{display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:999px;font-size:12px;font-weight:800;
+  background:var(--gg-card,rgba(255,255,255,.08));color:var(--gg-dim,#9aa4bf)}
+.share-where-ico svg{width:20px;height:20px}
 .gg-btn-row .gg-btn{flex:1}
 
 /* ══════════ СЛУЖЕБНЫЕ СОСТОЯНИЯ ══════════ */
@@ -9620,6 +9670,9 @@ async function loadProfile() {
     // «Вот полная версия того, что тебя сюда привело» — вместо обычного
     // «Продолжить просмотр» на главной, ровно один раз после оплаты
     welcomeLectureSlug = u.welcome_lecture_slug || '';
+    /* Код для ссылок, которыми человек делится. Сервер выдаёт его лениво,
+       при первом запросе профиля — до этого хвост откатывается на телеграмный айди */
+    shareCode = u.share_code || '';
     loadContinueWidget();
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
@@ -11150,6 +11203,15 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.note_h': { c:'Игры', l:'Заголовок попапа разбора хода', w:'Попап внутри партии', i:false, t:'Разбор хода — у участников' },
   'games.note_p': { c:'Игры', l:'Текст попапа разбора хода', w:'Попап внутри партии', i:false, t:'Играть можно и так. А в клубе после каждой твоей реплики видно, что сработало, что клиента оттолкнуло и какое занятие разбирает ровно этот момент.' },
   'games.note_cta': { c:'Игры', l:'Кнопка в попапе разбора', w:'Попап внутри партии', i:false, t:'Что в клубе' },
+  'share.where_h': { c:'Поделиться', l:'Заголовок окошка выбора', w:'Веб и MAX', i:false, t:'Куда отправляешь?' },
+  'share.where_p': { c:'Поделиться', l:'Пояснение в окошке выбора', w:'Веб и MAX', i:false, t:'Ссылка откроется прямо в том приложении, которое выберешь.' },
+  'share.where_tg': { c:'Поделиться', l:'Подпись Telegram', w:'Окошко выбора', i:false, t:'Telegram' },
+  'share.where_vk': { c:'Поделиться', l:'Подпись ВК', w:'Окошко выбора', i:false, t:'ВКонтакте' },
+  'share.where_max': { c:'Поделиться', l:'Подпись MAX', w:'Окошко выбора', i:false, t:'MAX' },
+  'share.where_web': { c:'Поделиться', l:'Подпись обычной ссылки', w:'Окошко выбора', i:false, t:'Просто ссылка' },
+  'games.share': { c:'Игры', l:'Кнопка «позвать друга»', w:'Финал партии', i:false, t:'Позвать друга сыграть' },
+  'games.share_text': { c:'Игры', l:'Текст при отправке ссылки на игру ({игра} — название)', w:'Шторка шеринга', i:false, t:'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.' },
+  'games.link_gone': { c:'Игры', l:'Ссылка на исчезнувшую игру', w:'Список игр', i:false, t:'Этой игры больше нет — посмотри остальные' },
   'games.note_back': { c:'Игры', l:'Кнопка возврата в партию', w:'Попап внутри партии', i:false, t:'Доиграть' },
   'games.ok': { c:'Игры', l:'Кнопка «понятно»', w:'Попап', i:false, t:'Понятно' },
   'games.level_points': { c:'Игры', l:'Кнопка про баллы в попапе уровня', w:'Попап', i:false, t:'Как получить баллы' },
@@ -11836,6 +11898,131 @@ const BOT_LINK = 'https://t.me/youselllikeagod_bot';
    по имени из `MAX_BOT_NAME`. Оба адреса ЖИВЬЁМ НЕ ПРОВЕРЕНЫ */
 const BOT_LINK_VK  = 'https://vk.ru/app7062840#8a7f94cebf065c7773c351c7dc1f4c1f&force=1';
 const BOT_LINK_MAX = 'https://max.ru/id616616492674_bot';
+/* ══ ССЫЛКА НА ЭКРАН АППА — ВСЕГДА ВНУТРИ СВОЕЙ ПЛОЩАДКИ ═══════
+   [stated] Denis 18.08: «давай ссылки держать внутри площадок».
+   ⚠️ ДО ЭТОГО ВСЕ ССЫЛКИ СОБИРАЛИСЬ ТЕЛЕГРАМНЫМИ (`quizShareUrl`, `appLink`):
+   человек из ВК делился ссылкой, которая уводит из ВК.
+
+   Форматы разные, полезная нагрузка ОДНА и та же (`тип_значение`):
+     Telegram — `t.me/бот/app?startapp=<payload>`
+     ВК       — `vk.ru/app<id>#<payload>` (ВК отдаёт хеш как есть, `appStartParam` его читает)
+     веб      — `<адрес аппа>?startapp=<payload>`
+   ⚠️ MAX: адреса мини-приложения у нас НЕТ, и гадать его нельзя (урок 43).
+   Пока `MAX_APP_LINK` пуст — в MAX отдаём веб-ссылку (откроется в браузере,
+   но сработает). Проставить адрес — одна строка, остальное заработает само. */
+const VK_APP_LINK  = 'https://vk.ru/app54715238';
+const MAX_APP_LINK = '';
+function shareLink(payload){
+  const load = String(payload || '');
+  if (typeof isInsideMax === 'function' && isInsideMax()){
+    if (MAX_APP_LINK) return MAX_APP_LINK + '#' + load;
+    return APP_URL + '?startapp=' + encodeURIComponent(load);
+  }
+  if (typeof isInsideVk === 'function' && isInsideVk()) return VK_APP_LINK + '#' + load;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
+                  && Telegram.WebApp.initDataUnsafe.user);
+  if (inTg) return BOT_LINK + '/app?startapp=' + encodeURIComponent(load);
+  return APP_URL + '?startapp=' + encodeURIComponent(load);
+}
+
+/* Хвост с приметой того, кто делится. Задним числом заслугу не пришьём:
+   `referred_by` пишется ОДИН раз и больше не перезаписывается.
+   ⚠️ КОД ВМЕСТО ТЕЛЕГРАМНОГО АЙДИ (18.08.2026). Две причины: у веб-участника
+   и у пришедшего из ВК телеграмного айди НЕТ вовсе — такой человек делился
+   и не получал за приведённых ничего; и айди уезжал наружу в каждой ссылке.
+   Откат на айди оставлен: код приезжает с профилем, а поделиться могут раньше */
+let shareCode = '';
+function shareTail(){
+  if (shareCode) return '_' + shareCode;
+  return telegramId ? ('_' + telegramId) : '';
+}
+
+/* ══ ЧЕМ ДЕЛИТЬСЯ — ТОЖЕ ПО ПЛОЩАДКЕ ═════════════════════════
+   Порядок попыток от родного к общему, каждая следующая — запасная для
+   предыдущей. Копирование в буфер — последний рубеж, он работает везде.
+   ⚠️ ОТМЕНА ЧЕЛОВЕКОМ — НЕ ОШИБКА: после отмены ничего не копируем и не
+   показываем тост — иначе выход из шторки выглядит как сработавшая кнопка */
+/* ══ ОКОШКО ВЫБОРА ПЛОЩАДКИ — ТОЛЬКО ТАМ, ГДЕ ПЛОЩАДКИ НЕТ ══════
+   Внутри Telegram и ВК выбор лишний: человек там, друг почти наверняка
+   тоже, а лишний экран между «хочу поделиться» и «поделился» стоит нажатий.
+   В вебе площадки нет вовсе — угадывать нечего, и вес веба будет расти:
+   поставивший апп на экран «Домой» дальше всегда открывает именно веб-версию.
+   В MAX спрашиваем по другой причине — своей ссылки на мини-приложение
+   у нас пока нет (`MAX_APP_LINK`); появится — окошко там само перестанет
+   спрашивать. Площадка готового выбора запоминается — второй раз не спрашиваем. */
+const SHARE_WHERE_KEY = 'club_app_share_where';
+let sharePending = null;
+
+function shareTargetLink(where, payload){
+  const load = String(payload || '');
+  if (where === 'tg')  return BOT_LINK + '/app?startapp=' + encodeURIComponent(load);
+  if (where === 'vk')  return VK_APP_LINK + '#' + load;
+  if (where === 'max' && MAX_APP_LINK) return MAX_APP_LINK + '#' + load;
+  return APP_URL + '?startapp=' + encodeURIComponent(load);
+}
+
+/* Главная точка входа для любой кнопки «поделиться» */
+function shareWithChoice(text, payload){
+  const known = (typeof isInsideVk === 'function' && isInsideVk())
+             || (typeof isInsideTelegram === 'function' && isInsideTelegram())
+             || !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
+                   && Telegram.WebApp.initDataUnsafe.user)
+             || ((typeof isInsideMax === 'function' && isInsideMax()) && !!MAX_APP_LINK);
+  if (known){ shareSomething(text, shareLink(payload)); return; }
+  let saved = '';
+  try { saved = localStorage.getItem(SHARE_WHERE_KEY) || ''; } catch(e){}
+  if (saved){ shareSomething(text, shareTargetLink(saved, payload)); return; }
+  sharePending = { text: text, payload: payload };
+  const el = document.getElementById('share-where-overlay');
+  if (el) el.classList.add('open');
+  else shareSomething(text, shareLink(payload));   /* окно не нашлось — не молчим */
+}
+
+function shareWhereClose(){
+  const el = document.getElementById('share-where-overlay');
+  if (el) el.classList.remove('open');
+  sharePending = null;
+}
+
+function shareWherePick(where){
+  const job = sharePending;
+  shareWhereClose();
+  if (!job) return;
+  /* Запоминаем только мессенджеры: «глобус» — разовый выбор для того,
+     кому сейчас нужна обычная ссылка, а не постоянное предпочтение */
+  if (where !== 'web'){ try { localStorage.setItem(SHARE_WHERE_KEY, where); } catch(e){} }
+  track('share_where', where);
+  shareSomething(job.text, shareTargetLink(where, job.payload));
+}
+
+async function shareSomething(text, url){
+  if (!url) return;
+  const msg = (text ? text + ' ' : '') + url;
+  /* ВК: своё окно шеринга через мост */
+  if (typeof isInsideVk === 'function' && isInsideVk() && window.vkBridge && vkBridge.send){
+    try { await vkBridge.send('VKWebAppShare', { link: url }); return; }
+    catch(e){ /* мост не умеет или человек закрыл — падаем ниже на копирование */ }
+  }
+  /* Telegram: штатный выбор чата */
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
+                  && Telegram.WebApp.initDataUnsafe.user);
+  if (inTg && window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink){
+    Telegram.WebApp.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(url)
+      + '&text=' + encodeURIComponent(text || ''));
+    return;
+  }
+  /* Веб и MAX: шторка системы, если есть */
+  if (navigator.share){
+    try { await navigator.share({ text: text || '', url: url }); return; }
+    catch(e){ return; }
+  }
+  if (typeof copyInviteText === 'function'){ copyInviteText(msg); return; }
+  try { await navigator.clipboard.writeText(msg); showToast('Ссылка скопирована'); }
+  catch(e){ showToast('Скопируй ссылку: ' + url); }
+}
+
 function botLinkForPlatform(){
   if (typeof isInsideMax === 'function' && isInsideMax()) return BOT_LINK_MAX;
   if (typeof isInsideVk === 'function' && isInsideVk()) return BOT_LINK_VK;
@@ -13160,7 +13347,7 @@ function routeFromUrl(){
 
 /* Готовая ссылка на любой маршрут из таблицы */
 function deeplinkUrl(name){
-  return BOT_LINK + '/app?startapp=' + encodeURIComponent(name);
+  return shareLink(name);
 }
 
 function renderBonusItems(){
@@ -18479,6 +18666,9 @@ async function init(){
       // Ссылка на конкретную единицу контента (занятие, аудио, выжимка, выпуск).
       // СТОИТ ПЕРЕД таблицей маршрутов: ключи с параметром она не знает
       if (typeof contentFromUrl === 'function' && contentFromUrl()) return;
+      // Ссылка на игру: `g_<ключ>` и `gs_<ключ>`. Тоже с параметром,
+      // поэтому до таблицы маршрутов
+      if (typeof gameFromUrl === 'function' && gameFromUrl()) return;
       // Простые маршруты по таблице DEEPLINKS: schedule, library, cards и т.д.
       // Стоит ПОСЛЕ разборов с параметром и ПЕРЕД тестом: `quiz` есть и в
       // таблице, но `quiz_КОД` со своим экраном результата должен победить
@@ -21835,21 +22025,30 @@ async function attachReferralFromStart(){
   let ref = null;
   if (p.startsWith('r_')) ref = p.slice(2);
   else if (p.startsWith('c_')) {
-    const parts = p.split('_');            // c_<карта>_<айди>
+    const parts = p.split('_');            // c_<карта>_<айди или код>
     if (parts.length >= 3) ref = parts[parts.length - 1];
   }
-  else if (p.startsWith('quiz_')) {
-    // quiz_КОД_айди — результат теста тоже приводит рефералов
+  else if (p.startsWith('quiz_') || p.startsWith('g_') || p.startsWith('gs_')) {
+    /* quiz_КОД_айди, g_<игра>_<айди>, gs_<игра>_<айди>.
+       ⚠️ Хвост берём, только если он ЦЕЛИКОМ из цифр — иначе пострадают
+       ключи с подчёркиванием (тот же приём, что у карточек) */
     const parts = p.split('_');
     const tail = parts[parts.length - 1];
-    if (parts.length >= 3 && /^\d+$/.test(tail)) ref = tail;
+    /* Хвост двух видов: цифры (старый телеграмный айди) или `u`+8 (код).
+       ⚠️ Здесь стояла только проверка на цифры — и ссылка с кодом не привязывала
+       никого МОЛЧА (поймано проверкой 18.08) */
+    if (parts.length >= 3 && (/^\d+$/.test(tail) || /^u[0-9a-z]{8}$/.test(tail))) ref = tail;
   }
-  const refId = Number(ref);
-  if (!refId || refId === Number(telegramId)) return;
+  /* Хвост теперь двух видов: `u`+8 знаков — код карточки, число — старый
+     телеграмный айди. Старые ссылки уже разошлись по чатам — ломать нельзя */
+  const asCode = /^u[0-9a-z]{8}$/.test(String(ref || ''));
+  const refId = asCode ? 0 : Number(ref);
+  if (!asCode && (!refId || refId === Number(telegramId))) return;
   try {
     await fetch(`${API_URL}/referral/attach`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, ref_id: refId })
+      body: JSON.stringify(asCode ? { telegram_id: telegramId, ref_code: ref }
+                                  : { telegram_id: telegramId, ref_id: refId })
     });
   } catch (e) { /* не критично: привязка не должна ломать вход */ }
 }
@@ -21889,8 +22088,8 @@ function quizShareUrl(){
   // всей системе не приводил рефералов вообще: люди приходили по результату
   // теста, вступали, а тому, кто поделился, не начислялось ничего.
   // Формат `quiz_КОД_айди` разбирается тем же приёмом, что `c_<ключ>_<айди>`
-  const tail = telegramId ? ('_' + telegramId) : '';
-  return BOT_LINK + '/app?startapp=quiz_' + encodeURIComponent(code) + tail;
+  /* через общую фабрику: в ВК телеграмная ссылка уводила из ВК */
+  return shareLink('quiz_' + code + shareTail());
 }
 
 async function shareQuizResult(){
@@ -22818,6 +23017,19 @@ function ggRenderList(){
   box.innerHTML = h;
 }
 
+/* Шеринг игры. Ссылка ведёт НА ПРАВИЛА, а не сразу в партию: человеку,
+   которому швырнули ссылку, надо сначала понять, куда он попал.
+   `gs_` остаётся для рассылок, где контекст уже дан текстом */
+function ggShare(key, ev){
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const g = ggFind(key);
+  if (!g) return;
+  const text = (t('games.share_text') || 'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.')
+    .replace('{игра}', g.title || '');
+  track('game_share', key);
+  shareWithChoice(text, 'g_' + key + shareTail());
+}
+
 function ggTrackName(key){
   const map = { presentation: 'Презентация', objections: 'Возражения', questions: 'Вопросы' };
   return map[key] || key;
@@ -22847,7 +23059,16 @@ function ggCardHtml(g){
          + '<div class="gg-lock-txt">' + escapeHtml(pair[1]) + '</div></div>';
   }
 
+  /* Круглая кнопка внутри карточки, у которой свой onclick — ОБЯЗАТЕЛЬНО
+     гасим всплытие, иначе вместе с шерингом откроется ещё и партия */
+  const share = '<button class="gg-share-btn" type="button" aria-label="Поделиться"'
+    + ' onclick="ggShare(' + jsArg(g.key) + ', event)">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>'
+    + '</button>';
+
   return '<div class="gg-gm-card' + (g.locked ? ' gg-locked' : '') + '" onclick="ggTap(' + jsArg(g.key) + ')">'
+    + share
     + (best >= 100 ? '<div class="gg-gm-done">Пройдена</div>' : '')
     + '<div class="gg-gm-top">'
       + '<div class="gg-gm-num">' + escapeHtml(String(g.step || 1)) + '</div>'
@@ -22860,6 +23081,48 @@ function ggCardHtml(g){
 
 function ggFind(key){
   return ((ggList && ggList.games) || []).find(function(g){ return g.key === key; });
+}
+
+/* ══ ДИПЛИНКИ НА ИГРЫ ══════════════════════════════════════
+   `g_<ключ>`  — карточка с правилами (человек решает сам)
+   `gs_<ключ>` — сразу партия (для «вот, иди поиграй»)
+   Кому что открывать, решает НЕ ссылка, а сервер: в `/games/list` у игры уже
+   есть `locked` с причиной, и `ggTap` показывает нужный попап — уровень,
+   ступень или участие. Гостю первая игра бесплатна, дальше пейвол.
+   ⚠️ ЖДЁМ ПРОФИЛЬ И СПИСОК, а не паузу: до прихода `/users/me` участник
+   выглядит гостём и упирается в чужой пейвол */
+async function ggOpenTo(key, mode){
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  switchView('games');
+  await waitProfile(4000);
+  await ggLoad();
+  const g = ggFind(key);
+  if (!g){ showToast(t('games.link_gone') || 'Этой игры больше нет — посмотри остальные'); return; }
+  if (g.locked){ ggTap(key); return; }
+  if (mode === 'play') ggStart(key); else ggRulesFor(g);
+}
+
+function gameFromUrl(){
+  const param = appStartParam();
+  const pairs = [['gs_', 'play'], ['g_', 'rules']];
+  for (let i = 0; i < pairs.length; i++){
+    const pref = pairs[i][0];
+    if (param.indexOf(pref) !== 0) continue;
+    /* Отрезаем хвост только по примете: целиком из цифр (старый телеграмный
+       айди) либо `u`+8 знаков (код). ⚠️ Без приметы `g_two_part_key` был бы
+       неотличим от `g_two_part_<код>` — именно ради этого код начинается с `u` */
+    let key = param.slice(pref.length);
+    const parts = key.split('_');
+    const tail = parts[parts.length - 1];
+    if (parts.length >= 2 && (/^\d+$/.test(tail) || /^u[0-9a-z]{8}$/.test(tail))) key = parts.slice(0, -1).join('_');
+    if (!key) return false;
+    rememberEntrySource('link_' + pref.replace('_', ''));
+    ggOpenTo(key, pairs[i][1]);
+    return true;
+  }
+  return false;
 }
 
 /* Тап по карточке: закрытая открывает СВОЙ попап, открытая — правила */
@@ -23278,6 +23541,16 @@ function ggFinal(f){
     h += '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggRetry()">' + escapeHtml(t('games.again') || 'Сыграть ещё') + '</button>';
   }
   h += '</div>';
+
+  /* Позвать друга — ИМЕННО ЗДЕСЬ: человек только что получил вердикт,
+     ему есть что сказать. Третьей кнопкой в ряд не ставим — она оттянет
+     нажатия у «Сыграть ещё», а повторная партия нам ценнее */
+  if (ggS && ggS.game_key){
+    h += '<button class="gg-share-line" type="button" onclick="ggShare(' + jsArg(ggS.game_key) + ', event)">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>'
+      + '<span>' + escapeHtml(t('games.share') || 'Позвать друга сыграть') + '</span></button>';
+  }
 
   document.getElementById('gg-final-wrap').innerHTML = h;
   ggShow('final');
