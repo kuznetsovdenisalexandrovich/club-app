@@ -5005,7 +5005,14 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          «на странице информации о клубе можно уже дать возможность
          осмотреться в приложении». Кнопка нужна только тому, кто ещё не
          вошёл, — участнику осматриваться незачем, он уже внутри -->
-    <button class="lec-link-btn" id="club-info-browse" style="display:none" onclick="clubInfoBrowse()" data-text="club.browse">Осмотреться в приложении</button>
+    <!-- ⚠️ КЛАСС `access-btn` ОБЯЗАТЕЛЕН: голый `lec-link-btn` — это `flex:1`,
+         кнопка из ряда, и в одиночке она встаёт по ширине текста слева -->
+    <button class="lec-link-btn access-btn" id="club-info-browse" style="display:none" onclick="clubInfoBrowse()" data-text="club.browse">Осмотреться в приложении</button>
+    <!-- Человек с подпиской, которого апп не узнал, попадает сюда из
+         предупреждения о демо-режиме и без этого выхода упирался в тупик.
+         ⚠️ ИМЕННО НАДПИСЬ, НЕ КНОПКА — [stated] Denis: третья кнопка рядом
+         с «получить доступ» съедает конверсию. На экране оплаты её НЕТ сознательно -->
+    <div class="payment-help-link" id="club-info-login" style="display:none" onclick="clubInfoLogin()" data-text="club.already">Я уже участник — войти</div>
     <div class="scroll-spacer"></div>
   </div>
 
@@ -5428,6 +5435,21 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
               onclick="ggClose('gg-m-member');switchView('club-info')" data-text="games.member_cta">Что в клубе</button>
       <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggClose('gg-m-member')" data-text="games.later">Позже</button>
+    </div>
+  </div>
+
+  <!-- Попап разбора хода — ГОСТЬ УЖЕ ИГРАЕТ, и говорить ему «игра для
+       участников» — враньё. Здесь речь только про разбор, и вторая кнопка
+       возвращает в партию, а не откладывает «на потом» -->
+  <div class="gg-overlay" id="gg-m-note" onclick="if(event.target===this)ggClose('gg-m-note')">
+    <div class="gg-modal" style="position:relative">
+      <button class="gg-modal-close" onclick="ggClose('gg-m-note')">✕</button>
+      <div class="gg-robot"></div>
+      <div class="gg-modal-h" data-text="games.note_h">Разбор хода — у участников</div>
+      <div class="gg-modal-p" data-text="games.note_p">Играть можно и так. А в клубе после каждой твоей реплики видно, что сработало, что клиента оттолкнуло и какое занятие разбирает ровно этот момент.</div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
+              onclick="ggClose('gg-m-note');switchView('club-info')" data-text="games.note_cta">Что в клубе</button>
+      <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggClose('gg-m-note')" data-text="games.note_back">Доиграть</button>
     </div>
   </div>
 
@@ -11125,6 +11147,10 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.member_p': { c:'Игры', l:'Текст «только участникам»', w:'Попап', i:false, t:'Первую игру можно пройти бесплатно. Остальные открываются вместе с клубом — вместе с разбором каждого хода по базе занятий.' },
   'games.member_cta': { c:'Игры', l:'Кнопка «что в клубе»', w:'Попап', i:false, t:'Что в клубе' },
   'games.later': { c:'Игры', l:'Кнопка «позже»', w:'Попап', i:false, t:'Позже' },
+  'games.note_h': { c:'Игры', l:'Заголовок попапа разбора хода', w:'Попап внутри партии', i:false, t:'Разбор хода — у участников' },
+  'games.note_p': { c:'Игры', l:'Текст попапа разбора хода', w:'Попап внутри партии', i:false, t:'Играть можно и так. А в клубе после каждой твоей реплики видно, что сработало, что клиента оттолкнуло и какое занятие разбирает ровно этот момент.' },
+  'games.note_cta': { c:'Игры', l:'Кнопка в попапе разбора', w:'Попап внутри партии', i:false, t:'Что в клубе' },
+  'games.note_back': { c:'Игры', l:'Кнопка возврата в партию', w:'Попап внутри партии', i:false, t:'Доиграть' },
   'games.ok': { c:'Игры', l:'Кнопка «понятно»', w:'Попап', i:false, t:'Понятно' },
   'games.level_points': { c:'Игры', l:'Кнопка про баллы в попапе уровня', w:'Попап', i:false, t:'Как получить баллы' },
   'games.start': { c:'Игры', l:'Кнопка старта партии', w:'Попап правил', i:false, t:'Начать партию' },
@@ -11186,6 +11212,9 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'club.browse': {
     c:'О клубе', l:'Кнопка «осмотреться» на странице описания', w:'Страница «О клубе», видна не участнику', i:false,
     t:'Осмотреться в приложении' },
+  'club.already': {
+    c:'О клубе', l:'Надпись «я уже участник»', w:'Страница «О клубе», видна не участнику', i:false,
+    t:'Я уже участник — войти' },
   'access.about': {
     c:'Оплата', l:'Выход с экрана оплаты в описание клуба', w:'Экран «Получить доступ»', i:false,
     t:'Сначала узнать подробнее о клубе' },
@@ -11800,6 +11829,18 @@ function dismissOnboardingBanner(){
 const CHANNEL_JOIN_LINK = 'https://t.me/+tqAEu2fTTfU0N2Ey';
 const CHAT_JOIN_LINK = 'https://t.me/+TxNRziNPk2hkZmVi';
 const BOT_LINK = 'https://t.me/youselllikeagod_bot';
+/* ⚠️ ВНУТРИ КАЖДОЙ ПЛОЩАДКИ ВЕДЁМ НА БОТА ЭТОЙ ЖЕ ПЛОЩАДКИ.
+   [stated] Denis 18.08: «нам надо не запутаться в ботах». Отправить человека
+   из MAX в телеграмного бота — значит потерять его совсем.
+   ВК — подписная Salebot (чистой ссылки на ВК-бота у нас нет), MAX — бот
+   по имени из `MAX_BOT_NAME`. Оба адреса ЖИВЬЁМ НЕ ПРОВЕРЕНЫ */
+const BOT_LINK_VK  = 'https://vk.ru/app7062840#8a7f94cebf065c7773c351c7dc1f4c1f&force=1';
+const BOT_LINK_MAX = 'https://max.ru/id616616492674_bot';
+function botLinkForPlatform(){
+  if (typeof isInsideMax === 'function' && isInsideMax()) return BOT_LINK_MAX;
+  if (typeof isInsideVk === 'function' && isInsideVk()) return BOT_LINK_VK;
+  return BOT_LINK;
+}
 /* Личка Denis'а — сюда ведёт окошко «не могу оплатить». Отдельно от бота:
    человеку, у которого не проходит платёж, нужен ЖИВОЙ собеседник */
 const SUPPORT_DM_LINK = 'https://t.me/kuznetsov_denis';
@@ -11807,7 +11848,7 @@ const SUPPORT_DM_LINK = 'https://t.me/kuznetsov_denis';
 // человек не должен упираться в тупик, поэтому даём выход прямо в бота (сворачивает
 // апп и открывает чат с ботом внутри Telegram, не во внешнем браузере — см. openUrl)
 function roundTripErrorHtml(){
-  return `<div class="empty">Приложение тупит( можешь <a href="#" onclick="event.preventDefault();openUrl('${BOT_LINK}')">продолжить в боте</a></div>`;
+  return `<div class="empty">Приложение тупит( можешь <a href="#" onclick="event.preventDefault();openUrl('${botLinkForPlatform()}')">продолжить в боте</a></div>`;
 }
 let channelJoined = false;
 let chatJoined = false;
@@ -15368,17 +15409,26 @@ function rememberLastLecture(l) {
   } catch(e){}
 }
 
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
 function openUrl(url) {
   if (!url) return;
-  const tg = window.Telegram?.WebApp;
-  const isTelegramLink = /^https:\/\/t\.me\//i.test(url);
-  if (tg && isTelegramLink && tg.openTelegramLink) {
-    tg.openTelegramLink(url);
-  } else if (tg && tg.openLink) {
-    tg.openLink(url);
-  } else {
-    window.open(url, '_blank');
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  if (inTg && tg) {
+    /* внутри Telegram: t.me — только `openTelegramLink`, иначе iOS уведёт в браузер */
+    if (/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+    if (tg.openLink) { tg.openLink(url); return; }
   }
+  /* Всё остальное — обычным способом. Всплывающее окно в чужом webview
+     часто блокируется МОЛЧА — тогда уходим текущей вкладкой */
+  let w = null;
+  try { w = window.open(url, '_blank'); } catch (e) {}
+  if (!w) { try { location.href = url; } catch (e) {} }
 }
 
 function openInsightsLevelLockNotice(){
@@ -16697,10 +16747,20 @@ function clubInfoBrowse(){
   switchView('portal');
 }
 
+/* Оплативший, которого апп не узнал — тот же путь, что из окошка на
+   эфире: глушим возврат в воронку и открываем вход по номеру */
+function clubInfoLogin(){
+  track('club_info_login');
+  if (typeof funnelToLogin === 'function') funnelToLogin();
+  else proceedToWebLogin();
+}
+
 /* Кнопка «осмотреться» нужна только тому, кто ещё не участник */
 function refreshClubInfoButtons(){
   var btn = document.getElementById('club-info-browse');
   if (btn) btn.style.display = isMember ? 'none' : '';
+  var log = document.getElementById('club-info-login');
+  if (log) log.style.display = isMember ? 'none' : '';
 }
 
 function funnelBrowse(){
@@ -16886,11 +16946,16 @@ async function openAccessPage(){
   const el = document.getElementById('access-buttons');
   el.innerHTML = '<div class="loading">Готовим ссылки...</div>';
 
-  // Вне Telegram telegram_id нет, а ссылку на оплату Salebot делает под конкретного
-  // человека — отправляем в бота, там он опознается сам
-  if (!telegramId) {
+  /* Ссылку на оплату Salebot делает под КОНКРЕТНОГО человека, поэтому
+     нужен хоть какой-то идентификатор. ⚠️ ЗДЕСЬ СТОЯЛО ПРОСТО `!telegramId`,
+     и человек из ВК без телеграма упирался в кнопку бота — хотя round-trip
+     через ВК-бота построен и работает с 11.08 (`actionIdent()` умеет `vk_id`).
+     В MAX round-trip ещё НЕ НАСТРОЕН — там кнопка бота пока верна */
+  const hasVkIdent = typeof isInsideVk === 'function' && isInsideVk()
+                     && !!(typeof vkUserId === 'function' && vkUserId());
+  if (!telegramId && !hasVkIdent) {
     el.innerHTML = '<div class="empty" style="line-height:1.5">Оплата проходит в боте — так платёж сразу свяжется с твоим аккаунтом.</div>'
-      + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(BOT_LINK)">Открыть бота</button>';
+      + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(botLinkForPlatform())">Открыть бота</button>';
     return;
   }
 
@@ -17804,12 +17869,8 @@ async function openOnPlatform(target){
   try {
     const url = await requestLinkUrl(target);
     if (!url) throw new Error('Эта платформа ещё не подключена');
-    // t.me открываем через openTelegramLink — openLink на iOS уводит в браузер
-    if (url.indexOf('https://t.me/') === 0 && window.Telegram?.WebApp?.openTelegramLink){
-      Telegram.WebApp.openTelegramLink(url);
-    } else {
-      openUrl(url);
-    }
+    // выбор способа теперь внутри openUrl — он знает про площадку
+    openUrl(url);
   } catch (e) {
     alert(e.message);
   }
@@ -23057,7 +23118,10 @@ function ggNote(d){
     + escapeHtml(member ? (t('games.note_open') || 'Разбор хода')
                         : (t('games.note_locked') || 'Разбор — участникам')) + '</span>';
   if (!member){
-    btn.onclick = function(){ ggPop('gg-m-member'); };
+    /* ⚠️ НЕ `gg-m-member`: тот попап говорит «эта игра для участников», а
+       человек как раз в этой игре и сидит. [stated] Denis 18.08: «этот
+       пейвол нужен при клике по закрытой игре, но не по подсказке во время игры» */
+    btn.onclick = function(){ ggPop('gg-m-note'); };
     feed.appendChild(btn);
     return;
   }
@@ -23184,7 +23248,11 @@ function ggFinal(f){
         }).join('') + '</div>';
   }
 
-  if (f.material){
+  /* ⚠️ КАРТОЧКА ТОЛЬКО СО ССЫЛКОЙ. Бэкенд отдаёт блок `material` и тогда,
+     когда занятие к игре ещё не привязано в настройках — тогда slug пуст,
+     и `ggOpenMaterial` выходит первой строкой. Кликабельная пустышка хуже
+     отсутствия карточки: она обещает разбор и ничего не делает */
+  if (f.material && String(f.material.slug || '').trim()){
     const m = f.material;
     h += '<div class="gg-block"><div class="gg-block-h">' + escapeHtml(t('games.material') || 'Разобрать теорию') + '</div>'
       + '<div class="gg-material" onclick="ggOpenMaterial(' + jsArg(m.slug || '') + ')">'
