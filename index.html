@@ -3333,6 +3333,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
     linear-gradient(to top,    #0b080c 0%, rgba(11,8,12,0) 14%)}
 
 #plan-dir-blobs{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
+/* Надпись на время расчёта раскладки — поверх поля, по центру */
+.pf-wait{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+  gap:10px;font-size:13.5px;color:#cfc6bb;pointer-events:none}
+.pf-wait-dot{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.55;
+  animation:pfWaitPulse 1s ease-in-out infinite}
+@keyframes pfWaitPulse{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:.75;transform:scale(1.1)}}
+
 .pf-dir-blob{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;
   filter:blur(70px);opacity:.09;
   background:radial-gradient(closest-side, var(--c), transparent 70%);
@@ -4871,6 +4878,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="pf-lead" data-text="plan.a1">Поле двигается пальцем. Тапай темы — они распускаются.</div>
     </div>
     <button class="pf-back" onclick="closePlanField()">✕</button>
+  <!-- Видно, пока считается раскладка: лучше надпись, чем пустота -->
+  <div class="pf-wait" id="pf-wait" style="display:none">
+    <div class="pf-wait-dot"></div>
+    <span data-text="plan.building">Собираю карту тем…</span>
+  </div>
+
     <div class="pf-dock">
       <div class="pf-fill" id="pf-fill"></div>
       <div class="pf-picked" id="pf-picked">Пока ничего не выбрано</div>
@@ -7996,6 +8009,16 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     <button class="icon-btn fullscreen-popup-close" onclick="closeBonusVideo()">✕</button>
     <div class="video-embed-player wide" id="bonus-video-slot"></div>
     <div id="bonus-video-title" style="margin-top:10px;font-size:14px"></div>
+  </div>
+</div>
+
+<!-- Предложение после двух замеров «тяжело»: низкий FPS или долгий блок -->
+<div class="center-modal-overlay" id="perf-offer-overlay">
+  <div class="center-modal">
+    <div class="center-modal-title" data-text="perf.offer_h">Телефону тяжеловато</div>
+    <div style="font-size:13px;line-height:1.5;color:var(--text-dim);margin:8px 0 14px" data-text="perf.offer_p">Приложение подталкивает. Щадящий режим уберёт анимации и эффекты — весь клуб останется на месте.</div>
+    <button class="lec-link-btn access-btn" onclick="perfOfferYes()" data-text="perf.offer_yes">Сделать легче</button>
+    <div class="payment-help-link" onclick="perfOfferNo()" data-text="perf.offer_no">Оставить как есть</div>
   </div>
 </div>
 
@@ -11428,6 +11451,11 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'support.reply_ok': { c:'Поддержка', l:'Кнопка под ответом', w:'Окно новостей', i:false, t:'Понятно, спасибо' },
   'support.open_here': { c:'Поддержка', l:'Подпись ссылки внутрь приложения', w:'Ответ поддержки', i:false, t:'открыть в приложении' },
   'support.route_gone': { c:'Поддержка', l:'Ссылка из ответа не открылась', w:'Тост', i:false, t:'Не получилось открыть — напиши нам ещё раз' },
+  'plan.building': { c:'Личный план', l:'Надпись на время сборки карты', w:'Поле выбора тем', i:false, t:'Собираю карту тем…' },
+  'perf.offer_h': { c:'Щадящий режим', l:'Заголовок при тормозах', w:'Попап', i:false, t:'Телефону тяжеловато' },
+  'perf.offer_p': { c:'Щадящий режим', l:'Текст при тормозах', w:'Попап', i:false, t:'Приложение подталкивает. Щадящий режим уберёт анимации и эффекты — весь клуб останется на месте.' },
+  'perf.offer_yes': { c:'Щадящий режим', l:'Кнопка согласия при тормозах', w:'Попап', i:false, t:'Сделать легче' },
+  'perf.offer_no': { c:'Щадящий режим', l:'Отказ при тормозах', w:'Попап', i:false, t:'Оставить как есть' },
   'lite.card_h': { c:'Щадящий режим', l:'Заголовок карточки в профиле', w:'Профиль', i:false, t:'Щадящий режим включён' },
   'lite.card_p': { c:'Щадящий режим', l:'Текст карточки в профиле', w:'Профиль', i:false, t:'Анимации и эффекты выключены, чтобы приложение не тормозило. Если телефон справляется — можно вернуть красоту.' },
   'lite.card_off': { c:'Щадящий режим', l:'Кнопка в карточке профиля', w:'Профиль', i:false, t:'Вернуть обычный вид' },
@@ -12557,6 +12585,81 @@ function liteSet(on, silent){
   track('lite_mode', on ? 'on' : 'off');
 }
 function liteToggle(){ liteSet(!liteOn()); }
+
+/* ══ СТОРОЖ ПРОИЗВОДИТЕЛЬНОСТИ ══════════════════════════════════
+   [stated] Denis: «чтобы быстро предложил щадящий режим».
+
+   ⚠️ ДВА РАЗНЫХ СИГНАЛА, И ОДНОГО СЧЁТЧИКА КАДРОВ МАЛО:
+     • НИЗКИЙ FPS — экран рисуется, но рывками. Замеряется счётом кадров.
+     • ДОЛГАЯ СИНХРОННАЯ РАБОТА — кадров НЕТ ВООБЩЕ (раскладка плана
+       считает 220 проходов подряд). Счётчик кадров такое ПРОСПИТ — он
+       сам не получает управление. Поэтому тяжёлые места замеряют себя сами
+       через `perfMark()`.
+   ⚠️ НИЧЕГО НЕ ЗАМЕРЯЕМ ФОНОМ: постоянный счётчик кадров — это само по
+   себе кадровый цикл, то есть нагрузка ради измерения нагрузки. Замер идёт
+   ОКНАМИ по две секунды и только там, где тяжело. */
+const PERF_BAD_FPS = 24;        /* ниже этого рывки видны глазом */
+const PERF_BAD_BLOCK_MS = 900;  /* дольше — человек видит зависание */
+const PERF_STRIKES_TO_OFFER = 2;
+const PERF_STRIKE_KEY = 'club_app_perf_bad';
+let perfWatching = false;
+
+/* Замер окном. Зовётся при открытии тяжёлого экрана, а не всегда */
+function perfWatch(ms){
+  if (liteOn() || perfWatching || typeof requestAnimationFrame !== 'function') return;
+  perfWatching = true;
+  const t0 = performance.now();
+  let frames = 0;
+  (function tick(){
+    frames++;
+    const dt = performance.now() - t0;
+    if (dt < (ms || 2000)){ requestAnimationFrame(tick); return; }
+    perfWatching = false;
+    const fps = frames / (dt / 1000);
+    if (fps < PERF_BAD_FPS) perfStrike('fps:' + Math.round(fps));
+  })();
+}
+
+/* Тяжёлый блок сообщает, сколько занял */
+function perfMark(name, ms){
+  if (liteOn()) return;
+  if (ms >= PERF_BAD_BLOCK_MS) perfStrike(name + ':' + Math.round(ms));
+}
+
+/* ⚠️ ПРЕДЛАГАЕМ ПОСЛЕ ДВУХ ПОПАДАНИЙ, А НЕ ПЕРВОГО. Один провал бывает
+   от чего угодно — фоновое обновление, звонок, греющийся телефон. Счётчик
+   ПЕРЕЖИВАЕТ перезапуск: два тяжёлых захода в разные дни — тоже сигнал */
+function perfStrike(why){
+  let n = 0;
+  try { n = Number(localStorage.getItem(PERF_STRIKE_KEY) || 0) + 1;
+        localStorage.setItem(PERF_STRIKE_KEY, String(n)); } catch(e){}
+  track('perf_bad', why);
+  if (n >= PERF_STRIKES_TO_OFFER) setTimeout(perfOfferLite, 400);
+}
+function perfResetStrikes(){
+  try { localStorage.setItem(PERF_STRIKE_KEY, '0'); } catch(e){}
+}
+function perfOfferLite(){
+  if (liteOn()) return;
+  const el = document.getElementById('perf-offer-overlay');
+  if (el) el.classList.add('open');
+}
+function perfOfferYes(){
+  const el = document.getElementById('perf-offer-overlay');
+  if (el) el.classList.remove('open');
+  perfResetStrikes();
+  liteSet(true);
+  /* Человек стоит на том же экране — пересобираем его сразу облегчённым,
+     иначе обещание «станет легче» не подтверждается ничем */
+  if (pfFieldOpen && typeof pfRender === 'function'){
+    try { pfRender(); } catch(e){}
+  }
+}
+function perfOfferNo(){
+  const el = document.getElementById('perf-offer-overlay');
+  if (el) el.classList.remove('open');
+  perfResetStrikes();
+}
 
 /* Пора ли напомнить про режим. Первый раз — через неделю после включения:
    только что включившему напоминать бессмысленно */
@@ -15372,6 +15475,7 @@ function pfRelax(list, roots, meta){
   list.forEach(function(k){ if (!pfPos[k]) pfPos[k] = { x: home[k].x, y: home[k].y }; });
 
   const ITER = pfIter(), PURE = pfPure();
+  const relaxT0 = (typeof performance !== 'undefined') ? performance.now() : 0;
   for (let it = 0; it < ITER + PURE; it++){
     // Последние проходы — без пружины: иначе тяга к родному месту подтягивает
     // соседей обратно уже после разведения, и зазор выходит меньше заданного
@@ -15539,7 +15643,17 @@ function pfGlows(v){
   });
 }
 
+/* Обёртка: сама отрисовка не знает про замеры, а сторож получает число */
 function pfRender(){
+  const t0 = (typeof performance !== 'undefined') ? performance.now() : 0;
+  try {
+    return pfRenderTimed();
+  } finally {
+    if (t0 && typeof perfMark === 'function') perfMark('plan', performance.now() - t0);
+  }
+}
+
+function pfRenderTimed(){
   const v = pfVisible(), list = v.list, roots = pfRoots();
   const world = document.getElementById('plan-world');
   if (!world) return;
@@ -15836,7 +15950,30 @@ async function openPlanField(){
   pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
   pfApply();
   pfWire();
-  pfRender();
+
+  /* ⚠⚠ СНАЧАЛА ПОКАЗЫВАЕМ ЭКРАН, ПОТОМ СЧИТАЕМ. Раскладка —
+     синхронный блок на сотни проходов; если запустить её ДО показа,
+     браузер не успевает отрисовать ничего — и человек видит БЕЛЫЙ ЭКРАН
+     ровно столько, сколько считает его телефон. [stated] Denis: «важно, чтобы
+     они не покидали апп, если страница долго грузится».
+     Порядок: показать поле с надписью → отдать браузеру кадр → считать. */
+  const wait = document.getElementById('pf-wait');
+  if (wait) wait.style.display = 'flex';
+  f.classList.add('show');
+  planFieldChrome(true);
+  requestAnimationFrame(function(){ f.classList.add('in'); });
+
+  /* Два кадра, а не один: первый ставит стили, второй их рисует */
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      try { pfRender(); } finally {
+        if (wait) wait.style.display = 'none';
+      }
+      /* Замеряем плавность именно здесь: самый тяжёлый экран клуба */
+      if (typeof perfWatch === 'function') perfWatch(2000);
+    });
+  });
+
   const dock = f.querySelector('.pf-dock');
   if (dock){
     // Перезапуск анимации: класс мог остаться с прошлого открытия, и тогда
@@ -15845,10 +15982,6 @@ async function openPlanField(){
     void dock.offsetWidth;
     dock.classList.add('born');
   }
-  f.classList.add('show');
-  planFieldChrome(true);
-  requestAnimationFrame(function(){ f.classList.add('in'); });   // проявление
-
 }
 
 /* Поле — самостоятельная сцена: бар уровня (z-index 500), значок уровня (501)
