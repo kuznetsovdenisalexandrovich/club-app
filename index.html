@@ -294,6 +294,12 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .toggle.off{justify-content:flex-start}
 .toggle-thumb{width:20px;height:20px;border-radius:50%;background:white;transition:all .15s}
 .news-block{font-size:13px;line-height:1.6;margin-bottom:10px;white-space:pre-wrap}
+/* Ответ поддержки — личный, поэтому отбит от общих новостей */
+.news-block--reply{border:1px solid var(--border);border-radius:14px;padding:12px}
+.news-reply-q{font-size:12px;color:var(--text-faint);line-height:1.45;margin-bottom:8px;
+  padding-left:9px;border-left:2px solid var(--border)}
+.news-reply-a{font-size:13.5px;line-height:1.6}
+.news-link{color:var(--lav);text-decoration:underline;cursor:pointer;word-break:break-word}
 .news-block--urgent{background:rgba(232,97,74,0.1);border:1px solid rgba(232,97,74,0.3);border-radius:12px;padding:10px 12px;font-weight:600}
 .news-block:last-child{margin-bottom:0}
 .news-tag{font-size:10px;font-weight:700;color:var(--lav);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
@@ -9408,6 +9414,63 @@ async function fetchListMembership() {
   return null;
 }
 
+/* ══ ОТВЕТЫ ПОДДЕРЖКИ В ОКНЕ НОВОСТЕЙ ═════════════════════════
+   Ответ уходит и в бота (надёжно), и сюда (ссылки можно прокликать). */
+let supportReplies = [];
+
+/* ⚠️ СНАЧАЛА ЭКРАНИРУЕМ, ПОТОМ СТАВИМ ССЫЛКИ. Текст пишет человек
+   в дашборде, и вставлять его в разметку как есть нельзя — одна угловая
+   скобка сломает блок. Ссылки находим УЖЕ в безопасном тексте.
+   ⚠️ НАШИ ССЫЛКИ ОТКРЫВАЕМ ВНУТРИ ПРИЛОЖЕНИЯ, а не через бота: человек
+   и так в аппе, выкидывать его в переписку ради возврата в апп — два лишних шага */
+function supportLinkify(text){
+  const safe = escapeHtml(String(text || ''));
+  return safe.replace(/https?:\/\/[^\s<]+/g, function(url){
+    const m = /[?&]startapp=([A-Za-z0-9_-]+)/.exec(url);
+    if (m && /t\.me\/|vk\.ru\/|max\.ru\/|github\.io/.test(url)){
+      return '<span class="news-link" onclick="runAppRoute(' + jsArg(m[1]) + ')">'
+           + (t('support.open_here') || 'открыть в приложении') + '</span>';
+    }
+    return '<span class="news-link" onclick="openUrl(' + jsArg(url) + ')">' + url + '</span>';
+  });
+}
+
+/* Выполнить маршрут по готовому payload — то же, что делает диплинк,
+   но без перезапуска приложения. ⚠️ Порядок разбора тот же, что в
+   `openFromStartParam`: сначала ключи с параметром, потом таблица */
+function runAppRoute(payload){
+  const p = String(payload || '');
+  if (!p) return;
+  try {
+    if (p.indexOf('gs_') === 0 || p.indexOf('g_') === 0){
+      const key = p.replace(/^gs?_/, '').replace(/_(\d+|u[0-9a-z]{8})$/, '');
+      if (typeof ggOpenTo === 'function'){ ggOpenTo(key, p.indexOf('gs_') === 0 ? 'play' : 'rules'); return; }
+    }
+    if (p.indexOf('l_') === 0 && typeof openLectureByKey === 'function'){
+      openLectureByKey(p.slice(2), ''); return;
+    }
+    const route = DEEPLINKS[p];
+    if (route){ route.go(); return; }
+    /* Незнакомый ключ — не молчим: человек нажал и ждёт реакции */
+    showToast(t('support.route_gone') || 'Не получилось открыть — напиши нам ещё раз');
+  } catch(e){}
+}
+
+/* Отметка прочтения. Блок убираем СРАЗУ, не дожидаясь сервера:
+   кнопка, которая «думает», выглядит как несработавшая */
+async function markSupportReplySeen(id){
+  const el = document.getElementById('sup-reply-' + id);
+  if (el) el.remove();
+  supportReplies = supportReplies.filter(function(r){ return r.id !== id; });
+  if (!telegramId) return;
+  try {
+    await fetch(`${API_URL}/support/${id}/seen`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId })
+    });
+  } catch(e){}
+}
+
 async function loadNews() {
   const el = document.getElementById('news-card');
   const headerEl = document.getElementById('news-header');
@@ -9424,11 +9487,19 @@ async function loadNews() {
       fetch(`${API_URL}/news/urgent`).then(r => r.json()).catch(() => ({ text: null })),
     ]);
 
+    /* Ответы поддержки — тут же, первым блоком. ⚠️ ОТДЕЛЬНЫЙ ЗАПРОС И
+       ОТДЕЛЬНЫЙ catch: если он упадёт, обычные новости обязаны показаться */
+    supportReplies = telegramId
+      ? await fetch(`${API_URL}/support/my?telegram_id=${telegramId}`)
+          .then(r => r.json()).catch(() => [])
+      : [];
+    const hasReplies = Array.isArray(supportReplies) && supportReplies.length > 0;
+
     const hasCommon = news.common_text && news.common_text.trim();
     const hasUrgent = urgent && urgent.text && urgent.text.trim();
     const hasTargeted = isMember && (news.targeted || []).length > 0;
 
-    if (!hasCommon && !hasUrgent && !hasTargeted) {
+    if (!hasCommon && !hasUrgent && !hasTargeted && !hasReplies) {
       el.style.display = 'none';
       headerEl.style.display = 'none';
       return;
@@ -9436,6 +9507,19 @@ async function loadNews() {
 
     function commonHtml(){
       let html = '';
+      /* Ответ поддержки выше всего, даже срочного: это ответ ЛИЧНО ему,
+         и он ждёт его больше, чем общеклубного объявления */
+      if (hasReplies){
+        supportReplies.forEach(function(rep){
+          html += '<div class="news-block news-block--reply" id="sup-reply-' + rep.id + '">'
+            + '<div class="news-tag">' + escapeHtml(t('support.reply_tag') || 'Ответ поддержки') + '</div>'
+            + (rep.question ? '<div class="news-reply-q">' + escapeHtml(rep.question) + '</div>' : '')
+            + '<div class="news-reply-a">' + supportLinkify(rep.reply) + '</div>'
+            + '<button class="lec-link-btn" style="width:100%;margin-top:10px" '
+            + 'onclick="markSupportReplySeen(' + rep.id + ')">'
+            + escapeHtml(t('support.reply_ok') || 'Понятно, спасибо') + '</button></div>';
+        });
+      }
       if (hasUrgent) {
         html += `<div class="news-block news-block--urgent">${urgent.text}</div>`;
       }
@@ -9451,7 +9535,7 @@ async function loadNews() {
 
     // Показываем сразу то, что не зависит от списков — обычно это и есть
     // весь текст, который увидит человек
-    if (hasCommon || hasUrgent) {
+    if (hasCommon || hasUrgent || hasReplies) {
       el.innerHTML = commonHtml();
       el.classList.add('fade-rise');
       el.style.display = 'block';
@@ -11314,6 +11398,10 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'share.where_vk': { c:'Поделиться', l:'Подпись ВК', w:'Окошко выбора', i:false, t:'ВКонтакте' },
   'share.where_max': { c:'Поделиться', l:'Подпись MAX', w:'Окошко выбора', i:false, t:'MAX' },
   'share.where_web': { c:'Поделиться', l:'Подпись обычной ссылки', w:'Окошко выбора', i:false, t:'Просто ссылка' },
+  'support.reply_tag': { c:'Поддержка', l:'Метка над ответом', w:'Окно новостей', i:false, t:'Ответ поддержки' },
+  'support.reply_ok': { c:'Поддержка', l:'Кнопка под ответом', w:'Окно новостей', i:false, t:'Понятно, спасибо' },
+  'support.open_here': { c:'Поддержка', l:'Подпись ссылки внутрь приложения', w:'Ответ поддержки', i:false, t:'открыть в приложении' },
+  'support.route_gone': { c:'Поддержка', l:'Ссылка из ответа не открылась', w:'Тост', i:false, t:'Не получилось открыть — напиши нам ещё раз' },
   'lite.btn_on': { c:'Щадящий режим', l:'Кнопка включения', w:'Настройки приложения', i:false, t:'Включить щадящий режим' },
   'lite.btn_off': { c:'Щадящий режим', l:'Кнопка выключения', w:'Настройки приложения', i:false, t:'Выключить щадящий режим' },
   'lite.hint': { c:'Щадящий режим', l:'Пояснение под кнопкой', w:'Настройки приложения', i:false, t:'Меньше анимаций и эффектов — приложение легче работает на слабых телефонах. Весь клуб остаётся на месте.' },
