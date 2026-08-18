@@ -486,6 +486,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .fullscreen-popup-overlay.open{display:flex;animation:overlayFadeIn .22s ease forwards}
 .fullscreen-popup-card{position:relative;background:var(--bg2);border-radius:20px;padding:16px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;animation:cardEntrance .3s cubic-bezier(0.34,1.56,0.64,1) both}
 .fullscreen-popup-close{position:absolute;top:10px;right:10px;z-index:2}
+/* Шеринг рядом с крестиком: 36px кнопка плюс 10px зазор = 56px от края */
+.fullscreen-popup-share{position:absolute;top:10px;right:56px;z-index:2}
 .lec-link-btn.locked{opacity:0.55}
 .ai-btn.locked{opacity:0.55}
 .club-info-text{font-size:13.5px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
@@ -5603,17 +5605,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <div class="fullscreen-popup-overlay" id="video-popup-sales-overlay" onclick="if(event.target===this) closeVideoPopup('sales')">
   <div class="fullscreen-popup-card">
     <button class="icon-btn fullscreen-popup-close" onclick="closeVideoPopup('sales')">✕</button>
+    <!-- Фильмом делиться МОЖНО (решение Denis'а 18.08). Ссылка ведёт на `film`,
+         а тот сам решает, что показать: гостю — воронку с фильмом, участнику —
+         занятие из библиотеки. ⚠️ КЛАСС `icon-btn`, А НЕ `gg-*`: попап живёт
+         вне `#gg-root`, и здесь работают стили самого приложения -->
+    <button class="icon-btn fullscreen-popup-share" type="button" aria-label="Поделиться" onclick="shareFilm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg></button>
     <div class="video-embed-player">
       <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
     </div>
     <button class="lec-link-btn access-btn" style="margin-top:14px" onclick="closeVideoPopup('sales');openAccessPage()">Получить доступ</button>
-    <!-- Фильмом делиться МОЖНО (решение Denis'а 18.08). Ссылка ведёт на `film`,
-         а тот сам решает, что показать: гостю — воронку с фильмом, участнику —
-         занятие из библиотеки. Продавать участнику нечего -->
-    <button class="gg-share-line" type="button" style="margin-top:10px" onclick="shareFilm()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
-      <span data-text="share.film">Поделиться фильмом</span></button>
   </div>
 </div>
 
@@ -7190,11 +7190,17 @@ body.api-override-on #api-override-bar{display:block}
 .gg-btn-row{display:flex;gap:12px;margin-bottom:12px}
 /* Круглая кнопка шеринга в углу карточки игры. Зона нажатия 34px —
    меньше берётся мимо пальцем и вместо шеринга открывается партия */
+/* ⚠️ СЕЛЕКТОР ОБЯЗАН ПЕРЕБИВАТЬ `#gg-root .gg-gm-card>*{position:relative}`.
+   Голый `.gg-share-btn` (0,1,0) проигрывал тому правилу (1,1,0), кнопка
+   возвращалась в поток и вставала СЛЕВА ПОВЕРХ номера ступени (Denis
+   поймал 18.08). Тот же класс, что урок 115: проверять против таблицы
+   стилей, а не против своего кода. */
+#gg-root .gg-gm-card>.gg-share-btn,
 .gg-share-btn{position:absolute;top:10px;right:10px;width:34px;height:34px;
   display:flex;align-items:center;justify-content:center;padding:0;
   border-radius:999px;border:1px solid var(--gg-card-brd,rgba(135,150,199,.32));
   background:var(--gg-card,rgba(255,255,255,.62));color:var(--gg-muted,#8994b8);
-  cursor:pointer;z-index:2}
+  cursor:pointer;z-index:3}
 .gg-share-btn svg{width:17px;height:17px}
 .gg-share-btn:active{transform:scale(.92)}
 .gg-gm-card{position:relative}
@@ -7892,17 +7898,17 @@ html[data-gg-play] #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){
     <div class="sched-popup-handle"></div>
     <div class="sched-popup-header">
       <div class="sched-popup-title" id="bonus-popup-title">Бонус</div>
-      <button class="icon-btn" onclick="closeBonusPopup()">✕</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <!-- Показывается ТОЛЬКО у наборов с открытой частью: делиться тем,
+             что друг не сможет открыть, — это не воронка, а обман -->
+        <button class="icon-btn" id="bonus-share-btn" type="button" style="display:none"
+                aria-label="Поделиться" onclick="shareBonus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg></button>
+        <button class="icon-btn" onclick="closeBonusPopup()">✕</button>
+      </div>
     </div>
     <div class="sched-popup-body">
       <div id="bonus-popup-sub" class="mag-sub" style="margin-bottom:12px"></div>
       <div id="bonus-popup-items"></div>
-      <!-- Показывается ТОЛЬКО у наборов с открытой частью: делиться тем,
-           что друг не сможет открыть, — это не воронка, а обман -->
-      <button class="gg-share-line" type="button" id="bonus-share-btn" style="display:none;margin-top:12px" onclick="shareBonus()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
-        <span data-text="share.bonus">Поделиться мастер-классом</span></button>
     </div>
   </div>
 </div>
@@ -11218,6 +11224,8 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.note_cta': { c:'Игры', l:'Кнопка в попапе разбора', w:'Попап внутри партии', i:false, t:'Что в клубе' },
   'share.film': { c:'Поделиться', l:'Кнопка под фильмом', w:'Попап фильма', i:false, t:'Поделиться фильмом' },
   'share.film_text': { c:'Поделиться', l:'Текст при отправке фильма', w:'Шторка шеринга', i:false, t:'Глянь короткометражку «Я Подумаю» — про то самое возражение, с которым все борются.' },
+  /* Кнопки стали значками в углу — эти два ключа остаются для подсказки
+     скринридера и на случай возврата подписей */
   'share.bonus': { c:'Поделиться', l:'Кнопка в попапе бонуса', w:'Попап бонуса', i:false, t:'Поделиться мастер-классом' },
   'share.bonus_text': { c:'Поделиться', l:'Текст при отправке бонуса ({что} — название)', w:'Шторка шеринга', i:false, t:'Забирай: {что}. Начало открыто всем.' },
   'share.where_h': { c:'Поделиться', l:'Заголовок окошка выбора', w:'Веб и MAX', i:false, t:'Куда отправляешь?' },
