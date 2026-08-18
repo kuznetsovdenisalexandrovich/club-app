@@ -4355,6 +4355,146 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .pmap-crumbs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .pmap-crumb{position:absolute;width:4px;height:4px;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--text-faint);opacity:.45}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   КАРТА ПУТИ НА ПЕЙЗАЖЕ — 19.08.2026. Блок стоит В САМОМ КОНЦЕ файла
+   сознательно: он переопределяет прежнее оформление карты (сферы-картинки с
+   врисованными цифрами), а при равной специфичности побеждает то, что ниже.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Полотно. Пропорция одна на обе темы — иначе при переключении страница
+   дёргалась бы. Прежний сплошной фон снимаем той же специфичностью */
+[data-theme="light"] .pmap,[data-theme="dark"] .pmap{background:none}
+.pmap{position:relative;border-radius:18px;overflow:hidden;height:auto;
+  aspect-ratio:1086/1448;container-type:inline-size;margin:4px 0 6px;
+  --fade:18%;--fade-x:14%}
+
+/* РАСТУШЁВКА КРАЁВ висит на СЛОЯХ С АРТОМ, а не на .pmap: иначе вместе с
+   пейзажем гасли бы и остановки, а первая с последней стоят у самого края.
+   Два вложенных блока, потому что маску по всем четырём сторонам одним слоем
+   без склейки градиентов не собрать, а mask-composite в Safari капризен */
+.pmap-fade{position:absolute;inset:0;z-index:0;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade)),transparent 100%)}
+.pmap-art{position:absolute;inset:0;background-size:cover;background-position:center;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-x),#000 calc(100% - var(--fade-x)),transparent 100%);
+          mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-x),#000 calc(100% - var(--fade-x)),transparent 100%)}
+[data-theme="light"] .pmap-art{background-image:url(images/plan/bg-light.webp)}
+[data-theme="dark"]  .pmap-art{background-image:url(images/plan/bg-dark.webp)}
+
+/* ⚠️ ЯКОРЬ ОСТАНОВКИ — КОНЧИК ПОДВЕСКИ, А НЕ ЦЕНТР КАРТИНКИ. У иконок шар
+   висит на оправе, под ним капля; на тропу садится именно она. В
+   нормализованных файлах кончик стоит на 94% высоты и по центру */
+.pmap-stop{position:absolute;transform:translate(-50%,-94%);width:auto;height:auto;
+  padding:0;border:none;background:none;font-family:inherit;cursor:pointer;
+  display:block;gap:0;overflow:visible;line-height:0;
+  animation:pmapPin .5s cubic-bezier(.22,.61,.36,1) backwards}
+@keyframes pmapPin{from{opacity:0;transform:translate(-50%,calc(-94% - 10px)) scale(.85)}}
+
+/* ⚠️ --cy ОБЪЯВЛЯЕТСЯ НА .pmap-stop, А НЕ НА .pmap-blob: цифра лежит ВНУТРИ
+   шара, а подпись — его СОСЕД. Переменные наследуются только вниз по дереву,
+   вбок не ходят, и на .pmap-blob подпись её не увидела бы.
+   Значения — замеренный центр шара в каждой иконке: подвески разной длины,
+   поэтому единый уровень уводил бы цифру */
+.pmap-stop{--pmcy:50%}
+[data-theme="light"] .pmap-stop{--pmcy:50.6%}
+[data-theme="light"] .pmap-stop.done{--pmcy:46.7%}
+[data-theme="light"] .pmap-stop.next{--pmcy:54.4%}
+[data-theme="dark"]  .pmap-stop{--pmcy:45.6%}
+[data-theme="dark"]  .pmap-stop.done{--pmcy:46.9%}
+[data-theme="dark"]  .pmap-stop.next{--pmcy:48.5%}
+
+/* ПЕРСПЕКТИВА: размер идёт через --pmsz, его считает JS от высоты остановки */
+.pmap-blob{position:relative;display:block;
+  width:calc(20cqw * var(--pmsz,1));height:calc(20cqw * var(--pmsz,1));
+  border:none;border-radius:0;box-shadow:none;background:none;
+  backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible;
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+  transition:transform .16s ease}
+.pmap-blob::before,.pmap-blob::after{content:none}
+.pmap-blob i,.pmap-glow{display:none}
+.pmap-stop:active .pmap-blob{transform:scale(.93)}
+/* активная НЕ участвует в перспективе — она всегда в полную величину */
+.pmap-stop.next .pmap-blob{width:27cqw;height:27cqw;animation:none}
+
+[data-theme="light"] .pmap-blob{background-image:url(images/plan/stop-future-light.webp)}
+[data-theme="dark"]  .pmap-blob{background-image:url(images/plan/stop-future-dark.webp)}
+[data-theme="light"] .pmap-stop.done .pmap-blob{background-image:url(images/plan/stop-done-light.webp)}
+[data-theme="dark"]  .pmap-stop.done .pmap-blob{background-image:url(images/plan/stop-done-dark.webp)}
+[data-theme="light"] .pmap-stop.next .pmap-blob{background-image:url(images/plan/stop-next-light.webp)}
+[data-theme="dark"]  .pmap-stop.next .pmap-blob{background-image:url(images/plan/stop-next-dark.webp)}
+
+/* Цифра живым текстом: остаётся резкой на любом экране и красится темой.
+   Запекать её в картинку значило бы 10 цифр × 3 состояния × 2 темы = 60 файлов */
+.pmap-blob b{display:block;position:absolute;left:50%;top:var(--pmcy);
+  transform:translate(-50%,-50%);z-index:2;
+  font-size:calc(5.4cqw * var(--pmsz,1));font-weight:600;line-height:1;
+  font-variant-numeric:lining-nums tabular-nums;letter-spacing:.01em;
+  color:#6b4f39;text-shadow:0 1px 2px rgba(255,255,255,.5)}
+[data-theme="dark"] .pmap-blob b{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.pmap-stop.next .pmap-blob b{font-size:6cqw;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+
+/* Подпись центрируется ПО ЦИФРЕ и стоит сбоку. Ширина (--pmcw) приходит из JS —
+   это свободное место до края пейзажа, чтобы название легло в строку-две */
+.pmap-cap{position:absolute;top:var(--pmcy);transform:translateY(-50%);
+  left:auto;right:auto;width:var(--pmcw,40cqw);
+  font-size:calc(3.5cqw * var(--pmfz,1));line-height:1.3;font-weight:600;
+  letter-spacing:-.006em;color:var(--text);text-align:left;white-space:normal;
+  padding:1.2cqw 1.6cqw;z-index:1;opacity:1}
+.pmap-stop.side-r .pmap-cap{left:100%;margin-left:1cqw;text-align:left}
+.pmap-stop.side-l .pmap-cap{right:100%;margin-right:1cqw;text-align:right}
+.pmap-stop.next .pmap-cap{font-weight:700}
+
+/* ОБЛАЧКО под подписью — овальное пятно в цвет темы с мягким краем.
+   Не backdrop-filter: он честно размывает слой под собой и на десяти
+   подписях роняет прокрутку на слабых телефонах */
+.pmap-cap::before{content:'';position:absolute;inset:-3.4cqw -5cqw;z-index:-1;
+  border-radius:50%;
+  background:radial-gradient(ellipse at center,var(--plate) 0%,var(--plate) 42%,transparent 76%)}
+[data-theme="light"] .pmap{--plate:rgba(243,236,226,.82)}
+[data-theme="dark"]  .pmap{--plate:rgba(14,15,26,.72)}
+.pmap-stop.done .pmap-cap::before{opacity:.62}
+.pmap-stop.done .pmap-cap{opacity:.62}
+.pmap-stop.done .pmap-blob{opacity:.82;border-color:transparent}
+.pmap-stop.skipped{opacity:.45}
+.pmap-stop.skipped .pmap-blob{filter:grayscale(.9)}
+
+.pmap-mark{position:absolute;right:4%;bottom:16%;z-index:5;
+  width:calc(6cqw * var(--pmsz,1));height:calc(6cqw * var(--pmsz,1));
+  font-size:calc(3.4cqw * var(--pmsz,1));line-height:1;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accent,#e8663a);color:#fff}
+
+.pmap-crumbs,.pmap-crumb{display:none}
+
+/* ── ЛЕНТА В БИБЛИОТЕКЕ ────────────────────────────────────────────────────
+   Полоса пейзажа повторяется по горизонтали. Плитка ЗЕРКАЛЬНАЯ (правый край
+   встречается со своей же копией), поэтому шва нет по построению.
+   ⚠️ БОКОВАЯ МАСКА ВИСИТ НА ПРОКРУЧИВАЕМОМ ОКОШКЕ .prail, А НЕ НА .prail-inner:
+   содержимое шире экрана, и растушёвка на нём легла бы на края СОДЕРЖИМОГО,
+   которые уезжают за пределы видимого. Сверху и снизу растушёвка вшита в
+   альфу самой плитки */
+[data-theme="light"] .prail-inner,[data-theme="dark"] .prail-inner{background:none}
+.prail{border-radius:14px;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
+          mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%)}
+.prail-inner{position:relative;container-type:size;
+  background-repeat:repeat-x;background-position:0 center;background-size:auto 100%}
+[data-theme="light"] .prail-inner{background-image:url(images/plan/rail-light.webp)}
+[data-theme="dark"]  .prail-inner{background-image:url(images/plan/rail-dark.webp)}
+/* В ленте перспективы нет — путь идёт вбок, а не вдаль */
+.prail .pmap-stop{width:auto;height:auto;animation:none}
+.prail .pmap-blob{width:46px;height:46px}
+.prail .pmap-stop.next .pmap-blob{width:62px;height:62px}
+.prail .pmap-blob b{font-size:14px}
+.prail .pmap-stop.next .pmap-blob b{font-size:17px}
+.prail .pmap-mark{width:11px;height:11px;font-size:7px}
+.prail .pmap-cap{display:none}
+.prail-line{display:none}
+
+@media (prefers-reduced-motion:reduce){
+  .pmap-stop{animation:none}
+}
 </style>
 </head>
 <body>
@@ -14862,6 +15002,95 @@ const PLAN_IMG_VARIANTS = 2;  // вариаций на каждую цифру
 /* Вариация выбирается УСТОЙЧИВО — от слага лекции, а не случайно.
    Иначе при каждой перерисовке (отметил лекцию просмотренной) все картинки
    менялись бы разом, и это читалось бы как сбой, а не как разнообразие */
+/* ══ НОВАЯ КАРТА ПУТИ НА ПЕЙЗАЖЕ (19.08.2026) ═══════════════════════════════
+   Остановки садятся на ВРИСОВАННУЮ в арт тропу. Кривая снята с картинки
+   автоматически (проход по яркости снизу вверх с определением конца тропы),
+   поэтому число остановок и арт больше не связаны: сколько бы лекций ни было
+   в плане, они разложатся вдоль той же линии.
+   ⚠️ Сверху кривая обрезана: шар висит ВЫШЕ точки крепления, и остановка у
+   самого верха вылезала бы за край карты. Вершина остаётся недостигнутой.
+   ══════════════════════════════════════════════════════════════════════════ */
+const PLAN_PATH = {"light": [[33.5, 98.4], [33.1, 92.3], [34.8, 86.2], [38.7, 80.1], [35.7, 73.9], [29.7, 67.8], [29.6, 61.7], [39.6, 55.6], [51.5, 49.5], [56.1, 43.3], [62.7, 37.2], [65.3, 31.1], [74.1, 25.0], [73.7, 18.9]], "dark": [[33.8, 98.5], [34.8, 93.2], [39.1, 87.9], [45.7, 82.6], [49.9, 77.4], [47.7, 72.1], [42.6, 66.8], [42.0, 61.5], [49.7, 56.3], [55.9, 51.0], [61.3, 45.7], [62.9, 40.4], [68.6, 35.2], [72.1, 29.9], [74.2, 24.6], [74.8, 19.3], [74.7, 19.2]]};
+const PLAN_RAIL_PATH = {"light": [[0.0, 49.06], [2.08, 49.71], [4.17, 52.19], [6.25, 59.49], [8.33, 63.79], [10.42, 66.02], [12.5, 66.74], [14.58, 66.05], [16.67, 64.49], [18.75, 61.34], [20.83, 56.66], [22.92, 54.75], [25.0, 53.31], [27.08, 53.54], [29.17, 55.34], [31.25, 59.18], [33.33, 64.2], [35.42, 65.99], [37.5, 66.75], [39.58, 66.83], [41.67, 65.1], [43.75, 61.0], [45.83, 55.38], [47.92, 53.79], [50.0, 52.84], [52.08, 53.79], [54.17, 55.38], [56.25, 61.0], [58.33, 65.1], [60.42, 66.83], [62.5, 66.75], [64.58, 65.99], [66.67, 64.2], [68.75, 59.18], [70.83, 55.34], [72.92, 53.54], [75.0, 53.31], [77.08, 54.75], [79.17, 56.66], [81.25, 61.34], [83.33, 64.49], [85.42, 66.05], [87.5, 66.74], [89.58, 66.02], [91.67, 63.79], [93.75, 59.49], [95.83, 52.19], [97.92, 49.71], [100.0, 49.06]], "dark": [[0.0, 63.95], [2.08, 64.11], [4.17, 64.51], [6.25, 65.04], [8.33, 65.74], [10.42, 66.64], [12.5, 67.58], [14.58, 68.38], [16.67, 69.1], [18.75, 69.74], [20.83, 70.3], [22.92, 70.69], [25.0, 71.0], [27.08, 70.97], [29.17, 71.13], [31.25, 71.4], [33.33, 71.16], [35.42, 71.03], [37.5, 70.7], [39.58, 70.19], [41.67, 69.42], [43.75, 68.6], [45.83, 67.23], [47.92, 66.1], [50.0, 65.7], [52.08, 66.1], [54.17, 67.23], [56.25, 68.6], [58.33, 69.42], [60.42, 70.19], [62.5, 70.7], [64.58, 71.03], [66.67, 71.16], [68.75, 71.4], [70.83, 71.13], [72.92, 70.97], [75.0, 71.0], [77.08, 70.69], [79.17, 70.3], [81.25, 69.74], [83.33, 69.1], [85.42, 68.38], [87.5, 67.58], [89.58, 66.64], [91.67, 65.74], [93.75, 65.04], [95.83, 64.51], [97.92, 64.11], [100.0, 63.95]]};
+/* Ширина плитки ленты в пикселях исходника; высота у обеих 408 */
+const PLAN_RAIL_TILE = { light: 1337, dark: 951 };
+const PLAN_RAIL_TILE_H = 408;
+const PLAN_RAIL_H = 118;          // высота ленты на экране
+const PLAN_RAIL_STEP = 72;
+const PLAN_RAIL_X0 = 40;
+const PLAN_PERSP_MIN = 0.62;      // во сколько сжимается остановка у вершины
+const PLAN_ALPHA_MIN = 0.35;      // до чего гаснет самая дальняя
+
+function planTheme(){
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
+
+/* Catmull-Rom проходит РОВНО через снятые точки, в отличие от Безье,
+   где они были бы лишь управляющими */
+function planSpline(p, t){
+  const n = p.length, s = t * (n - 1);
+  const i = Math.min(Math.floor(s), n - 2), u = s - i;
+  const a = p[Math.max(i-1,0)], b = p[i], c = p[i+1], d = p[Math.min(i+2,n-1)];
+  const f = (A,B,C,D) => 0.5*((2*B) + (-A+C)*u + (2*A-5*B+4*C-D)*u*u + (-A+3*B-3*C+D)*u*u*u);
+  return { x: f(a[0],b[0],c[0],d[0]), y: f(a[1],b[1],c[1],d[1]) };
+}
+
+/* Раскладка РАВНОМЕРНО ПО ДЛИНЕ ДУГИ, а не по параметру t: иначе на изгибах
+   остановки сбивались бы в кучу, а на прямых разъезжались */
+function planAlong(p, count){
+  const S = 400, samp = [], len = [0];
+  let tot = 0;
+  for (let i = 0; i <= S; i++) samp.push(planSpline(p, i / S));
+  for (let j = 1; j <= S; j++){
+    const dx = samp[j].x - samp[j-1].x, dy = samp[j].y - samp[j-1].y;
+    tot += Math.sqrt(dx*dx + dy*dy); len.push(tot);
+  }
+  const out = []; let k = 0;
+  for (let m = 0; m < count; m++){
+    const want = count === 1 ? 0 : tot * m / (count - 1);
+    while (k < S && len[k+1] < want) k++;
+    out.push(samp[k]);
+  }
+  return out;
+}
+
+/* Высота тропы ленты в точке t (0..100 по ширине плитки) */
+function planRailY(t){
+  const p = PLAN_RAIL_PATH[planTheme()];
+  for (let i = 1; i < p.length; i++){
+    if (p[i][0] >= t){
+      const a = p[i-1], b = p[i], u = (t - a[0]) / ((b[0] - a[0]) || 1);
+      return a[1] + (b[1] - a[1]) * u;
+    }
+  }
+  return p[p.length-1][1];
+}
+
+/* Прогрессивная прозрачность будущих. Считается ОТ СЛЕДУЮЩЕЙ, а не от первой
+   лекции — иначе по мере прохождения карта выцветала бы целиком. Диапазон
+   растягивается под число остановок: следующая всегда 1.0, самая дальняя
+   всегда PLAN_ALPHA_MIN, и эффект одинаково читается при 4 и при 10 */
+function planFutureAlpha(k, last){
+  if (k <= 0 || last <= 0) return 1;
+  return +(1 - (1 - PLAN_ALPHA_MIN) * (k / last)).toFixed(3);
+}
+
+/* ПЕРСПЕКТИВА: чем выше остановка на карте, тем она мельче */
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
 function planImgVariant(seed){
   let h = 0;
   const str = String(seed || '');
@@ -14880,17 +15109,11 @@ function planStopImg(i, stop){
    разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
    на это же значение опирается блок стилей */
 function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
-  const side = Math.round(d / PLAN_IMG_FILL);
   return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
       + (isNext ? ' next' : '') + '"'
-    + ' style="' + (extraStyle || '') + '--d:' + side + 'px"'
+    + ' style="' + (extraStyle || '') + '"'
     + ' onclick="openPlanStop(' + i + ')">'
-    + '<span class="pmap-blob">'
-      // БЕЗ loading="lazy" (07.08.2026): картинок всего несколько и они мелкие,
-      // а отложенная загрузка тянула их ПО ОДНОЙ уже после появления кружков —
-      // получалось, что остановки проступают по очереди рывками.
-      // Denis: «по очереди загрузились конфетки». Теперь приходят разом
-      + '<img src="' + planStopImg(i, stop) + '" alt="' + (i + 1) + '" decoding="async">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
       + (done ? '<span class="pmap-mark">✓</span>' : '')
     + '</span>'
     + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
@@ -15022,37 +15245,33 @@ function planMapHtml(answers){
 
   const n = planStops.length;
   const nextIdx = planNextIdx();
+  const lastK = Math.max(0, n - 1 - Math.max(0, nextIdx));
+  const pos = planAlong(PLAN_PATH[planTheme()], n);
+  const topY = pos[pos.length - 1].y;
 
-  /* Размеры теперь разные, поэтому раскладка идёт по ЦЕНТРАМ: центр каждой
-     сферы садится на регулярную сетку, а верхний край считается вычитанием
-     радиуса. Иначе крупная «текущая» соскочила бы с тропинки */
-  const size = planStops.map(function(s, i){
-    return planStopSize(i, nextIdx, planVisited.has(s.lec.slug), PMAP_D);
-  });
-  const maxR = Math.max.apply(null, size) / PLAN_IMG_FILL / 2;
-  const top0 = Math.max(PMAP_TOP, maxR + 14);
-  const pt = planStops.map(function(s, i){
-    return { x: PMAP_X[i % PMAP_X.length], cy: top0 + i * PMAP_STEP, r: size[i] / 2 };
-  });
-  const h = top0 + (n - 1) * PMAP_STEP + maxR + 58;
-
-  // Тропинка — не линия, а редкие точки по той же кривой: четыре на промежуток
-  let html = '<div class="pmap fade-rise" data-imgs-sync style="height:' + h + 'px"><div class="pmap-crumbs">';
-  for (let i = 1; i < pt.length; i++){
-    const a = pt[i-1], b = pt[i], m = (b.cy - a.cy) / 2;
-    for (let k = 1; k <= PMAP_DOTS; k++){
-      const p = planBez({ x:a.x, y:a.cy }, { x:a.x, y:a.cy + m },
-                        { x:b.x, y:b.cy - m }, { x:b.x, y:b.cy }, k / (PMAP_DOTS + 1));
-      html += '<span class="pmap-crumb" style="left:' + p.x + '%;top:' + p.y + 'px"></span>';
-    }
-  }
-  html += '</div>';
+  /* ⚠️ ОБЁРТКА .pmap ОБЯЗАТЕЛЬНА: остановки position:absolute, и без
+     позиционированного предка они отсчитываются от СТРАНИЦЫ и разлетаются.
+     Внутри неё два слоя арта — на них висит растушёвка краёв, чтобы гасить
+     пейзаж, а не сами остановки (первая и последняя стоят у самого края) */
+  let html = '<div class="pmap fade-rise">'
+    + '<div class="pmap-fade"><div class="pmap-art"></div></div>';
 
   planStops.forEach(function(s, i){
     const done = planVisited.has(s.lec.slug);
     const skip = planSkipped.has(s.lec.slug);
-    html += planStopNode(i, s, size[i], done, skip, i === nextIdx,
-      'left:' + pt[i].x + '%;top:' + pt[i].cy + 'px;animation-delay:' + (i * 70) + 'ms;');
+    const p = pos[i];
+    const cb = planCapBox(p.x);
+    const sz = planPersp(p.y, topY);
+    let st = 'left:' + p.x.toFixed(2) + '%;top:' + p.y.toFixed(2) + '%;'
+      + 'animation-delay:' + (i * 60) + 'ms;'
+      + '--pmcw:' + cb.w.toFixed(1) + 'cqw;'
+      + '--pmsz:' + sz + ';--pmfz:' + (0.8 + 0.2 * sz).toFixed(3) + ';'
+      /* ЧТО НИЖЕ — ТО БЛИЖЕ: слой берём из высоты, а не из номера. Номер
+         говорит о порядке в плане, глубину задаёт положение на пейзаже */
+      + 'z-index:' + Math.round(p.y * 10) + ';';
+    if (!done && i !== nextIdx) st += 'opacity:' + planFutureAlpha(i - nextIdx, lastK) + ';';
+    html += planStopNode(i, s, 0, done, skip, i === nextIdx,
+      st + ' ').replace('class="pmap-stop', 'class="pmap-stop ' + cb.side);
   });
   html += '</div>';
 
@@ -15077,55 +15296,29 @@ function planRailHtml(answers){
       + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
   }
 
-  const STEP = 57, X0 = 32, WAVE = [0, 8];   // ужато под уменьшенные кружки 07.08.2026, +10% вместе с PRAIL_D
   const n = planStops.length;
   const nextIdx = planNextIdx();
+  const lastK = Math.max(0, n - 1 - Math.max(0, nextIdx));
+  const w = Math.max(PLAN_RAIL_X0 * 2 + (n - 1) * PLAN_RAIL_STEP, 260);
+  /* Ширина плитки НА ЭКРАНЕ: полоса повторяется по горизонтали, поэтому
+     положение остановки внутри плитки берём остатком от деления */
+  const tileW = PLAN_RAIL_TILE[planTheme()] * PLAN_RAIL_H / PLAN_RAIL_TILE_H;
 
-  // Как и на полной карте — раскладка по центрам, размеры разные
-  const size = planStops.map(function(s, i){
-    return planStopSize(i, nextIdx, planVisited.has(s.lec.slug), PRAIL_D);
-  });
-  const maxR = Math.max.apply(null, size) / PLAN_IMG_FILL / 2;
-  const cy = function(i){ return maxR + RAIL_PAD + WAVE[i % WAVE.length]; };
-  const w = X0 * 2 + (n - 1) * STEP;
-  /* ВЫСОТА ЛЕНТЫ = ровно по цепочке (07.08.2026, просьба Denis'а «убрать
-     пустоту»). Старая формула добавляла +40px под подписи лекций, а подписи в
-     ленте скрыты (.prail .pmap-cap{display:none}) — эти 40px просто висели
-     пустым полем под кружками. Теперь берём фактическую нижнюю точку самой
-     низкой остановки (центр + половина стороны её квадрата) и добавляем
-     маленький отступ. Формула сама подстроится, если размеры поменяются
-     снова. Считать надо именно по КВАДРАТУ картинки (size/PLAN_IMG_FILL), а
-     не по видимой сфере: у .prail стоит overflow-y:hidden, и недосчитанные
-     пиксели срезали бы низ картинки */
-  const bottom = Math.max.apply(null, size.map(function(d, i){
-    return cy(i) + d / PLAN_IMG_FILL / 2;
-  }));
-  const railH = Math.round(bottom + RAIL_PAD);
-
-  /* data-imgs-sync — просьба Denis'а: конфетки пути показываются ВСЕ РАЗОМ,
-     когда догрузилась последняя, а не каждая по мере готовности */
-  let html = '<div class="prail fade-rise" data-imgs-sync><div class="prail-inner" style="width:' + w + 'px;height:' + railH + 'px">'
-    + '<div class="pmap-crumbs">';
-  for (let i = 1; i < n; i++){
-    const a = { x: X0 + (i-1) * STEP, cy: cy(i-1) }, b = { x: X0 + i * STEP, cy: cy(i) };
-    for (let k = 1; k <= PMAP_DOTS; k++){
-      const p = planBez({x:a.x,y:a.cy}, {x:a.x + STEP/2, y:a.cy}, {x:b.x - STEP/2, y:b.cy},
-                        {x:b.x,y:b.cy}, k / (PMAP_DOTS + 1));
-      html += '<span class="pmap-crumb" style="left:' + p.x + 'px;top:' + p.y + 'px"></span>';
-    }
-  }
-  html += '</div>';
+  let html = '<div class="prail fade-rise"><div class="prail-inner" style="width:' + w
+    + 'px;height:' + PLAN_RAIL_H + 'px">';
 
   planStops.forEach(function(s, i){
     const done = planVisited.has(s.lec.slug);
     const skip = planSkipped.has(s.lec.slug);
-    html += planStopNode(i, s, size[i], done, skip, i === nextIdx,
-      'left:' + (X0 + i * STEP) + 'px;top:' + cy(i) + 'px;');
+    const px = PLAN_RAIL_X0 + i * PLAN_RAIL_STEP;
+    const py = planRailY((px % tileW) / tileW * 100) / 100 * PLAN_RAIL_H;
+    let st = 'left:' + (px / w * 100).toFixed(2) + '%;top:' + (py / PLAN_RAIL_H * 100).toFixed(2) + '%;'
+      + 'z-index:' + Math.round(py) + ';';
+    if (!done && i !== nextIdx) st += 'opacity:' + planFutureAlpha(i - nextIdx, lastK) + ';';
+    html += planStopNode(i, s, 0, done, skip, i === nextIdx, st);
   });
   html += '</div></div>';
 
-  // Заголовок «Твой путь» убран 07.08.2026: блок и так называется «Твой личный
-  // план» строкой выше. Остался только счётчик пройденного
   const done = planStops.filter(function(s){ return planVisited.has(s.lec.slug); }).length;
   return '<div class="prail-head">'
       + '<div class="reward-hint" style="margin:0 0 0 auto">' + done + ' из ' + n + '</div>'
