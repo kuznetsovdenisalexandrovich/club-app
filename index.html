@@ -9704,12 +9704,13 @@ function renderDemoBanner(){
   const legalLabel = document.getElementById('profile-legal-label');
   if (legalLabel) legalLabel.style.display = isMember ? '' : 'none';
   const demoLoginBtn = document.getElementById('demo-profile-login-btn');
-  if (demoLoginBtn) {
-    const inTelegram = !!(window.Telegram && window.Telegram.WebApp
-                          && window.Telegram.WebApp.initDataUnsafe
-                          && window.Telegram.WebApp.initDataUnsafe.user);
-    demoLoginBtn.style.display = inTelegram ? 'none' : 'block';
-  }
+  /* ⚠️ ВХОД ПО НОМЕРУ ПОКАЗЫВАЕМ ВСЕМ НЕ-УЧАСТНИКАМ, ДАЖЕ ВНУТРИ TELEGRAM
+     (18.08.2026). Здесь пряталось по признаку «опознан телеграмом — значит
+     входить некуда». Но опознан телеграмом ≠ найден в клубе: человек, купивший
+     с другого аккаунта или на другой номер, опознаётся как гость, и раньше его
+     спасала форма входа. С этого дня досмотревший фильм попадает сразу в демо,
+     и спрятанная кнопка оставила бы его в тупике без единого выхода. */
+  if (demoLoginBtn) demoLoginBtn.style.display = isMember ? 'none' : 'block';
   const onboardingVideo = document.getElementById('onboarding-video-banner');
   let onboardingDismissed = false;
   try { onboardingDismissed = localStorage.getItem('onboarding_banner_dismissed') === '1'; } catch (e) {}
@@ -16442,12 +16443,37 @@ initSwipeToClose('ai-popup', closeAiPopup);
    у неузнанного быть не может — мы про него ничего не знаем, в этом и суть */
 let funnelSuppressed = false;
 
-function funnelAlreadySeen(){
-  try { return localStorage.getItem('club_app_funnel_seen') === '1'; } catch(e){ return false; }
+/* ⚠️ ТРИ СОСТОЯНИЯ ГОСТЯ, А НЕ ДВА (18.08.2026). [stated] Denis: «нам нужно
+   различать реально совсем новых, тех кто начал и не досмотрел — им показывать
+   фильм. А если досмотрел — я бы вообще в демо доступ их пускал уже сразу».
+
+   Была одна отметка «воронку видел», и она не различала «посмотрел и решил
+   войти» от «мазнул и закрыл»: второй при следующем заходе получал форму входа,
+   хотя оставался незнакомым и продавать ему никто не переставал.
+
+     none    — фильма не видел вовсе        → воронка
+     started — начал, но не досмотрел       → воронка (второй заход даём)
+     done    — досмотрел                    → сразу демо, фильм не повторяем
+
+   Старая отметка `club_app_funnel_seen` читается как `done`: тот, кто уже
+   прошёл воронку до нашей правки, фильм заново не увидит. */
+function funnelStage(){
+  try {
+    const v = localStorage.getItem('club_app_funnel_stage');
+    if (v === 'done' || v === 'started') return v;
+    if (localStorage.getItem('club_app_funnel_seen') === '1') return 'done';
+  } catch(e){}
+  return 'none';
 }
-function markFunnelSeen(){
-  try { localStorage.setItem('club_app_funnel_seen', '1'); } catch(e){}
+function setFunnelStage(stage){
+  try {
+    // «начал» не затирает «досмотрел» — пересмотр не отменяет прошлый просмотр
+    if (stage === 'started' && funnelStage() === 'done') return;
+    localStorage.setItem('club_app_funnel_stage', stage);
+  } catch(e){}
 }
+function funnelAlreadySeen(){ return funnelStage() === 'done'; }
+function markFunnelSeen(){ setFunnelStage('done'); }
 
 /* ══ ВОРОНКА ПЕРВОГО КАСАНИЯ (14.08.2026) ═════════════════════════════════
    [stated] Denis: «новый пользователь пришёл по ссылке, сразу получил фильм,
@@ -16575,6 +16601,7 @@ window.addEventListener('message', function(ev){
      теперь имеет смысл считать время и ждать конца */
   if (d.method === 'play' && !funnelFilmStarted){
     funnelFilmStarted = true;
+    setFunnelStage('started');   // начал смотреть — при следующем заходе снова фильм
     track('funnel_film_start');
     startVideoHeartbeat('funnel');
     clearTimeout(funnelAfterTimer);
@@ -16601,6 +16628,7 @@ function showFunnelAfter(){
   if (cur) cur.style.display = 'none';
   const box = document.getElementById('funnel-after');
   if (box) box.style.display = 'flex';
+  setFunnelStage('done');       // досмотрел — фильм больше не повторяем
   track('funnel_film_done');
 }
 
@@ -18192,8 +18220,18 @@ async function proceedToWebLogin(){
      Форма входа остаётся, но становится вторым шагом — по ссылке «уже
      участник». Показываем воронку ОДИН РАЗ: увидевший её и ушедший в вход
      не должен встречать фильм при каждом открытии. */
-  if (!funnelAlreadySeen() && !funnelSuppressed){
-    showFunnelScreen();      // отметку ставим на ВЫХОДЕ из воронки, не на входе
+  if (!funnelSuppressed){
+    const stage = funnelStage();
+    if (stage !== 'done'){
+      showFunnelScreen();    // отметку ставим на ВЫХОДЕ из воронки, не на входе
+      return;
+    }
+    /* ⚠️ ДОСМОТРЕВШЕГО ФИЛЬМ ПУСКАЕМ В ДЕМО, А НЕ К ФОРМЕ ВХОДА (18.08.2026).
+       [stated] Denis: «а если досмотрел — я бы вообще в демо доступ их пускал
+       уже сразу». Он видел продающую часть целиком, повторять её незачем, а
+       форма входа неузнанному ничего не даёт: войти по ней может только тот,
+       кто уже платил. Вход остаётся доступен из демо, ссылкой в профиле. */
+    enterDemoMode();
     return;
   }
 
