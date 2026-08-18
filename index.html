@@ -11932,15 +11932,22 @@ const BOT_LINK_MAX = 'https://max.ru/id616616492674_bot';
      Telegram — `t.me/бот/app?startapp=<payload>`
      ВК       — `vk.ru/app<id>#<payload>` (ВК отдаёт хеш как есть, `appStartParam` его читает)
      веб      — `<адрес аппа>?startapp=<payload>`
-   ⚠️ MAX: адреса мини-приложения у нас НЕТ, и гадать его нельзя (урок 43).
-   Пока `MAX_APP_LINK` пуст — в MAX отдаём веб-ссылку (откроется в браузере,
-   но сработает). Проставить адрес — одна строка, остальное заработает само. */
+   MAX — тот же адрес бота с `?startapp=`. Разведано по документации
+   dev.max.ru 18.08.2026: формат `https://max.ru/<имя бота>?startapp=<payload>`,
+   payload до 512 знаков, только `A-Za-z0-9_-`.
+   ⚠️ НЕДОПУСТИМЫЙ ЗНАК УБИВАЕТ ВЕСЬ PAYLOAD МОЛЧА, без ошибки — поэтому
+   чистим его перед сборкой ссылки, а не надеемся на то, что ключи всегда
+   латинские. */
 const VK_APP_LINK  = 'https://vk.ru/app54715238';
-const MAX_APP_LINK = '';
+const MAX_APP_LINK = 'https://max.ru/id616616492674_bot';
+/* Отбрасываем всё, что MAX не пропустит. Обрезаем до 512 — его потолок */
+function safePayload(load){
+  return String(load || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 512);
+}
 function shareLink(payload){
   const load = String(payload || '');
   if (typeof isInsideMax === 'function' && isInsideMax()){
-    if (MAX_APP_LINK) return MAX_APP_LINK + '#' + load;
+    if (MAX_APP_LINK) return MAX_APP_LINK + '?startapp=' + safePayload(load);
     return APP_URL + '?startapp=' + encodeURIComponent(load);
   }
   if (typeof isInsideVk === 'function' && isInsideVk()) return VK_APP_LINK + '#' + load;
@@ -11983,7 +11990,7 @@ function shareTargetLink(where, payload){
   const load = String(payload || '');
   if (where === 'tg')  return BOT_LINK + '/app?startapp=' + encodeURIComponent(load);
   if (where === 'vk')  return VK_APP_LINK + '#' + load;
-  if (where === 'max' && MAX_APP_LINK) return MAX_APP_LINK + '#' + load;
+  if (where === 'max' && MAX_APP_LINK) return MAX_APP_LINK + '?startapp=' + safePayload(load);
   return APP_URL + '?startapp=' + encodeURIComponent(load);
 }
 
@@ -12029,6 +12036,13 @@ async function shareSomething(text, url){
     try { await vkBridge.send('VKWebAppShare', { link: url }); return; }
     catch(e){ /* мост не умеет или человек закрыл — падаем ниже на копирование */ }
   }
+  /* MAX: штатный экран «Отправить в MAX». По документации есть на iOS,
+     Android и в вебе; на десктопе ещё нет — там отработает общий путь ниже */
+  if (typeof isInsideMax === 'function' && isInsideMax() && !maxIsDesktop()){
+    openUrl('https://max.ru/:share?text=' + encodeURIComponent(msg));
+    return;
+  }
+
   /* Telegram: штатный выбор чата */
   const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
             || !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
@@ -18044,6 +18058,15 @@ function maxLaunchData(){
   } catch(e){ return ''; }
 }
 function isInsideMax(){ return !!maxLaunchData(); }
+/* На десктопе MAX экран «Отправить в MAX» ещё не работает (так сказано в их
+   документации). Определяем грубо — по отсутствию признаков телефона:
+   ошибёмся — человек получит ссылку в буфер, а не мёртвую кнопку */
+function maxIsDesktop(){
+  try {
+    if (navigator.maxTouchPoints > 0) return false;
+    return !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  } catch(e){ return false; }
+}
 function maxUserId(){
   try {
     const wa = window.WebApp && WebApp.initDataUnsafe && WebApp.initDataUnsafe.user;
@@ -22128,10 +22151,18 @@ function appStartParam(){
     const p = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     if (p) return String(p);
   } catch(e){}
+  // Внутри MAX — свой мост `window.WebApp` с тем же именем поля
+  try {
+    const p = window.WebApp && WebApp.initDataUnsafe && WebApp.initDataUnsafe.start_param;
+    if (p) return String(typeof p === 'object' ? (p.value || p.payload || '') : p);
+  } catch(e){}
   // В вебе — обычный параметр, там ограничений Telegram нет
   try {
     const q = new URLSearchParams(location.search);
-    const direct = q.get('startapp') || q.get('tgWebAppStartParam');
+    /* ⚠️ `WebAppStartParam` — ЭТО MAX. По его документации payload из диплинка
+       приезжает ИМЕННО так — GET-параметром и в `start_param`. Без этой
+       строки ЛЮБАЯ ссылка в MAX открывала просто главную — молча. */
+    const direct = q.get('startapp') || q.get('tgWebAppStartParam') || q.get('WebAppStartParam');
     if (direct) return String(direct);
     const quiz = q.get('quiz');
     if (quiz !== null) return 'quiz_' + quiz;
