@@ -13118,6 +13118,11 @@ const DEEPLINKS = {
   'watch':       { go: () => switchView('library'),       guests: true  },
   'magazine':    { go: () => openMagazine(),              guests: true  },
   'bonuses':     { go: () => switchView('portal'),        guests: true  },
+  /* Страница «Пригласить друга» — [stated] Denis 18.08: ссылку на неё он ставит
+     в канале, чтобы каждый перешедший оказался на СВОИХ персональных ссылках.
+     Гостю тоже открыта: не участник, приведя друга, зарабатывает льготный вход */
+  'invite':      { go: () => openInvitePopup(),           guests: true  },
+  'friend':      { go: () => openInvitePopup(),           guests: true  },
   'points':      { go: () => switchView('points-info'),   guests: true  },
   'levels':      { go: () => openLevelsPopup(),           guests: true  },
   'deck-rules':  { go: () => switchView('deck-rules'),    guests: true  },
