@@ -5485,6 +5485,20 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
   </div>
 
+  <!-- Незаконченная партия после перезапуска приложения -->
+  <div class="gg-overlay" id="gg-m-resume" onclick="if(event.target===this)ggResumeNo()">
+    <div class="gg-modal" style="position:relative">
+      <button class="gg-modal-close" onclick="ggResumeNo()">✕</button>
+      <div class="gg-robot"></div>
+      <div class="gg-modal-h" data-text="games.resume_h">Партия осталась незаконченной</div>
+      <div class="gg-modal-p"><span data-text="games.resume_p">Приложение закрылось посреди разговора. Клиент всё ещё ждёт ответа.</span>
+        <span id="gg-resume-name" style="display:block;margin-top:6px;font-weight:700"></span></div>
+      <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
+              onclick="ggResumeYes()" data-text="games.resume_yes">Продолжить</button>
+      <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggResumeNo()" data-text="games.resume_no">Не надо</button>
+    </div>
+  </div>
+
   <div class="gg-overlay" id="gg-m-quit" onclick="if(event.target===this)ggClose('gg-m-quit')">
     <div class="gg-modal">
       <div class="gg-modal-h" data-text="games.quit_h">Выйти из партии?</div>
@@ -7861,6 +7875,49 @@ html[data-gg-play] #gg-root .gg-composer-wrap{
 html[data-gg-play] #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){
   padding-bottom:calc(22px + var(--gg-vvbot, 0px))}
 
+
+/* ══ ЩАДЯЩИЙ РЕЖИМ ═════════════════════════════════════════
+   [stated] Denis 18.08.2026: нужна версия для слабых телефонов.
+
+   Что именно греет слабое устройство (замерено по файлу, а не на глаз):
+     • 60 правил с `backdrop-filter` — матовое стекло пересчитывается каждый
+       кадр прокрутки и на старых GPU стоит дороже всего остального вместе
+     • три фоновых блоба с `filter:blur(70px)` и бесконечной анимацией — рисуются
+       ПОСТОЯННО, даже когда человек просто читает
+     • 92 анимации и 219 теней
+   Здесь гасим именно это — А НЕ ФУНКЦИОНАЛ: человек на слабом телефоне
+   должен получить тот же клуб, только без украшений.
+   ⚠️ `!important` и префикс `html[data-lite]` — иначе правила игр с `#gg-root`
+   и темы перебьют этот блок по специфичности (урок 115). */
+/* ⚠️ КАЖДОЕ СВОЙСТВО — СВОИМ ПРАВИЛОМ, А НЕ ОДНИМ БЛОКОМ.
+   Вендорное `-webkit-backdrop-filter` в общем блоке роняло разбор всего
+   остального — тени и анимации просто не снимались (поймано проверкой
+   на вычисленных стилях). Порознь плохой парсер теряет только одну строку,
+   а не весь режим. */
+html[data-lite] *{backdrop-filter:none!important}
+html[data-lite] *{-webkit-backdrop-filter:none!important}
+html[data-lite] *{animation:none!important}
+html[data-lite] *{transition:none!important}
+html[data-lite] *{box-shadow:none!important}
+html[data-lite] *{text-shadow:none!important}
+html[data-lite] *::before,html[data-lite] *::after{backdrop-filter:none!important}
+html[data-lite] *::before,html[data-lite] *::after{-webkit-backdrop-filter:none!important}
+html[data-lite] *::before,html[data-lite] *::after{animation:none!important}
+html[data-lite] *::before,html[data-lite] *::after{transition:none!important}
+html[data-lite] *::before,html[data-lite] *::after{box-shadow:none!important}
+html[data-lite] *::before,html[data-lite] *::after{text-shadow:none!important}
+/* Фоновые блобы убираем совсем: размытие 70px держится в памяти всё время */
+html[data-lite] .blob{display:none!important}
+/* Стеклянные поверхности без размытия становятся прозрачными и нечитаемыми —
+   подкладываем плотный фон темы */
+html[data-lite] .card,
+html[data-lite] .sched-popup,
+html[data-lite] .gg-modal,
+html[data-lite] .gg-gm-card,
+html[data-lite] #tabbar{background:var(--card)!important}
+/* Анимированные фоны экрана вскрытия пака — самое тяжёлое, что есть */
+html[data-lite] .reveal-bg,
+html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -7920,6 +7977,16 @@ html[data-gg-play] #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){
     <button class="icon-btn fullscreen-popup-close" onclick="closeBonusVideo()">✕</button>
     <div class="video-embed-player wide" id="bonus-video-slot"></div>
     <div id="bonus-video-title" style="margin-top:10px;font-size:14px"></div>
+  </div>
+</div>
+
+<!-- Предложение после двух подозрительно коротких запусков подряд -->
+<div class="center-modal-overlay" id="lite-offer-overlay">
+  <div class="center-modal">
+    <div class="center-modal-title" data-text="lite.offer_h">Приложение закрывается само?</div>
+    <div style="font-size:13px;line-height:1.5;color:var(--text-dim);margin:8px 0 14px" data-text="lite.offer_p">Похоже, телефону тяжеловато. Есть щадящий режим: меньше эффектов, всё остальное на месте.</div>
+    <button class="lec-link-btn access-btn" onclick="liteOfferYes()" data-text="lite.offer_yes">Включить</button>
+    <div class="payment-help-link" onclick="liteOfferNo()" data-text="lite.offer_no">Не надо</div>
   </div>
 </div>
 
@@ -8286,6 +8353,11 @@ html[data-gg-play] #gg-root .gg-composer-wrap:has(.gg-input-warn.gg-on){
     </div>
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openAddToHomeScreenPopup()">Добавить на экран домой</button>
+    </div>
+    <!-- Щадящий режим: подпись кнопки меняется по состоянию -->
+    <div class="sm-block">
+      <button class="lec-link-btn access-btn" id="lite-toggle-btn" onclick="liteToggle()">Включить щадящий режим</button>
+      <div class="sm-hint" style="margin-top:6px" data-text="lite.hint">Меньше анимаций и эффектов — приложение легче работает на слабых телефонах. Весь клуб остаётся на месте.</div>
     </div>
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();enablePushNotifications()">Включить push-уведомления</button>
@@ -9692,6 +9764,12 @@ async function loadProfile() {
     /* Код для ссылок, которыми человек делится. Сервер выдаёт его лениво,
        при первом запросе профиля — до этого хвост откатывается на телеграмный айди */
     shareCode = u.share_code || '';
+    /* Щадящий режим из настроек на сервере — так Denis включает его человеку
+       из дашборда. ⚠️ ТОЛЬКО ВКЛЮЧАЕМ: если на сервере выключено, а человек
+       включил сам — его выбор главнее, молча выключать нельзя */
+    try {
+      if (u.ui_prefs && u.ui_prefs.lite && !liteOn()) liteSet(true, true);
+    } catch(e){}
     loadContinueWidget();
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
@@ -10732,6 +10810,7 @@ function homeAddBlock(key){
 
 function openAppSettingsPopup(){
   document.getElementById('app-settings-overlay').classList.add('open');
+  liteSyncButton();
 }
 function closeAppSettingsPopup(){
   document.getElementById('app-settings-overlay').classList.remove('open');
@@ -11235,6 +11314,20 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'share.where_vk': { c:'Поделиться', l:'Подпись ВК', w:'Окошко выбора', i:false, t:'ВКонтакте' },
   'share.where_max': { c:'Поделиться', l:'Подпись MAX', w:'Окошко выбора', i:false, t:'MAX' },
   'share.where_web': { c:'Поделиться', l:'Подпись обычной ссылки', w:'Окошко выбора', i:false, t:'Просто ссылка' },
+  'lite.btn_on': { c:'Щадящий режим', l:'Кнопка включения', w:'Настройки приложения', i:false, t:'Включить щадящий режим' },
+  'lite.btn_off': { c:'Щадящий режим', l:'Кнопка выключения', w:'Настройки приложения', i:false, t:'Выключить щадящий режим' },
+  'lite.hint': { c:'Щадящий режим', l:'Пояснение под кнопкой', w:'Настройки приложения', i:false, t:'Меньше анимаций и эффектов — приложение легче работает на слабых телефонах. Весь клуб остаётся на месте.' },
+  'lite.on': { c:'Щадящий режим', l:'Подтверждение включения', w:'Тост', i:false, t:'Щадящий режим включён' },
+  'lite.off': { c:'Щадящий режим', l:'Подтверждение выключения', w:'Тост', i:false, t:'Щадящий режим выключен' },
+  'lite.offer_h': { c:'Щадящий режим', l:'Заголовок предложения после падений', w:'Попап при запуске', i:false, t:'Приложение закрывается само?' },
+  'lite.offer_p': { c:'Щадящий режим', l:'Текст предложения', w:'Попап при запуске', i:false, t:'Похоже, телефону тяжеловато. Есть щадящий режим: меньше эффектов, всё остальное на месте.' },
+  'lite.offer_yes': { c:'Щадящий режим', l:'Кнопка согласия', w:'Попап при запуске', i:false, t:'Включить' },
+  'lite.offer_no': { c:'Щадящий режим', l:'Отказ от режима', w:'Попап при запуске', i:false, t:'Не надо' },
+  'games.resume_h': { c:'Игры', l:'Заголовок возврата в партию', w:'Попап на списке игр', i:false, t:'Партия осталась незаконченной' },
+  'games.resume_p': { c:'Игры', l:'Текст возврата в партию', w:'Попап на списке игр', i:false, t:'Приложение закрылось посреди разговора. Клиент всё ещё ждёт ответа.' },
+  'games.resume_yes': { c:'Игры', l:'Кнопка возврата в партию', w:'Попап на списке игр', i:false, t:'Продолжить' },
+  'games.resume_no': { c:'Игры', l:'Отказ вернуться в партию', w:'Попап на списке игр', i:false, t:'Не надо' },
+  'games.resume_gone': { c:'Игры', l:'Партия уже закрыта', w:'Тост', i:false, t:'Та партия уже закрыта — начнём заново' },
   'games.share': { c:'Игры', l:'Кнопка «позвать друга»', w:'Финал партии', i:false, t:'Позвать друга сыграть' },
   'games.share_text': { c:'Игры', l:'Текст при отправке ссылки на игру ({игра} — название)', w:'Шторка шеринга', i:false, t:'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.' },
   'games.link_gone': { c:'Игры', l:'Ссылка на исчезнувшую игру', w:'Список игр', i:false, t:'Этой игры больше нет — посмотри остальные' },
@@ -12298,6 +12391,110 @@ function watchPlayerOverlays(){
   nodes.forEach(function(n){ obs.observe(n, { attributes: true, attributeFilter: ['class'] }); });
 }
 
+/* ══ ЩАДЯЩИЙ РЕЖИМ: ВКЛЮЧЕНИЕ И ЛОВЛЯ ПАДЕНИЙ ═══════════════
+   ⚠️ СОСТОЯНИЕ ЖИВЁТ ЛОКАЛЬНО, А НЕ В ПРОФИЛЕ: режим нужен С ПЕРВОГО
+   КАДРА, а профиль приезжает секундой позже — именно в эту секунду
+   слабый телефон и захлёбывается. С сервером синхронизируемся вторым шагом,
+   чтобы Denis мог включить режим человеку из дашборда. */
+const LITE_KEY = 'club_app_lite';
+const LITE_BOOT_KEY = 'club_app_boot';     /* незакрытый запуск */
+const LITE_FAILS_KEY = 'club_app_bad_boots';
+const LITE_BAD_MS = 45000;   /* запуск короче — подозрительно короткий */
+const LITE_FAILS_TO_OFFER = 2;
+
+function liteOn(){
+  try { return localStorage.getItem(LITE_KEY) === '1'; } catch(e){ return false; }
+}
+function liteApply(){
+  document.documentElement.toggleAttribute('data-lite', liteOn());
+}
+/* Переключатель. `silent` — когда режим пришёл снаружи (диплинк, сервер) */
+function liteSet(on, silent){
+  try { localStorage.setItem(LITE_KEY, on ? '1' : '0'); } catch(e){}
+  liteApply();
+  liteSyncButton();
+  if (!silent && typeof showToast === 'function'){
+    showToast(on ? (t('lite.on') || 'Щадящий режим включён')
+                 : (t('lite.off') || 'Щадящий режим выключен'));
+  }
+  /* Серверу сообщаем тихо и неблокирующе: это удобство для дашборда,
+     а не источник правды — если запрос не уйдёт, режим всё равно работает */
+  try {
+    if (telegramId){
+      fetch(`${API_URL}/users/ui-prefs`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: telegramId, lite: !!on })
+      }).catch(function(){});
+    }
+  } catch(e){}
+  track('lite_mode', on ? 'on' : 'off');
+}
+function liteToggle(){ liteSet(!liteOn()); }
+
+function liteSyncButton(){
+  const el = document.getElementById('lite-toggle-btn');
+  if (!el) return;
+  el.textContent = liteOn() ? (t('lite.btn_off') || 'Выключить щадящий режим')
+                            : (t('lite.btn_on') || 'Включить щадящий режим');
+}
+
+/* ══ ЛОВЛЯ ПАДЕНИЙ ═════════════════════════════════════════
+   Надёжного события «вкладка убита системой» не бывает — браузер просто
+   перестаёт существовать. Поэтому судим косвенно: при старте ставим метку
+   «запуск идёт», при штатном уходе её снимаем. Метка на месте ПЛЮС сессия
+   была короче минуты = похоже на падение.
+   ⚠️ ДВА УСЛОВИЯ, А НЕ ОДНО. По одной только метке падением считался бы
+   каждый обычный выход — `pagehide` доезжает не всегда, особенно в вебвью.
+   ⚠️ ПРЕДЛАГАЕМ ТОЛЬКО ПОСЛЕ ДВУХ ПОДРЯД: одиночный случай — это просто
+   человек закрыл приложение через полминуты, а не поломка. */
+let liteBootAt = 0;
+
+function liteBootStart(){
+  liteBootAt = Date.now();
+  let prev = 0;
+  try { prev = Number(localStorage.getItem(LITE_BOOT_KEY) || 0); } catch(e){}
+  if (prev){
+    /* Прошлый запуск не закрылся штатно */
+    const lived = Date.now() - prev;
+    if (lived < LITE_BAD_MS) liteCountBad(); else liteResetBad();
+  }
+  try { localStorage.setItem(LITE_BOOT_KEY, String(liteBootAt)); } catch(e){}
+  /* Оба события: `pagehide` работает в iOS, `beforeunload` — в остальных */
+  window.addEventListener('pagehide', liteBootClean);
+  window.addEventListener('beforeunload', liteBootClean);
+  /* Пережил минуту — запуск удачный, счётчик можно обнулить */
+  setTimeout(liteResetBad, LITE_BAD_MS + 5000);
+}
+function liteBootClean(){
+  try { localStorage.removeItem(LITE_BOOT_KEY); } catch(e){}
+}
+function liteCountBad(){
+  let n = 0;
+  try { n = Number(localStorage.getItem(LITE_FAILS_KEY) || 0) + 1; localStorage.setItem(LITE_FAILS_KEY, String(n)); } catch(e){}
+  if (n >= LITE_FAILS_TO_OFFER && !liteOn()){
+    /* Показываем НЕ сразу: пусть сначала соберётся экран */
+    setTimeout(liteOfferPopup, 1200);
+  }
+}
+function liteResetBad(){
+  try { localStorage.setItem(LITE_FAILS_KEY, '0'); } catch(e){}
+}
+function liteOfferPopup(){
+  const el = document.getElementById('lite-offer-overlay');
+  if (el) el.classList.add('open');
+}
+function liteOfferYes(){
+  const el = document.getElementById('lite-offer-overlay');
+  if (el) el.classList.remove('open');
+  liteResetBad();
+  liteSet(true);
+}
+function liteOfferNo(){
+  const el = document.getElementById('lite-offer-overlay');
+  if (el) el.classList.remove('open');
+  liteResetBad();   /* отказался — не долбим при каждом следующем запуске */
+}
+
 function levelBarMustHide(){
   if (pfFieldOpen) return true;    // поле выбора тем
   if (liveFullOpen) return true;   // полный экран эфира
@@ -13215,6 +13412,11 @@ const DEEPLINKS = {
      в канале, чтобы каждый перешедший оказался на СВОИХ персональных ссылках.
      Гостю тоже открыта: не участник, приведя друга, зарабатывает льготный вход */
   'invite':      { go: () => openInvitePopup(),           guests: true  },
+  /* [stated] Denis: «сделай диплинк, чтобы я дал его пользователям».
+     Ссылка СРАЗУ включает режим и только потом открывает приложение:
+     человеку, у которого всё виснет, нельзя предлагать найти кнопку в настройках */
+  'lite':        { go: () => { liteSet(true); switchView('portal'); }, guests: true },
+  'light':       { go: () => { liteSet(true); switchView('portal'); }, guests: true },
   'friend':      { go: () => openInvitePopup(),           guests: true  },
   'points':      { go: () => switchView('points-info'),   guests: true  },
   'levels':      { go: () => openLevelsPopup(),           guests: true  },
@@ -18925,6 +19127,10 @@ async function init(){
    отказом промиса, а это опять белый экран без объяснения */
 /* Сторож над плеерами — ВНЕ `init()`: тот ветвится на пять площадок и
    половина веток возвращается раньше (урок 132) */
+/* ⚠️ ЩАДЯЩИЙ РЕЖИМ — САМЫМ ПЕРВЫМ ДЕЛОМ, ДО ЛЮБОЙ ОТРИСОВКИ.
+   Если включить его после запуска, слабое устройство успеет отрисовать
+   всё тяжёлое один раз — а именно на этом кадре оно и падает */
+try { liteApply(); liteBootStart(); } catch(e){}
 try { watchPlayerOverlays(); } catch(e){}
 
 loadPlatformSdk().then(function(){
@@ -23096,6 +23302,8 @@ async function ggOpen(){
      решение по флагу, который ещё не загружен. Ждём ГОТОВНОСТИ, не паузы. */
   ggBackToList();
   await waitProfile(4000);
+  /* ⚠️ ПРЕДЛОЖЕНИЕ — ПОСЛЕ ЗАГРУЗКИ СПИСКА: без него нечем взять
+     название игры, число ходов и шкалу */
   /* ⚠️ СПИСОК ПЕРЕЧИТЫВАЕМ ПРИ КАЖДОМ ЗАХОДЕ: уровень мог вырасти, ступень —
      открыться. Данные, загруженные один раз при старте, устаревают молча */
   ggLoad();
@@ -23112,6 +23320,9 @@ async function ggLoad(){
     ggList = await r.json();
     ggLoadedOnce = true;
     ggRenderList();
+    /* Незаконченная партия — только когда человек смотрит на список,
+       а не поверх идущей игры (`ggLoad` зовётся и после финала) */
+    if (!ggS && typeof ggOfferResume === 'function') ggOfferResume();
   } catch(e){
     box.innerHTML = '<div class="gg-err">' + escapeHtml(t('games.load_err') || 'Игры не загрузились. Потяни экран вниз или зайди позже.') + '</div>';
   }
@@ -23379,6 +23590,100 @@ function ggHideAppHeader(hide){
   document.documentElement.toggleAttribute('data-gg-nohead', !!hide);
 }
 
+/* ══ ПАРТИЯ ПЕРЕЖИВАЕТ ПЕРЕЗАПУСК ПРИЛОЖЕНИЯ ══════════════
+   ⚠️ ПОВОД: в поддержку написали, что  во время игры выкидывает на главную.
+   Состояние партии жило ТОЛЬКО в памяти вкладки (`ggS`), а вебвью
+   перезапускается сам: iOS выгружает фоновую вкладку, Telegram и MAX гасят
+   мини-приложение при нехватке памяти, PWA перезагружается при возврате.
+   Печатать реплики долго, свернуться в переписку посреди партии — обычное дело.
+   Лечим НЕ поиском виновного перезапуска, а тем, что партию можно вернуть:
+   она целиком лежит на сервере, `GET /games/session/{id}` отдаёт ходы.
+   ⚠️ `game_key` храним САМИ: сервер его в ответе не присылает, а без него нечем
+   восстановить название, число ходов и шкалу. */
+const GG_LIVE_KEY = 'club_app_gg_live';
+const GG_LIVE_TTL_MS = 24 * 60 * 60 * 1000;   // сутки: вчерашнюю партию предлагать странно
+
+function ggRemember(){
+  if (!ggS || !ggS.session_id) return;
+  try {
+    localStorage.setItem(GG_LIVE_KEY, JSON.stringify({
+      session_id: ggS.session_id, game_key: ggS.game_key, at: Date.now()
+    }));
+  } catch(e){}
+}
+function ggForget(){
+  try { localStorage.removeItem(GG_LIVE_KEY); } catch(e){}
+}
+function ggSaved(){
+  try {
+    const raw = localStorage.getItem(GG_LIVE_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || !d.session_id) return null;
+    if (Date.now() - (d.at || 0) > GG_LIVE_TTL_MS){ ggForget(); return null; }
+    return d;
+  } catch(e){ return null; }
+}
+
+/* Восстановление. Лента собирается из сохранённых ходов: реплики и счёт
+   возвращаются полностью. ⚠️ Разборы ходов НЕ восстанавливаются: в базе
+   лежат только ключи сработавших правил, а подписи и пояснения собираются
+   сервером в момент хода. Обещать разбор и показать пустоту хуже, чем
+   не показывать вовсе. */
+async function ggResume(saved){
+  if (!saved || ggBusy) return false;
+  ggBusy = true;
+  try {
+    const r = await fetch(API_URL + '/games/session/' + encodeURIComponent(saved.session_id));
+    if (!r.ok){ ggForget(); return false; }
+    const d = await r.json().catch(function(){ return {}; });
+    if (d.status !== 'live'){ ggForget(); return false; }
+
+    const g = ggFind(saved.game_key) || {};
+    ggS = { session_id: saved.session_id, game_key: saved.game_key, title: g.title || '',
+            score: d.score, max_turns: g.max_turns, turn_no: d.turn_no || 0,
+            scale_name: g.scale_name || '', member: !!isMember };
+
+    document.getElementById('gg-feed').innerHTML = '';
+    document.getElementById('gg-play-title').textContent = ggS.title;
+    document.getElementById('gg-scale-name').textContent = ggS.scale_name;
+    ggTurnLabel();
+    ggScale(ggS.score);
+    ggShow('play');
+    (d.turns || []).forEach(function(t){
+      if (t.player) ggMsg(t.player, true);
+      if (t.client) ggMsg(t.client, false);
+    });
+    ggRemember();
+    ggScrollDown();
+    return true;
+  } catch(e){
+    return false;
+  } finally { ggBusy = false; }
+}
+
+/* Спрашиваем, а не втаскиваем силой: человек мог уйти из партии нарочно */
+function ggOfferResume(){
+  const saved = ggSaved();
+  if (!saved) return;
+  const g = ggFind(saved.game_key);
+  const el = document.getElementById('gg-resume-name');
+  if (el) el.textContent = g ? (g.title || '') : '';
+  ggPop('gg-m-resume');
+}
+function ggResumeYes(){
+  ggClose('gg-m-resume');
+  const saved = ggSaved();
+  if (!saved) return;
+  ggResume(saved).then(function(ok){
+    if (!ok) showToast(t('games.resume_gone') || 'Та партия уже закрыта — начнём заново');
+  });
+}
+function ggResumeNo(){
+  ggClose('gg-m-resume');
+  ggForget();
+}
+
 async function ggStart(key){
   if (ggBusy) return;
   ggBusy = true;
@@ -23410,6 +23715,7 @@ async function ggStart(key){
     ggTurnLabel();
     ggScale(ggS.score);
     ggShow('play');
+    ggRemember();
     /* Вводные показываем репликой клиента: так человек сразу в разговоре, а
        не читает инструкцию поверх пустого чата */
     if (d.intro) ggMsg(d.intro, false);
@@ -23704,6 +24010,7 @@ function ggOpenMaterial(slug){
 }
 
 async function ggAfterFinal(){
+  ggForget();
   ggS = null;
   ggShow('list');
   await ggLoad();          /* уровень и открытые ступени могли измениться */
@@ -23712,12 +24019,14 @@ async function ggAfterFinal(){
 async function ggNext(key){
   await ggLoad();
   const g = ggFind(key);
+  ggForget();
   ggS = null;
   if (g && !g.locked) ggStart(key); else ggShow('list');
 }
 
 function ggRetry(){
   const key = ggS && ggS.game_key;
+  ggForget();
   ggS = null;
   if (key) ggStart(key); else ggShow('list');
 }
