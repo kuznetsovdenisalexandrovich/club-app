@@ -4704,6 +4704,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <span onclick="openAppSettingsPopup()" style="cursor:pointer;font-size:16px">⚙️</span>
     </div>
 
+    <!-- ⚠️ ЧЕЛОВЕК ДОЛЖЕН ЗНАТЬ, ЧТО СИДИТ НА ОБЛЕГЧЁННОЙ ВЕРСИИ.
+         [stated] Denis: «чтобы не получилось, что пользователь даже не понял,
+         что давно сидит на голой версии» -->
+    <div class="card" id="lite-profile-card" style="display:none">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px" data-text="lite.card_h">Щадящий режим включён</div>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px" data-text="lite.card_p">Анимации и эффекты выключены, чтобы приложение не тормозило. Если телефон справляется — можно вернуть красоту.</div>
+      <button class="lec-link-btn" style="width:100%" onclick="liteSet(false)" data-text="lite.card_off">Вернуть обычный вид</button>
+    </div>
+
     <div class="card" id="demo-profile-card" style="display:none">
       <div style="font-size:14px;font-weight:600;margin-bottom:4px" data-text="demo.a1">Ты смотришь клуб в демо-режиме</div>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px" data-text="demo.banner">Оплати участие — откроются записи занятий, живые эфиры и баллы. Или войди, если подписка уже есть.</div>
@@ -7914,6 +7923,10 @@ html[data-lite] *::before,html[data-lite] *::after{box-shadow:none!important}
 html[data-lite] *::before,html[data-lite] *::after{text-shadow:none!important}
 /* Фоновые блобы убираем совсем: размытие 70px держится в памяти всё время */
 html[data-lite] .blob{display:none!important}
+/* Свечения поля выбора тем: размытие 46 и 70 пикселей на каждое
+   направление, поверх двигающихся капсул — самое дорогое на экране */
+html[data-lite] .pf-glow,
+html[data-lite] .pf-dir-blob{display:none!important}
 /* Стеклянные поверхности без размытия становятся прозрачными и нечитаемыми —
    подкладываем плотный фон темы */
 html[data-lite] .card,
@@ -9499,7 +9512,7 @@ async function loadNews() {
     const hasUrgent = urgent && urgent.text && urgent.text.trim();
     const hasTargeted = isMember && (news.targeted || []).length > 0;
 
-    if (!hasCommon && !hasUrgent && !hasTargeted && !hasReplies) {
+    if (!hasCommon && !hasUrgent && !hasTargeted && !hasReplies && !liteRemindDue()) {
       el.style.display = 'none';
       headerEl.style.display = 'none';
       return;
@@ -9509,6 +9522,19 @@ async function loadNews() {
       let html = '';
       /* Ответ поддержки выше всего, даже срочного: это ответ ЛИЧНО ему,
          и он ждёт его больше, чем общеклубного объявления */
+      /* Напоминание раз в неделю — чтобы режим не стал незаметным навсегда.
+         ⚠️ НЕ ПРИ КАЖДОМ ЗАПУСКЕ: ежедневное напоминание о том, что человек
+         сам включил, — это не забота, а назойливость */
+      if (liteRemindDue()){
+        html += '<div class="news-block news-block--reply">'
+          + '<div class="news-tag">' + escapeHtml(t('lite.remind_tag') || 'Щадящий режим') + '</div>'
+          + '<div class="news-reply-a">' + escapeHtml(t('lite.remind_p') || 'У тебя включён щадящий режим — без анимаций и эффектов. Если телефон справляется, можно вернуть красоту.') + '</div>'
+          + '<div style="display:flex;gap:8px;margin-top:10px">'
+          + '<button class="lec-link-btn" style="flex:1" onclick="liteRemindLater()">'
+          + escapeHtml(t('lite.remind_keep') || 'Оставить') + '</button>'
+          + '<button class="lec-link-btn" style="flex:1" onclick="liteRemindOff()">'
+          + escapeHtml(t('lite.remind_off') || 'Вернуть красоту') + '</button></div></div>';
+      }
       if (hasReplies){
         supportReplies.forEach(function(rep){
           html += '<div class="news-block news-block--reply" id="sup-reply-' + rep.id + '">'
@@ -9535,7 +9561,7 @@ async function loadNews() {
 
     // Показываем сразу то, что не зависит от списков — обычно это и есть
     // весь текст, который увидит человек
-    if (hasCommon || hasUrgent || hasReplies) {
+    if (hasCommon || hasUrgent || hasReplies || liteRemindDue()) {
       el.innerHTML = commonHtml();
       el.classList.add('fade-rise');
       el.style.display = 'block';
@@ -11402,6 +11428,13 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'support.reply_ok': { c:'Поддержка', l:'Кнопка под ответом', w:'Окно новостей', i:false, t:'Понятно, спасибо' },
   'support.open_here': { c:'Поддержка', l:'Подпись ссылки внутрь приложения', w:'Ответ поддержки', i:false, t:'открыть в приложении' },
   'support.route_gone': { c:'Поддержка', l:'Ссылка из ответа не открылась', w:'Тост', i:false, t:'Не получилось открыть — напиши нам ещё раз' },
+  'lite.card_h': { c:'Щадящий режим', l:'Заголовок карточки в профиле', w:'Профиль', i:false, t:'Щадящий режим включён' },
+  'lite.card_p': { c:'Щадящий режим', l:'Текст карточки в профиле', w:'Профиль', i:false, t:'Анимации и эффекты выключены, чтобы приложение не тормозило. Если телефон справляется — можно вернуть красоту.' },
+  'lite.card_off': { c:'Щадящий режим', l:'Кнопка в карточке профиля', w:'Профиль', i:false, t:'Вернуть обычный вид' },
+  'lite.remind_tag': { c:'Щадящий режим', l:'Метка напоминания', w:'Окно новостей', i:false, t:'Щадящий режим' },
+  'lite.remind_p': { c:'Щадящий режим', l:'Текст напоминания раз в неделю', w:'Окно новостей', i:false, t:'У тебя включён щадящий режим — без анимаций и эффектов. Если телефон справляется, можно вернуть красоту.' },
+  'lite.remind_keep': { c:'Щадящий режим', l:'Кнопка «оставить»', w:'Окно новостей', i:false, t:'Оставить' },
+  'lite.remind_off': { c:'Щадящий режим', l:'Кнопка возврата эффектов', w:'Окно новостей', i:false, t:'Вернуть красоту' },
   'lite.btn_on': { c:'Щадящий режим', l:'Кнопка включения', w:'Настройки приложения', i:false, t:'Включить щадящий режим' },
   'lite.btn_off': { c:'Щадящий режим', l:'Кнопка выключения', w:'Настройки приложения', i:false, t:'Выключить щадящий режим' },
   'lite.hint': { c:'Щадящий режим', l:'Пояснение под кнопкой', w:'Настройки приложения', i:false, t:'Меньше анимаций и эффектов — приложение легче работает на слабых телефонах. Весь клуб остаётся на месте.' },
@@ -12495,10 +12528,16 @@ function liteOn(){
 }
 function liteApply(){
   document.documentElement.toggleAttribute('data-lite', liteOn());
+  const card = document.getElementById('lite-profile-card');
+  if (card) card.style.display = liteOn() ? 'block' : 'none';
 }
 /* Переключатель. `silent` — когда режим пришёл снаружи (диплинк, сервер) */
 function liteSet(on, silent){
-  try { localStorage.setItem(LITE_KEY, on ? '1' : '0'); } catch(e){}
+  try {
+    localStorage.setItem(LITE_KEY, on ? '1' : '0');
+    /* Отсчёт напоминаний начинается заново при каждом переключении */
+    localStorage.setItem(LITE_REMIND_KEY, on ? String(Date.now()) : '0');
+  } catch(e){}
   liteApply();
   liteSyncButton();
   if (!silent && typeof showToast === 'function'){
@@ -12518,6 +12557,26 @@ function liteSet(on, silent){
   track('lite_mode', on ? 'on' : 'off');
 }
 function liteToggle(){ liteSet(!liteOn()); }
+
+/* Пора ли напомнить про режим. Первый раз — через неделю после включения:
+   только что включившему напоминать бессмысленно */
+const LITE_REMIND_KEY = 'club_app_lite_remind';
+const LITE_REMIND_MS = 7 * 24 * 60 * 60 * 1000;
+function liteRemindDue(){
+  if (!liteOn()) return false;
+  let last = 0;
+  try { last = Number(localStorage.getItem(LITE_REMIND_KEY) || 0); } catch(e){}
+  if (!last){ liteRemindLater(); return false; }   /* отсчёт с первого взгляда */
+  return (Date.now() - last) > LITE_REMIND_MS;
+}
+function liteRemindLater(){
+  try { localStorage.setItem(LITE_REMIND_KEY, String(Date.now())); } catch(e){}
+  if (typeof loadNews === 'function') loadNews();
+}
+function liteRemindOff(){
+  liteRemindLater();
+  liteSet(false);
+}
 
 function liteSyncButton(){
   const el = document.getElementById('lite-toggle-btn');
@@ -15172,6 +15231,14 @@ function pfVisible(){
    границе, не смешивая. */
 
 const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
+/* ⚠⚠ ГЛАВНАЯ ЦЕНА ЭКРАНА ПЛАНА — ЗДЕСЬ. `pfRelax` крутит 220 итераций
+   расталкивания СИНХРОННО, перебирая каждую пару капсул — это десятки тысяч
+   сравнений в одном блоке без единого кадра отрисовки. На слабом телефоне
+   это и есть «белый экран»: вкладка жива, но занята счётом.
+   В щадящем режиме берём вчетверо меньше проходов: раскладка выйдет
+   чуть менее вылизанной, зато экран откроется. */
+function pfIter(){ return (typeof liteOn === 'function' && liteOn()) ? 45 : PF_ITER; }
+function pfPure(){ return (typeof liteOn === 'function' && liteOn()) ? 8 : PF_PURE; }
 /* Когда ветка раскрыта, чужие капсулы должны отойти СИЛЬНЕЕ обычного: иначе
    на экране одновременно висит десяток тем, не относящихся к выбранной, и
    рябит. Совсем убирать их нельзя — пропадёт ощущение, что поле большое */
@@ -15304,11 +15371,12 @@ function pfRelax(list, roots, meta){
 
   list.forEach(function(k){ if (!pfPos[k]) pfPos[k] = { x: home[k].x, y: home[k].y }; });
 
-  for (let it = 0; it < PF_ITER + PF_PURE; it++){
+  const ITER = pfIter(), PURE = pfPure();
+  for (let it = 0; it < ITER + PURE; it++){
     // Последние проходы — без пружины: иначе тяга к родному месту подтягивает
     // соседей обратно уже после разведения, и зазор выходит меньше заданного
-    const t = Math.min(1, it / PF_ITER);
-    const kSpring = it < PF_ITER ? (0.13 * (1 - t) + 0.012) : 0;
+    const t = Math.min(1, it / ITER);
+    const kSpring = it < ITER ? (0.13 * (1 - t) + 0.012) : 0;
 
     list.forEach(function(k){
       pfPos[k].x += (home[k].x - pfPos[k].x) * kSpring;
@@ -15333,7 +15401,7 @@ function pfRelax(list, roots, meta){
        НО в финальных проходах его быть не должно: оно подтягивает капсулы на
        пару пикселей после каждого разведения, и зазор навсегда застревает чуть
        ниже заданного — ровно как пружина, которую мы отключаем там же */
-    const cen = it < PF_ITER ? {} : null;
+    const cen = it < ITER ? {} : null;
     if (cen){
     list.forEach(function(k){
       const c = cl[k];
@@ -15586,11 +15654,18 @@ function pfRender(){
 /* Один кадр анимации на всё поле: пружина к цели, парение, переливание и
    камера. Держим в одном месте — иначе CSS-анимация парения перехватывает
    transform, и переезд из плавного превращается в мгновенный прыжок */
-const PF_CALM = typeof matchMedia === 'function'
-  && matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ⚠️ ФУНКЦИЯ, А НЕ КОНСТАНТА: щадящий режим включается в любой момент,
+   а константа считалась бы один раз при загрузке — человек включил бы режим
+   и не понял, почему план всё равно тяжёлый */
+function pfCalm(){
+  if (typeof liteOn === 'function' && liteOn()) return true;
+  return typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 function pfAnimFrame(){
   const now = performance.now() / 1000;
+  const calm = pfCalm();
   Object.keys(pfEls).forEach(function(k){
     const tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k], el = pfEls[k];
     if (!tgt || !r || !vel || !el) return;
@@ -15600,7 +15675,7 @@ function pfAnimFrame(){
       vel.x *= PF_DAMP; vel.y *= PF_DAMP;
       r.x += vel.x; r.y += vel.y;
     }
-    if (PF_CALM){
+    if (calm){
       el.style.transform = 'translate(' + r.x.toFixed(1) + 'px,' + r.y.toFixed(1) + 'px)';
     } else {
       // Переливание отдано CSS-анимации (см. .pf-node): filter и transform —
@@ -15624,7 +15699,23 @@ function pfAnimFrame(){
         Math.abs(pfCamY - pfOy) < 0.4 && Math.abs(pfCamVY) < 0.4) pfCamOn = false;
   }
 
-  pfAnimRaf = requestAnimationFrame(pfAnimFrame);   // парение идёт всегда
+  /* ⚠️ В ЩАДЯЩЕМ ЦИКЛ ОСТАНАВЛИВАЕТСЯ, КОГДА ВСЁ ДОЕХАЛО. В обычном
+     режиме он крутится вечно ради парения — шестьдесят кадров в секунду,
+     пока экран открыт, даже если человек просто читает */
+  if (calm && !pfCamOn && pfSettled()){ pfAnimRaf = null; return; }
+  pfAnimRaf = requestAnimationFrame(pfAnimFrame);
+}
+
+/* Все капсулы доехали до своих мест и практически не движутся */
+function pfSettled(){
+  const keys = Object.keys(pfEls);
+  for (let i = 0; i < keys.length; i++){
+    const k = keys[i], tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k];
+    if (!tgt || !r || !vel) continue;
+    if (Math.abs(tgt.x - r.x) > 0.5 || Math.abs(tgt.y - r.y) > 0.5) return false;
+    if (Math.abs(vel.x) > 0.5 || Math.abs(vel.y) > 0.5) return false;
+  }
+  return true;
 }
 
 function pfStartAnim(){ if (!pfAnimRaf) pfAnimFrame(); }
