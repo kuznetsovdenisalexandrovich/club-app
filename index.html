@@ -352,7 +352,7 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .tab-icon{font-size:20px;transition:filter .15s;display:flex;align-items:center;justify-content:center}
 /* Знак бога вместо человечка в пилюле: спрайт 4x4 работает МАСКОЙ,
    поэтому цвет берётся из currentColor и тема красит его сама */
-.tab-sign{display:block;width:25px;height:25px;background-color:currentColor;
+.tab-sign{display:block;width:28px;height:28px;background-color:currentColor;
   -webkit-mask-image:url('images/tab-signs.png');mask-image:url('images/tab-signs.png');
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
   -webkit-mask-size:400% 100%;mask-size:400% 100%}
@@ -360,8 +360,10 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .tab-sign[data-i="1"]{-webkit-mask-position:33.333% 0;mask-position:33.333% 0}
 .tab-sign[data-i="2"]{-webkit-mask-position:66.667% 0;mask-position:66.667% 0}
 .tab-sign[data-i="3"]{-webkit-mask-position:100% 0;mask-position:100% 0}
-.god-sign{display:block;width:25px;height:25px;background-color:currentColor;
-  -webkit-mask-image:url('images/god-signs.png');mask-image:url('images/god-signs.png');
+.god-sign{display:block;width:28px;height:28px;background-color:currentColor;
+  /* ФИГУРЫ с человечком. Откат на голые атрибуты — заменить god-figures.png
+     на god-signs.png в двух строках ниже, оба файла лежат в images/ */
+  -webkit-mask-image:url('images/god-figures.png');mask-image:url('images/god-figures.png');
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
   -webkit-mask-size:400% 400%;mask-size:400% 400%}
 .tab-item.active{color:var(--warm)}
