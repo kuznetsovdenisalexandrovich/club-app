@@ -227,6 +227,13 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 
 .sub-card{animation:cardEntrance .5s cubic-bezier(0.34,1.56,0.64,1) both;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(232,97,74,0.08),transparent);box-shadow:0 0 18px -10px rgba(232,97,74,0.15),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.20);border-width:1px}
 .sub-left{display:flex;align-items:center;gap:12px}
+/* Кнопка настроек в шапке профиля */
+.profile-settings-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;
+  border-radius:999px;border:1px solid var(--border);background:var(--card2);
+  color:var(--text-dim);font-family:inherit;font-size:12px;font-weight:700;
+  letter-spacing:0;text-transform:none;cursor:pointer}
+.profile-settings-btn:active{transform:scale(.97)}
+
 .sub-icon{width:44px;height:44px;border-radius:14px;background:var(--lav-dim);color:var(--lav-deep);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),inset 0 -1px 0 rgba(0,0,0,0.2)}
 .sub-name{font-family:var(--disp);font-weight:700;font-size:15px}
 .sub-meta{font-size:12px;color:var(--text-faint);margin-top:3px}
@@ -533,8 +540,37 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .points-caption{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
 .points-hint{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:12px}
 .sm-slider-row{margin-top:14px}
-.sm-slider{width:100%;accent-color:var(--warm)}
+/* ══ ПОЛЗУНОК — ТОТ ЖЕ МАТЕРИАЛ, ЧТО И БАР УРОВНЯ ═════════════
+   Был голый `accent-color` — то есть системный ползунок браузера,
+   разный на каждой платформе и чужой остальному приложению.
+   ⚠️ Дорожка и бегунок описываются ОТДЕЛЬНО для WebKit и Firefox:
+   общего селектора нет, а склейка через запятую убивает правило
+   целиком в обоих браузерах.
+   Заполнение слева рисуется градиентом по `--p` — процент ставит JS. */
+.sm-slider{width:100%;height:9px;margin:0;-webkit-appearance:none;appearance:none;
+  background:transparent;cursor:pointer}
+.sm-slider::-webkit-slider-runnable-track{height:9px;border-radius:6px;
+  background:linear-gradient(90deg,var(--warm) 0%,var(--warm) var(--p,0%),
+             var(--card2) var(--p,0%),var(--card2) 100%)}
+.sm-slider::-moz-range-track{height:9px;border-radius:6px;background:var(--card2)}
+.sm-slider::-moz-range-progress{height:9px;border-radius:6px;background:var(--warm)}
+.sm-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:20px;height:20px;border-radius:50%;margin-top:-5.5px;
+  background:var(--card);border:2px solid var(--warm)}
+.sm-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;
+  background:var(--card);border:2px solid var(--warm)}
 .sm-slider:disabled{opacity:.4}
+/* Те же токены, что у бара уровня — чтобы один материал на весь апп */
+[data-theme="dark"] .sm-slider::-webkit-slider-runnable-track{
+  background:linear-gradient(90deg,#ff604b 0%,#e96a91 var(--p,0%),
+             rgba(255,255,255,.055) var(--p,0%),rgba(255,255,255,.055) 100%);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.30)}
+[data-theme="dark"] .sm-slider::-moz-range-track{background:rgba(255,255,255,.055)}
+[data-theme="light"] .sm-slider::-webkit-slider-runnable-track{
+  background:linear-gradient(90deg,#e85f48 0%,#ff8768 var(--p,0%),
+             #d8cec2 var(--p,0%),#d8cec2 100%);
+  box-shadow:inset 4px 5px 9px rgba(100,78,60,.16),inset -4px -4px 8px rgba(255,255,255,.55)}
+[data-theme="light"] .sm-slider::-moz-range-track{background:#d8cec2}
 .sm-slider-row{position:relative}
 .sm-slider-cap{position:absolute;top:-4px;bottom:12px;width:2px;background:var(--warm);opacity:.65;pointer-events:none}
 .sm-slider-cap span{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--warm);white-space:nowrap}
@@ -549,6 +585,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* ── Управление подпиской ── */
 .sub-manage-btn{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:none}
 .sub-manage-btn:active{transform:scale(0.98)}
+/* Заголовок группы в настройках */
+.sm-group-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-faint);margin:18px 0 2px}
+.sm-group-title:first-of-type{margin-top:4px}
+/* Кнопки внутри группы идут стопкой с ровным зазором */
+.sm-block > .lec-link-btn{width:100%;margin-bottom:8px}
+.sm-block > .lec-link-btn:last-child{margin-bottom:0}
+.sm-block > .sm-hint{margin-top:8px}
+
 .sm-block{border-bottom:1px solid var(--line);padding:16px 0}
 .sm-block:last-child{border-bottom:none}
 .sm-title{font-size:13.5px;font-weight:700;margin-bottom:6px}
@@ -4708,7 +4753,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="view" id="view-profile">
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
       <span>Профиль</span>
-      <span onclick="openAppSettingsPopup()" style="cursor:pointer;font-size:16px">⚙️</span>
+      <!-- ⚠️ ЯВНАЯ КНОПКА ВМЕСТО ГОЛОГО ЗНАЧКА. Шестерёнка была эмодзи
+           без подписи — и незаметна, и против правила «эмодзи в интерфейсе нет» -->
+      <button class="profile-settings-btn" onclick="openAppSettingsPopup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 008.9 19a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 8.9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V10a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span data-text="settings.open">Настройки</span></button>
     </div>
 
     <!-- ⚠️ ЧЕЛОВЕК ДОЛЖЕН ЗНАТЬ, ЧТО СИДИТ НА ОБЛЕГЧЁННОЙ ВЕРСИИ.
@@ -4730,7 +4777,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="section-label">Подписка</div>
     <div class="card sub-card" onclick="openSubManage()" style="cursor:pointer">
       <div class="sub-left">
-        <div class="sub-icon">◆</div>
+        <!-- Знак бога по результату теста; ромб остаётся тому, кто тест не проходил -->
+        <div class="sub-icon" id="sub-icon">◆</div>
         <div>
           <div class="sub-name" id="sub-name">—</div>
           <div class="sub-meta" id="sub-meta">—</div>
@@ -8385,31 +8433,30 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       <div class="sched-popup-title">Настройки приложения</div>
       <button class="icon-btn" onclick="closeAppSettingsPopup()">✕</button>
     </div>
+    <!-- ⚠️ ТРИ ГРУППЫ ВМЕСТО ПЛОСКОГО СПИСКА ИЗ ВОСЬМИ ОДИНАКОВЫХ КНОПОК.
+         Разные по смыслу вещи (вид приложения, уведомления, спасательные доступы)
+         выглядели одинаково и читались подряд, как один длинный столбик -->
+    <div class="sm-group-title" data-text="settings.g_app">Приложение</div>
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();switchView('portal');startHomeEdit()" data-text="home.set1">Настроить главный экран</button>
-    </div>
-    <!-- «Вернуть первоначальный вид» показывается сама, когда состав или
-         порядок блоков отличается от исходного — требование Denis'а -->
-    <div class="sm-block" id="home-reset-row" style="display:none">
-      <button class="lec-link-btn access-btn" onclick="resetHomeLayout()" data-text="home.set2">Вернуть первоначальный вид</button>
-    </div>
-    <div class="sm-block">
+      <!-- «Вернуть первоначальный вид» показывается сама, когда состав или
+           порядок блоков отличается от исходного — требование Denis'а -->
+      <button class="lec-link-btn access-btn" id="home-reset-row" style="display:none" onclick="resetHomeLayout()" data-text="home.set2">Вернуть первоначальный вид</button>
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openAddToHomeScreenPopup()">Добавить на экран домой</button>
-    </div>
-    <!-- Щадящий режим: подпись кнопки меняется по состоянию -->
-    <div class="sm-block">
       <button class="lec-link-btn access-btn" id="lite-toggle-btn" onclick="liteToggle()">Включить щадящий режим</button>
-      <div class="sm-hint" style="margin-top:6px" data-text="lite.hint">Меньше анимаций и эффектов — приложение легче работает на слабых телефонах. Весь клуб остаётся на месте.</div>
+      <div class="sm-hint" data-text="lite.hint">Меньше анимаций и эффектов — приложение легче работает на слабых телефонах. Весь клуб остаётся на месте.</div>
     </div>
+
+    <div class="sm-group-title" data-text="settings.g_notify">Уведомления</div>
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();enablePushNotifications()">Включить push-уведомления</button>
     </div>
+
     <!-- Спасательные кнопки: если человек потерял доступ или отметил «уже есть»
          по ошибке, отсюда можно пройти путь заново, не ища его в лекциях -->
+    <div class="sm-group-title" data-text="settings.g_access">Доступы</div>
     <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();grantVkAccessAndJoin()" data-text="settings.vk1">Получить доступ к ВКонтакте</button>
-    </div>
-    <div class="sm-block">
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openStepsPopup()" data-text="settings.tg1">Получить доступ в Telegram</button>
       <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openOnPlatform('vk')" data-text="settings.open_vk">Открыть клуб во ВКонтакте</button>
     </div>
@@ -10166,6 +10213,7 @@ function updatePointsPreview(){
   const slider = document.getElementById('sm-points-slider');
   const preview = document.getElementById('sm-points-preview');
   if (!slider || !preview || !subStatus) return;
+  smSliderFill(slider);
   const spend = parseInt(slider.value, 10);
   const left = Math.max(subStatus.cost - spend, 0);
   preview.innerHTML = `<b>${spend}</b> баллов → заплатишь <b>${left} ₽</b> вместо ${subStatus.cost} ₽`;
@@ -11456,6 +11504,10 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'perf.offer_p': { c:'Щадящий режим', l:'Текст при тормозах', w:'Попап', i:false, t:'Приложение подталкивает. Щадящий режим уберёт анимации и эффекты — весь клуб останется на месте.' },
   'perf.offer_yes': { c:'Щадящий режим', l:'Кнопка согласия при тормозах', w:'Попап', i:false, t:'Сделать легче' },
   'perf.offer_no': { c:'Щадящий режим', l:'Отказ при тормозах', w:'Попап', i:false, t:'Оставить как есть' },
+  'settings.open': { c:'Настройки', l:'Кнопка настроек в шапке профиля', w:'Профиль', i:false, t:'Настройки' },
+  'settings.g_app': { c:'Настройки', l:'Заголовок группы «Приложение»', w:'Настройки приложения', i:false, t:'Приложение' },
+  'settings.g_notify': { c:'Настройки', l:'Заголовок группы «Уведомления»', w:'Настройки приложения', i:false, t:'Уведомления' },
+  'settings.g_access': { c:'Настройки', l:'Заголовок группы «Доступы»', w:'Настройки приложения', i:false, t:'Доступы' },
   'lite.card_h': { c:'Щадящий режим', l:'Заголовок карточки в профиле', w:'Профиль', i:false, t:'Щадящий режим включён' },
   'lite.card_p': { c:'Щадящий режим', l:'Текст карточки в профиле', w:'Профиль', i:false, t:'Анимации и эффекты выключены, чтобы приложение не тормозило. Если телефон справляется — можно вернуть красоту.' },
   'lite.card_off': { c:'Щадящий режим', l:'Кнопка в карточке профиля', w:'Профиль', i:false, t:'Вернуть обычный вид' },
@@ -22360,15 +22412,40 @@ function godSignIndex(){
   return (god && GOD_SIGNS[god] !== undefined) ? GOD_SIGNS[god] : -1;
 }
 
-function applyGodSign(){
-  var host = document.getElementById('tab-profile-icon');
-  if (!host) return;
+/* Разметка знака одна на все места: пилюля и карточка подписки.
+   Размер параметром — в пилюле 28px, в карточке крупнее */
+/* Доля заполнения для градиента дорожки (WebKit сам её не знает) */
+function smSliderFill(el){
+  if (!el) return;
+  const min = Number(el.min || 0), max = Number(el.max || 100);
+  const v = Number(el.value || 0);
+  const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
+  el.style.setProperty('--p', pct.toFixed(1) + '%');
+}
+
+function godSignHtml(size){
   var idx = godSignIndex();
-  if (idx < 0){ host.innerHTML = GOD_SIGN_FALLBACK; return; }
+  if (idx < 0) return '';
   var col = idx % 4, row = Math.floor(idx / 4);
   var pos = (col * 100 / 3) + '% ' + (row * 100 / 3) + '%';
-  host.innerHTML = '<i class="god-sign" style="-webkit-mask-position:' + pos
-                 + ';mask-position:' + pos + '"></i>';
+  var sz = size ? (';width:' + size + 'px;height:' + size + 'px') : '';
+  return '<i class="god-sign" style="-webkit-mask-position:' + pos
+       + ';mask-position:' + pos + sz + '"></i>';
+}
+
+function applyGodSign(){
+  var host = document.getElementById('tab-profile-icon');
+  if (host){
+    var h = godSignHtml(0);
+    host.innerHTML = h || GOD_SIGN_FALLBACK;
+  }
+  /* ⚠️ В КАРТОЧКЕ ПОДПИСКИ — ТОЛЬКО ЕСЛИ ТЕСТ ПРОЙДЕН. Запасной знак
+     пилюли (человечек) здесь не к месту — оставляем ромб из разметки */
+  var sub = document.getElementById('sub-icon');
+  if (sub){
+    var g = godSignHtml(26);
+    if (g) sub.innerHTML = g;
+  }
 }
 
 function savedQuizResult(){
