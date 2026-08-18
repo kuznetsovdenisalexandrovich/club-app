@@ -12281,6 +12281,23 @@ function updateMenuPointsBadge(){
    во временной мёртвой зоне `typeof` всё равно бросает ошибку — защиты он бы
    не дал, только вид. Если добавляешь сюда новый флаг — проверь, что он
    объявлен раньше init(). */
+/* ══ СТОРОЖ НАД ПЛЕЕРАМИ ═══════════════════════════════════
+   ⚠️ ПРАВИЛО СКРЫТИЯ БЕСПОЛЕЗНО, ПОКА ЕГО НЕКОМУ СПРОСИТЬ. В v229 я
+   научил `levelBarMustHide()` видеть открытый плеер, но перерисовку повесил
+   только на `openVideoPopup`. Плеер бонуса открывается СВОЕЙ функцией — и бар
+   оставался поверх фильма во вкладке «Что посмотреть» (Denis поймал вторым
+   скриншотом). Тот же класс, что урок 131: правка верна, но код не вызывается.
+   Решение — НЕ расставлять вызовы по местам (четвёртый плеер снова забудут),
+   а следить за классом одним наблюдателем. */
+function watchPlayerOverlays(){
+  const nodes = document.querySelectorAll('.fullscreen-popup-overlay');
+  if (!nodes.length || typeof MutationObserver !== 'function') return;
+  const obs = new MutationObserver(function(){
+    if (typeof renderLevelCard === 'function') renderLevelCard();
+  });
+  nodes.forEach(function(n){ obs.observe(n, { attributes: true, attributeFilter: ['class'] }); });
+}
+
 function levelBarMustHide(){
   if (pfFieldOpen) return true;    // поле выбора тем
   if (liveFullOpen) return true;   // полный экран эфира
@@ -18906,6 +18923,10 @@ async function init(){
 /* Сначала SDK (если он этой платформе нужен), потом запуск. Ошибку запуска
    ловим сами: без этого падение внутри `init` стало бы необработанным
    отказом промиса, а это опять белый экран без объяснения */
+/* Сторож над плеерами — ВНЕ `init()`: тот ветвится на пять площадок и
+   половина веток возвращается раньше (урок 132) */
+try { watchPlayerOverlays(); } catch(e){}
+
 loadPlatformSdk().then(function(){
   /* ⚠️ СНАЧАЛА ТЕЛЕГРАМНАЯ НАСТРОЙКА, ПОТОМ ЗАПУСК. Порядок именно такой:
      что бы ни решил `init()` дальше и в какую бы ветку ни ушёл, безопасная
