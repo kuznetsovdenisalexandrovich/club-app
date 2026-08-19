@@ -11741,6 +11741,14 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.resume_gone': { c:'Игры', l:'Партия уже закрыта', w:'Тост', i:false, t:'Та партия уже закрыта — начнём заново' },
   'games.share': { c:'Игры', l:'Кнопка «позвать друга»', w:'Финал партии', i:false, t:'Позвать друга сыграть' },
   'games.share_text': { c:'Игры', l:'Текст при отправке ссылки на игру ({игра} — название)', w:'Шторка шеринга', i:false, t:'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.' },
+  'games.share_won': { c:'Игры', l:'Шеринг победы ({игра}, {счёт})', w:'Шторка шеринга с финала', i:false,
+    t:'Сыграл в «{игра}» на тренажёре продаж — {счёт} из 100, клиент купил. Обойдёшь?' },
+  'games.share_perfect': { c:'Игры', l:'Шеринг безупречной партии ({игра})', w:'Шторка шеринга с финала', i:false,
+    t:'«{игра}» на тренажёре продаж — 100 из 100. Попробуй повторить.' },
+  'games.share_lost': { c:'Игры', l:'Шеринг проигранной партии ({игра}, {счёт})', w:'Шторка шеринга с финала', i:false,
+    t:'Тренажёр продаж, «{игра}»: {счёт} из 100, клиент не купил. Думаешь, у тебя выйдет лучше?' },
+  'games.share_result': { c:'Игры', l:'Кнопка шеринга результата', w:'Экран финала партии', i:false,
+    t:'Поделиться результатом' },
   'games.link_gone': { c:'Игры', l:'Ссылка на исчезнувшую игру', w:'Список игр', i:false, t:'Этой игры больше нет — посмотри остальные' },
   'games.note_back': { c:'Игры', l:'Кнопка возврата в партию', w:'Попап внутри партии', i:false, t:'Доиграть' },
   'games.ok': { c:'Игры', l:'Кнопка «понятно»', w:'Попап', i:false, t:'Понятно' },
@@ -24240,6 +24248,39 @@ function ggShare(key, ev){
   shareWithChoice(text, 'g_' + key + shareTail());
 }
 
+/* ── ШЕРИНГ РЕЗУЛЬТАТА ПАРТИИ ─────────────────────────────────────────────
+   Отличается от шеринга самой игры не только текстом. Ссылка ведёт `gs_` —
+   СРАЗУ В ПАРТИЮ, а не на правила: друг пришёл на вызов, и лишний экран между
+   вызовом и игрой гасит порыв. Правила он прочитает, если захочет.
+
+   ⚠️ НОМЕР ПАРТИИ В ССЫЛКУ НЕ КЛАДЁМ. У Telegram параметр запуска ограничен, а
+   там уже ключ игры и код пригласившего; номер партии добил бы длину и ссылка
+   молча обрезалась бы. Партию как источник записываем СВОИМ событием — этого
+   хватает, чтобы потом увидеть, какие партии приводят людей. */
+let ggLastFinal = null;
+
+function ggShareResult(ev){
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const f = ggLastFinal;
+  const key = (ggS && ggS.game_key) || '';
+  if (!f || !key) return;
+  const g = ggFind(key);
+  const name = (g && g.title) || '';
+  const score = Number(f.score || 0);
+
+  let tpl;
+  if (f.status === 'won') tpl = f.perfect ? t('games.share_perfect') : t('games.share_won');
+  else tpl = t('games.share_lost');
+  const text = String(tpl || '')
+    .replace('{игра}', name)
+    .replace('{счёт}', String(score));
+
+  /* Партия как единица атрибуции: событие пишем ДО ухода в шторку — из неё
+     человек может не вернуться, и вызов после неё не выполнится */
+  track('game_result_share', (ggS && ggS.session_id) || key, score);
+  shareWithChoice(text, 'gs_' + key + shareTail());
+}
+
 function ggTrackName(key){
   const map = { presentation: 'Презентация', objections: 'Возражения', questions: 'Вопросы' };
   return map[key] || key;
@@ -24802,6 +24843,7 @@ async function ggSend(){
    следующая ступень. Текст приглашения приходит с сервера дословно — его
    пишет Denis, а не модель. */
 function ggFinal(f){
+  ggLastFinal = f;
   const won = f.status === 'won';
   let h = '<div class="gg-final-hero">'
     + '<div class="gg-final-robot"><div class="gg-robot"></div></div>'
@@ -24859,11 +24901,14 @@ function ggFinal(f){
   /* Позвать друга — ИМЕННО ЗДЕСЬ: человек только что получил вердикт,
      ему есть что сказать. Третьей кнопкой в ряд не ставим — она оттянет
      нажатия у «Сыграть ещё», а повторная партия нам ценнее */
+  /* НА ФИНАЛЕ ДЕЛИМСЯ РЕЗУЛЬТАТОМ, а не просто зовём сыграть: у человека
+     только что появилась цифра, и она и есть повод показать друзьям.
+     Общее «позвать сыграть» осталось на карточке игры в списке */
   if (ggS && ggS.game_key){
-    h += '<button class="gg-share-line" type="button" onclick="ggShare(' + jsArg(ggS.game_key) + ', event)">'
+    h += '<button class="gg-share-line" type="button" onclick="ggShareResult(event)">'
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
       + '<path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>'
-      + '<span>' + escapeHtml(t('games.share') || 'Позвать друга сыграть') + '</span></button>';
+      + '<span>' + escapeHtml(t('games.share_result') || 'Поделиться результатом') + '</span></button>';
   }
 
   document.getElementById('gg-final-wrap').innerHTML = h;
