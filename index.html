@@ -12131,6 +12131,15 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'live.badge.soon': {
     c:'Эфиры', l:'Значок «эфир скоро»', w:'Блок эфира и полный экран', i:true,
     t:'СКОРО НАЧНЁМ' },
+  'meet.points.got': {
+    c:'Эфиры', l:'Баллы за переход на встречу (подставляется {n})', w:'Тост при переходе', i:true,
+    t:'+{n} баллов за то, что пришёл на встречу' },
+  'meet.opening': {
+    c:'Эфиры', l:'Сообщение при переходе на встречу', w:'Тост разводки', i:true,
+    t:'Открываю встречу…' },
+  'meet.members_only': {
+    c:'Эфиры', l:'Встреча только участникам', w:'Тост разводки', i:true,
+    t:'Живые встречи — для участников клуба' },
   'live.points.got': {
     c:'Эфиры', l:'Баллы за приход на эфир (подставляется {n})', w:'Тост при открытии эфира', i:true,
     t:'+{n} баллов за то, что пришёл на эфир' },
@@ -13930,6 +13939,12 @@ const DEEPLINKS = {
   // запуска один и в нём можно только латиницу с цифрами, обычные utm туда не
   // положить — они живут в карточке единицы атрибуции на нашей стороне
   'film':        { go: () => openFilmRoute(),             guests: true  },
+  /* ⚠️ ОДНА ВЕЧНАЯ ССЫЛКА НА ВСЁ ЖИВОЕ. Её Denis кидает в рассылку встречи и
+     в каналы: приложение само разберёт, идёт эфир, идёт встреча, есть запись
+     или нет ничего. Гостю открыта — на встрече он упрётся в пейвол внутри */
+  'go':          { go: () => openNowRoute(),              guests: true  },
+  'now':         { go: () => openNowRoute(),              guests: true  },
+  'meet':        { go: () => openNowRoute(),              guests: true  },
   'live':        { go: () => openLiveEntry(),             guests: true  },
   'efir':        { go: () => openLiveEntry(),             guests: true  },
   'club':        { go: () => switchView('club-info'),     guests: true  },
@@ -17148,6 +17163,60 @@ function openLivePractice(){
    не помня, звал ли раньше. Локальный флаг здесь нужен только чтобы не
    дёргать сеть каждые десять секунд на каждом круге опроса. */
 let liveEnterMarked = '';
+
+/* ── РАЗВОДКА ПО ОДНОЙ ВЕЧНОЙ ССЫЛКЕ ─────────────────────────────────────
+   Denis кидает в рассылку и в каналы ОДНУ ссылку на приложение, а куда вести
+   человека — решается здесь, в момент клика. Та же мысль, что у входа в эфир:
+   ссылка обозначает не событие, а МЕСТО.
+
+   ⚠️ МИНИМУМ ДЕЙСТВИЙ. Внутри Telegram внешнюю ссылку открываем САМИ, без
+   второго нажатия: `openUrl` уходит в telegram-овский `openLink`, а это не
+   всплывающее окно браузера и оно не блокируется. В вебе всплывающее окно
+   молча блокируют, но `openUrl` в этом случае уводит текущую вкладку —
+   человек всё равно попадает куда шёл, за один тап. */
+async function openNowRoute(){
+  let d = null;
+  try {
+    const q = telegramId ? ('?telegram_id=' + encodeURIComponent(telegramId)) : '';
+    const r = await fetch(`${API_URL}/now${q}`);
+    d = await r.json();
+  } catch (e){
+    console.warn('[разводка] не спросил, что сейчас:', e && e.message || e);
+  }
+  const kind = (d && d.kind) || 'none';
+
+  // Эфир и запись живут ВНУТРИ приложения — там своя готовая точка входа
+  if (kind === 'live' || kind === 'record'){ openLiveEntry(); return; }
+
+  if (kind === 'meeting'){
+    // Живые встречи — платное содержимое. Ссылку могли переслать кому угодно
+    await waitProfile();
+    if (!isMember){ showToast(t('meet.members_only')); openPaywall(); return; }
+    showToast(t('meet.opening'));
+    let link = d.link || '';
+    try {
+      const r = await fetch(`${API_URL}/meeting/click`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: Number(telegramId) || 0 })
+      });
+      const res = await r.json();
+      if (res && res.link) link = res.link;
+      const n = Number(res && res.points_awarded || 0);
+      if (n > 0){
+        showToast(tf('meet.points.got', { n: n }));
+        if (typeof loadProfile === 'function') loadProfile();
+      }
+    } catch (e){
+      // Баллы — довесок. Ссылку открываем в любом случае: человек шёл на встречу,
+      // а не за баллами, и оставить его ни с чем из-за упавшего запроса нельзя
+      console.warn('[разводка] не отметил переход:', e && e.message || e);
+    }
+    if (link) openUrl(link); else showLiveNothing();
+    return;
+  }
+
+  showLiveNothing();
+}
 
 async function markLiveEnter(){
   if (!telegramId) return;
