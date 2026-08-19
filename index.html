@@ -4651,6 +4651,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     <div id="raffle-block" style="display:none"></div>
 
+    <!-- ⚠️ ДВА ТЕХНИЧЕСКИХ ШАГА ЖИВУТ ЗДЕСЬ, А НЕ В ЗНАКОМСТВЕ ([stated] Denis):
+         резервный ВК и приложение на экран «Домой» в туре только тормозят, но и
+         терять их нельзя. Третьей идут уведомления. Каждая строка закрывается
+         крестиком НАВСЕГДА — это предложение, а не задача -->
+    <div id="onb-notes"></div>
+
     <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
       <div class="demo-banner-icon">👀</div>
       <div>
@@ -4769,10 +4775,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="tile-icon tile-icon-number" id="menu-points-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Баллы</div>
       </div>
-      <div class="tile" onclick="openQuiz()">
-        <div class="tile-icon" style="background:rgba(232,97,74,.14);color:var(--warm)">⚡</div>
-        <div class="tile-label">Кто ты из богов</div>
-      </div>
+      <!-- Плитка «Кто ты из богов» УБРАНА 19.08.2026: тест переехал во вкладку
+           «Игры» отдельной карточкой ([stated] Denis). Держать его в двух местах
+           значит спорить с самим собой, где он живёт -->
       <div class="tile" onclick="switchView('cards')">
         <div class="tile-icon tile-icon-number" id="menu-cards-badge" style="background:var(--lav-dim);color:var(--lav-deep)">0</div>
         <div class="tile-label">Коллекция</div>
@@ -5841,6 +5846,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <button class="lec-link-btn" id="onb-next" onclick="onbNext('skipped')" data-text="onb.next">Дальше</button>
     </div>
   </div>
+</div>
+
+<div class="otip" id="onb-tip">
+  <button class="otip-x" onclick="hideOnbTip()" aria-label="Скрыть">&#10005;</button>
+  <span id="onb-tip-text"></span>
 </div>
 
 <div class="onb-trail" id="onb-trail" onclick="onbResume()">
@@ -8313,6 +8323,39 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 .onb-bars i{height:3px;flex:1;border-radius:2px;background:var(--border)}
 .onb-bars i.on{background:var(--warm)}
 
+/* ⚠️ ЯНТАРНЫЕ СТРОКИ — ПРЕДЛОЖЕНИЕ, А НЕ ЗАДАЧА. Никаких галочек и счётчиков:
+   человек либо делает, либо закрывает крестиком, и больше её не видит */
+.onote{display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:11px 13px;
+  border-radius:14px;cursor:pointer;
+  background:rgba(255,184,77,.12);border:1px solid rgba(255,184,77,.34)}
+.onote-ico{width:30px;height:30px;flex:none;border-radius:10px;display:grid;place-items:center;
+  background:rgba(255,184,77,.22);color:var(--amber);font-size:15px;font-weight:800}
+.onote-txt{flex:1;min-width:0}
+.onote-txt b{display:block;font-size:13px;font-weight:800;line-height:1.3}
+.onote-txt small{display:block;font-size:12px;color:var(--text-dim);line-height:1.4;margin-top:2px}
+.onote-x{flex:none;width:26px;height:26px;border:none;background:none;cursor:pointer;
+  color:var(--text-faint);font-size:15px;line-height:1;padding:0}
+
+/* ⚠️ ПОДСКАЗКА-ЗАСАДА: лежит и ждёт, пока человек ВПЕРВЫЕ возьмётся за
+   функцию ([stated] Denis). Слой ниже окна знакомства (860) и полоски (855),
+   но выше содержимого — она поясняет то, что человек только что сделал */
+.otip{position:fixed;z-index:845;max-width:290px;display:none;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:11px 13px;box-shadow:0 10px 30px rgba(0,0,0,.22);
+  font-size:12.5px;line-height:1.45;color:var(--text)}
+.otip.open{display:block;animation:otipIn .26s cubic-bezier(.2,.8,.2,1) both}
+@keyframes otipIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.otip-x{position:absolute;top:6px;right:8px;width:22px;height:22px;border:none;background:none;
+  color:var(--text-faint);font-size:13px;line-height:1;cursor:pointer;padding:0}
+
+/* ⚠️ ТОЧКА «НОВОЕ», А НЕ РАМКА: рамка на вкладке занята бонусами ([stated]
+   Denis). `position` ставим ЗНАЧКУ, а не самой вкладке: значок — флекс-бокс с
+   одним ребёнком фиксированного размера, раскладка от этого не двигается */
+.tab-icon{position:relative}
+.tab-item.has-new .tab-icon::after{content:"";position:absolute;top:-1px;right:-1px;
+  width:8px;height:8px;border-radius:50%;background:var(--warm);
+  box-shadow:0 0 0 2px var(--bg)}
+
 /* Плитка теста заперта на время знакомства: тест — воронка на две минуты,
    он уводит человека из знакомства целиком, а не на один экран */
 .tile.onb-locked{opacity:.45}
@@ -9555,6 +9598,9 @@ function switchView(name) {
       listEl.classList.add('fade-rise');
     });
   }
+  if (name === 'portal') renderOnbNotes();
+  if (name === 'library' || name === 'games') markTabSeen(name);
+  renderTabDots();
   syncTgBackButton(name);
   window.scrollTo(0, 0);
   updateLevelBarScrollPosition();
@@ -10315,6 +10361,7 @@ async function loadProfile() {
     builtPath = !!u.built_path;
     points = u.points || 0;
     hasPushSubscription = !!u.has_push_subscription;
+    if (typeof renderOnbNotes === 'function') renderOnbNotes();
     notifyChannel = u.notify_channel || 'both';
     notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
@@ -11964,6 +12011,26 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'onb.plan_empty': { c:'Знакомство', l:'Экран плана на шаге, когда пути ещё нет', w:'Шаг «Личный план»', i:false,
     t:'Пути пока нет — соберём его прямо сейчас.' },
 
+  'onb.note_vk_t': { c:'Знакомство', l:'Строка про резервный ВК — заголовок', w:'Главная, после знакомства', i:false,
+    t:'Открой резервный доступ в ВК' },
+  'onb.note_vk_x': { c:'Знакомство', l:'Строка про резервный ВК — пояснение', w:'Главная, после знакомства', i:false,
+    t:'Замедлят Telegram — клуб останется на связи. Минута дела.' },
+  'onb.note_home_t': { c:'Знакомство', l:'Строка про экран «Домой» — заголовок', w:'Главная, после знакомства', i:false,
+    t:'Поставь приложение на экран «Домой»' },
+  'onb.note_home_x': { c:'Знакомство', l:'Строка про экран «Домой» — пояснение', w:'Главная, после знакомства', i:false,
+    t:'Открывается одним касанием, без поиска по вкладкам.' },
+  'onb.note_push_t': { c:'Знакомство', l:'Строка про уведомления — заголовок', w:'Главная, после знакомства', i:false,
+    t:'Включи уведомления' },
+  'onb.note_push_x': { c:'Знакомство', l:'Строка про уведомления — пояснение', w:'Главная, после знакомства', i:false,
+    t:'Напомним про живую встречу до её начала, а не после.' },
+
+  'onb.tip_saved': { c:'Знакомство', l:'Подсказка при первом «смотреть позже»', w:'Библиотека', i:false,
+    t:'Отложенное собирается наверху библиотеки — в полке «Смотреть позже».' },
+  'onb.tip_listen': { c:'Знакомство', l:'Подсказка при первом «Слушать»', w:'Плеер', i:false,
+    t:'Плеер не гаснет, если свернуть приложение: занятие можно слушать как подкаст.' },
+  'onb.tip_arbiter': { c:'Знакомство', l:'Подсказка при первой партии', w:'Экран партии', i:false,
+    t:'Арбитр взвешивает каждую реплику и в конце объясняет счёт.' },
+
   'onb.games_t': { c:'Знакомство', l:'Шаг «Игры» — заголовок', w:'Окно шага', i:false, t:'Игры' },
   'onb.games_x': { c:'Знакомство', l:'Шаг «Игры» — текст', w:'Окно шага', i:false,
     t:'Тренажёр с живым клиентом. Партия — три минуты, в конце счёт и разбор от арбитра.' },
@@ -13477,6 +13544,7 @@ async function refreshOnboardStatus(){
       builtPath = !!u.built_path;
       points = u.points || 0;
       hasPushSubscription = !!u.has_push_subscription;
+      if (typeof renderOnbNotes === 'function') renderOnbNotes();
     notifyChannel = u.notify_channel || 'both';
     notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
@@ -14036,6 +14104,7 @@ function onbSelfServe(){
   markTourOnServer({ step:'offer', action:'self', finished:true });
   onbDrawTrail();
   onbApplyLocks();
+  renderOnbNotes();
   setTimeout(function(){ showToast(t('onb.help')); }, 500);
 }
 
@@ -14171,6 +14240,7 @@ function onbFinish(){
   onbDrawTrail();
   onbApplyLocks();
   switchView('portal');
+  renderOnbNotes();
   setTimeout(function(){ showToast(t('onb.help')); }, 400);
 }
 
@@ -14225,6 +14295,141 @@ function onbCloseFloaters(){
   const tst = document.getElementById('toast');
   if (tst) tst.classList.remove('visible');   // в этом файле класс именно 'visible'
   clearTimeout(window._toastTimer);
+}
+
+/* ══ ЯНТАРНЫЕ СТРОКИ НА ГЛАВНОЙ ══════════════════════════════════════════
+   ⚠️ ПОКАЗЫВАЕМ ТОЛЬКО ПОСЛЕ ЗНАКОМСТВА и по одной причине за раз: строка
+   висит, пока дело не сделано ЛИБО пока её не закрыли крестиком. Условие у
+   каждой — настоящий сигнал, а не отметка «показали» */
+const ONB_NOTES = [
+  { key:'vk',   ico:'\u2691',
+    when: function(){ return isMember && !vkAccessGranted; },
+    go:   function(){ if (typeof openVkAccessFlow === 'function') openVkAccessFlow(); },
+    t:'onb.note_vk_t', x:'onb.note_vk_x' },
+  { key:'home', ico:'\u2302',
+    when: function(){ return isMember && !homeScreenAdded && !isStandaloneWebApp(); },
+    go:   function(){ if (typeof openAddToHomeScreenPopup === 'function') openAddToHomeScreenPopup(); },
+    t:'onb.note_home_t', x:'onb.note_home_x' },
+  /* ⚠️ ПУШИ ТОЛЬКО В УСТАНОВЛЕННОМ ПРИЛОЖЕНИИ. Внутри Telegram Web Push
+     технически недоступен, и предлагать его там — обещать несбыточное */
+  { key:'push', ico:'\u25c9',
+    when: function(){ return isMember && isStandaloneWebApp() && !hasPushSubscription; },
+    go:   function(){ if (typeof enablePushNotifications === 'function') enablePushNotifications(); },
+    t:'onb.note_push_t', x:'onb.note_push_x' },
+];
+
+function onbNoteHidden(key){
+  try { return localStorage.getItem('club_app_note_' + key) === '1'; } catch (e) { return false; }
+}
+function dismissOnbNote(key, ev){
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  try { localStorage.setItem('club_app_note_' + key, '1'); } catch (e) {}
+  renderOnbNotes();
+}
+function runOnbNote(key){
+  const n = ONB_NOTES.find(function(x){ return x.key === key; });
+  if (n) n.go();
+}
+function renderOnbNotes(){
+  const box = document.getElementById('onb-notes');
+  if (!box) return;
+  // Пока идёт знакомство — молчим: у человека уже есть окно, которое им руководит
+  if (!isMember || onbActive || !tourDone){ box.innerHTML = ''; return; }
+  const rows = ONB_NOTES.filter(function(n){
+    try { return !onbNoteHidden(n.key) && n.when(); } catch (e) { return false; }
+  });
+  box.innerHTML = rows.map(function(n){
+    return '<div class="onote" onclick="runOnbNote(' + jsArg(n.key) + ')">'
+      + '<div class="onote-ico">' + n.ico + '</div>'
+      + '<div class="onote-txt"><b>' + escapeHtml(t(n.t) || '') + '</b>'
+      + '<small>' + escapeHtml(t(n.x) || '') + '</small></div>'
+      + '<button class="onote-x" onclick="dismissOnbNote(' + jsArg(n.key) + ', event)" aria-label="Скрыть">\u2715</button>'
+      + '</div>';
+  }).join('');
+}
+
+/* ══ ПОДСКАЗКИ-ЗАСАДЫ ════════════════════════════════════════════════════
+   [stated] Denis: объяснения раскидать по приложению и оставить ЛЕЖАТЬ до
+   момента, когда человек ВПЕРВЫЕ решит воспользоваться функцией. Не поток
+   объяснений, а одна подсказка ровно там и тогда, где она нужна.
+   ⚠️ ОТМЕТКА В localStorage СОЗНАТЕЛЬНО: подсказка привязана к устройству —
+   на новом телефоне жесты и кнопки заново незнакомы */
+function onbTipSeen(key){
+  try { return localStorage.getItem('club_app_tip_' + key) === '1'; } catch (e) { return false; }
+}
+function hideOnbTip(){
+  const el = document.getElementById('onb-tip');
+  if (el) el.classList.remove('open');
+  clearTimeout(window._onbTipTimer);
+}
+/* ⚠️ ЯКОРЬ МОЖЕТ НЕ НАЙТИСЬ (карточка не отрисовалась, экран другой) — тогда
+   показываем над пилюлей, а не молчим: подсказка полезна и без стрелки */
+function showOnbTip(key, sel, delay){
+  if (onbTipSeen(key)) return;
+  if (onbActive) return;              // во время знакомства ведёт окно шага, не мы
+  try { localStorage.setItem('club_app_tip_' + key, '1'); } catch (e) {}
+  setTimeout(function(){
+    const el  = document.getElementById('onb-tip');
+    const txt = document.getElementById('onb-tip-text');
+    if (!el || !txt) return;
+    txt.textContent = t(key) || '';
+    el.classList.add('open');
+
+    const target = sel ? document.querySelector(sel) : null;
+    const w = el.offsetWidth || 280, h = el.offsetHeight || 60;
+    let left, top;
+    const r = target && target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+    const onScreen = r && r.width && r.top > 0 && r.bottom < innerHeight;
+    if (onScreen){
+      left = Math.min(Math.max(10, r.left + r.width / 2 - w / 2), innerWidth - w - 10);
+      top  = (r.bottom + h + 12 < innerHeight) ? r.bottom + 10 : r.top - h - 10;
+    } else {
+      left = Math.max(10, (innerWidth - w) / 2);
+      top  = innerHeight - h - 104;
+    }
+    el.style.left = Math.round(left) + 'px';
+    el.style.top  = Math.round(Math.max(10, top)) + 'px';
+    clearTimeout(window._onbTipTimer);
+    window._onbTipTimer = setTimeout(hideOnbTip, 7000);
+  }, delay || 500);
+}
+
+/* ══ ТОЧКА «НОВОЕ» НА ВКЛАДКЕ ════════════════════════════════════════════
+   ⚠️ ПЕРВЫЙ ЗАПУСК НЕ ДОЛЖЕН ЗАЖЕЧЬ ВСЁ. Отметок нет — значит новизну
+   считать не от чего: тихо запоминаем то, что есть сейчас, и показываем
+   точку только тому, что появится ПОСЛЕ */
+function onbSeenSet(tab){
+  try {
+    const raw = localStorage.getItem('club_app_seen_' + tab);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function onbSaveSeen(tab, ids){
+  try { localStorage.setItem('club_app_seen_' + tab, JSON.stringify(ids.slice(0, 400))); } catch (e) {}
+}
+function onbTabIds(tab){
+  if (tab === 'library') return (allLectures || []).map(function(l){ return l.slug; }).filter(Boolean);
+  if (tab === 'games')   return (((typeof ggList !== 'undefined' && ggList) || {}).games || [])
+                                  .map(function(g){ return g.key; }).filter(Boolean);
+  return [];
+}
+function markTabSeen(tab){
+  const ids = onbTabIds(tab);
+  if (!ids.length) return;
+  onbSaveSeen(tab, ids);
+  renderTabDots();
+}
+function renderTabDots(){
+  ['library', 'games'].forEach(function(tab){
+    const el = document.getElementById('tab-' + tab);
+    if (!el) return;
+    const ids = onbTabIds(tab);
+    if (!ids.length) return;                 // данные ещё не приехали — не решаем
+    const seen = onbSeenSet(tab);
+    if (!seen){ onbSaveSeen(tab, ids); el.classList.remove('has-new'); return; }
+    const fresh = ids.some(function(id){ return seen.indexOf(id) < 0; });
+    el.classList.toggle('has-new', fresh && !el.classList.contains('active'));
+  });
 }
 
 /* ⚠️ ТЕСТ ЗАПЕРТ НА ВРЕМЯ ЗНАКОМСТВА: он сам по себе воронка на две минуты и
@@ -15309,6 +15514,8 @@ async function loadSavedSlugs(){
 }
 
 function toggleSaved(slug){
+  // Первое отложенное занятие — говорим, где его потом искать
+  showOnbTip('onb.tip_saved', '#saved-banner', 700);
   /* Шаг библиотеки закрывается СОХРАНЕНИЕМ, а не открытием: так человек
      проходит весь маленький путь — спросил, нашёл, отложил */
   onbDone('lib');
@@ -24273,6 +24480,8 @@ function plHasAudio(lec){ return !!(lec && (lec.audio_url || '').trim()); }
    человек нажал, но только те занятия, у которых аудио есть */
 function playLecture(index, src){
   if (!isMember) { openPaywall(); return; }
+  // Первое «Слушать» — рассказываем про подкаст-режим, дальше молчим
+  showOnbTip('onb.tip_listen', '#mini-player', 900);
   var list = cardList(src) || [];
   var clicked = list[index];
   if (!plHasAudio(clicked)) { showToast('У этого занятия пока нет аудиоверсии'); return; }
@@ -24848,6 +25057,7 @@ async function ggLoad(){
     const r = await fetch(API_URL + '/games/list?' + q);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     ggList = await r.json();
+    if (typeof renderTabDots === 'function') renderTabDots();
     ggLoadedOnce = true;
     ggRenderList();
     /* Незаконченная партия — только когда человек смотрит на список,
@@ -25278,6 +25488,8 @@ function ggResumeNo(){
 }
 
 async function ggStart(key){
+  // Первая партия — один раз объясняем, кто такой арбитр
+  showOnbTip('onb.tip_arbiter', '.gg-arbiter', 1400);
   if (ggBusy) return;
   ggBusy = true;
   vkTrack('game');
