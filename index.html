@@ -5033,6 +5033,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <button class="help-btn" onclick="diagShowEnv()">Показать инфо о среде</button>
         <div style="font-size:12px;color:var(--text-dim);margin-top:10px;white-space:pre-wrap;text-align:left" id="diag-result"></div>
       </div>
+      <div class="admin-reset-btn" onclick="onbRestart()">Запустить знакомство заново (тест)</div>
       <div class="admin-reset-btn" onclick="resetOnboardingProgress()">Сбросить прогресс онбординга (тест)</div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Симуляция уровня и баллов</div>
@@ -5818,6 +5819,39 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
   </div>
 </div>
+<!-- ══ ЗНАКОМСТВО С ПРИЛОЖЕНИЕМ ══════════════════════════════════════════ -->
+<div class="onb-hi" id="onb-hi">
+  <div class="onb-hi-card">
+    <h2 data-text="onb.hi_title">Ты в клубе</h2>
+    <p data-text="onb.hi_text">Канал и чат открыты. Тут много всего — покажу за пару минут, что где.</p>
+    <button class="lec-link-btn access-btn" onclick="onbStart()" data-text="onb.hi_btn">С чего начать</button>
+    <div class="payment-help-link" style="margin-top:14px" onclick="onbSelfServe()" data-text="onb.hi_skip">Разберусь сам</div>
+  </div>
+</div>
+
+<div class="onb-wrap" id="onb-wrap">
+  <div class="onb-veil" onclick="onbPause()"></div>
+  <div class="onb-card">
+    <button class="onb-x" onclick="onbPause()">&#10005;</button>
+    <div class="num" id="onb-num"></div>
+    <h2 id="onb-title"></h2>
+    <p id="onb-text"></p>
+    <div class="onb-acts">
+      <button class="lec-link-btn access-btn" id="onb-try" onclick="onbTry()"></button>
+      <button class="lec-link-btn" id="onb-next" onclick="onbNext('skipped')" data-text="onb.next">Дальше</button>
+    </div>
+  </div>
+</div>
+
+<div class="onb-trail" id="onb-trail" onclick="onbResume()">
+  <div style="min-width:0">
+    <b id="onb-trail-t" data-text="onb.trail">Обучение</b>
+    <small id="onb-trail-s"></small>
+    <div class="onb-bars" id="onb-bars"></div>
+  </div>
+  <span class="go" data-text="onb.trail_go">продолжить &#8594;</span>
+</div>
+
 <div class="tabbar" id="tabbar" style="display:none">
   <div class="tab-item active" onclick="switchView('portal')" id="tab-portal">
     <span class="tab-icon"><i class="tab-sign" data-i="0"></i></span>
@@ -8213,6 +8247,64 @@ html[data-lite] #tabbar{background:var(--card)!important}
 /* Анимированные фоны экрана вскрытия пака — самое тяжёлое, что есть */
 html[data-lite] .reveal-bg,
 html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
+
+/* ══ ЗНАКОМСТВО С ПРИЛОЖЕНИЕМ (19.08.2026) ═══════════════════════════════
+   Три слоя, каждый занят своим: ТУР знакомит с четырьмя большими вещами,
+   ЛАМПОЧКИ говорят «тут появилось новое», ПОДСКАЗКИ объясняют мелочь при
+   первом касании. Пересечений нет — поэтому список шагов закрыт.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Экран приветствия — поверх всего, но БЕЗ пилюли: выбор здесь всего один */
+.onb-hi{position:fixed;inset:0;z-index:880;display:none;align-items:center;justify-content:center;
+  padding:24px;background:var(--bg)}
+.onb-hi.open{display:flex;animation:overlayFadeIn .25s ease}
+.onb-hi-card{width:100%;max-width:360px;text-align:center;background:var(--card);
+  border-radius:22px;padding:28px 20px 22px;box-shadow:0 10px 34px rgba(0,0,0,.14)}
+.onb-hi-card h2{font-size:19px;font-weight:800;margin:0 0 8px}
+.onb-hi-card p{font-size:13.5px;color:var(--text-dim);line-height:1.5;margin:0 0 22px}
+
+/* ⚠️ ОКНО ШАГА НАД ПИЛЮЛЕЙ, А НЕ ПОВЕРХ ВСЕГО ЭКРАНА: за ним видно настоящий
+   интерфейс — окно рассказывает про то, что человек и так видит.
+   Крестик = ПАУЗА, шаг остаётся незачтённым */
+.onb-wrap{position:fixed;inset:0;z-index:860;display:none}
+.onb-wrap.open{display:block}
+.onb-veil{position:absolute;inset:0;background:rgba(0,0,0,.3)}
+.onb-card{position:absolute;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 14px);
+  width:calc(100% - 28px);max-width:440px;background:var(--card);border-radius:22px;
+  padding:18px 16px 16px;box-shadow:0 14px 40px rgba(0,0,0,.32);
+  animation:onbUp .34s cubic-bezier(.22,.61,.36,1)}
+@keyframes onbUp{from{opacity:0;transform:translate(-50%,22px)}}
+.onb-card .num{font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--warm);font-weight:800}
+.onb-card h2{margin:6px 0;font-size:19px;font-weight:800}
+.onb-card p{margin:0 0 14px;font-size:13.5px;color:var(--text-dim);line-height:1.5}
+.onb-acts{display:flex;gap:10px}
+.onb-acts .lec-link-btn{flex:1;margin:0}
+.onb-x{position:absolute;top:10px;right:12px;width:30px;height:30px;border-radius:50%;
+  border:none;background:none;color:var(--text-faint);font-size:19px;cursor:pointer;line-height:1}
+
+/* ⚠️ ПОЛОСКА — ЯКОРЬ, А НЕ ЛОВУШКА. Не модальная, ничего не перекрывает.
+   Человек ушёл пробовать, вышел из аппа, вернулся завтра — она на месте
+   и помнит, где он остановился */
+.onb-trail{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 92px);
+  width:calc(100% - 28px);max-width:440px;background:var(--card2);
+  border:1px solid var(--border);border-radius:14px;padding:10px 14px;
+  display:none;align-items:center;gap:10px;z-index:855;cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.onb-trail.open{display:flex;animation:fade-rise .3s cubic-bezier(.2,.8,.2,1) both}
+.onb-trail b{font-size:13px;font-weight:800;display:block}
+.onb-trail small{font-size:11.5px;color:var(--text-dim);display:block}
+.onb-trail .go{margin-left:auto;color:var(--warm);font-weight:800;font-size:13px;white-space:nowrap}
+.onb-bars{display:flex;gap:3px;margin-top:5px}
+.onb-bars i{height:3px;flex:1;border-radius:2px;background:var(--border)}
+.onb-bars i.on{background:var(--warm)}
+
+/* Плитка теста заперта на время знакомства: тест — воронка на две минуты,
+   он уводит человека из знакомства целиком, а не на один экран */
+.tile.onb-locked{opacity:.45}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -8306,7 +8398,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       <span>Видео для всех новеньких</span>
       <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
-    <div class="howto-btn" onclick="closeHowToUsePopup();startLibraryTour()">
+    <div class="howto-btn" onclick="closeHowToUsePopup();onbRestart()">
       <span>Тур по основным функциям</span>
       <svg class="howto-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>
@@ -10028,6 +10120,9 @@ async function toggleNotifyCards(){
 }
 
 async function toggleNotif(key) {
+  /* PP ШАГ ЗАКРЫВАЕТ ИМЕННО «ЖИВЫЕ ЗАНЯТИЯ» (список 2100153), а не любой
+     тумблер: в этом и смысл шага — не пропустить встречу */
+  if (key === 'l2100153') onbDone('live');
   const cfg = NOTIF_LISTS.find(c => c.key === key);
   if (!cfg) return;
   const isOn = listMembership[key] === 'True';
@@ -11825,6 +11920,56 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     t:'Канал и чат — для участников клуба' },
   'tg.access_fail': { c:'Доступы', l:'Ссылка не выдалась', w:'Канал и чат', i:false,
     t:'Не получилось открыть доступ. Напиши в поддержку — разберёмся.' },
+  'onb.hi_title': { c:'Знакомство', l:'Заголовок приветствия', w:'Экран после доступов', i:false,
+    t:'Ты в клубе' },
+  'onb.hi_text': { c:'Знакомство', l:'Текст приветствия', w:'Экран после доступов', i:false,
+    t:'Канал и чат открыты. Тут много всего — покажу за пару минут, что где.' },
+  'onb.hi_btn': { c:'Знакомство', l:'Кнопка начала знакомства', w:'Экран после доступов', i:false,
+    t:'С чего начать' },
+  'onb.hi_skip': { c:'Знакомство', l:'Отказ от знакомства', w:'Экран после доступов', i:false,
+    t:'Разберусь сам' },
+  'onb.next': { c:'Знакомство', l:'Кнопка «дальше»', w:'Окно шага', i:false, t:'Дальше' },
+  'onb.trail': { c:'Знакомство', l:'Полоска обучения', w:'Внизу экрана', i:false, t:'Обучение' },
+  'onb.trail_wait': { c:'Знакомство', l:'Полоска, пока человек пробует', w:'Внизу экрана', i:false,
+    t:'Как попробуешь — продолжим' },
+  'onb.trail_go': { c:'Знакомство', l:'Ссылка «продолжить» на полоске', w:'Внизу экрана', i:false,
+    t:'продолжить →' },
+  'onb.trail_of': { c:'Знакомство', l:'Счётчик шагов (подставляются {n} и {m})', w:'Полоска', i:false,
+    t:'{n} из {m} пройдено' },
+  'onb.step_of': { c:'Знакомство', l:'Номер шага (подставляются {n} и {m})', w:'Окно шага', i:false,
+    t:'Шаг {n} из {m}' },
+  'onb.help': { c:'Знакомство', l:'Подсказка про справку в конце', w:'После знакомства', i:false,
+    t:'Если захочешь подробнее — в справке разобрано всё, что есть в клубе.' },
+  'onb.quiz_locked': { c:'Знакомство', l:'Тест закрыт на время знакомства', w:'Главное меню', i:false,
+    t:'Откроется после знакомства с приложением' },
+
+  'onb.games_t': { c:'Знакомство', l:'Шаг «Игры» — заголовок', w:'Окно шага', i:false, t:'Игры' },
+  'onb.games_x': { c:'Знакомство', l:'Шаг «Игры» — текст', w:'Окно шага', i:false,
+    t:'Тренажёр с живым клиентом. Партия — три минуты, в конце счёт и разбор от арбитра.' },
+  'onb.games_b': { c:'Знакомство', l:'Шаг «Игры» — кнопка', w:'Окно шага', i:false, t:'Сыграть' },
+
+  'onb.live_t': { c:'Знакомство', l:'Шаг «Встречи» — заголовок', w:'Окно шага', i:false, t:'Живые встречи' },
+  'onb.live_x': { c:'Знакомство', l:'Шаг «Встречи» — текст', w:'Окно шага', i:false,
+    t:'Раз в неделю собираемся вживую и разбираем ваши ситуации. Это самое ценное, что тут есть — включи, чтобы не пропустить.' },
+  'onb.live_x_sa': { c:'Знакомство', l:'Шаг «Встречи» — текст в установленном приложении', w:'Окно шага', i:false,
+    t:'Раз в неделю собираемся вживую. Включи, о чём предупреждать, и выбери куда — в бота или прямо на телефон.' },
+  'onb.live_b': { c:'Знакомство', l:'Шаг «Встречи» — кнопка', w:'Окно шага', i:false, t:'Включить напоминания' },
+
+  'onb.plan_t': { c:'Знакомство', l:'Шаг «План» — заголовок', w:'Окно шага', i:false, t:'Личный план' },
+  'onb.plan_x': { c:'Знакомство', l:'Шаг «План» — текст', w:'Окно шага', i:false,
+    t:'Отмечаешь, что болит — собираем путь из занятий именно под это. Первая остановка короткая.' },
+  'onb.plan_x_seed': { c:'Знакомство', l:'Шаг «План» — текст, если тест уже пройден', w:'Окно шага', i:false,
+    t:'По твоему архетипу мы уже подобрали первые занятия. Добавь, что ещё болит — допишем путь под это.' },
+  'onb.plan_b': { c:'Знакомство', l:'Шаг «План» — кнопка', w:'Окно шага', i:false, t:'Собрать путь' },
+  'onb.plan_b_seed': { c:'Знакомство', l:'Шаг «План» — кнопка, если тест пройден', w:'Окно шага', i:false,
+    t:'Добавить свои темы' },
+
+  'onb.lib_t': { c:'Знакомство', l:'Шаг «Библиотека» — заголовок', w:'Окно шага', i:false, t:'Что посмотреть' },
+  'onb.lib_x': { c:'Знакомство', l:'Шаг «Библиотека» — текст', w:'Окно шага', i:false,
+    t:'Спроси своими словами — «как вытащить клиента из игнора» — и получишь занятия под это. Что не успеешь сейчас, отложи на потом.' },
+  'onb.lib_b': { c:'Знакомство', l:'Шаг «Библиотека» — кнопка', w:'Окно шага', i:false,
+    t:'Спросить своими словами' },
+
   'points.feed_empty': { c:'Баллы', l:'Лента начислений пуста', w:'Страница «Баллы»', i:false,
     t:'Пока пусто. Посмотри занятие или загляни на эфир — начисления появятся здесь.' },
   'points.feed_earlier': { c:'Баллы', l:'Сколько заработано до появления ленты ({n})', w:'Страница «Баллы»', i:false,
@@ -13322,6 +13467,11 @@ async function refreshOnboardStatus(){
       serverLevel = Math.min(u.onboarding_level || 1, MAX_LEVEL);
       if (sessionFirstMemberOpen === null) sessionFirstMemberOpen = !!u.is_first_member_open;
       showRegistrationWarning = isMember && !sessionFirstMemberOpen && currentLevelNum() === 1 && (!channelJoined || !chatJoined);
+      /* PP ПРЕДЛОЖЕНИЕ ЗНАКОМСТВА ЖИВЁТ ЗДЕСЬ, а не в старте приложения: доступы
+         подтверждаются колбеком от бота и приезжают ПОЗЖЕ первого экрана.
+         Человек вступает в канал, возвращается в апп — и встречает предложение
+         ровно в этот момент, а не при следующем запуске */
+      onbMaybeOffer();
     }
   } catch (e) {}
 }
@@ -13565,8 +13715,7 @@ async function enablePushNotifications(){
 }
 function startTourFromSteps(){
   closeStepsPopup();
-  markTourOnServer({ step: 'start', action: 'shown', index: 0 });
-  startLibraryTour();
+  onbRestart();
 }
 
 /* ── "Пуш недоступен внутри Telegram" — честное объяснение вместо попытки, которая
@@ -13784,6 +13933,222 @@ function tourAdvanceOn(eventName){
     return;
   }
   setTimeout(showTourStep, 400);
+}
+
+/* ══ ЗНАКОМСТВО С ПРИЛОЖЕНИЕМ — ДВИЖОК ═══════════════════════════════════
+   ⚠️ ПОРЯДОК ШАГОВ. Игры первыми — самое лёгкое и весёлое, и единственное
+   место, где человек ДЕЙСТВУЕТ, а не потребляет. Встреча второй: это
+   настоящий вау клуба ([stated] Denis — «вайб, которым я заражаю на живой
+   встрече»), и к ней достаточно одного нажатия. План третьим — обещание на
+   месяцы, в первый день человек к нему не готов. Библиотека последней,
+   она же самая «болотистая».
+   ⚠️ У ШАГА БЫВАЕТ ДВА ТЕКСТА: план говорит иначе тому, у кого тест уже
+   засеял первые остановки; встреча — иначе в установленном приложении, где
+   есть выбор канала (внутри Telegram выбирать нечего). */
+const ONB_STEPS = [
+  { key:'games', view:'games',
+    t:'onb.games_t', x:'onb.games_x', b:'onb.games_b' },
+  { key:'live',  view:'portal', scrollTo:'notif-section',
+    t:'onb.live_t',  x:'onb.live_x',  xAlt:'onb.live_x_sa', b:'onb.live_b' },
+  { key:'plan',  view:'plan',
+    t:'onb.plan_t',  x:'onb.plan_x',  xSeed:'onb.plan_x_seed',
+    b:'onb.plan_b',  bSeed:'onb.plan_b_seed' },
+  { key:'lib',   view:'library',
+    t:'onb.lib_t',   x:'onb.lib_x',   b:'onb.lib_b' },
+];
+
+let onbIdx = 0;          // на каком шаге стоим
+let onbTrying = null;    // какой шаг человек пошёл пробовать
+let onbActive = false;   // знакомство запущено и не закончено
+let onbSeed = false;     // тест архетипа пройден → план уже засеян
+
+function onbHasSeed(){
+  try { return !!(savedQuizResult() && savedQuizResult().code); } catch (e) { return false; }
+}
+
+/* ⚠️ ПРЕДЛАГАЕМ ЗНАКОМСТВО ТОЛЬКО ТОМУ, КОМУ ЕСТЬ ЧТО ПОКАЗАТЬ: участнику,
+   уже получившему доступы. Гостю и человеку без канала показывать тур рано —
+   у него другая задача, и окно поверх неё только помешает. */
+function onbMaybeOffer(){
+  if (onbActive || tourDone) return;
+  if (!isMember || !telegramId) return;
+  if (!channelJoined || !chatJoined) return;
+  onbSeed = onbHasSeed();
+  document.getElementById('onb-hi').classList.add('open');
+  markTourOnServer({ step:'offer', action:'shown', index:0 });
+}
+
+/* ⚠️ РУЧНОЙ ЗАПУСК — В ОБХОД ВСЕХ УСЛОВИЙ `onbMaybeOffer`. Тот показывает
+   предложение один раз и только тому, кому оно к месту; а сюда человек
+   приходит СОЗНАТЕЛЬНО — из шага регистрации, из справки, из отладки.
+   Отказывать ему потому, что «уже проходил», неправильно. */
+function onbRestart(){
+  onbActive = false;
+  onbIdx = 0;
+  onbTrying = null;
+  onbSeed = onbHasSeed();
+  onbHideCard();
+  onbDrawTrail();
+  document.getElementById('onb-hi').classList.add('open');
+  markTourOnServer({ step:'offer', action:'shown', index:0 });
+}
+
+function onbStart(){
+  document.getElementById('onb-hi').classList.remove('open');
+  onbActive = true; onbIdx = 0; onbTrying = null;
+  onbSeed = onbHasSeed();
+  onbShow();
+}
+
+/* ⚠️ «РАЗБЕРУСЬ САМ» ЗАКРЫВАЕТ ШАГ РЕГИСТРАЦИИ. Иначе человек сделал
+   осознанный выбор, а список продолжает висеть и мигать — ровно то
+   раздражение, от которого мы уходим */
+function onbSelfServe(){
+  document.getElementById('onb-hi').classList.remove('open');
+  onbActive = false; onbTrying = null;
+  tourDone = true;
+  markOnboardStep('tour');
+  markTourOnServer({ step:'offer', action:'self', finished:true });
+  onbDrawTrail();
+  onbApplyLocks();
+  setTimeout(function(){ showToast(t('onb.help')); }, 500);
+}
+
+function onbShow(){
+  const st = ONB_STEPS[onbIdx];
+  if (!st){ onbFinish(); return; }
+  onbCloseFloaters();
+  switchView(st.view);                    // окно НЕ уводит само — только показывает
+
+  const seeded = st.xSeed && onbSeed;
+  const alt    = st.xAlt && isStandaloneWebApp();
+  document.getElementById('onb-num').textContent =
+    tf('onb.step_of', { n: onbIdx + 1, m: ONB_STEPS.length });
+  document.getElementById('onb-title').textContent = t(st.t);
+  document.getElementById('onb-text').textContent  =
+    t(seeded ? st.xSeed : (alt ? st.xAlt : st.x));
+  document.getElementById('onb-try').textContent   =
+    t(seeded && st.bSeed ? st.bSeed : st.b);
+  document.getElementById('onb-wrap').classList.add('open');
+  onbTrying = null;
+  markTourOnServer({ step: st.key, action:'shown', index: onbIdx });
+  onbDrawTrail();
+}
+
+function onbHideCard(){ document.getElementById('onb-wrap').classList.remove('open'); }
+
+function onbTry(){
+  const st = ONB_STEPS[onbIdx];
+  onbCloseFloaters();
+  onbTrying = st.key;
+  onbHideCard();
+  switchView(st.view);
+  markTourOnServer({ step: st.key, action:'tried', index: onbIdx });
+  onbDrawTrail();
+  /* ⚠️ НА ШАГЕ ПЛАНА СРАЗУ ОТКРЫВАЕМ ВЫБОР ТЕМ. Человек нажал «собрать путь» —
+     значит согласился; показывать ему после этого ещё одну кнопку и ждать
+     второго нажатия значит переспрашивать */
+  if (st.key === 'plan' && typeof startPlanQuiz === 'function') startPlanQuiz();
+  if (st.scrollTo) onbScrollTo(st.scrollTo);
+}
+
+function onbScrollTo(id){
+  const el = document.getElementById(id);
+  if (!el || !el.scrollIntoView) return;
+  // Небольшая задержка: экран только что переключился, разметка ещё считается
+  setTimeout(function(){
+    try { el.scrollIntoView({ behavior:'smooth', block:'start' }); } catch (e) {}
+  }, 140);
+}
+
+function onbNext(how){
+  const st = ONB_STEPS[onbIdx];
+  onbCloseFloaters();
+  if (st) markTourOnServer({ step: st.key, action: how || 'done', index: onbIdx });
+  onbTrying = null;
+  onbIdx++;
+  if (onbIdx >= ONB_STEPS.length){ onbFinish(); return; }
+  onbShow();
+}
+
+/* ⚠️ КРЕСТИК — ПАУЗА, А НЕ ОТКАЗ. Шаг остаётся незачтённым, полоска на месте.
+   Явный отказ бывает ровно один — «разберусь сам» в самом начале */
+function onbPause(){
+  const st = ONB_STEPS[onbIdx];
+  onbCloseFloaters();
+  onbHideCard();
+  onbTrying = null;
+  if (st) markTourOnServer({ step: st.key, action:'paused', index: onbIdx });
+  onbDrawTrail();
+}
+
+/* ⚠️ ЕСЛИ ЧЕЛОВЕК БЫЛ В ПРОБЕ — «продолжить» ведёт ДАЛЬШЕ, а не показывает
+   тот же шаг заново: он уже сделал то, о чём мы просили (или решил, что
+   хватит), и повторное «настрой уведомления» читается как «тебя не услышали» */
+function onbResume(){
+  if (!onbActive || onbIdx >= ONB_STEPS.length) return;
+  if (onbTrying){ onbNext('tried'); return; }
+  onbShow();
+}
+
+function onbFinish(){
+  onbHideCard();
+  onbActive = false; onbTrying = null; onbIdx = ONB_STEPS.length;
+  tourDone = true;
+  markOnboardStep('tour');
+  markTourOnServer({ step:'end', action:'done', index: ONB_STEPS.length, finished:true });
+  onbDrawTrail();
+  onbApplyLocks();
+  switchView('portal');
+  setTimeout(function(){ showToast(t('onb.help')); }, 400);
+}
+
+/* Полоска видна только когда человек НЕ смотрит окно: на паузе или в пробе */
+function onbDrawTrail(){
+  const el = document.getElementById('onb-trail');
+  if (!el) return;
+  const show = onbActive && onbIdx < ONB_STEPS.length &&
+               (!!onbTrying || !document.getElementById('onb-wrap').classList.contains('open'));
+  el.classList.toggle('open', !!show);
+  if (!show) return;
+  document.getElementById('onb-trail-t').textContent =
+    onbTrying ? t('onb.trail_wait') : t('onb.trail');
+  document.getElementById('onb-trail-s').textContent =
+    tf('onb.trail_of', { n: onbIdx, m: ONB_STEPS.length });
+  document.getElementById('onb-bars').innerHTML =
+    ONB_STEPS.map(function(_, k){ return '<i class="' + (k < onbIdx ? 'on' : '') + '"></i>'; }).join('');
+}
+
+/* ⚠️ ПОДСКАЗКИ И ТОСТЫ ГАСНУТ ПРИ КАСАНИИ ТУРА. Они живут внизу экрана, там
+   же, где полоска и окно шага, — и оставшись поверх нового шага читаются как
+   часть его, а не как хвост предыдущего действия */
+function onbCloseFloaters(){
+  const tst = document.getElementById('toast');
+  if (tst) tst.classList.remove('visible');   // в этом файле класс именно 'visible'
+  clearTimeout(window._toastTimer);
+}
+
+/* ⚠️ ТЕСТ ЗАПЕРТ НА ВРЕМЯ ЗНАКОМСТВА: он сам по себе воронка на две минуты и
+   уводит человека целиком, а не на один экран. Заперт, но НЕ спрятан —
+   иначе человек не узнает, что он есть */
+function onbApplyLocks(){
+  const tile = document.querySelector('.tile[onclick*="openQuiz"]');
+  if (!tile) return;
+  tile.classList.toggle('onb-locked', !!onbActive);
+}
+function onbQuizBlocked(){
+  if (!onbActive) return false;
+  showToast(t('onb.quiz_locked'));
+  return true;
+}
+
+/* ══ СИГНАЛЫ ЗАВЕРШЕНИЯ ДЕЙСТВИЯ ═════════════════════════════════════════
+   ⚠️ ЭТО И ЕСТЬ «ПОЙМАТЬ ПОД РУЧКУ»: возврат к туру не перехватывается, а
+   происходит САМ, когда настоящее действие закончилось. Человек может выйти
+   из аппа и вернуться завтра — его встретит полоска */
+function onbDone(key){
+  if (!onbActive || onbTrying !== key) return;
+  setTimeout(function(){ if (onbTrying === key) onbNext('done'); }, 700);
 }
 
 /* Отметка знакомства на сервере. Звать можно сколько угодно: сервер только
@@ -14148,7 +14513,7 @@ const DEEPLINKS = {
   'subscription':{ go: () => openSubManage(),             guests: false },
   'notifications':{ go: () => openNotificationsSection(), guests: false },
   'howto':       { go: () => openHowToUsePopup(),         guests: false },
-  'tour':        { go: () => startLibraryTour(),          guests: false },
+  'tour':        { go: () => onbRestart(),                guests: false },
   'ai':          { go: () => openAiPopup(),               guests: false },
   'access':      { go: () => switchView('access'),        guests: false },
 };
@@ -14845,6 +15210,9 @@ async function loadSavedSlugs(){
 }
 
 function toggleSaved(slug){
+  /* Шаг библиотеки закрывается СОХРАНЕНИЕМ, а не открытием: так человек
+     проходит весь маленький путь — спросил, нашёл, отложил */
+  onbDone('lib');
   const willBeSaved = !savedSlugs.has(slug);
   if (willBeSaved) {
     savedSlugs.add(slug);
@@ -16713,6 +17081,7 @@ function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQues
 function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
 
 async function finishPlanQuiz(){
+  onbDone('plan');
   const noteEl = document.getElementById('plan-note');
   planDraft.note = noteEl ? noteEl.value.trim() : '';
   planAnswers = {
@@ -23143,6 +23512,7 @@ function quizScore(answers){
 /* ── Экраны ──────────────────────────────────────────────────────────────── */
 
 function openQuiz(restart){
+  if (onbQuizBlocked()) return;
   const ov = document.getElementById('quiz-overlay');
   if (!ov) return;
   hideSplash();   // человек пришёл по ссылке на тест — оболочка может и не запускаться
@@ -25015,6 +25385,8 @@ async function ggSend(){
    следующая ступень. Текст приглашения приходит с сервера дословно — его
    пишет Denis, а не модель. */
 function ggFinal(f){
+  // Шаг «Игры» закрывается настоящей партией, а не показом экрана
+  if (f && f.status === 'won') onbDone('games');
   ggLastFinal = f;
   const won = f.status === 'won';
   let h = '<div class="gg-final-hero">'
