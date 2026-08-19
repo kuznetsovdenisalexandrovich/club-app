@@ -5824,6 +5824,36 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
   </div>
 </div>
+<!-- ══ ТУР ДЛЯ ГОСТЯ ═══════════════════════════════════════════════════════
+     ⚠️ ЭТО НЕ ЭКСКУРСИЯ ПО КНОПКАМ, А ДОКАЗАТЕЛЬСТВО ЖИЗНИ ([stated] Denis):
+     показываем НАСТОЯЩИЕ экраны и живые данные — тему ближайшего занятия,
+     книгу недели, дату эфира, число занятий. Заглушки убивают весь смысл.
+     Классы берём у знакомства участника (`onb-*`) — вид тот же, а два тура
+     одновременно идти не могут: этот только у не-участника -->
+<div class="onb-wrap" id="gt-wrap">
+  <div class="onb-veil" onclick="gtSkip()"></div>
+  <div class="onb-card">
+    <button class="onb-x" onclick="gtSkip()">&#10005;</button>
+    <div class="num" id="gt-num"></div>
+    <h2 id="gt-title"></h2>
+    <p id="gt-text"></p>
+    <div class="onb-acts">
+      <button class="lec-link-btn access-btn" id="gt-next" onclick="gtNext()" data-text="gt.next">Дальше</button>
+    </div>
+    <div class="payment-help-link" style="margin-top:12px" onclick="gtSkip()" data-text="gt.skip">Пропустить</div>
+  </div>
+</div>
+
+<!-- Развилка в конце тура: рубль на три дня либо остаться в бесплатном -->
+<div class="onb-hi" id="gt-fin">
+  <div class="onb-hi-card">
+    <h2 data-text="gt.fin_title">Ну что, как тебе?</h2>
+    <p data-text="gt.fin_text">Можно открыть всё сразу — три дня за рубль. А можно остаться и посмотреть, что открыто бесплатно.</p>
+    <button class="lec-link-btn access-btn" onclick="gtPay()" data-text="gt.fin_pay">Открыть доступ за 1 ₽</button>
+    <div class="payment-help-link" style="margin-top:14px" onclick="gtStay()" data-text="gt.fin_stay">Побыть тут, осмотреться</div>
+  </div>
+</div>
+
 <!-- ══ ЗНАКОМСТВО С ПРИЛОЖЕНИЕМ ══════════════════════════════════════════ -->
 <div class="onb-hi" id="onb-hi">
   <div class="onb-hi-card">
@@ -12009,6 +12039,51 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     t:'Канал и чат — для участников клуба' },
   'tg.access_fail': { c:'Доступы', l:'Ссылка не выдалась', w:'Канал и чат', i:false,
     t:'Не получилось открыть доступ. Напиши в поддержку — разберёмся.' },
+  'gt.step_of': { c:'Тур для гостя', l:'Номер шага (подставляются {n} и {m})', w:'Окно шага', i:false,
+    t:'Шаг {n} из {m}' },
+  'gt.next': { c:'Тур для гостя', l:'Кнопка «дальше»', w:'Окно шага', i:false, t:'Дальше' },
+  'gt.skip': { c:'Тур для гостя', l:'Отказ от тура', w:'Окно шага', i:false, t:'Пропустить' },
+
+  'gt.sched_t': { c:'Тур для гостя', l:'Шаг «Расписание» — заголовок', w:'Окно шага', i:false,
+    t:'Тут всё идёт по расписанию' },
+  'gt.sched_x': { c:'Тур для гостя', l:'Шаг «Расписание» — текст (подставляется {занятие})', w:'Окно шага', i:false,
+    t:'Ближайшее занятие: {занятие}. Дальше в календаре — что будет на неделе.' },
+  'gt.sched_none': { c:'Тур для гостя', l:'Шаг «Расписание», если ближайших занятий нет', w:'Окно шага', i:false,
+    t:'В календаре видно, что и когда проходит в клубе.' },
+  'gt.sched_book': { c:'Тур для гостя', l:'Книга недели (подставляется {книга})', w:'Окно шага', i:false,
+    t:'А ещё разбираем книгу: {книга}.' },
+
+  'gt.live_t': { c:'Тур для гостя', l:'Шаг «Эфиры» — заголовок', w:'Окно шага', i:false,
+    t:'Живые эфиры каждую неделю' },
+  'gt.live_x': { c:'Тур для гостя', l:'Шаг «Эфиры» — текст (подставляется {эфир})', w:'Окно шага', i:false,
+    t:'Ближайший эфир: {эфир}. Первые десять минут открыты всем — можно просто прийти и посмотреть.' },
+  'gt.live_none': { c:'Тур для гостя', l:'Шаг «Эфиры», если эфир ещё не назначен', w:'Окно шага', i:false,
+    t:'Эфиры идут каждую неделю, ближайший появится в расписании. Первые десять минут открыты всем.' },
+
+  'gt.lib_t': { c:'Тур для гостя', l:'Шаг «Библиотека» — заголовок', w:'Окно шага', i:false,
+    t:'Библиотека занятий' },
+  'gt.lib_x': { c:'Тур для гостя', l:'Шаг «Библиотека» — текст ({занятий}, {аудио}, {выпусков})', w:'Окно шага', i:false,
+    t:'Сейчас в клубе {занятий} занятий, {аудио} из них можно слушать как подкаст, и {выпусков} выпусков журнала.' },
+
+  'gt.games_t': { c:'Тур для гостя', l:'Шаг «Тренажёры» — заголовок', w:'Окно шага', i:false,
+    t:'Тут можно не смотреть, а делать' },
+  'gt.games_x': { c:'Тур для гостя', l:'Шаг «Тренажёры» — текст', w:'Окно шага', i:false,
+    t:'Тренажёры продаж с живым собеседником и разбором каждой реплики. И тест, который покажет твой стиль продаж.' },
+
+  'gt.about_t': { c:'Тур для гостя', l:'Шаг «О клубе» — заголовок', w:'Окно шага', i:false,
+    t:'Что входит в клуб' },
+  'gt.about_x': { c:'Тур для гостя', l:'Шаг «О клубе» — текст', w:'Окно шага', i:false,
+    t:'Здесь коротко про то, как всё устроено и что открывается с доступом.' },
+
+  'gt.fin_title': { c:'Тур для гостя', l:'Развилка в конце — заголовок', w:'Конец тура', i:false,
+    t:'Ну что, как тебе?' },
+  'gt.fin_text': { c:'Тур для гостя', l:'Развилка в конце — текст', w:'Конец тура', i:false,
+    t:'Можно открыть всё сразу — три дня за рубль. А можно остаться и посмотреть то, что открыто бесплатно.' },
+  'gt.fin_pay': { c:'Тур для гостя', l:'Развилка — кнопка доступа', w:'Конец тура', i:false,
+    t:'Открыть доступ за 1 ₽' },
+  'gt.fin_stay': { c:'Тур для гостя', l:'Развилка — остаться в бесплатном', w:'Конец тура', i:false,
+    t:'Побыть тут, осмотреться' },
+
   'onb.hi_title': { c:'Знакомство', l:'Заголовок приветствия', w:'Экран после доступов', i:false,
     t:'Ты в клубе' },
   'onb.hi_text': { c:'Знакомство', l:'Текст приветствия', w:'Экран после доступов', i:false,
@@ -14047,6 +14122,139 @@ function tourAdvanceOn(eventName){
     return;
   }
   setTimeout(showTourStep, 400);
+}
+
+/* ══ ТУР ДЛЯ ГОСТЯ ═══════════════════════════════════════════════════════
+   [stated] Denis: «показать, что тут всё серьёзно и по-настоящему, блеснуть
+   оружием и подразнить интересными темами занятий, упомянуть книгу недели».
+   Аудитория — СОМНЕВАЮЩИЙСЯ: фильм ему уже понравился, он решает, платить
+   ли тысячу. Поэтому тур не учит пользоваться, а показывает жизнь.
+   ⚠️ ДАННЫЕ БЕРЁМ ОДНИМ ЗАПРОСОМ `GET /tour/highlights` — он публичный и
+   НИЧЕГО ЗАКРЫТОГО НЕ ОТДАЁТ: только названия, даты и числа. */
+let gtData = null;        // ответ /tour/highlights
+let gtIdx = 0;
+let gtActive = false;
+
+const GT_STEPS = [
+  { key:'sched', view:'schedule', scrollTo:'schedule-calendar-card',
+    t:'gt.sched_t', build: gtSchedText },
+  { key:'live',  view:'schedule',
+    t:'gt.live_t',  build: gtLiveText },
+  { key:'lib',   view:'library',  scrollTo:'lib-list',
+    t:'gt.lib_t',   build: gtLibText },
+  { key:'games', view:'games',
+    t:'gt.games_t', build: function(){ return t('gt.games_x'); } },
+  { key:'about', view:'club-info',
+    t:'gt.about_t', build: function(){ return t('gt.about_x'); } },
+];
+
+/* ⚠️ ЖИВЫЕ СТРОКИ СОБИРАЕТ КОД, А НЕ РЕЕСТР: в реестре лежит ФРАЗА С
+   ПОДСТАНОВКАМИ (её Denis правит), а числа и темы приезжают с сервера.
+   Нет данных — фраза без них, а не пустой экран */
+function gtEvLine(e){
+  if (!e) return '';
+  const when = [e.date, e.weekday, e.time].filter(Boolean).join(' ');
+  return (when ? when + ' — ' : '') + (e.title || '');
+}
+function gtSchedText(){
+  const ev = (gtData && (gtData.events || [])[0]) || null;
+  const book = gtData && gtData.book;
+  let out = ev ? tf('gt.sched_x', { занятие: gtEvLine(ev) }) : t('gt.sched_none');
+  if (book) out += ' ' + tf('gt.sched_book', { книга: book.title || '' });
+  return out;
+}
+function gtLiveText(){
+  const live = gtData && gtData.live;
+  return live ? tf('gt.live_x', { эфир: gtEvLine(live) }) : t('gt.live_none');
+}
+function gtLibText(){
+  const c = (gtData && gtData.counts) || {};
+  return tf('gt.lib_x', {
+    занятий: c.lectures || 0, аудио: c.with_audio || 0, выпусков: c.issues || 0,
+  });
+}
+
+/* Данные тянем ОДИН раз за сессию и НЕ ждём их вечно: тур должен открыться,
+   даже если сервер молчит — тексты просто останутся без чисел */
+async function gtLoad(){
+  if (gtData) return gtData;
+  try {
+    const r = await fetch(`${API_URL}/tour/highlights`);
+    if (r.ok) gtData = await r.json();
+  } catch (e) {
+    console.warn('[гостевой тур] данные не приехали:', e && e.message || e);
+  }
+  return gtData;
+}
+
+/* Вход — кнопка «Осмотреться в приложении» на странице о клубе.
+   ⚠️ РУБИЛЬНИК НА СЕРВЕРЕ (`guest_tour_enabled`): выключен — ведём человека
+   в демо ровно как раньше, без тура */
+async function gtStart(){
+  track('guest_tour_start');
+  await gtLoad();
+  if (gtData && gtData.enabled === false){ gtLeave(); return; }
+  gtActive = true; gtIdx = 0;
+  gtShow();
+}
+
+function gtShow(){
+  const st = GT_STEPS[gtIdx];
+  if (!st){ gtFinish(); return; }
+  switchView(st.view);
+  document.getElementById('gt-num').textContent =
+    tf('gt.step_of', { n: gtIdx + 1, m: GT_STEPS.length });
+  document.getElementById('gt-title').textContent = t(st.t);
+  document.getElementById('gt-text').textContent  = st.build();
+  document.getElementById('gt-wrap').classList.add('open');
+  // Та же плавная прокрутка, что у знакомства участника, — родная «smooth»
+  // во встроенных вебвью прыгает (урок 182)
+  if (st.scrollTo) onbScrollTo(st.scrollTo, 'center');
+  track('guest_tour_step', st.key);
+}
+
+function gtHide(){ document.getElementById('gt-wrap').classList.remove('open'); }
+
+function gtNext(){
+  gtIdx++;
+  if (gtIdx >= GT_STEPS.length){ gtFinish(); return; }
+  gtShow();
+}
+
+/* ⚠️ ПРОПУСК — НЕ ТУПИК. Человек не хочет экскурсию, но он всё ещё
+   сомневающийся: показываем ту же развилку, что и в конце тура */
+function gtSkip(){
+  const st = GT_STEPS[gtIdx];
+  track('guest_tour_skip', st ? st.key : '');
+  gtFinish();
+}
+
+function gtFinish(){
+  gtHide();
+  gtActive = false;
+  document.getElementById('gt-fin').classList.add('open');
+  track('guest_tour_end');
+}
+
+function gtCloseFin(){ document.getElementById('gt-fin').classList.remove('open'); }
+
+function gtPay(){
+  gtCloseFin();
+  track('guest_tour_to_pay');
+  openAccessPage();
+}
+
+/* «Побыть тут» — это и есть демо. Бесплатный маршрут подключится сюда же,
+   когда будет заведён плейлист (настройка `guest_plan_playlist`) */
+function gtStay(){
+  gtCloseFin();
+  track('guest_tour_stay');
+  gtLeave();
+}
+
+function gtLeave(){
+  gtActive = false;
+  switchView('portal');
 }
 
 /* ══ ЗНАКОМСТВО С ПРИЛОЖЕНИЕМ — ДВИЖОК ═══════════════════════════════════
@@ -18974,7 +19182,11 @@ function funnelAbout(){
 /* Осмотреться предлагаем уже ПОСЛЕ описания — кнопка живёт на самой странице */
 function clubInfoBrowse(){
   track('club_info_browse');
-  switchView('portal');
+  /* ⚠️ РАНЬШЕ КНОПКА ПРОСТО БРОСАЛА ЧЕЛОВЕКА В ДЕМО НАЕДИНЕ С ПРИЛОЖЕНИЕМ.
+     Теперь она ведёт тур; если тур выключен рубильником или не завёлся —
+     `gtStart` сам уходит в прежнее поведение */
+  if (typeof gtStart === 'function') gtStart();
+  else switchView('portal');
 }
 
 /* Оплативший, которого апп не узнал — тот же путь, что из окошка на
