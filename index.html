@@ -4474,9 +4474,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    содержимое шире экрана, и растушёвка на нём легла бы на края СОДЕРЖИМОГО,
    которые уезжают за пределы видимого. Сверху и снизу растушёвка вшита в
    альфу самой плитки */
-.prail{border-radius:14px;
+/* ⚠️ БОКОВАЯ МАСКА ВИСИТ НА ОТДЕЛЬНОЙ НЕПОДВИЖНОЙ ОБЁРТКЕ, А НЕ НА .prail.
+   .prail — прокручиваемый блок (overflow-x:auto), и маска на нём считается
+   от области прокрутки, а не от видимого окошка: края растушёвки уезжают
+   вместе с содержимым. Проверено дважды, оба раза размытие пропадало */
+.prail-wrap{position:relative;overflow:hidden;border-radius:14px;
+  margin:8px -16px 0;
   -webkit-mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
           mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%)}
+.prail-wrap .prail{margin:0}
 .prail-inner{position:relative;container-type:size}
 /* ⚠️ ФОН ЛЕНТЫ — ОДНИМ СОКРАЩЁННЫМ СВОЙСТВОМ И С ТОЙ ЖЕ СПЕЦИФИЧНОСТЬЮ,
    ЧТО У ПРЕЖНЕГО ПРАВИЛА. Выше по файлу стоит [data-theme=…] .prail-inner
@@ -4489,8 +4495,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 [data-theme="dark"]  .prail-inner{background:url(images/plan/rail-dark.webp) 0 center/auto 100% repeat-x}
 /* В ленте перспективы нет — путь идёт вбок, а не вдаль */
 .prail .pmap-stop{width:auto;height:auto;animation:none}
-.prail .pmap-blob{width:46px;height:46px}
-.prail .pmap-stop.next .pmap-blob{width:62px;height:62px}
+.prail .pmap-blob{width:52px;height:52px}
+.prail .pmap-stop.next .pmap-blob{width:70px;height:70px}
 .prail .pmap-blob b{font-size:14px}
 .prail .pmap-stop.next .pmap-blob b{font-size:17px}
 .prail .pmap-mark{width:11px;height:11px;font-size:7px}
@@ -15020,7 +15026,7 @@ const PLAN_RAIL_PATH = {"light": [[0.0, 49.06], [2.08, 49.71], [4.17, 52.19], [6
 /* Ширина плитки ленты в пикселях исходника; высота у обеих 408 */
 const PLAN_RAIL_TILE = { light: 1337, dark: 951 };
 const PLAN_RAIL_TILE_H = 408;
-const PLAN_RAIL_H = 118;          // высота ленты на экране
+const PLAN_RAIL_H = 140;          // высота ленты на экране
 const PLAN_RAIL_STEP = 72;
 const PLAN_RAIL_X0 = 40;
 const PLAN_PERSP_MIN = 0.62;      // во сколько сжимается остановка у вершины
@@ -15309,7 +15315,9 @@ function planRailHtml(answers){
      положение остановки внутри плитки берём остатком от деления */
   const tileW = PLAN_RAIL_TILE[planTheme()] * PLAN_RAIL_H / PLAN_RAIL_TILE_H;
 
-  let html = '<div class="prail fade-rise"><div class="prail-inner" style="width:' + w
+  /* ⚠️ ОБЁРТКА .prail-wrap ОБЯЗАТЕЛЬНА: на ней висит боковая растушёвка.
+     На самой .prail она не работает — та прокручивается */
+  let html = '<div class="prail-wrap"><div class="prail fade-rise"><div class="prail-inner" style="width:' + w
     + 'px;height:' + PLAN_RAIL_H + 'px">';
 
   planStops.forEach(function(s, i){
@@ -15322,7 +15330,7 @@ function planRailHtml(answers){
     if (!done && i !== nextIdx) st += 'opacity:' + planFutureAlpha(i - nextIdx, lastK) + ';';
     html += planStopNode(i, s, 0, done, skip, i === nextIdx, st);
   });
-  html += '</div></div>';
+  html += '</div></div></div>';
 
   const done = planStops.filter(function(s){ return planVisited.has(s.lec.slug); }).length;
   return '<div class="prail-head">'
