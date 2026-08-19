@@ -4474,14 +4474,19 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    содержимое шире экрана, и растушёвка на нём легла бы на края СОДЕРЖИМОГО,
    которые уезжают за пределы видимого. Сверху и снизу растушёвка вшита в
    альфу самой плитки */
-[data-theme="light"] .prail-inner,[data-theme="dark"] .prail-inner{background:none}
 .prail{border-radius:14px;
   -webkit-mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
           mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%)}
-.prail-inner{position:relative;container-type:size;
-  background-repeat:repeat-x;background-position:0 center;background-size:auto 100%}
-[data-theme="light"] .prail-inner{background-image:url(images/plan/rail-light.webp)}
-[data-theme="dark"]  .prail-inner{background-image:url(images/plan/rail-dark.webp)}
+.prail-inner{position:relative;container-type:size}
+/* ⚠️ ФОН ЛЕНТЫ — ОДНИМ СОКРАЩЁННЫМ СВОЙСТВОМ И С ТОЙ ЖЕ СПЕЦИФИЧНОСТЬЮ,
+   ЧТО У ПРЕЖНЕГО ПРАВИЛА. Выше по файлу стоит [data-theme=…] .prail-inner
+   со сплошным цветом; если гасить его отдельным `background:none`, то
+   сокращённое свойство сбросит ЗАОДНО размер, позицию и повтор, а они
+   задавались правилом с меньшей специфичностью — и картинка нарисуется в
+   натуральную величину от левого верхнего угла. Ровно это и случилось 19.08:
+   вместо ленты был увеличенный кусок неба, и пропала растушёвка снизу */
+[data-theme="light"] .prail-inner{background:url(images/plan/rail-light.webp) 0 center/auto 100% repeat-x}
+[data-theme="dark"]  .prail-inner{background:url(images/plan/rail-dark.webp) 0 center/auto 100% repeat-x}
 /* В ленте перспективы нет — путь идёт вбок, а не вдаль */
 .prail .pmap-stop{width:auto;height:auto;animation:none}
 .prail .pmap-blob{width:46px;height:46px}
