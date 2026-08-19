@@ -8328,7 +8328,14 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   bottom:calc(env(safe-area-inset-bottom, 0px) + 14px);
   width:calc(100% - 28px);max-width:440px;background:var(--card);border-radius:22px;
   padding:18px 16px 16px;box-shadow:0 14px 40px rgba(0,0,0,.32);
+  border:1px solid var(--border);
   animation:onbUp .34s cubic-bezier(.22,.61,.36,1)}
+/* ⚠️ ОКНО ШАГА — ПЛОТНОЕ, А НЕ ПОЛУПРОЗРАЧНОЕ. `--card` в тёмной теме имеет
+   альфу .54: обычные карточки лежат на фоне страницы и читаются, а это окно
+   висит НАД содержимым, и сквозь него просвечивали пилюля и текст под ним
+   ([stated] Denis 20.08 по тёмной теме). Фон задаём прямо, не через `--card` */
+[data-theme="dark"] .onb-card{background:#12132a;
+  box-shadow:0 16px 44px rgba(0,0,0,.55)}
 @keyframes onbUp{from{opacity:0;transform:translate(-50%,22px)}}
 .onb-card .num{font-size:11px;letter-spacing:.08em;text-transform:uppercase;
   color:var(--warm);font-weight:800}
@@ -16025,15 +16032,25 @@ async function loadPlanProblems(){
 }
 
 async function loadPlanAnswers(){
-  if (!telegramId) return;
+  /* ⚠️⚠️ ОТМЕТКУ СТАВИМ ВО ВСЕХ ИСХОДАХ, ВКЛЮЧАЯ НЕУДАЧНЫЕ. Она значит
+     «СПРАШИВАТЬ БОЛЬШЕ НЕ НАДО», а не «ответ получен». Раньше выход по
+     «нет telegram_id» (гость в вебе), по коду ответа и по исключению
+     оставлял её ложной — а `renderPlanScreen` в этом случае звал загрузку
+     и перерисовывался снова: приложение вставало намертво (поймал Denis
+     20.08 в демо, кнопка «Составить план»). Классика: флаг «данные не
+     приехали» перепутан с флагом «данных нет» */
   try {
+    if (!telegramId) return;
     const r = await fetch(`${API_URL}/plan-answers/${telegramId}`);
     if (!r.ok) return;
     const d = await r.json();
     planAnswers = d.exists ? { problems: d.problems || [], level: d.level || '',
                                depth: d.depth || '', note: d.note || '' } : null;
+  } catch(e){
+    console.warn('[личный план] ответы не приехали:', e && e.message || e);
+  } finally {
     planAnswersLoaded = true;
-  } catch(e){}
+  }
 }
 
 // Проблема, под которой нет ни одной лекции, участнику НЕ показывается: он бы
@@ -16722,8 +16739,17 @@ function renderPlanScreen(){
   if (!el) return;
   // Ответы ещё не спрашивали — сначала спросим, потом решим, что показывать
   if (!planAnswersLoaded){
+    /* ⚠️ ВТОРОЙ ЗАМОК ОТ ТОЙ ЖЕ ПЕТЛИ: даже если отметка почему-то снова не
+       встанет, повторно грузить и перерисовывать себя мы не будем */
     el.innerHTML = '<div class="loading">Загрузка...</div>';
-    loadPlanAnswers().then(renderPlanScreen);
+    if (!window._planAnswersAsking){
+      window._planAnswersAsking = true;
+      loadPlanAnswers().then(function(){
+        window._planAnswersAsking = false;
+        planAnswersLoaded = true;
+        renderPlanScreen();
+      });
+    }
     return;
   }
   if (!planAnswers || !(planAnswers.problems || []).length){
