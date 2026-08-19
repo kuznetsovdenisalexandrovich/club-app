@@ -12009,6 +12009,12 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'support.open_here': { c:'Поддержка', l:'Подпись ссылки внутрь приложения', w:'Ответ поддержки', i:false, t:'открыть в приложении' },
   'support.route_gone': { c:'Поддержка', l:'Ссылка из ответа не открылась', w:'Тост', i:false, t:'Не получилось открыть — напиши нам ещё раз' },
   'plan.building': { c:'Личный план', l:'Надпись на время сборки карты', w:'Поле выбора тем', i:false, t:'Собираю карту тем…' },
+  'plan.guest_free': { c:'Личный план', l:'Кнопка открытой части занятия у гостя', w:'Остановка карты', i:false,
+    t:'Смотреть открытую часть' },
+  'plan.guest_shut': { c:'Личный план', l:'Пояснение, если у занятия нет открытой части', w:'Остановка карты', i:false,
+    t:'Занятие на эту тему есть, но открытой части у него нет — оно целиком в клубе.' },
+  'plan.guest_buy': { c:'Личный план', l:'Кнопка доступа с закрытой остановки', w:'Остановка карты', i:false,
+    t:'Открыть доступ' },
   'perf.offer_h': { c:'Щадящий режим', l:'Заголовок при тормозах', w:'Попап', i:false, t:'Телефону тяжеловато' },
   'perf.offer_p': { c:'Щадящий режим', l:'Текст при тормозах', w:'Попап', i:false, t:'Приложение подталкивает. Щадящий режим уберёт анимации и эффекты — весь клуб останется на месте.' },
   'perf.offer_yes': { c:'Щадящий режим', l:'Кнопка согласия при тормозах', w:'Попап', i:false, t:'Сделать легче' },
@@ -16031,6 +16037,19 @@ async function loadPlanProblems(){
   } catch(e){}
 }
 
+const PLAN_GUEST_KEY = 'club_app_plan_guest';
+function planGuestAnswers(){
+  try {
+    const raw = localStorage.getItem(PLAN_GUEST_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return (d && (d.problems || []).length) ? d : null;
+  } catch (e) { return null; }
+}
+function planGuestSave(answers){
+  try { localStorage.setItem(PLAN_GUEST_KEY, JSON.stringify(answers || {})); } catch (e) {}
+}
+
 async function loadPlanAnswers(){
   /* ⚠️⚠️ ОТМЕТКУ СТАВИМ ВО ВСЕХ ИСХОДАХ, ВКЛЮЧАЯ НЕУДАЧНЫЕ. Она значит
      «СПРАШИВАТЬ БОЛЬШЕ НЕ НАДО», а не «ответ получен». Раньше выход по
@@ -16040,7 +16059,11 @@ async function loadPlanAnswers(){
      20.08 в демо, кнопка «Составить план»). Классика: флаг «данные не
      приехали» перепутан с флагом «данных нет» */
   try {
-    if (!telegramId) return;
+    /* ⚠️ У ГОСТЯ КАРТА ЖИВЁТ НА УСТРОЙСТВЕ. Ему негде храниться на сервере —
+       телеграма нет, а карту он собирает сам и она должна пережить закрытие
+       вкладки. При опознании (вход, подписка на бота) её надо будет перенести
+       на сервер — точка переноса `planGuestAnswers()` */
+    if (!telegramId){ planAnswers = planGuestAnswers(); return; }
     const r = await fetch(`${API_URL}/plan-answers/${telegramId}`);
     if (!r.ok) return;
     const d = await r.json();
@@ -16356,6 +16379,14 @@ function planStopImg(i, stop){
 /* Одна разметка остановки на полную карту и на ленту — чтобы они не
    разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
    на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
 function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
   return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
       + (isNext ? ' next' : '') + '"'
@@ -16475,6 +16506,16 @@ function planStopList(answers){
                    group: w.g.label, phase: w.phase });
     });
   });
+  /* ⚠️ ГОСТЮ — ОТКРЫТОЕ ВПЕРЁД. Порядок для участника выстроен по фазам
+     воронки и трогать его нельзя, но у гостя первая остановка решает всё:
+     если она закрыта, вся карта читается как витрина с ценниками. Занятия
+     с открытой частью поднимаем наверх, СОХРАНЯЯ порядок внутри каждой
+     половины — сортировка устойчивая, поэтому логика подбора не рушится */
+  if (!isMember){
+    const open = [], shut = [];
+    stops.forEach(function(st){ (planStopHasFree(st) ? open : shut).push(st); });
+    return open.concat(shut).slice(0, PLAN_STOPS_MAX);
+  }
   /* Путь обрезается десятью остановками: это стартовый маршрут новичка, и
      ровно столько цифр нарисовано. Обрезка здесь, а не в отрисовке, чтобы
      полная карта, лента и попап видели ОДИН И ТОТ ЖЕ список и индексы
@@ -16598,9 +16639,30 @@ function openPlanStop(i){
   if (s.viaParent) notes.push('разбор темы шире');
 
   const l = s.lec;
-  const locked = !isMember || (isMember && tourActive);
+  const hasFree = planStopHasFree(s);
+  /* ⚠️ ГОСТЮ ГОВОРИМ ПРАВДУ, А НЕ ПРЯЧЕМ ЗАНЯТИЕ. [stated] Denis 20.08:
+     «не стесняться и показывать, что лекция на эту тему есть, но бесплатной
+     части у неё нет. Хочешь — покупай». Закрытая остановка — доказательство,
+     что клуб закрывает его боль, а не насмешка. Замок в прежнем смысле
+     остаётся только участнику во время знакомства */
+  const locked = isMember ? tourActive : !hasFree;
   const lockIcon = locked ? '🔒 ' : '';
   const hasNext = i + 1 < planStops.length;
+
+  let acts;
+  if (!isMember && !hasFree){
+    // Открытой части нет — не рисуем кнопки-обманки, а прямо зовём в клуб
+    acts = '<div class="pstop-note" style="margin-top:10px">'
+        + escapeHtml(t('plan.guest_shut') || '') + '</div>'
+      + '<button class="lec-link-btn access-btn" style="margin-top:10px" '
+        + 'onclick="planStopBuy(' + i + ')">' + escapeHtml(t('plan.guest_buy') || 'Открыть доступ') + '</button>';
+  } else {
+    const label = (!isMember && hasFree) ? (t('plan.guest_free') || 'Смотреть открытую часть') : '';
+    acts = '<div class="lec-links">'
+      + (l.link ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'tg\')">' + lockIcon + (label || 'Смотреть в ТГ') + '</button>' : '')
+      + ((l.link_vk && isMember) ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'vk\')">' + lockIcon + 'Смотреть в VK</button>' : '')
+      + '</div>';
+  }
 
   el.innerHTML =
       '<img class="pstop-img" src="images/lectures/' + l.slug + '.jpg" alt="" '
@@ -16608,10 +16670,7 @@ function openPlanStop(i){
     + '<div class="pstop-title">' + escapeHtml(l.title || '') + '</div>'
     + '<div class="pstop-note">' + escapeHtml(s.group || '')
       + (notes.length ? ' · ' + notes.join(' · ') : '') + '</div>'
-    + '<div class="lec-links">'
-      + (l.link ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'tg\')">' + lockIcon + 'Смотреть в ТГ</button>' : '')
-      + (l.link_vk ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'vk\')">' + lockIcon + 'Смотреть в VK</button>' : '')
-    + '</div>'
+    + acts
     + (hasNext ? '<button class="lec-link-btn access-btn" style="margin-top:12px" onclick="planStopNext(' + i + ')">Открыть следующую</button>' : '')
     + '<button class="pstop-skip" onclick="planStopSkip(' + i + ')">Это не хочу смотреть</button>';
 
@@ -16629,7 +16688,23 @@ function planStopWatch(i, platform){
   planVisited.add(s.lec.slug);
   planSkipped.delete(s.lec.slug);
   planSaveMarks();
+  /* ⚠️ У ГОСТЯ СВОЯ ДОРОГА: `openLectureLink` первым делом упирает не-участника
+     в пейволл, и открытая часть до него не доживала. Открытую отдаём как есть */
+  if (!isMember){
+    closePlanStop();
+    showFreeVersion(s.lec);
+    return;
+  }
   openLectureLink(i, platform, 'plan');
+}
+
+/* Кнопка с закрытой остановки. Отдельная функция, а не прямой `openAccessPage`,
+   чтобы в дашборде было видно, откуда пришёл человек */
+function planStopBuy(i){
+  const s = planStops[i];
+  track('plan_stop_buy', s && s.lec ? s.lec.slug : '');
+  closePlanStop();
+  openAccessPage();
 }
 
 function planStopNext(i){
@@ -17747,6 +17822,7 @@ async function finishPlanQuiz(){
   // теперь его закрывает настоящее прохождение анкеты
   if (!builtPath) placeholderBuildPathStep();
   // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
   if (telegramId){
     fetch(`${API_URL}/plan-answers`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
