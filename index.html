@@ -7469,7 +7469,14 @@ body.api-override-on #api-override-bar{display:block}
   background:var(--gg-lock-bg);color:var(--gg-lock)}
 .gg-chip.gg-win{background:var(--gg-good-bg);color:var(--gg-good);box-shadow:var(--gg-good-glow)}
 .gg-chip.gg-stage{background:rgba(126,143,240,.16);color:var(--gg-accent);box-shadow:var(--gg-dot-glow)}
-.gg-gm-done{position:absolute;top:16px;right:18px;font-size:11px;font-weight:700;color:var(--gg-good)}
+/* ⚠️ ТОТ ЖЕ КЛАСС, ЧТО У КНОПКИ ШЕРИНГА ВЫШЕ: голый `.gg-gm-done` (0,1,0)
+   проигрывал `#gg-root .gg-gm-card>*{position:relative}` (1,1,0) — плашка
+   возвращалась В ПОТОК и вставала слева, под номером ступени, со сдвигом
+   на 18px влево от `right` (Denis поймал 19.08). `right:52px` — чтобы не
+   уехать под кнопку шеринга: та 34px по `right:10px` */
+#gg-root .gg-gm-card>.gg-gm-done,
+.gg-gm-done{position:absolute;top:16px;right:52px;font-size:11px;font-weight:700;
+  color:var(--gg-good);z-index:2}
 .gg-gm-card.gg-locked .gg-gm-num,.gg-gm-card.gg-locked .gg-gm-name,.gg-gm-card.gg-locked .gg-gm-desc{opacity:.5}
 .gg-lock-row{display:flex;align-items:center;gap:9px;margin-top:14px;padding-top:13px;
   border-top:1px solid var(--gg-card-brd)}
@@ -8293,7 +8300,12 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   border:1px solid var(--border);border-radius:14px;padding:10px 14px;
   display:none;align-items:center;gap:10px;z-index:855;cursor:pointer;
   box-shadow:0 6px 18px rgba(0,0,0,.14)}
-.onb-trail.open{display:flex;animation:fade-rise .3s cubic-bezier(.2,.8,.2,1) both}
+/* ⚠️ СВОИ КАДРЫ, А НЕ ОБЩИЙ `fade-rise`: тот заканчивается `transform:none`,
+   и с `both` НАВСЕГДА снимал `translateX(-50%)` — полоска уезжала правой
+   половиной за край экрана (Denis поймал 19.08) */
+.onb-trail.open{display:flex;animation:onbTrailIn .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes onbTrailIn{from{opacity:0;transform:translate(-50%,6px)}
+  to{opacity:1;transform:translateX(-50%)}}
 .onb-trail b{font-size:13px;font-weight:800;display:block}
 .onb-trail small{font-size:11.5px;color:var(--text-dim);display:block}
 .onb-trail .go{margin-left:auto;color:var(--warm);font-weight:800;font-size:13px;white-space:nowrap}
@@ -11855,6 +11867,13 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.empty': { c:'Игры', l:'Когда игр нет', w:'Список игр', i:false, t:'Игр пока нет. Загляни позже — они появятся.' },
   'games.load_err': { c:'Игры', l:'Список не загрузился', w:'Список игр', i:false, t:'Игры не загрузились. Потяни экран вниз или зайди позже.' },
   'games.other': { c:'Игры', l:'Заголовок игр вне треков', w:'Список игр', i:false, t:'Отдельные игры' },
+  'games.quiz_h': { c:'Игры', l:'Заголовок раздела с тестом', w:'Список игр', i:false, t:'Разминка' },
+  'games.quiz_t': { c:'Игры', l:'Название теста', w:'Список игр', i:false, t:'Кто ты из богов продаж' },
+  'games.quiz_x': { c:'Игры', l:'Описание теста', w:'Список игр', i:false,
+    t:'Пара минут вопросов — и увидишь свой стиль продаж: сильную сторону и тень.' },
+  'games.quiz_x_done': { c:'Игры', l:'Описание теста, если он уже пройден', w:'Список игр', i:false,
+    t:'Тест пройден. Можно перечитать разбор или пройти заново.' },
+  'games.quiz_chip': { c:'Игры', l:'Плашка со временем прохождения теста', w:'Список игр', i:false, t:'2 минуты' },
   'games.lock_step': { c:'Игры', l:'Тап по закрытой ступени', w:'Список игр', i:false, t:'Сначала пройди предыдущую ступень' },
   'games.locked_note': { c:'Игры', l:'Замок на разборе хода у гостя', w:'Экран партии', i:false, t:'Разбор хода открыт участникам клуба' },
   'games.locked_cta': { c:'Игры', l:'Кнопка на замке разбора', w:'Экран партии', i:false, t:'Что это даёт' },
@@ -11942,6 +11961,8 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     t:'Если захочешь подробнее — в справке разобрано всё, что есть в клубе.' },
   'onb.quiz_locked': { c:'Знакомство', l:'Тест закрыт на время знакомства', w:'Главное меню', i:false,
     t:'Откроется после знакомства с приложением' },
+  'onb.plan_empty': { c:'Знакомство', l:'Экран плана на шаге, когда пути ещё нет', w:'Шаг «Личный план»', i:false,
+    t:'Пути пока нет — соберём его прямо сейчас.' },
 
   'onb.games_t': { c:'Знакомство', l:'Шаг «Игры» — заголовок', w:'Окно шага', i:false, t:'Игры' },
   'onb.games_x': { c:'Знакомство', l:'Шаг «Игры» — текст', w:'Окно шага', i:false,
@@ -13948,12 +13969,16 @@ function tourAdvanceOn(eventName){
 const ONB_STEPS = [
   { key:'games', view:'games',
     t:'onb.games_t', x:'onb.games_x', b:'onb.games_b' },
-  { key:'live',  view:'portal', scrollTo:'notif-section',
+  /* ⚠️ ЭКРАН ШАГА — ТОТ, ГДЕ ЛЕЖИТ ДЕЙСТВИЕ. Тумблеры уведомлений живут в
+     `view-schedule` (календарь + «Уведомления»), а не на главной: со
+     `view:'portal'` кнопка шага никуда не вела и человек искал сам
+     ([stated] Denis 19.08) */
+  { key:'live',  view:'schedule', scrollTo:'notif-section',
     t:'onb.live_t',  x:'onb.live_x',  xAlt:'onb.live_x_sa', b:'onb.live_b' },
   { key:'plan',  view:'plan',
     t:'onb.plan_t',  x:'onb.plan_x',  xSeed:'onb.plan_x_seed',
     b:'onb.plan_b',  bSeed:'onb.plan_b_seed' },
-  { key:'lib',   view:'library',
+  { key:'lib',   view:'library', scrollTo:'ai-helper-btn',
     t:'onb.lib_t',   x:'onb.lib_x',   b:'onb.lib_b' },
 ];
 
@@ -14019,6 +14044,7 @@ function onbShow(){
   if (!st){ onbFinish(); return; }
   onbCloseFloaters();
   switchView(st.view);                    // окно НЕ уводит само — только показывает
+  onbStage(st);                           // дозагрузка данных и показ места глазами
 
   const seeded = st.xSeed && onbSeed;
   const alt    = st.xAlt && isStandaloneWebApp();
@@ -14037,6 +14063,49 @@ function onbShow(){
 
 function onbHideCard(){ document.getElementById('onb-wrap').classList.remove('open'); }
 
+/* ⚠️ ШАГ ПОКАЗЫВАЕТ МЕСТО, А НЕ НАЗЫВАЕТ ЕГО. [stated] Denis 19.08: экран
+   «что посмотреть» надо ОТКРЫТЬ и промотать прямо при человеке, чтобы он
+   увидел, что там есть; вкладку с календарём и уведомлениями — открыть, а
+   не заставлять искать.
+   ⚠️ ЖДЁМ ГОТОВНОСТИ ДАННЫХ, А НЕ ТАЙМЕРА (урок 40): списки приезжают
+   разными запросами и, дорисовавшись, толкают цель вниз — прокрутка «по
+   таймеру» встала бы мимо. */
+async function onbStage(st){
+  if (!st) return;
+  const same = function(){ return onbActive && ONB_STEPS[onbIdx] && ONB_STEPS[onbIdx].key === st.key; };
+
+  if (st.key === 'plan'){
+    /* Карта плана, а не поле выбора тем: поле открывается только по кнопке
+       шага (см. onbTry). Ответы могли ещё не приехать — дожидаемся и
+       перерисовываем, иначе экран решит, что плана нет */
+    if (!planAnswersLoaded){
+      await loadPlanAnswers();
+      if (same()) renderPlanScreen();
+    }
+    return;
+  }
+
+  if (st.key === 'live'){
+    try { await window._scheduleLoadPromise; } catch (e) {}
+    await tourWaitFor(function(){
+      const list = document.getElementById('notif-list');
+      const row  = document.getElementById('notif-channel-row');
+      const listReady = list && !list.querySelector('.loading') && list.offsetHeight > 40;
+      const rowReady  = !row || row.children.length > 0;
+      return listReady && rowReady;
+    });
+  }
+
+  if (st.key === 'lib'){
+    await tourWaitFor(function(){
+      const l = document.getElementById('lib-list');
+      return l && !l.querySelector('.loading') && l.children.length > 0;
+    });
+  }
+
+  if (st.scrollTo && same()) onbScrollTo(st.scrollTo, 'center');
+}
+
 function onbTry(){
   const st = ONB_STEPS[onbIdx];
   onbCloseFloaters();
@@ -14045,20 +14114,22 @@ function onbTry(){
   switchView(st.view);
   markTourOnServer({ step: st.key, action:'tried', index: onbIdx });
   onbDrawTrail();
-  /* ⚠️ НА ШАГЕ ПЛАНА СРАЗУ ОТКРЫВАЕМ ВЫБОР ТЕМ. Человек нажал «собрать путь» —
-     значит согласился; показывать ему после этого ещё одну кнопку и ждать
-     второго нажатия значит переспрашивать */
+  /* ⚠️ КНОПКА ШАГА ОБЯЗАНА СДЕЛАТЬ РОВНО ТО, ЧТО ОБЕЩАЕТ НАДПИСЬ.
+     [stated] Denis 19.08: «спросить своими словами» оставляла его наедине с
+     библиотекой — попап ИИ он открывал сам, домотав до кнопки. Выбор тем
+     открываем только отсюда: на показе шага человек видит КАРТУ */
   if (st.key === 'plan' && typeof startPlanQuiz === 'function') startPlanQuiz();
-  if (st.scrollTo) onbScrollTo(st.scrollTo);
+  else if (st.key === 'lib' && typeof openAiPopup === 'function') openAiPopup();
+  else if (st.scrollTo) onbScrollTo(st.scrollTo, 'start');
 }
 
-function onbScrollTo(id){
+function onbScrollTo(id, block){
   const el = document.getElementById(id);
   if (!el || !el.scrollIntoView) return;
   // Небольшая задержка: экран только что переключился, разметка ещё считается
   setTimeout(function(){
-    try { el.scrollIntoView({ behavior:'smooth', block:'start' }); } catch (e) {}
-  }, 140);
+    try { el.scrollIntoView({ behavior:'smooth', block: block || 'start' }); } catch (e) {}
+  }, 180);
 }
 
 function onbNext(how){
@@ -14103,11 +14174,39 @@ function onbFinish(){
   setTimeout(function(){ showToast(t('onb.help')); }, 400);
 }
 
+/* ⚠️ ПОЛОСКА НЕ ЛЕЗЕТ ПОВЕРХ ОТКРЫТОГО ОКНА. Её слой (855) выше попапов
+   (200–600), и на попапе ИИ она села прямо на поле ввода ([stated] Denis
+   19.08). Классы «открыто» у окон РАЗНЫЕ — поэтому список селекторов, а не
+   один общий (урок 115) */
+const ONB_MODAL_SEL = '.sched-popup-overlay.open, .center-modal-overlay.open,'
+  + ' .fullscreen-popup-overlay.open, .quiz-overlay.open, .gg-overlay.gg-open,'
+  + ' #plan-field.in, #cardentry-overlay.open, #hd-overlay.open';
+function onbModalOpen(){
+  try { return !!document.querySelector(ONB_MODAL_SEL); } catch (e) { return false; }
+}
+
+/* Окна открываются и закрываются чужим кодом, звать оттуда onbDrawTrail
+   пришлось бы в двух десятках мест. Смотрим за классами сами — и ТОЛЬКО
+   пока идёт знакомство, чтобы не держать наблюдателя всю жизнь аппа */
+let onbModalObs = null;
+function onbWatchModals(on){
+  if (on && !onbModalObs){
+    onbModalObs = new MutationObserver(function(){
+      clearTimeout(window._onbTrailTimer);
+      window._onbTrailTimer = setTimeout(onbDrawTrail, 80);
+    });
+    onbModalObs.observe(document.body, { attributes:true, subtree:true, attributeFilter:['class'] });
+  } else if (!on && onbModalObs){
+    onbModalObs.disconnect(); onbModalObs = null;
+  }
+}
+
 /* Полоска видна только когда человек НЕ смотрит окно: на паузе или в пробе */
 function onbDrawTrail(){
   const el = document.getElementById('onb-trail');
   if (!el) return;
-  const show = onbActive && onbIdx < ONB_STEPS.length &&
+  onbWatchModals(onbActive && onbIdx < ONB_STEPS.length);
+  const show = onbActive && onbIdx < ONB_STEPS.length && !onbModalOpen() &&
                (!!onbTrying || !document.getElementById('onb-wrap').classList.contains('open'));
   el.classList.toggle('open', !!show);
   if (!show) return;
@@ -15401,6 +15500,10 @@ let planOpenPhases = {};   // какие направления развёрну
 
 let planProblems = [];      // справочник проблем с бэкенда
 let planAnswers  = null;    // { problems, level, depth, note } либо null
+/* ⚠️ ДВА РАЗНЫХ СОСТОЯНИЯ ДАВАЛИ ОДНО ЗНАЧЕНИЕ (урок 90/143): «ответы ещё
+   не приехали» и «плана нет» — оба `planAnswers === null`. Экран плана
+   принимал первое за второе и открывал анкету поверх шага знакомства */
+let planAnswersLoaded = false;
 let planStep     = 0;
 let planDraft    = { problems: [], expanded: [], level: '', depth: '', note: '' };
 
@@ -15421,6 +15524,7 @@ async function loadPlanAnswers(){
     const d = await r.json();
     planAnswers = d.exists ? { problems: d.problems || [], level: d.level || '',
                                depth: d.depth || '', note: d.note || '' } : null;
+    planAnswersLoaded = true;
   } catch(e){}
 }
 
@@ -16108,7 +16212,21 @@ function openPlanFull(){
 function renderPlanScreen(){
   const el = document.getElementById('plan-inner');
   if (!el) return;
+  // Ответы ещё не спрашивали — сначала спросим, потом решим, что показывать
+  if (!planAnswersLoaded){
+    el.innerHTML = '<div class="loading">Загрузка...</div>';
+    loadPlanAnswers().then(renderPlanScreen);
+    return;
+  }
   if (!planAnswers || !(planAnswers.problems || []).length){
+    /* ⚠️ ВО ВРЕМЯ ЗНАКОМСТВА ЭКРАН НЕ ЗАПУСКАЕТ АНКЕТУ САМ: поле выбора тем
+       полноэкранное, оно съедало бы шаг целиком ещё до того, как человек
+       прочитал, о чём он ([stated] Denis 19.08). Поле открывает кнопка шага */
+    if (onbActive && !onbTrying){
+      el.innerHTML = '<div class="empty">' + escapeHtml(t('onb.plan_empty')
+        || 'Пути пока нет — соберём его прямо сейчас.') + '</div>';
+      return;
+    }
     // Справочник ещё едет — иначе мелькнёт «пока нечего выбрать»
     if (!planProblems.length){
       el.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -24744,7 +24862,8 @@ function ggRenderList(){
   const box = document.getElementById('gg-list');
   const games = (ggList && ggList.games) || [];
   if (!games.length){
-    box.innerHTML = '<div class="gg-empty">' + escapeHtml(t('games.empty') || 'Игр пока нет. Загляни позже — они появятся.') + '</div>';
+    box.innerHTML = '<div class="gg-empty">' + escapeHtml(t('games.empty') || 'Игр пока нет. Загляни позже — они появятся.') + '</div>'
+      + ggQuizCardHtml();
     return;
   }
   /* Группируем по треку: у трека своя лесенка ступеней, сквозные игры идут
@@ -24774,7 +24893,36 @@ function ggRenderList(){
     }
     tr.games.forEach(function(g){ h += ggCardHtml(g); });
   });
+  h += ggQuizCardHtml();
   box.innerHTML = h;
+}
+
+/* ⚠️ ТЕСТ ЖИВЁТ ВО ВКЛАДКЕ ИГР. [stated] Denis 19.08: «игру про богов вообще
+   забыли перенести в раздел игры». Карточка собирается ЗДЕСЬ, а не приходит
+   с сервера: тест целиком в аппе, у него нет ни ступени, ни процента —
+   поэтому и подписи свои. Тап идёт через `openQuiz()`, а он сам знает про
+   замок на время знакомства (`onbQuizBlocked`) */
+function ggQuizCardHtml(){
+  let god = '';
+  try {
+    const saved = savedQuizResult();
+    if (saved && saved.code && QUIZ_RESULTS[saved.code]) god = QUIZ_RESULTS[saved.code].god || '';
+  } catch (e) {}
+
+  const foot = '<div class="gg-gm-foot">'
+    + (god ? '<span class="gg-chip gg-win">' + escapeHtml(god) + '</span>' : '')
+    + '<span class="gg-chip">' + escapeHtml(t('games.quiz_chip') || '2 минуты') + '</span>'
+    + '</div>';
+
+  return '<div class="gg-section-h">' + escapeHtml(t('games.quiz_h') || 'Разминка') + '</div>'
+    + '<div class="gg-gm-card" onclick="openQuiz()">'
+    + '<div class="gg-gm-top">'
+      + '<div class="gg-gm-num">\u2726</div>'
+      + '<div><div class="gg-gm-name">' + escapeHtml(t('games.quiz_t') || 'Кто ты из богов продаж') + '</div>'
+      + '<div class="gg-gm-desc">' + escapeHtml(god
+          ? (t('games.quiz_x_done') || 'Тест пройден. Можно перечитать разбор или пройти заново.')
+          : (t('games.quiz_x') || 'Пара минут вопросов — и увидишь свой стиль продаж: сильную сторону и тень.')) + '</div></div>'
+    + '</div>' + foot + '</div>';
 }
 
 /* Шеринг игры. Ссылка ведёт НА ПРАВИЛА, а не сразу в партию: человеку,
