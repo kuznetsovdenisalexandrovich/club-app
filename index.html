@@ -9691,13 +9691,39 @@ const NOTIF_LISTS = [
 ];
 
 let listMembership = null; // {l2100157: true, ...} после первого запроса
+/* ⚠️ ОБЪЯВЛЕНО ВЫШЕ ВСЕХ, КТО ЧИТАЕТ. Сначала положил рядом с
+   roundTripErrorHtml — а та описана НИЖЕ loadNotifications, и получалась
+   временная мёртвая зона. Сегодня бы не упало (обе зовутся после разбора
+   файла), но на этом мы уже подрывались 31.07 с флагом заставки */
+let lastListError = '';
 
 async function fetchListMembership() {
-  await fetch(`${API_URL}/app/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...actionIdent(), action: 'check_lists', params: {} })
-  }).catch(()=>{});
+  lastListError = '';
+  /* ⚠️ БЕЗ ОПОЗНАНИЯ ХОДИТЬ НЕКУДА. Раунд-трип идёт через бота, а бот находит
+     человека по telegram_id. В вебе он появляется не сразу — восстановление
+     сессии асинхронное, и запрос, ушедший раньше, гарантированно пустой.
+     Раньше мы всё равно шли и восемь раз опрашивали пустоту десять секунд */
+  const ident = actionIdent();
+  if (!ident.telegram_id && !ident.vk_id){
+    lastListError = 'Не удалось опознать тебя — попробуй перезайти.';
+    return null;
+  }
+
+  try {
+    const r0 = await fetchWithTimeout(`${API_URL}/app/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...ident, action: 'check_lists', params: {} })
+    }, 12000);
+    if (!r0.ok){
+      lastListError = r0.elapsed >= 11500
+        ? 'Сервер не ответил вовремя.' : 'Не дозвонились до сервера.';
+      return null;
+    }
+  } catch (e){
+    lastListError = 'Нет связи с сервером.';
+    return null;
+  }
 
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 1200));
@@ -9710,6 +9736,7 @@ async function fetchListMembership() {
       }
     } catch (e) {}
   }
+  lastListError = 'Бот не ответил за десять секунд.';
   return null;
 }
 
@@ -9887,9 +9914,15 @@ async function loadNews() {
 async function loadNotifications() {
   const el = document.getElementById('notif-list');
   const firstRender = !el.dataset.loadedOnce;
+  /* ⚠️ ВЫБОР КАНАЛА РИСУЕМ ПЕРВЫМ И БЕЗУСЛОВНО. Это НАША настройка, к Salebot
+     она отношения не имеет — а раньше стояла после раунд-трипа и терялась
+     вместе с ним: один сбой гасил два блока, и «Где присылать» оставалось
+     пустой рамкой (жалоба Denis'а 19.08.2026, веб с экрана Домой) */
+  renderNotifChannel();
+
   if (!listMembership) await fetchListMembership();
   if (!listMembership) {
-    el.innerHTML = roundTripErrorHtml();
+    el.innerHTML = roundTripErrorHtml(lastListError);
     return;
   }
   el.innerHTML = NOTIF_LISTS.map(cfg => {
@@ -10170,6 +10203,7 @@ async function loadProfile() {
     channelJoined = !!u.channel_joined;
     chatJoined = !!u.chat_joined;
     homeScreenAdded = !!u.home_screen_added;
+    tourDone = !!u.tour_done;
     askedDenis = !!u.asked_denis;
     builtPath = !!u.built_path;
     points = u.points || 0;
@@ -12669,12 +12703,30 @@ const SUPPORT_DM_LINK = 'https://t.me/kuznetsov_denis';
 // Общий фоллбек для любого зависшего раунд-трипа (Salebot не ответил/недоступен) —
 // человек не должен упираться в тупик, поэтому даём выход прямо в бота (сворачивает
 // апп и открывает чат с ботом внутри Telegram, не во внешнем браузере — см. openUrl)
-function roundTripErrorHtml(){
-  return `<div class="empty">Приложение тупит( можешь <a href="#" onclick="event.preventDefault();openUrl('${botLinkForPlatform()}')">продолжить в боте</a></div>`;
+/* ⚠️ ПРИЧИНА СБОЯ ВИДНА В ИНТЕРФЕЙСЕ. Раньше на любую поломку выводилась одна
+   фраза «приложение тупит» — по ней нельзя отличить «не опознали человека» от
+   «бот не ответил» и «сеть не дошла». Кнопка «Повторить» тут же: чаще всего
+   помогает, потому что раунд-трип разовый и падает от таймаута */
+function roundTripErrorHtml(reason){
+  const why = reason ? '<div class="reward-hint" style="margin-top:6px">' + escapeHtml(reason) + '</div>' : '';
+  return `<div class="empty">Не получилось загрузить настройки.` + why
+    + `<div style="margin-top:10px"><button class="quiz-answer" onclick="retryNotifications()">Повторить</button></div>`
+    + `<div class="payment-help-link" style="margin-top:8px" onclick="openUrl('${botLinkForPlatform()}')">Настроить в боте</div>`
+    + `</div>`;
+}
+async function retryNotifications(){
+  listMembership = null; lastListError = '';
+  const el = document.getElementById('notif-list');
+  if (el) el.innerHTML = '<div class="loading">Загрузка...</div>';
+  await loadNotifications();
 }
 let channelJoined = false;
 let chatJoined = false;
 let homeScreenAdded = false;
+/* PP ЗНАКОМСТВО — С СЕРВЕРА, А НЕ ИЗ ПАМЯТИ БРАУЗЕРА (19.08.2026). Это был
+   последний шаг первого уровня, живший в localStorage: прошёл на телефоне,
+   открыл в вебе — регистрация снова не завершена */
+let tourDone = false;
 let points = 0;
 let hasPushSubscription = false;
 let notifyChannel = 'both';   // слой 1: bot | push | both
@@ -12733,6 +12785,7 @@ function onboardStepDone(key){
   if (key === 'channel') return channelJoined;   // реальный статус с сервера, не localStorage
   if (key === 'chat') return chatJoined;          // реальный статус с сервера, не localStorage
   if (key === 'add_home_screen') return homeScreenAdded; // реальный статус с сервера — фронтенд сам шлёт сигнал, когда веб-версия открыта в standalone
+  if (key === 'tour') return tourDone;        // реальный статус с сервера
   if (key === 'ask_denis') return askedDenis;   // реальный статус с сервера — ставится в POST /questions, не по клику
   if (key === 'build_path') return builtPath;    // на сервере, не в localStorage — чтобы не слетало в другом браузере (веб-версия)
   if (key === 'enable_push') {
@@ -13253,6 +13306,7 @@ async function refreshOnboardStatus(){
       channelJoined = !!u.channel_joined;
       chatJoined = !!u.chat_joined;
       homeScreenAdded = !!u.home_screen_added;
+      tourDone = !!u.tour_done;
       askedDenis = !!u.asked_denis;
       builtPath = !!u.built_path;
       points = u.points || 0;
@@ -13509,7 +13563,11 @@ async function enablePushNotifications(){
     showToast('Не получилось включить — попробуй ещё раз');
   }
 }
-function startTourFromSteps(){ closeStepsPopup(); startLibraryTour(); }
+function startTourFromSteps(){
+  closeStepsPopup();
+  markTourOnServer({ step: 'start', action: 'shown', index: 0 });
+  startLibraryTour();
+}
 
 /* ── "Пуш недоступен внутри Telegram" — честное объяснение вместо попытки, которая
    всё равно не сработает. "Установить приложение" возвращает на шаг назад — к попапу
@@ -13728,11 +13786,29 @@ function tourAdvanceOn(eventName){
   setTimeout(showTourStep, 400);
 }
 
+/* Отметка знакомства на сервере. Звать можно сколько угодно: сервер только
+   двигает положение вперёд и пишет событие в статистику */
+async function markTourOnServer(data){
+  if (!telegramId) return;
+  try {
+    await fetch(`${API_URL}/onboard/tour`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ telegram_id: Number(telegramId) }, data))
+    });
+  } catch (e){
+    console.warn('[тур] не отметил на сервере:', e && e.message || e);
+  }
+}
+
 function endLibraryTour(completed){
   tourActive = false;
   document.getElementById('tour-overlay').classList.remove('open');
   if (tourResizeObserver) { tourResizeObserver.disconnect(); tourResizeObserver = null; }
-  if (completed) markOnboardStep('tour');
+  if (completed){
+    tourDone = true;                         // рисуем сразу, не ждём сервер
+    markOnboardStep('tour');
+    markTourOnServer({ action: 'done', finished: true });
+  }
   // Карточки лекций рендерятся один раз при первом открытии вкладки (см. switchView) и
   // "запекают" в себе состояние блокировки (isMember && tourActive) на тот момент — без
   // этого повторного рендера они оставались бы заблокированными навсегда после тура.
@@ -19692,7 +19768,18 @@ async function proceedToWebLogin(){
 
   loginStage = 'phone';
   codeSendAttempts = 0;
+  /* ⚠️ ПРЯЧЕМ ОБОЛОЧКУ ПРИЛОЖЕНИЯ. Форма входа лежит ВНЕ `app-shell`, и если
+     человек пришёл сюда с открытого экрана — например нажал «я уже участник»
+     на странице о клубе, — она просто дорисовывалась НИЖЕ. Снаружи это
+     выглядело так, будто нажатие ничего не сделало: экран не сменился, а
+     форма ждала где-то за краем прокрутки (жалоба Denis'а 19.08.2026).
+     Ровно так же поступает `exitDemoToLogin` — там это было с самого начала */
+  var shellEl = document.getElementById('app-shell');
+  if (shellEl) shellEl.style.display = 'none';
+  var tabEl = document.getElementById('tabbar');
+  if (tabEl) tabEl.style.display = 'none';
   document.getElementById('web-login-screen').style.display = 'flex';
+  window.scrollTo(0, 0);
   // Заставку снимаем ИМЕННО ЗДЕСЬ, а не в startWebSession: до этого момента
   // человек либо уже входит в собранный апп (её снимет startApp), либо ждёт
   // форму — и показывать пустой экран между заставкой и формой незачем
