@@ -5199,6 +5199,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="step-row" style="cursor:pointer" onclick="document.getElementById('donate-section').scrollIntoView({behavior:'smooth'})"><span style="color:var(--warm)" data-text="points.a4">Или просто задонатить любую сумму ↓</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">1₽ = 1</span></div>
     </div>
 
+    <div class="section-label">Откуда взялись твои баллы</div>
+    <div class="card" id="pi-feed-card">
+      <div id="pi-feed"><div class="loading">Загрузка...</div></div>
+    </div>
+
     <div class="section-label">На что потратить</div>
     <div class="card" id="pi-rewards-card">
       <div id="pi-rewards-list"><div class="loading">Загрузка...</div></div>
@@ -9438,6 +9443,7 @@ function switchView(name) {
   if (name === 'points-info') {
     const el = document.getElementById('pi-points');
     if (el) el.textContent = points;
+    loadPointsFeed();
     loadRewardsData().then(() => {
       const listEl = document.getElementById('pi-rewards-list');
       if (!listEl) return;
@@ -10627,6 +10633,44 @@ async function confirmRewardBuy(key, btn){
   }
 }
 
+/* ── ЛЕНТА НАЧИСЛЕНИЙ ────────────────────────────────────────────────────
+   Человек видел баланс и не понимал, откуда он взялся. Баллы, происхождение
+   которых непонятно, не мотивируют.
+
+   ⚠️ ЖУРНАЛ ЗАВЁЛСЯ 19.08.2026, и за прошлое он пуст. Врать про это нельзя:
+   если сумма в ленте меньше заработанного за всё время, честно пишем, что
+   остальное заработано раньше, чем завёлся журнал. */
+async function loadPointsFeed(){
+  const box = document.getElementById('pi-feed');
+  if (!box || !telegramId) return;
+  try {
+    const d = await apiRequest(`${API_URL}/points/feed?telegram_id=${telegramId}`, {}, 8000);
+    const items = (d && d.items) || [];
+    if (!items.length){
+      box.innerHTML = '<div class="reward-hint">' + t('points.feed_empty') + '</div>';
+      return;
+    }
+    let h = items.map(function(it){
+      const note = it.note ? '<div class="reward-hint" style="margin:2px 0 0">' + escapeHtml(it.note) + '</div>' : '';
+      return '<div class="step-row" style="align-items:flex-start">'
+        + '<div style="flex:1;min-width:0"><span>' + escapeHtml(it.label) + '</span>' + note + '</div>'
+        + '<span style="margin-left:auto;color:var(--text-dim);font-weight:700;flex-shrink:0">+'
+        + it.amount + '</span>'
+        + '<span style="margin-left:10px;color:var(--text-faint);font-size:11px;flex-shrink:0">'
+        + escapeHtml(it.at || '') + '</span></div>';
+    }).join('');
+    const earlier = Number(d.lifetime || 0) - Number(d.logged_total || 0);
+    if (earlier > 0){
+      h += '<div class="reward-hint" style="margin-top:10px">'
+        + tf('points.feed_earlier', { n: earlier }) + '</div>';
+    }
+    box.innerHTML = h;
+    box.classList.add('fade-rise');
+  } catch (e){
+    box.innerHTML = '<div class="reward-hint">' + t('points.feed_fail') + '</div>';
+  }
+}
+
 async function submitDonation(){
   const input = document.getElementById('donate-amount');
   const amount = parseFloat(input.value);
@@ -11741,6 +11785,12 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.resume_gone': { c:'Игры', l:'Партия уже закрыта', w:'Тост', i:false, t:'Та партия уже закрыта — начнём заново' },
   'games.share': { c:'Игры', l:'Кнопка «позвать друга»', w:'Финал партии', i:false, t:'Позвать друга сыграть' },
   'games.share_text': { c:'Игры', l:'Текст при отправке ссылки на игру ({игра} — название)', w:'Шторка шеринга', i:false, t:'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.' },
+  'points.feed_empty': { c:'Баллы', l:'Лента начислений пуста', w:'Страница «Баллы»', i:false,
+    t:'Пока пусто. Посмотри занятие или загляни на эфир — начисления появятся здесь.' },
+  'points.feed_earlier': { c:'Баллы', l:'Сколько заработано до появления ленты ({n})', w:'Страница «Баллы»', i:false,
+    t:'Ещё {n} баллов заработано раньше — до того, как мы начали вести эту ленту.' },
+  'points.feed_fail': { c:'Баллы', l:'Лента начислений не загрузилась', w:'Страница «Баллы»', i:false,
+    t:'Не удалось загрузить историю. Попробуй позже.' },
   'games.share_won': { c:'Игры', l:'Шеринг победы ({игра}, {счёт})', w:'Шторка шеринга с финала', i:false,
     t:'Сыграл в «{игра}» на тренажёре продаж — {счёт} из 100, клиент купил. Обойдёшь?' },
   'games.share_perfect': { c:'Игры', l:'Шеринг безупречной партии ({игра})', w:'Шторка шеринга с финала', i:false,
