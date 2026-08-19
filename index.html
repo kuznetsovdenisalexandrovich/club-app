@@ -5848,6 +5848,14 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   </div>
 </div>
 
+<!-- ⚠️ УВЕДОМЛЕНИЕ ПРО СПРАВКУ В КОНЦЕ ЗНАКОМСТВА. Не тост: тост живёт две
+     секунды и не кликается, а тут нужна ЖИВАЯ ССЫЛКА и время её заметить
+     ([stated] Denis 19.08: пятнадцать секунд, гиперссылка на справку и «Понятно») -->
+<div class="ohelp" id="onb-help">
+  <div class="ohelp-txt" id="onb-help-txt"></div>
+  <button class="ohelp-ok" onclick="hideOnbHelp()" data-text="onb.help_ok">Понятно</button>
+</div>
+
 <div class="otip" id="onb-tip">
   <button class="otip-x" onclick="hideOnbTip()" aria-label="Скрыть">&#10005;</button>
   <span id="onb-tip-text"></span>
@@ -8345,6 +8353,21 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   font-size:12.5px;line-height:1.45;color:var(--text)}
 .otip.open{display:block;animation:otipIn .26s cubic-bezier(.2,.8,.2,1) both}
 @keyframes otipIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Уведомление про справку: живёт над пилюлей 15 секунд, внутри — ссылка */
+.ohelp{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 92px);
+  width:calc(100% - 28px);max-width:440px;z-index:850;display:none;
+  align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);
+  transform:translateX(-50%)}
+.ohelp.open{display:flex;animation:onbHelpIn .28s cubic-bezier(.2,.8,.2,1) both}
+@keyframes onbHelpIn{from{opacity:0;transform:translate(-50%,8px)}
+  to{opacity:1;transform:translateX(-50%)}}
+.ohelp-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.45;color:var(--text)}
+.ohelp-txt a{color:var(--warm);font-weight:700;text-decoration:underline;
+  text-underline-offset:3px;cursor:pointer}
+.ohelp-ok{flex:none;border:none;background:none;padding:0;cursor:pointer;
+  color:var(--text-dim);font-size:12.5px;font-weight:800;white-space:nowrap}
+
 .otip-x{position:absolute;top:6px;right:8px;width:22px;height:22px;border:none;background:none;
   color:var(--text-faint);font-size:13px;line-height:1;cursor:pointer;padding:0}
 
@@ -12006,6 +12029,12 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     t:'Шаг {n} из {m}' },
   'onb.help': { c:'Знакомство', l:'Подсказка про справку в конце', w:'После знакомства', i:false,
     t:'Если захочешь подробнее — в справке разобрано всё, что есть в клубе.' },
+  /* ⚠️ СЛОВО ДОЛЖНО ВСТРЕЧАТЬСЯ В `onb.help` — именно оно станет ссылкой.
+     Правя один текст, проверяй второй: не нашли слово — ссылка встанет в конец */
+  'onb.help_word': { c:'Знакомство', l:'Слово-ссылка внутри подсказки про справку', w:'После знакомства', i:false,
+    t:'справке' },
+  'onb.help_ok': { c:'Знакомство', l:'Закрыть подсказку про справку', w:'После знакомства', i:false,
+    t:'Понятно' },
   'onb.quiz_locked': { c:'Знакомство', l:'Тест закрыт на время знакомства', w:'Главное меню', i:false,
     t:'Откроется после знакомства с приложением' },
   'onb.plan_empty': { c:'Знакомство', l:'Экран плана на шаге, когда пути ещё нет', w:'Шаг «Личный план»', i:false,
@@ -12019,10 +12048,6 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     t:'Поставь приложение на экран «Домой»' },
   'onb.note_home_x': { c:'Знакомство', l:'Строка про экран «Домой» — пояснение', w:'Главная, после знакомства', i:false,
     t:'Открывается одним касанием, без поиска по вкладкам.' },
-  'onb.note_push_t': { c:'Знакомство', l:'Строка про уведомления — заголовок', w:'Главная, после знакомства', i:false,
-    t:'Включи уведомления' },
-  'onb.note_push_x': { c:'Знакомство', l:'Строка про уведомления — пояснение', w:'Главная, после знакомства', i:false,
-    t:'Напомним про живую встречу до её начала, а не после.' },
 
   'onb.tip_saved': { c:'Знакомство', l:'Подсказка при первом «смотреть позже»', w:'Библиотека', i:false,
     t:'Отложенное собирается наверху библиотеки — в полке «Смотреть позже».' },
@@ -14041,7 +14066,11 @@ const ONB_STEPS = [
      `view-schedule` (календарь + «Уведомления»), а не на главной: со
      `view:'portal'` кнопка шага никуда не вела и человек искал сам
      ([stated] Denis 19.08) */
-  { key:'live',  view:'schedule', scrollTo:'notif-section',
+  /* ⚠️ НА ПОКАЗЕ ШАГА ЦЕЛИМСЯ В КАЛЕНДАРЬ, А НА ПРОБЕ — В ТУМБЛЕРЫ.
+     [stated] Denis 19.08: «промотка чуть перестаралась, надо показать календарь
+     посередине экрана». Человек сначала должен увидеть, ЧТО за экран, и только
+     нажав кнопку — попасть к настройке */
+  { key:'live',  view:'schedule', scrollTo:'schedule-calendar-card', tryScrollTo:'notif-section',
     t:'onb.live_t',  x:'onb.live_x',  xAlt:'onb.live_x_sa', b:'onb.live_b' },
   { key:'plan',  view:'plan',
     t:'onb.plan_t',  x:'onb.plan_x',  xSeed:'onb.plan_x_seed',
@@ -14105,7 +14134,7 @@ function onbSelfServe(){
   onbDrawTrail();
   onbApplyLocks();
   renderOnbNotes();
-  setTimeout(function(){ showToast(t('onb.help')); }, 500);
+  setTimeout(showOnbHelp, 500);
 }
 
 function onbShow(){
@@ -14189,15 +14218,57 @@ function onbTry(){
      открываем только отсюда: на показе шага человек видит КАРТУ */
   if (st.key === 'plan' && typeof startPlanQuiz === 'function') startPlanQuiz();
   else if (st.key === 'lib' && typeof openAiPopup === 'function') openAiPopup();
-  else if (st.scrollTo) onbScrollTo(st.scrollTo, 'start');
+  else if (st.tryScrollTo || st.scrollTo) onbScrollTo(st.tryScrollTo || st.scrollTo, 'start');
+}
+
+/* ⚠️ СВОЯ ПРОКРУТКА, А НЕ РОДНОЙ `behavior:'smooth'`. [stated] Denis 19.08:
+   «промотки надо сделать более плавными, сейчас просто прыжки». Во встроенных
+   вебвью (Telegram, MAX) плавность часто не поддерживается вовсе и браузер
+   прыгает сразу в конечную точку — а где поддерживается, длительность задаёт
+   он сам, и на короткой дистанции получается рывок. Считаем кадры сами:
+   ДОЛГО (0.9 сек) и с плавным входом-выходом — человек должен успеть
+   проследить взглядом, это и есть смысл прокрутки на знакомстве. */
+let onbScrollRaf = null;
+function onbStopScroll(){
+  if (onbScrollRaf){ cancelAnimationFrame(onbScrollRaf); onbScrollRaf = null; }
+}
+function onbSmoothScroll(toY, ms){
+  onbStopScroll();
+  const startY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+  const endY = Math.min(Math.max(0, toY), max);
+  const dist = endY - startY;
+  if (Math.abs(dist) < 2) return;
+  const dur = ms || 900;
+  const t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  // Человек тронул экран — прокрутка немедленно уступает ему управление
+  const stop = function(){ onbStopScroll(); window.removeEventListener('touchstart', stop); };
+  window.addEventListener('touchstart', stop, { passive: true });
+  (function step(){
+    const now = (window.performance && performance.now) ? performance.now() : Date.now();
+    const k = Math.min(1, (now - t0) / dur);
+    // Плавный вход и выход: без рывка в начале и без удара в конце
+    const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    window.scrollTo(0, Math.round(startY + dist * e));
+    if (k < 1) onbScrollRaf = requestAnimationFrame(step);
+    else { onbScrollRaf = null; window.removeEventListener('touchstart', stop); }
+  })();
 }
 
 function onbScrollTo(id, block){
   const el = document.getElementById(id);
-  if (!el || !el.scrollIntoView) return;
+  if (!el || !el.getBoundingClientRect) return;
   // Небольшая задержка: экран только что переключился, разметка ещё считается
   setTimeout(function(){
-    try { el.scrollIntoView({ behavior:'smooth', block: block || 'start' }); } catch (e) {}
+    const r = el.getBoundingClientRect();
+    const top = r.top + (window.pageYOffset || document.documentElement.scrollTop || 0);
+    /* «Посередине экрана» считаем от ВИДИМОЙ части: окно шага занимает низ,
+       поэтому центр берём между шапкой и окном, иначе цель уедет под него */
+    const visible = Math.max(240, innerHeight - 230);
+    const y = (block === 'center')
+      ? top - Math.max(0, (visible - r.height) / 2) - 10
+      : top - 72;
+    onbSmoothScroll(y, 900);
   }, 180);
 }
 
@@ -14241,7 +14312,7 @@ function onbFinish(){
   onbApplyLocks();
   switchView('portal');
   renderOnbNotes();
-  setTimeout(function(){ showToast(t('onb.help')); }, 400);
+  setTimeout(showOnbHelp, 400);
 }
 
 /* ⚠️ ПОЛОСКА НЕ ЛЕЗЕТ ПОВЕРХ ОТКРЫТОГО ОКНА. Её слой (855) выше попапов
@@ -14292,6 +14363,7 @@ function onbDrawTrail(){
    же, где полоска и окно шага, — и оставшись поверх нового шага читаются как
    часть его, а не как хвост предыдущего действия */
 function onbCloseFloaters(){
+  hideOnbHelp();
   const tst = document.getElementById('toast');
   if (tst) tst.classList.remove('visible');   // в этом файле класс именно 'visible'
   clearTimeout(window._toastTimer);
@@ -14310,12 +14382,10 @@ const ONB_NOTES = [
     when: function(){ return isMember && !homeScreenAdded && !isStandaloneWebApp(); },
     go:   function(){ if (typeof openAddToHomeScreenPopup === 'function') openAddToHomeScreenPopup(); },
     t:'onb.note_home_t', x:'onb.note_home_x' },
-  /* ⚠️ ПУШИ ТОЛЬКО В УСТАНОВЛЕННОМ ПРИЛОЖЕНИИ. Внутри Telegram Web Push
-     технически недоступен, и предлагать его там — обещать несбыточное */
-  { key:'push', ico:'\u25c9',
-    when: function(){ return isMember && isStandaloneWebApp() && !hasPushSubscription; },
-    go:   function(){ if (typeof enablePushNotifications === 'function') enablePushNotifications(); },
-    t:'onb.note_push_t', x:'onb.note_push_x' },
+  /* ⚠️ СТРОК РОВНО ДВЕ. Третья, про пуши, была моей самодеятельностью:
+     [stated] Denis 19.08 — «я ж просил не делать три, третья для веб-версии».
+     Уведомления и так живут в шагах регистрации и на экране расписания;
+     на главной им места нет. НЕ ВОЗВРАЩАТЬ */
 ];
 
 function onbNoteHidden(key){
@@ -14354,6 +14424,29 @@ function renderOnbNotes(){
    объяснений, а одна подсказка ровно там и тогда, где она нужна.
    ⚠️ ОТМЕТКА В localStorage СОЗНАТЕЛЬНО: подсказка привязана к устройству —
    на новом телефоне жесты и кнопки заново незнакомы */
+/* ⚠️ ССЫЛКУ СОБИРАЕМ САМИ, А НЕ ЖДЁМ ЕЁ В ТЕКСТЕ: текст правится из реестра,
+   и разметка в нём рано или поздно потеряется. Подставляем в слово-метку */
+function showOnbHelp(){
+  const box = document.getElementById('onb-help');
+  const txt = document.getElementById('onb-help-txt');
+  if (!box || !txt) return;
+  const raw = t('onb.help') || '';
+  const word = t('onb.help_word') || 'справке';
+  const link = '<a onclick="hideOnbHelp();openHelpDocs()">' + escapeHtml(word) + '</a>';
+  const i = raw.indexOf(word);
+  txt.innerHTML = (i < 0)
+    ? escapeHtml(raw) + ' ' + link
+    : escapeHtml(raw.slice(0, i)) + link + escapeHtml(raw.slice(i + word.length));
+  box.classList.add('open');
+  clearTimeout(window._onbHelpTimer);
+  window._onbHelpTimer = setTimeout(hideOnbHelp, 15000);
+}
+function hideOnbHelp(){
+  const box = document.getElementById('onb-help');
+  if (box) box.classList.remove('open');
+  clearTimeout(window._onbHelpTimer);
+}
+
 function onbTipSeen(key){
   try { return localStorage.getItem('club_app_tip_' + key) === '1'; } catch (e) { return false; }
 }
