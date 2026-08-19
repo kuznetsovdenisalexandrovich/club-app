@@ -4733,11 +4733,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
         <div class="tile-label">Как пользоваться клубом</div>
       </div>
-      <div class="tile" onclick="openUrl(CHANNEL_JOIN_LINK)">
+      <div class="tile" onclick="openTgAccess('channel')">
         <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Открыть канал</div>
       </div>
-      <div class="tile" onclick="openUrl(CHAT_JOIN_LINK)">
+      <div class="tile" onclick="openTgAccess('chat')">
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a7.5 7.5 0 0 1-11.4 6.4L4 19l1.2-4.3A7.5 7.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Открыть чат</div>
       </div>
@@ -11785,6 +11785,12 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.resume_gone': { c:'Игры', l:'Партия уже закрыта', w:'Тост', i:false, t:'Та партия уже закрыта — начнём заново' },
   'games.share': { c:'Игры', l:'Кнопка «позвать друга»', w:'Финал партии', i:false, t:'Позвать друга сыграть' },
   'games.share_text': { c:'Игры', l:'Текст при отправке ссылки на игру ({игра} — название)', w:'Шторка шеринга', i:false, t:'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.' },
+  'tg.access_wait': { c:'Доступы', l:'Пока делаем персональную ссылку', w:'Канал и чат', i:false,
+    t:'Готовлю ссылку…' },
+  'tg.access_members': { c:'Доступы', l:'Канал и чат только участникам', w:'Канал и чат', i:false,
+    t:'Канал и чат — для участников клуба' },
+  'tg.access_fail': { c:'Доступы', l:'Ссылка не выдалась', w:'Канал и чат', i:false,
+    t:'Не получилось открыть доступ. Напиши в поддержку — разберёмся.' },
   'points.feed_empty': { c:'Баллы', l:'Лента начислений пуста', w:'Страница «Баллы»', i:false,
     t:'Пока пусто. Посмотри занятие или загляни на эфир — начисления появятся здесь.' },
   'points.feed_earlier': { c:'Баллы', l:'Сколько заработано до появления ленты ({n})', w:'Страница «Баллы»', i:false,
@@ -13375,8 +13381,37 @@ async function loadNextEventIntoSteps(){
   } catch (e) {}
 }
 
-function openChannelJoinLink(){ openUrl(CHANNEL_JOIN_LINK); pendingJoinKey = 'channel'; renderStepsPopup(); }
-function openChatJoinLink(){ openUrl(CHAT_JOIN_LINK); pendingJoinKey = 'chat'; renderStepsPopup(); }
+/* ── ПЕРСОНАЛЬНАЯ ССЫЛКА В КАНАЛ И ЧАТ ───────────────────────────────────
+   Раньше здесь стояла ОДНА пригласительная ссылка на всех: у кого она есть,
+   тот и вошёл — участник, бывший участник, случайный человек из пересланного
+   сообщения. Теперь сервер выдаёт ссылку на один вход, живущую двадцать минут.
+
+   ⚠️ СТАРЫЕ ОБЩИЕ ССЫЛКИ ОСТАВЛЕНЫ ЗАПАСНЫМ ПУТЁМ: если бот ещё не назначен
+   администратором канала, Telegram откажет, и без запасного варианта человек
+   остался бы вовсе без входа. Уберём, когда персональные обкатаются. */
+async function openTgAccess(what){
+  const fallback = what === 'chat' ? CHAT_JOIN_LINK : CHANNEL_JOIN_LINK;
+  if (!telegramId){ openUrl(fallback); return; }
+  showToast(t('tg.access_wait'));
+  try {
+    const r = await fetch(`${API_URL}/access/tg/links`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId) })
+    });
+    if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
+    const d = await r.json();
+    const link = (d && d[what]) || '';
+    if (link){ openUrl(link); return; }
+    showToast(t('tg.access_fail'));
+    openUrl(fallback);
+  } catch (e){
+    // Сеть моргнула — человек всё равно должен попасть в канал
+    openUrl(fallback);
+  }
+}
+
+function openChannelJoinLink(){ openTgAccess('channel'); pendingJoinKey = 'channel'; renderStepsPopup(); }
+function openChatJoinLink(){ openTgAccess('chat'); pendingJoinKey = 'chat'; renderStepsPopup(); }
 // Плейсхолдеры — реального сигнала пока нет, кнопка просто отмечает шаг
 // выполненным для тестирования интерфейса
 function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
