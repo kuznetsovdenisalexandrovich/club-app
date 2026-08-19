@@ -12131,6 +12131,9 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'live.badge.soon': {
     c:'Эфиры', l:'Значок «эфир скоро»', w:'Блок эфира и полный экран', i:true,
     t:'СКОРО НАЧНЁМ' },
+  'live.points.got': {
+    c:'Эфиры', l:'Баллы за приход на эфир (подставляется {n})', w:'Тост при открытии эфира', i:true,
+    t:'+{n} баллов за то, что пришёл на эфир' },
   'live.title.default': {
     c:'Эфиры', l:'Название эфира по умолчанию', w:'Везде, где эфир без названия', i:true,
     t:'Прямой эфир' },
@@ -17136,6 +17139,41 @@ function openLivePractice(){
 
 /* Рисуем то, что вернул сервер. Ошибки показываем ТЕКСТОМ, а не молчим —
    Denis просил подробную диагностику, тут много движущихся частей */
+/* ── БАЛЛЫ ЗА ПРИХОД НА ЭФИР ──────────────────────────────────────────────
+   Зовём в момент, когда блок эфира ДЕЙСТВИТЕЛЬНО показался человеку, а не
+   когда апп узнал о существовании эфира: узнаёт он и в фоне, опросом.
+
+   ⚠️ Сервер сам решает, платить ли: цена лежит на сессии, а выдача защищена
+   уникальной записью. Поэтому повторный вызов безопасен, и апп может звать
+   не помня, звал ли раньше. Локальный флаг здесь нужен только чтобы не
+   дёргать сеть каждые десять секунд на каждом круге опроса. */
+let liveEnterMarked = '';
+
+async function markLiveEnter(){
+  if (!telegramId) return;
+  const key = String((liveNow && liveNow.live_event_id) || 'live');
+  if (liveEnterMarked === key) return;
+  liveEnterMarked = key;
+  try {
+    const r = await fetch(`${API_URL}/live/enter`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId) })
+    });
+    const d = await r.json();
+    const n = Number(d && d.points_awarded || 0);
+    if (n > 0){
+      showToast(tf('live.points.got', { n: n }));
+      // Баланс в шапке обновляем сразу: иначе человек увидит прибавку только
+      // после перезапуска и решит, что баллы не пришли
+      if (typeof loadProfile === 'function') loadProfile();
+    }
+  } catch (e){
+    // Молча: баллы — приятный довесок, а не то, ради чего человек открыл эфир.
+    // Флаг НЕ сбрасываем — иначе при лежащей сети запрос уходил бы каждый круг
+    console.warn('[эфир] не отметил приход:', e && e.message || e);
+  }
+}
+
 function renderLiveBlock(){
   const host = liveHostEl(), slot = liveSlotEl();
   if (!host || !slot) return;
@@ -17166,6 +17204,7 @@ function renderLiveBlock(){
 
   slot.style.display = 'block';
   host.style.display = 'block';
+  markLiveEnter();
 
   document.getElementById('live-title').textContent = liveNow.title || t('live.title.default');
   const badge = document.getElementById('live-badge');
