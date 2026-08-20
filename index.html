@@ -3687,7 +3687,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Вторая натура как ТЕНЕВАЯ КАРТОЧКА за основной (идея жены Denis'а).
    Текстом «вторая натура — Гефест» это читалось как сноска; карточка,
    выглядывающая из-за плеча, делает вторую сторону видимой */
-.quiz-hero-stack{position:relative;width:min(64vw,240px);aspect-ratio:3/4;margin:0 auto 16px}
+/* ⚠️ ОТСТУП ДЕРЖИТ ПОДСКАЗКУ, А НЕ КАРТИНКУ: `.quiz-shadow-hint` висит на
+   19px НИЖЕ стопки, и при отступе 16px она садилась прямо на строку кода
+   («нажми на теневую карточку» поверх «ТЫ — ETMI»). Меняя это число,
+   смотреть на `bottom` подсказки, а не на глаз */
+.quiz-hero-stack{position:relative;width:min(64vw,240px);aspect-ratio:3/4;margin:0 auto 38px}
 .quiz-hero-stack .quiz-hero-art{width:100%;margin:0;position:relative;z-index:2}
 .quiz-shadow-card{position:absolute;inset:0;z-index:1;border-radius:18px;overflow:hidden;
   border:2px solid var(--line);background:var(--card-bg);
