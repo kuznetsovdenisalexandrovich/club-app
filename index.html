@@ -5435,6 +5435,20 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 <!-- Не в Telegram — веб-вход по номеру. Один и тот же экран работает в двух режимах:
      с SMS-кодом и без него (зависит от глобального тумблера sms_login_enabled) -->
+<!-- ══ ПРИЁМ ССЫЛКИ «ОПЛАТИЛ ПЕРЕВОДОМ» (20.08.2026) ═════════════════════
+     ⚠️ РАНЬШЕ ЭТО БЫЛ ТОСТ. Человек открывал ссылку, апп молча дёргал сервер
+     и показывал полусекундную подпись поверх гостевого экрана — снаружи
+     выглядело как «ничего не произошло, меня пустили в демо». Проверено на
+     живом человеке 20.08. Теперь у приёма есть свой экран: он говорит, что
+     происходит, и не исчезает сам. -->
+<div class="center-modal-overlay" id="paid-claim-overlay" style="z-index:880">
+  <div class="center-modal" style="text-align:center">
+    <div class="center-modal-title" id="paid-claim-title" style="margin-bottom:8px"></div>
+    <div id="paid-claim-text" style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:18px"></div>
+    <div id="paid-claim-actions" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="demo-entry-overlay" onclick="if(event.target===this)closeDemoEntryPopup()" style="z-index:700">
   <div class="center-modal" style="text-align:center">
     <div class="center-modal-header" style="justify-content:flex-end">
@@ -11994,6 +12008,25 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.other': { c:'Игры', l:'Заголовок игр вне треков', w:'Список игр', i:false, t:'Отдельные игры' },
   'games.no_final': { c:'Игры', l:'Ходы кончились, а сервер партию не закрыл', w:'Экран партии', i:false,
     t:'Партия не закрылась — попробуй выйти и сыграть заново.' },
+  'paid.wait_t': { c:'Доступ', l:'Заголовок окна, пока проверяем ссылку', w:'Ссылка «оплатил переводом»', i:false, t:'Открываю доступ' },
+  'paid.wait_x': { c:'Доступ', l:'Текст, пока проверяем ссылку', w:'Ссылка «оплатил переводом»', i:false,
+    t:'Секунду, проверяю ссылку.' },
+  'paid.ok_t': { c:'Доступ', l:'Заголовок при удачной выдаче', w:'Ссылка «оплатил переводом»', i:false, t:'Доступ открыт' },
+  'paid.ok_x': { c:'Доступ', l:'Текст при удачной выдаче', w:'Ссылка «оплатил переводом»', i:false,
+    t:'Участие в клубе открыто. Осталось вступить в канал и чат — ссылки ниже живут 20 минут.' },
+  'paid.until': { c:'Доступ', l:'Слово перед датой окончания', w:'Ссылка «оплатил переводом»', i:false, t:'Участие до' },
+  'paid.ok_channel': { c:'Доступ', l:'Кнопка вступления в канал', w:'Ссылка «оплатил переводом»', i:false, t:'Вступить в канал' },
+  'paid.ok_chat': { c:'Доступ', l:'Кнопка вступления в чат', w:'Ссылка «оплатил переводом»', i:false, t:'Вступить в чат' },
+  'paid.ok_go': { c:'Доступ', l:'Кнопка перехода в приложение', w:'Ссылка «оплатил переводом»', i:false, t:'Перейти в клуб' },
+  'paid.who_t': { c:'Доступ', l:'Заголовок, когда не поняли, кто открыл ссылку', w:'Ссылка «оплатил переводом»', i:false,
+    t:'Нужно тебя узнать' },
+  'paid.who_x': { c:'Доступ', l:'Текст, когда не поняли, кто открыл ссылку', w:'Ссылка «оплатил переводом»', i:false,
+    t:'Ссылка рабочая, но приложение не поняло, кто её открыл. Войди по номеру телефона — доступ откроется сразу после этого, ссылку я запомнил.' },
+  'paid.who_btn': { c:'Доступ', l:'Кнопка перехода ко входу', w:'Ссылка «оплатил переводом»', i:false, t:'Войти по номеру' },
+  'paid.fail_t': { c:'Доступ', l:'Заголовок при ошибке выдачи', w:'Ссылка «оплатил переводом»', i:false, t:'Ссылка не сработала' },
+  'paid.fail_x': { c:'Доступ', l:'Текст при ошибке без причины', w:'Ссылка «оплатил переводом»', i:false,
+    t:'Не получилось открыть доступ. Напиши Денису, он выдаст новую ссылку.' },
+  'paid.fail_btn': { c:'Доступ', l:'Кнопка закрытия окна ошибки', w:'Ссылка «оплатил переводом»', i:false, t:'Понятно' },
   'games.quiz_h': { c:'Игры', l:'Заголовок раздела с тестом', w:'Список игр', i:false, t:'Разминка' },
   'games.quiz_t': { c:'Игры', l:'Название теста', w:'Список игр', i:false, t:'Кто ты из богов продаж' },
   'games.quiz_x': { c:'Игры', l:'Описание теста', w:'Список игр', i:false,
@@ -20178,6 +20211,8 @@ function applyTelegramSafeAreaSoon(){
 
 function startApp(){
   track('app_open');
+  /* Ссылка «оплатил переводом», открытая до опознания, ждёт в хранилище */
+  try { if (typeof paidClaimRetryIfPending === 'function') paidClaimRetryIfPending(); } catch(e){}
   document.getElementById('app-shell').style.display = 'block';
   document.getElementById('tabbar').style.display = 'flex';
   if (typeof startStoragePoll === 'function') startStoragePoll();
@@ -20445,6 +20480,14 @@ function isInsideTelegram(){ return !!tgLaunchData(); }
    показывает и экран входа, и «Показать инфо о среде» в профиле. */
 let tgAuthWhy = '';
 
+/* ⚠️ АЙДИ ЧЕЛОВЕКА, КОТОРОГО МЫ УЗНАЛИ, НО КОТОРОГО НЕТ В КЛУБЕ.
+   `/auth/tg/session` проверяет подпись параметров запуска и возвращает айди
+   ДАЖЕ когда карточки не нашлось (`found:false`). Раньше этот айди молча
+   выбрасывался — и заявка «оплатил переводом» уходила без него, а сервер
+   отбивал её с «Не понял, кому выдавать». Участником человек от этой
+   переменной не становится: она только отвечает на вопрос «кто открыл». */
+let tgKnownId = 0;
+
 async function startTgSessionFallback(){
   const data = tgLaunchData();
   if (!data){ tgAuthWhy = 'Telegram не передал данные запуска'; return false; }
@@ -20463,6 +20506,9 @@ async function startTgSessionFallback(){
       flushPendingAttribution();
       startApp();
       return true;
+    }
+    if (r.ok && !d.found && d.telegram_id){
+      tgKnownId = Number(d.telegram_id) || 0;
     }
     tgAuthWhy = r.ok
       ? ('сервер не нашёл участника' + (d.detail ? ': ' + d.detail : ''))
@@ -20599,37 +20645,142 @@ async function openOnPlatform(target){
 }
 
 // Обратная сторона: мы открылись ПО такой ссылке
-/* Приглашение от Denis'а: доступ выдаётся тому, кто открыл ссылку. Айди берём
-   у площадки — человеку ничего вводить не нужно */
+/* ── ПРИЁМ ССЫЛКИ «ОПЛАТИЛ ПЕРЕВОДОМ» ──────────────────────────────────────
+   Приглашение от Denis'а: доступ выдаётся тому, кто открыл ссылку. Айди берём
+   у площадки — человеку ничего вводить не нужно.
+
+   ⚠️⚠️ ТРИ ВЕЩИ, НА КОТОРЫХ ЭТО СЛОМАЛОСЬ 20.08 У ЖИВОГО ЧЕЛОВЕКА:
+   1) параметр запуска терялся, если SDK Telegram не доехал (чинится в
+      `appStartParam`);
+   2) айди у неучастника не сохранялся, хотя сервер его называл (`tgKnownId`);
+   3) исход приёма показывался ТОСТОМ поверх гостевого экрана — то есть не
+      показывался вовсе.
+   Поэтому здесь теперь: видимое окно на каждый исход, сохранённый токен и
+   повтор после входа, а на успехе — пересборка оболочки, чтобы не остался
+   нарисованным демо-режим. */
+
+var PAID_TOKEN_KEY = 'club_app_paid_token';
+
+function paidClaimShow(title, text, actionsHtml){
+  var ov = document.getElementById('paid-claim-overlay');
+  if (!ov) return;
+  document.getElementById('paid-claim-title').textContent = title || '';
+  document.getElementById('paid-claim-text').textContent = text || '';
+  document.getElementById('paid-claim-actions').innerHTML = actionsHtml || '';
+  ov.classList.add('open');
+  hideSplash();
+}
+
+function paidClaimClose(){
+  var ov = document.getElementById('paid-claim-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+/* Кто открыл ссылку. Порядок важен: опознанный участник → узнанный по подписи
+   гость → ВК. Первый непустой и выигрывает */
+function paidClaimWho(){
+  var body = {};
+  var u = null;
+  try { u = (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe
+             && Telegram.WebApp.initDataUnsafe.user) || null; } catch(e){}
+  body.name = (u && u.first_name) || '';
+  if (telegramId) body.telegram_id = Number(telegramId) || null;
+  else if (typeof tgKnownId !== 'undefined' && tgKnownId) body.telegram_id = Number(tgKnownId) || null;
+  else if (typeof currentPlatform === 'function' && currentPlatform() === 'vk'){
+    body.vk_id = Number(currentPlatformId()) || null;
+  }
+  return body;
+}
+
 async function claimManualAccess(token){
+  if (!token) return;
+  /* ⚠️ ТОКЕН СОХРАНЯЕМ ДО ЗАПРОСА. Если человека сейчас не опознали, ссылка
+     не должна пропасть вместе с закрытым окном: после входа по номеру мы
+     повторим попытку сами */
+  try { localStorage.setItem(PAID_TOKEN_KEY, token); } catch(e){}
+
+  paidClaimShow(t('paid.wait_t'), t('paid.wait_x'), '');
+
+  var body = paidClaimWho();
+  body.token = token;
+
+  if (!body.telegram_id && !body.vk_id){
+    /* Не поняли, кто открыл. Раньше запрос всё равно уходил и сервер отбивал
+       его невидимой ошибкой — теперь честно просим войти, а ссылку помним */
+    paidClaimShow(t('paid.who_t'), t('paid.who_x'),
+      '<button class="lec-link-btn access-btn" style="width:100%" onclick="paidClaimGoLogin()">'
+      + escapeHtml(t('paid.who_btn')) + '</button>');
+    return;
+  }
+
   try {
-    /* Имя берём у площадки, а не выдумываем: у Denis'а в дашборде должно быть
-       видно, кому он выдал доступ, а не «id 12345» */
-    const u = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
-    const body = { token: token, name: (u && u.first_name) || '' };
-    if (telegramId) body.telegram_id = Number(telegramId) || null;
-    else if (typeof currentPlatform === 'function' && currentPlatform() === 'vk'){
-      body.vk_id = Number(currentPlatformId()) || null;
-    }
     const r = await fetch(`${API_URL}/access/manual/claim`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     const d = await r.json().catch(function(){ return {}; });
-    if (!r.ok) throw new Error(d.detail || 'Ссылка не сработала');
+    if (!r.ok) throw new Error(d.detail || ('сервер ответил ' + r.status));
+
+    try { localStorage.removeItem(PAID_TOKEN_KEY); } catch(e){}
     isMember = true;
-    // ⚠️ ССЫЛКИ В КАНАЛ И ЧАТ ЖИВУТ 20 МИНУТ — показываем их сразу, а не прячем
-    // в профиль: человек только что получил доступ и идёт вступать
-    showToast(t('manual.granted') || 'Доступ открыт');
-    /* ⚠️ В КАНАЛ ВЕДЁМ ТЕМ ЖЕ ПУТ�ес, ЧТО И ВЕЗДЕ (`openTgAccess`), а не открываем
-       выданную ссылку руками: там уже разобраны и запасной путь, и пейволл, и
-       отметка шага регистрации. Второй такой же код развалился бы при первой
-       же правке одного из них */
-    if (typeof openChannelJoinLink === 'function') setTimeout(openChannelJoinLink, 900);
-    if (typeof loadProfile === 'function') loadProfile();
+    if (!telegramId && body.telegram_id) telegramId = body.telegram_id;
+    track('manual_access_claimed');
+
+    /* ⚠️ ССЫЛКИ В КАНАЛ И ЧАТ ЖИВУТ 20 МИНУТ — зовём их кнопками прямо
+       отсюда, через общий `openTgAccess`: там уже разобраны запасной путь и
+       отметка шага регистрации, второй такой же код развалился бы на первой
+       правке одного из них */
+    var until = d.until ? (' ' + t('paid.until') + ' ' + escapeHtml(d.until)) : '';
+    paidClaimShow(t('paid.ok_t'), t('paid.ok_x') + until,
+        '<button class="lec-link-btn access-btn" style="width:100%" onclick="openChannelJoinLink()">'
+      + escapeHtml(t('paid.ok_channel')) + '</button>'
+      + '<button class="lec-link-btn" style="width:100%" onclick="openChatJoinLink()">'
+      + escapeHtml(t('paid.ok_chat')) + '</button>'
+      + '<button class="lec-link-btn" style="width:100%" onclick="paidClaimFinish()">'
+      + escapeHtml(t('paid.ok_go')) + '</button>');
   } catch (e) {
-    showToast((t('manual.failed') || 'Ссылка не сработала') + ': ' + e.message);
+    paidClaimShow(t('paid.fail_t'), (e && e.message) || t('paid.fail_x'),
+      '<button class="lec-link-btn access-btn" style="width:100%" onclick="paidClaimClose()">'
+      + escapeHtml(t('paid.fail_btn')) + '</button>');
   }
+}
+
+/* Не опознали — ведём на вход по номеру. Токен уже сохранён, после входа
+   попытка повторится сама */
+function paidClaimGoLogin(){
+  paidClaimClose();
+  if (typeof funnelToLogin === 'function') funnelToLogin();
+  else if (typeof proceedToWebLogin === 'function') proceedToWebLogin();
+}
+
+/* ⚠️ ПОСЛЕ ВЫДАЧИ ОБОЛОЧКУ ПЕРЕСОБИРАЕМ. Экран к этому моменту нарисован
+   гостевым — с пейволлами и демо-баннером, — и сам он не обновится: доступ
+   выдан на сервере, а не в разметке */
+function paidClaimFinish(){
+  paidClaimClose();
+  if (typeof funnelLeave === 'function') { try { funnelLeave(); } catch(e){} }
+  ['web-login-screen','web-add-home-screen-screen'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var shell = document.getElementById('app-shell');
+  var hidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (hidden){
+    startApp();
+  } else {
+    if (typeof loadProfile === 'function') loadProfile();
+    if (typeof switchView === 'function') switchView('portal');
+  }
+}
+
+/* Ссылку открыли, но тогда не опознали. Повторяем, как только человек стал
+   известен — зовётся из `startApp()` */
+function paidClaimRetryIfPending(){
+  var token = '';
+  try { token = localStorage.getItem(PAID_TOKEN_KEY) || ''; } catch(e){}
+  if (!token) return;
+  if (!telegramId && !(typeof tgKnownId !== 'undefined' && tgKnownId)) return;
+  claimManualAccess(token);
 }
 
 async function claimLinkToken(token){
@@ -24759,6 +24910,30 @@ function appStartParam(){
     if (direct) return String(direct);
     const quiz = q.get('quiz');
     if (quiz !== null) return 'quiz_' + quiz;
+  } catch(e){}
+  /* ⚠️⚠️ БЕЗ SDK ПАРАМЕТР ЗАПУСКА ЛЕЖИТ В ХЕШЕ, А НЕ В СТРОКЕ ЗАПРОСА.
+     Telegram открывает мини-приложение адресом вида
+     `#tgWebAppData=...&tgWebAppStartParam=paid_XXXX`. Пока SDK не доехал,
+     `initDataUnsafe` пуст, а `location.search` у нас пуст всегда — и диплинк
+     терялся ЦЕЛИКОМ, молча: ссылка «доступ за перевод» открывала просто апп.
+     Ровно то, на чём 20.08 встал доступ за перевод у нового человека.
+     ⚠️ КЛЮЧ СРАВНИВАЕМ ЦЕЛИКОМ, а не подстрокой — на этом уже обжигались,
+     когда `WebAppData=` нашлось внутри `tgWebAppData`. */
+  try {
+    const h = (location.hash || '').replace(/^#/, '');
+    if (h.indexOf('=') >= 0){
+      const pairs = h.split('&');
+      for (let i = 0; i < pairs.length; i++){
+        const eq = pairs[i].indexOf('=');
+        if (eq < 0) continue;
+        const key = pairs[i].slice(0, eq);
+        if (key === 'tgWebAppStartParam' || key === 'startapp'){
+          let v = pairs[i].slice(eq + 1);
+          try { v = decodeURIComponent(v); } catch(e){}
+          if (v) return String(v);
+        }
+      }
+    }
   } catch(e){}
   /* Внутри ВКонтакте полезная нагрузка приезжает ПОСЛЕ РЕШЁТКИ: свои параметры
      запуска ВК дописывает в строку запроса, а хеш из ссылки передаёт как есть.
