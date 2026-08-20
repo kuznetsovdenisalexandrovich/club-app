@@ -14544,7 +14544,14 @@ const ONB_MODAL_SEL = '.sched-popup-overlay.open, .center-modal-overlay.open,'
   + ' .fullscreen-popup-overlay.open, .quiz-overlay.open, .gg-overlay.gg-open,'
   + ' #plan-field.in, #cardentry-overlay.open, #hd-overlay.open';
 function onbModalOpen(){
-  try { return !!document.querySelector(ONB_MODAL_SEL); } catch (e) { return false; }
+  /* ⚠️ ИДУЩАЯ ПАРТИЯ — ТОЖЕ «ОТКРЫТОЕ ОКНО», хотя это не попап: экран игры
+     занимает всё, лента прижата к полю ввода, и полоска садилась ровно на
+     последний ответ ([stated] Denis 20.08 по скриншоту). Признак партии —
+     атрибут на <html>, тот же, которым переключается вёрстка экрана игры */
+  try {
+    if (document.documentElement.hasAttribute('data-gg-play')) return true;
+    return !!document.querySelector(ONB_MODAL_SEL);
+  } catch (e) { return false; }
 }
 
 /* Окна открываются и закрываются чужим кодом, звать оттуда onbDrawTrail
@@ -16999,6 +17006,7 @@ const PF_PUSH_AWAY = 95;   // насколько чужие направлени
 /* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
    воздух: без запаса оно при парении наползает на соседние темы */
 const PF_ROOT_PAD = 30;
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
 const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
 // Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
 // относительно первой настройки по просьбе Denis'а
@@ -17121,7 +17129,16 @@ function pfRelax(list, roots, meta){
     home[k] = { x: pcx + Math.cos(ang)*dist - s.w/2, y: pcy + Math.sin(ang)*dist - s.h/2 };
   });
 
-  list.forEach(function(k){ if (!pfPos[k]) pfPos[k] = { x: home[k].x, y: home[k].y }; });
+  /* ⚠️ СВЕЖИЕ КАПСУЛЫ ОСТАЮТСЯ У РОДИТЕЛЯ, УСТУПАЮТ СТАРЫЕ. [stated] Denis
+     20.08: «в момент появления смежных тем их иногда выбрасывает сильно
+     далеко… надо двигать именно их, пускай улетают старые и дают место
+     новым». Раньше расталкивание было симметричным, и в тесном месте
+     новорождённую капсулу отшвыривало от родителя на пол-экрана — а она
+     как раз то, ради чего человек и нажал */
+  const fresh = {};
+  list.forEach(function(k){
+    if (!pfPos[k]){ fresh[k] = true; pfPos[k] = { x: home[k].x, y: home[k].y }; }
+  });
 
   const ITER = pfIter(), PURE = pfPure();
   const relaxT0 = (typeof performance !== 'undefined') ? performance.now() : 0;
@@ -17132,8 +17149,11 @@ function pfRelax(list, roots, meta){
     const kSpring = it < ITER ? (0.13 * (1 - t) + 0.012) : 0;
 
     list.forEach(function(k){
-      pfPos[k].x += (home[k].x - pfPos[k].x) * kSpring;
-      pfPos[k].y += (home[k].y - pfPos[k].y) * kSpring;
+      // Свежую тянет к её месту у родителя вдвое сильнее — она не должна
+      // уплывать, пока соседи расходятся
+      const ks = fresh[k] ? Math.min(0.4, kSpring * 2) : kSpring;
+      pfPos[k].x += (home[k].x - pfPos[k].x) * ks;
+      pfPos[k].y += (home[k].y - pfPos[k].y) * ks;
     });
 
     /* Зажим радиуса — ВНУТРИ цикла, ДО расталкивания (после всех проходов он
@@ -17206,14 +17226,45 @@ function pfRelax(list, roots, meta){
       const ox = (sa.w + sb.w)/2 + pad - Math.abs(dx);
       const oy = (sa.h + sb.h)/2 + pad - Math.abs(dy);
       if (ox <= 0 || oy <= 0) continue;
+      /* Кто уступает: если одна капсула свежая, а вторая давно на поле —
+         двигается СТАРАЯ на всю глубину пересечения. Обе свежие или обе
+         старые — расходятся поровну, как раньше */
+      let wa = 0.5, wb = 0.5;
+      /* ⚠️ РОДИТЕЛЬ СВОИМ ДЕТЯМ НЕ УСТУПАЕТ — ОН ЯКОРЬ. Иначе он убегает от
+         собственного букета, и дети оказываются дальше, чем были: пробный
+         прогон показал рост дальней капсулы со 248 до 315 px */
+      const aIsPar = ref[b] && ref[b].par === a;
+      const bIsPar = ref[a] && ref[a].par === b;
+      if (aIsPar){ wa = 0; wb = 1; }
+      else if (bIsPar){ wa = 1; wb = 0; }
+      else if (fresh[a] && !fresh[b]){ wa = 0; wb = 1; }
+      else if (!fresh[a] && fresh[b]){ wa = 1; wb = 0; }
       if (ox < oy){
-        const s = (dx >= 0 ? 1 : -1) * ox / 2;
-        pfPos[a].x -= s; pfPos[b].x += s;
+        const s = (dx >= 0 ? 1 : -1) * ox;
+        pfPos[a].x -= s * wa; pfPos[b].x += s * wb;
       } else {
-        const s = (dy >= 0 ? 1 : -1) * oy / 2;
-        pfPos[a].y -= s; pfPos[b].y += s;
+        const s = (dy >= 0 ? 1 : -1) * oy;
+        pfPos[a].y -= s * wa; pfPos[b].y += s * wb;
       }
     }
+
+    /* ⚠️ ПОВОДОК СВЕЖЕЙ КАПСУЛЫ. Расталкивание — это цепочка: сосед толкает
+       соседа, и новорождённую могло унести от родителя на пол-экрана, хотя
+       рядом с ним место было. Держим её в пределах поводка от родителя;
+       разойтись мешающим соседям есть куда — поле большое */
+    list.forEach(function(k){
+      if (!fresh[k]) return;
+      const r = ref[k];
+      if (!r || !pfPos[r.par]) return;
+      const s = pfSizes[k] || {w:150,h:42};
+      const dx = cx(k) - cx(r.par), dy = cy(k) - cy(r.par);
+      const d = Math.hypot(dx, dy);
+      if (d > PF_KID_LEASH && d > 0.5){
+        const f = PF_KID_LEASH / d;
+        pfPos[k].x = cx(r.par) + dx * f - s.w/2;
+        pfPos[k].y = cy(r.par) + dy * f - s.h/2;
+      }
+    });
 
     list.forEach(function(k){
       const s = pfSizes[k] || {w:150,h:42};
