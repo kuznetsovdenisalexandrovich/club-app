@@ -12145,6 +12145,10 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     t:'Понятно' },
   'onb.quiz_locked': { c:'Знакомство', l:'Тест закрыт на время знакомства', w:'Главное меню', i:false,
     t:'Откроется после знакомства с приложением' },
+  'manual.granted': { c:'Доступ', l:'Доступ открыт по ссылке от Дениса', w:'После перехода по ссылке', i:false,
+    t:'Доступ открыт. Добро пожаловать в клуб!' },
+  'manual.failed': { c:'Доступ', l:'Ссылка на доступ не сработала', w:'После перехода по ссылке', i:false,
+    t:'Ссылка не сработала' },
   'onb.plan_empty': { c:'Знакомство', l:'Экран плана на шаге, когда пути ещё нет', w:'Шаг «Личный план»', i:false,
     t:'Пути пока нет — соберём его прямо сейчас.' },
 
@@ -20595,6 +20599,39 @@ async function openOnPlatform(target){
 }
 
 // Обратная сторона: мы открылись ПО такой ссылке
+/* Приглашение от Denis'а: доступ выдаётся тому, кто открыл ссылку. Айди берём
+   у площадки — человеку ничего вводить не нужно */
+async function claimManualAccess(token){
+  try {
+    /* Имя берём у площадки, а не выдумываем: у Denis'а в дашборде должно быть
+       видно, кому он выдал доступ, а не «id 12345» */
+    const u = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+    const body = { token: token, name: (u && u.first_name) || '' };
+    if (telegramId) body.telegram_id = Number(telegramId) || null;
+    else if (typeof currentPlatform === 'function' && currentPlatform() === 'vk'){
+      body.vk_id = Number(currentPlatformId()) || null;
+    }
+    const r = await fetch(`${API_URL}/access/manual/claim`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(d.detail || 'Ссылка не сработала');
+    isMember = true;
+    // ⚠️ ССЫЛКИ В КАНАЛ И ЧАТ ЖИВУТ 20 МИНУТ — показываем их сразу, а не прячем
+    // в профиль: человек только что получил доступ и идёт вступать
+    showToast(t('manual.granted') || 'Доступ открыт');
+    /* ⚠️ В КАНАЛ ВЕДЁМ ТЕМ ЖЕ ПУТ�ес, ЧТО И ВЕЗДЕ (`openTgAccess`), а не открываем
+       выданную ссылку руками: там уже разобраны и запасной путь, и пейволл, и
+       отметка шага регистрации. Второй такой же код развалился бы при первой
+       же правке одного из них */
+    if (typeof openChannelJoinLink === 'function') setTimeout(openChannelJoinLink, 900);
+    if (typeof loadProfile === 'function') loadProfile();
+  } catch (e) {
+    showToast((t('manual.failed') || 'Ссылка не сработала') + ': ' + e.message);
+  }
+}
+
 async function claimLinkToken(token){
   try {
     const r = await fetch(`${API_URL}/link/claim`, {
@@ -21196,6 +21233,13 @@ async function init(){
       // бонус или тест до того, как мы поняли, кто он, бессмысленно
       if (appStartParam().indexOf('link_') === 0){
         claimLinkToken(appStartParam().slice(5));
+        return;
+      }
+      /* ⚠️ ССЫЛКА «ОПЛАТИЛ ПЕРЕВОДОМ» — ТОЖЕ ДО ВСЕГО ОСТАЛЬНОГО. Человек
+         открыл её, чтобы получить доступ; показывать ему воронку или тест,
+         пока доступа нет, значит встретить оплатившего стеной */
+      if (appStartParam().indexOf('paid_') === 0){
+        claimManualAccess(appStartParam().slice(5));
         return;
       }
       // Привязку к пригласившему пробуем ВСЕГДА, какой бы ни была ссылка:
