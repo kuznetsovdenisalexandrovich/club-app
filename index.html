@@ -395,6 +395,15 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 
 .view{display:none}
 .view.active{display:block}
+/* ⚠️ ПЕРЕХОД МЕЖДУ ШАГАМИ ЗНАКОМСТВА — ЗАТУХАНИЕ И ПРОЯВЛЕНИЕ ([stated] Denis
+   20.08: «сейчас переключаются неуклюже»). Гасим ТОЛЬКО содержимое экрана:
+   окно шага, полоска и пилюля остаются на месте — они и есть та неподвижная
+   рамка, за которую человек держится, пока под ней меняется картинка.
+   ⚠️ `transition`, а не `animation`: у экранов уже бывают свои появления
+   (`fade-rise` у карточек), и вторая анимация на том же элементе их бы
+   перебила (урок 178) */
+.view.active{transition:opacity .22s ease}
+html.onb-swap .view.active{opacity:0}
 
 /* НИЖНИЙ ОТСТУП ОБЯЗАТЕЛЕН: карточка экрана рисуется псевдоэлементом ::before и
    заканчивается на 24px ВЫШЕ нижнего края контейнера. При нулевом отступе
@@ -14234,7 +14243,7 @@ async function gtStart(){
 function gtShow(){
   const st = GT_STEPS[gtIdx];
   if (!st){ gtFinish(); return; }
-  switchView(st.view);
+  onbSwapView(st.view);   // та же мягкая смена, что и у знакомства участника
   document.getElementById('gt-num').textContent =
     tf('gt.step_of', { n: gtIdx + 1, m: GT_STEPS.length });
   document.getElementById('gt-title').textContent = t(st.t);
@@ -14382,7 +14391,7 @@ function onbShow(){
   const st = ONB_STEPS[onbIdx];
   if (!st){ onbFinish(); return; }
   onbCloseFloaters();
-  switchView(st.view);                    // окно НЕ уводит само — только показывает
+  onbSwapView(st.view);                   // окно НЕ уводит само — только показывает
   onbStage(st);                           // дозагрузка данных и показ места глазами
 
   const seeded = st.xSeed && onbSeed;
@@ -14401,6 +14410,27 @@ function onbShow(){
 }
 
 function onbHideCard(){ document.getElementById('onb-wrap').classList.remove('open'); }
+
+/* Мягкая смена экрана: погасили → переключили → проявили. Экран переключаем
+   в ТЁМНОЙ фазе, поэтому подмены не видно вовсе.
+   ⚠️ УЖЕ ТОТ ЖЕ ЭКРАН — НЕ МОРГАЕМ: два шага подряд живут на расписании, и
+   лишняя вспышка там читалась бы как сбой */
+let onbSwapTimer = null;
+function onbSwapView(name){
+  const cur = document.querySelector('.view.active');
+  if (cur && cur.id === 'view-' + name){ switchView(name); return; }
+  const root = document.documentElement;
+  clearTimeout(onbSwapTimer);
+  root.classList.add('onb-swap');
+  onbSwapTimer = setTimeout(function(){
+    switchView(name);
+    // Проявляем следующим кадром: снять класс в том же кадре, что и смену
+    // экрана, — значит не дать браузеру нарисовать тёмную фазу вовсе
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){ root.classList.remove('onb-swap'); });
+    });
+  }, 220);
+}
 
 /* ⚠️ ШАГ ПОКАЗЫВАЕТ МЕСТО, А НЕ НАЗЫВАЕТ ЕГО. [stated] Denis 19.08: экран
    «что посмотреть» надо ОТКРЫТЬ и промотать прямо при человеке, чтобы он
@@ -14545,6 +14575,10 @@ function onbResume(){
 
 function onbFinish(){
   onbHideCard();
+  // ⚠️ Снимаем затемнение принудительно: если человек закрыл знакомство ровно
+  // в тёмной фазе, экран остался бы прозрачным навсегда
+  clearTimeout(onbSwapTimer);
+  document.documentElement.classList.remove('onb-swap');
   onbActive = false; onbTrying = null; onbIdx = ONB_STEPS.length;
   tourDone = true;
   markOnboardStep('tour');
