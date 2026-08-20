@@ -260,6 +260,15 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .lec-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .save-btn{background:none;border:none;line-height:1;color:var(--text-faint);cursor:pointer;padding:0;flex-shrink:0;display:flex;align-items:center}
 .save-btn.saved{color:var(--warm)}
+/* ⚠️ БЛИК — ТОЛЬКО ПРИ ПЕРВОЙ ВЫДАЧЕ ИИ И ТОЛЬКО ТРИ РАЗА. [stated] Denis
+   20.08: «значки таймеров с бликами света, типа обрати внимание». Вечная
+   анимация превратилась бы в фон, который перестают замечать */
+.save-btn.hintme{color:var(--warm);animation:saveHint 1.5s ease-in-out 3}
+@keyframes saveHint{
+  0%,100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(255,184,77,0))}
+  35%{transform:scale(1.18);filter:drop-shadow(0 0 7px rgba(255,184,77,.85))}
+  70%{transform:scale(1);filter:drop-shadow(0 0 2px rgba(255,184,77,.25))}
+}
 .saved-banner{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:12.5px;font-weight:600}
 .clear-saved{color:var(--warm);cursor:pointer;font-weight:600}
 .watch-later-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--card2);border:1px solid var(--border);min-height:118px;text-align:center;padding:0 8px}
@@ -12139,6 +12148,8 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'onb.note_home_x': { c:'Знакомство', l:'Строка про экран «Домой» — пояснение', w:'Главная, после знакомства', i:false,
     t:'Открывается одним касанием, без поиска по вкладкам.' },
 
+  'onb.tip_ai_saved': { c:'Знакомство', l:'Подсказка на первой выдаче ИИ — про «смотреть позже»', w:'Попап ИИ-помощника', i:false,
+    t:'Что не успеешь сейчас — отложи: тапни часы у занятия, и оно уедет в «Смотреть позже».' },
   'onb.tip_saved': { c:'Знакомство', l:'Подсказка при первом «смотреть позже»', w:'Библиотека', i:false,
     t:'Отложенное собирается наверху библиотеки — в полке «Смотреть позже».' },
   'onb.tip_listen': { c:'Знакомство', l:'Подсказка при первом «Слушать»', w:'Плеер', i:false,
@@ -13509,6 +13520,13 @@ function levelBarMustHide(){
      кружок со значком (Denis поймал 18.08). Проверяем класс, а не конкретные
      id: плееров уже три, и четвёртый иначе снова забудут вписать сюда */
   if (document.querySelector('.fullscreen-popup-overlay.open')) return true;
+  /* ⚠️ ПОПАП ИИ — ТОЖЕ ПРИЧИНА СПРЯТАТЬ БАР. `openAiPopup` прятал его руками,
+     но любой чужой вызов `renderLevelCard` (начисление баллов, возврат в
+     приложение, прокрутка) тут же возвращал бар поверх выдачи с занятиями
+     ([stated] Denis 20.08: «бар наплывает на попап с результатами поиска»).
+     Причина прячется ЗДЕСЬ, в одном месте, а не в вызывающем коде */
+  var ai = document.getElementById('ai-popup-overlay');
+  if (ai && ai.classList.contains('open')) return true;
   return false;
 }
 
@@ -14357,7 +14375,7 @@ function onbSelfServe(){
   onbDrawTrail();
   onbApplyLocks();
   renderOnbNotes();
-  setTimeout(showOnbHelp, 500);
+  setTimeout(showOnbHelpLater, 500);
 }
 
 function onbShow(){
@@ -14535,7 +14553,7 @@ function onbFinish(){
   onbApplyLocks();
   switchView('portal');
   renderOnbNotes();
-  setTimeout(showOnbHelp, 400);
+  setTimeout(showOnbHelpLater, 400);
 }
 
 /* ⚠️ ПОЛОСКА НЕ ЛЕЗЕТ ПОВЕРХ ОТКРЫТОГО ОКНА. Её слой (855) выше попапов
@@ -14656,6 +14674,21 @@ function renderOnbNotes(){
    на новом телефоне жесты и кнопки заново незнакомы */
 /* ⚠️ ССЫЛКУ СОБИРАЕМ САМИ, А НЕ ЖДЁМ ЕЁ В ТЕКСТЕ: текст правится из реестра,
    и разметка в нём рано или поздно потеряется. Подставляем в слово-метку */
+/* ⚠️ СПРАВКУ ПОКАЗЫВАЕМ ПОСЛЕ ТОГО, КАК ЧЕЛОВЕК ЗАКРЫЛ ВЫДАЧУ ИИ, А НЕ ПОВЕРХ
+   НЕЁ ([stated] Denis 20.08). Знакомство заканчивается, пока попап с
+   найденными занятиями ещё открыт — уведомление там просто мешало бы */
+let onbHelpPending = false;
+function showOnbHelpLater(){
+  const ai = document.getElementById('ai-popup-overlay');
+  if (ai && ai.classList.contains('open')){ onbHelpPending = true; return; }
+  showOnbHelp();
+}
+function onbHelpAfterAi(){
+  if (!onbHelpPending) return;
+  onbHelpPending = false;
+  setTimeout(showOnbHelp, 600);
+}
+
 function showOnbHelp(){
   const box = document.getElementById('onb-help');
   const txt = document.getElementById('onb-help-txt');
@@ -14687,9 +14720,12 @@ function hideOnbTip(){
 }
 /* ⚠️ ЯКОРЬ МОЖЕТ НЕ НАЙТИСЬ (карточка не отрисовалась, экран другой) — тогда
    показываем над пилюлей, а не молчим: подсказка полезна и без стрелки */
-function showOnbTip(key, sel, delay){
+function showOnbTip(key, sel, delay, force){
   if (onbTipSeen(key)) return;
-  if (onbActive) return;              // во время знакомства ведёт окно шага, не мы
+  /* Обычно во время знакомства ведёт окно шага, а не подсказки. Исключение —
+     подсказки, которые САМО знакомство и просит показать (флаг `force`):
+     например, про «смотреть позже» на первой выдаче ИИ */
+  if (onbActive && !force) return;
   try { localStorage.setItem('club_app_tip_' + key, '1'); } catch (e) {}
   setTimeout(function(){
     const el  = document.getElementById('onb-tip');
@@ -19719,12 +19755,16 @@ function openAiPopup(){
   // Прячем затемнение тура на время, пока человек печатает/отправляет вопрос —
   // вернём его уже вокруг результатов, см. renderAiAnswerCards()
   if (tourActive) document.getElementById('tour-overlay').classList.remove('open');
-  // Бар перекрывал верх попапа — прячем на время, пока попап открыт
+  // Бар перекрывал верх попапа — прячем на время, пока попап открыт.
+  // ⚠️ И ЗНАЧОК ТОЖЕ: он живёт отдельным узлом и оставался висеть один
   const bar = document.getElementById('level-card');
   if (bar) bar.style.display = 'none';
+  const badge = document.getElementById('reward-level-badge');
+  if (badge) badge.style.display = 'none';
 }
 function closeAiPopup(){
   document.getElementById('ai-popup-overlay').classList.remove('open');
+  onbHelpAfterAi();          // отложенное уведомление про справку — теперь можно
   renderLevelCard(); // возвращает бар на место (если он вообще должен быть виден)
   // Пока шёл тур — закрытие этого попапа ВСЕГДА двигает тур дальше (к расписанию),
   // даже если Salebot не успел ответить или человек не сохранил лекцию. Раньше застревали
@@ -19828,7 +19868,23 @@ async function renderAiAnswerCards(rawAnswer){
     + matched.map((l, i) => lecCardHtml(l, i)).join('')
     + `<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="askAiAgain()">Спросить ещё раз</button>`;
 
+  /* ⚠️ ПЕРВАЯ В ЖИЗНИ ВЫДАЧА ИИ — ЕДИНСТВЕННЫЙ МОМЕНТ, КОГДА ЧЕЛОВЕК ТОЧНО
+     СМОТРИТ НА КАРТОЧКИ. [stated] Denis 20.08: подсветить значки «смотреть
+     позже» бликом и сказать словами, что занятия можно отложить */
+  aiFirstSaveHint();
+
   if (tourActive) tourAdvanceOn('ai_asked');
+}
+
+/* Блик и подсказка — ровно один раз на устройство */
+function aiFirstSaveHint(){
+  try { if (localStorage.getItem('club_app_ai_save_hint') === '1') return; } catch (e) {}
+  const btns = document.querySelectorAll('#ai-answer-area .save-btn');
+  if (!btns.length) return;
+  try { localStorage.setItem('club_app_ai_save_hint', '1'); } catch (e) {}
+  btns.forEach(function(b){ b.classList.add('hintme'); });
+  // Подсказку вешаем на ПЕРВЫЙ значок и разрешаем её даже во время знакомства
+  showOnbTip('onb.tip_ai_saved', '#ai-answer-area .save-btn', 700, true);
 }
 
 // ── Init ──
