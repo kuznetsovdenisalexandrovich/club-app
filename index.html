@@ -3286,12 +3286,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    Бесплатная механика для холодного трафика: работает без входа, результат
    можно показать друзьям. Отдельный полноэкранный слой, а не вкладка —
    человек может прийти по прямой ссылке, не видя остального приложения */
+/* ⚠️ `overflow-x:hidden` ОБЯЗАТЕЛЕН. Сигил за картой шире экрана (1.98 ширины
+   карты), он создавал горизонтальную прокрутку — страницу можно было увести
+   вбок, и крестик «уезжал за правый край». Клипом сигил не портится: он и
+   задуман уходящим под края сцены */
 .quiz-overlay{position:fixed;inset:0;z-index:870;background:var(--bg);
-  display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  display:none;flex-direction:column;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .quiz-overlay.open{display:flex}
 .quiz-inner{width:100%;max-width:440px;margin:0 auto;padding:calc(var(--safe-top, 0px) + 18px) 20px
   calc(env(safe-area-inset-bottom, 0px) + 28px);flex:1;display:flex;flex-direction:column}
-.quiz-close{position:absolute;top:calc(var(--safe-top, 0px) + 12px);right:14px;width:34px;height:34px;
+.quiz-close{position:fixed;top:calc(var(--safe-top, 0px) + 12px);right:14px;width:34px;height:34px;
   border-radius:50%;border:1px solid var(--line);background:var(--card-bg);color:var(--text);
   font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2}
 
@@ -3829,6 +3833,45 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .qr-actions-row{display:flex;gap:9px;margin-top:9px}
 .qr-actions-row>.lec-link-btn{flex:1 1 0;min-width:0;margin-top:0}
 .qr-tertiary{display:grid;gap:14px;justify-items:center;margin-top:14px}
+
+/* ⚠️ ПОДСКАЗКА ПОДНЯТА НАД СИГИЛОМ. Сигил — позиционированный слой (z-index 0)
+   и по правилам отрисовки ложится ПОВЕРХ обычного текста, идущего следом:
+   строка «нажми на теневую карточку» пряталась под кругом. Лечится не
+   отступом, а собственным слоем у самой подсказки */
+.qr-hint{position:relative;z-index:9;font-size:10.5px;color:var(--text-dim);
+  letter-spacing:.02em;margin:0 0 10px}
+
+/* Строка «карта уже в коллекции». Мелкая по замыслу: это уведомление о
+   случившемся, а не кнопка — главное действие на экране остаётся одно */
+.qr-gift{position:relative;z-index:9;display:inline-flex;align-items:center;gap:7px;
+  max-width:100%;margin:0 auto 12px;padding:7px 12px;border-radius:999px;
+  font-size:11px;line-height:1.35;text-align:left;color:var(--text-dim);
+  background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
+  border:1px solid rgba(255,158,62,.22)}
+.qr-gift b{color:var(--warm);font-weight:700}
+.qr-gift.tap{cursor:pointer}
+.qr-gift-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--warm);
+  box-shadow:0 0 8px rgba(255,155,49,.8)}
+
+/* ══ ЭКРАН ТЕНЕВОЙ СТОРОНЫ ═════════════════════════════════════════════════
+   Та же сцена, что на результате, но приглушённая: карта второй натуры в
+   рамке, её сигил за спиной, её знак. Отдельной вёрстки нет намеренно —
+   два экрана одного теста обязаны выглядеть родственниками */
+.qr-stack.is-shadow{--qr-w:min(56vw,232px);margin-bottom:16px}
+.qr-stack.is-shadow .qr-card{filter:grayscale(.62) brightness(.86) saturate(.75)}
+.qr-stack.is-shadow .qr-sigil{opacity:.2}
+.qr-stack.is-shadow .qr-badge{color:#c3a179}
+
+/* Мини-воронка вокруг замороженных баллов */
+.gp-hero{font-family:var(--disp);font-weight:700;font-size:19px;margin:2px 0 6px}
+.gp-amount{font-family:var(--disp);font-weight:700;font-size:38px;line-height:1;
+  color:var(--warm);margin:4px 0 2px;text-shadow:0 0 22px rgba(255,150,44,.35)}
+.gp-sub{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:14px}
+.gp-list{display:grid;gap:7px;margin:0 0 16px;text-align:left}
+.gp-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 12px;border-radius:12px;font-size:12.5px;
+  background:var(--card-bg);border:1px solid var(--line)}
+.gp-item span:last-child{color:var(--warm);font-weight:700;white-space:nowrap}
 
 .quiz-block{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;
   padding:14px 16px;margin-bottom:12px;text-align:left}
@@ -5549,6 +5592,18 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px" data-text="pay.a3">Этот контент доступен только участникам клуба</div>
     <button class="lec-link-btn access-btn" onclick="closePaywall();openAccessPage()">Открыть доступ</button>
     <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePaywall();openClubInfoPage()">Узнать подробнее</button>
+  </div>
+</div>
+
+<!-- ⚠️ МИНИ-ВОРОНКА ВОКРУГ ЗАМОРОЖЕННЫХ БАЛЛОВ ПОДАРОЧНОЙ КАРТЫ.
+     Гость получает карту за тест сразу, а баллы внутри открываются вступлением.
+     Это не отказ, а предложение, поэтому и окно своё, а не общий пейволл:
+     общий говорит «не вижу подписки», а здесь человеку уже что-то принадлежит,
+     и разговор идёт о том, как это забрать. -->
+<div class="sched-popup-overlay" id="giftpoints-overlay" onclick="if(event.target===this) closeGiftPoints()">
+  <div class="sched-popup" id="giftpoints-popup" style="text-align:center">
+    <div class="sched-popup-handle"></div>
+    <div id="giftpoints-body"></div>
   </div>
 </div>
 
@@ -12638,6 +12693,36 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'share.quiz': {
     c:'Шеринг', l:'Кнопка поделиться результатом теста', w:'Экран результата', i:true,
     t:'Показать друзьям' },
+  'gift.note_member': {
+    c:'Карточки', l:'Строка «карта в коллекции» участнику', w:'Экран результата теста', i:true,
+    t:'Карта уже в твоей коллекции — внутри {n} баллов' },
+  'gift.note_guest': {
+    c:'Карточки', l:'Строка «карта в коллекции» гостю', w:'Экран результата теста', i:true,
+    t:'Карта закреплена за тобой — внутри {n} баллов' },
+  'gift.note_more': {
+    c:'Карточки', l:'Подпись-приглашение в строке о карте', w:'Экран результата теста', i:true,
+    t:'подробнее' },
+  'gift.funnel_title': {
+    c:'Карточки', l:'Заголовок окна о замороженных баллах', w:'Окно баллов подарочной карты', i:true,
+    t:'Баллы внутри карты' },
+  'gift.funnel_sub': {
+    c:'Карточки', l:'Пояснение в окне о замороженных баллах', w:'Окно баллов подарочной карты', i:true,
+    t:'Карта твоя навсегда, её никто не заберёт. А баллы внутри тратятся только в клубе — поэтому они и ждут твоего вступления.' },
+  'gift.funnel_list': {
+    c:'Карточки', l:'Заголовок списка «на что хватит»', w:'Окно баллов подарочной карты', i:true,
+    t:'На что их хватит' },
+  'gift.funnel_cta': {
+    c:'Карточки', l:'Главная кнопка окна о баллах', w:'Окно баллов подарочной карты', i:true,
+    t:'Забрать баллы — войти в клуб' },
+  'gift.funnel_more': {
+    c:'Карточки', l:'Вторая ссылка окна о баллах', w:'Окно баллов подарочной карты', i:true,
+    t:'Сначала расскажи, что за клуб' },
+  'gift.funnel_member': {
+    c:'Карточки', l:'Окно о баллах у участника', w:'Окно баллов подарочной карты', i:true,
+    t:'Баллы уже открыты — забери их в альбоме, кнопкой «Забрать» на карте.' },
+  'shadow.kicker': {
+    c:'Тест и вопросы', l:'Надпись над картой теневой стороны', w:'Экран теневой стороны', i:true,
+    t:'Твоя теневая сторона' },
   'share.card': {
     c:'Шеринг', l:'Кнопка поделиться картой из коллекции', w:'Витрина карточки', i:true,
     t:'Похвастаться картой' },
@@ -23737,7 +23822,9 @@ async function claimCard(cardId){
     // открываются подпиской. Это момент предложения, а не отказа
     if (e && e.status === 402){
       showToast(e.message || t('prologue.locked'));
-      setTimeout(openPaywall, 600);
+      // ⚠️ НЕ ОБЩИЙ ПЕЙВОЛЛ: он говорит «не вижу подписки», а здесь у человека
+      // уже есть карта и речь о том, как забрать её содержимое
+      setTimeout(openGiftPoints, 600);
       return;
     }
     showToast(e.message || 'Не получилось забрать');
@@ -24867,22 +24954,69 @@ function quizGodArt(godName){
    РАМКИ: рамка записывается экземпляру при дарении, и показать надо ровно ту,
    что человек увидит потом в коллекции. Аноним получает ту же карту и
    устойчиво выбранную рамку — иначе при перезагрузке она менялась бы. */
-var quizGift = null, quizGiftFor = null;
+/* ⚠️ КАРТЫ ХРАНЯТСЯ ПО КОДУ, А НЕ ОДНОЙ ПЕРЕМЕННОЙ. Экран теневой стороны
+   просит карту ВТОРОГО бога тем же запросом — с одним слотом второй запрос
+   затирал бы первый, и возврат «к результату» показывал бы чужую карту. */
+var quizGifts = {}, quizGiftAsked = {};
+
+function quizGiftOf(code){ return (code && quizGifts[code]) || null; }
 
 function loadQuizGift(code, then){
   // ⚠️⚠️ ПРИ ПОВТОРНОМ ВЫЗОВЕ `then` ЗВАТЬ НЕЛЬЗЯ. Отрисовка зовёт загрузку, а
   // загрузка в ответе зовёт отрисовку — если отвечать «уже готово» вызовом
   // then, эти двое уходят в бесконечную рекурсию и экран падает. Данные уже
   // есть (или запрос в пути): просто выходим, перерисовка не нужна.
-  if (!code || quizGiftFor === code) return;
-  quizGiftFor = code;
+  if (!code || quizGiftAsked[code]) return;
+  quizGiftAsked[code] = true;
   var url = `${API_URL}/quiz/gift-card?code=` + encodeURIComponent(code)
           + (telegramId ? ('&telegram_id=' + telegramId) : '');
   apiRequest(url)
-    .then(function(d){ quizGift = (d && d.card) || null; if (then) then(); })
+    .then(function(d){ quizGifts[code] = (d && d.card) || null; if (then) then(); })
     // Молчим намеренно: без карты экран показывает результат теста как раньше,
     // а не ошибку. Это украшение, а не содержание
-    .catch(function(){ quizGift = null; if (then) then(); });
+    .catch(function(){ quizGifts[code] = null; if (then) then(); });
+}
+
+/* Сцена «карта в рамке» — общая для результата и теневой стороны. Один
+   сборщик на оба экрана: разъехавшаяся вёрстка двух экранов одного теста и
+   была тем, что Denis назвал «из разных приложений». */
+function quizCardSceneHtml(godName, gift, opts){
+  opts = opts || {};
+  const art   = (gift && gift.art_url) || quizGodArt(godName);
+  const frame = (gift && gift.frame_url) || '';
+  // Приглушённая версия сигила своя, при её отсутствии — основная.
+  // Нет ни той ни другой — слоя просто нет, сцена живёт без него
+  const sigil = gift ? (gift.sigil_url_soft || gift.sigil_url || '') : '';
+  const sign  = godSignFor(godName, 0);
+  return '<div class="qr-stack' + (opts.shadow ? ' is-shadow' : '') + '">'
+    + (sigil ? '<div class="qr-sigil"><img src="' + escapeHtml(sigil) + '" alt=""></div>' : '')
+    + (opts.behind || '')
+    + '<div class="qr-card">'
+      + '<div class="qr-card-art">'
+        + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '')
+      + '</div>'
+      + (sign ? '<div class="qr-badge">' + sign + '</div>' : '')
+      + '<div class="qr-copy">'
+        + '<div class="qr-god">' + escapeHtml(godName) + '</div>'
+        + '<div class="qr-role">' + escapeHtml(opts.role || '') + '</div>'
+      + '</div>'
+      + (frame ? '<img class="qr-frame" src="' + escapeHtml(frame) + '" alt="">' : '')
+    + '</div>'
+    + '</div>';
+}
+
+/* Строка «карта уже в коллекции». Показываем только когда карта РЕАЛЬНО
+   выдана: выдача идёт при сохранении результата, а оно уходит на сервер
+   лишь при известном telegram_id. Без него обещать нечего. */
+function quizGiftNoteHtml(gift){
+  if (!gift || !telegramId) return '';
+  const n = gift.gift_points || 1000;
+  const member = (typeof isMember !== 'undefined' && isMember);
+  const txt = tf(member ? 'gift.note_member' : 'gift.note_guest', { n: n });
+  return '<div class="qr-gift tap" onclick="openGiftPoints()">'
+    + '<span class="qr-gift-dot"></span>'
+    + '<span>' + escapeHtml(txt) + ' · <b>' + escapeHtml(t('gift.note_more')) + '</b></span>'
+    + '</div>';
 }
 
 function renderQuizResult(){
@@ -24895,11 +25029,7 @@ function renderQuizResult(){
   // когда приедет ответ. Пустой экран на время запроса был бы хуже
   loadQuizGift(r.code, function(){ if (quizResult === r) renderQuizResult(); });
 
-  const art   = (quizGift && quizGift.art_url) || quizGodArt(me.god);
-  const frame = (quizGift && quizGift.frame_url) || '';
-  // Сигил за картой: приглушённая версия своя, при её отсутствии — основная.
-  // Нет ни той ни другой — слоя просто нет, сцена живёт без него
-  const sigil = quizGift ? (quizGift.sigil_url_soft || quizGift.sigil_url || '') : '';
+  const gift = quizGiftOf(r.code);
 
   // Полосы по осям: человек видит, ИЗ ЧЕГО получился его результат.
   // Именно это отличает объяснимый тест от жребия. Процент печатаем у той
@@ -24931,21 +25061,7 @@ function renderQuizResult(){
       + '</div>'
     : '';
 
-  const mySign = godSignFor(me.god, 0);
-  const sigilHtml = sigil
-    ? '<div class="qr-sigil"><img src="' + escapeHtml(sigil) + '" alt=""></div>'
-    : '';
-  const cardHtml = '<div class="qr-card">'
-    + '<div class="qr-card-art">'
-      + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '')
-    + '</div>'
-    + (mySign ? '<div class="qr-badge">' + mySign + '</div>' : '')
-    + '<div class="qr-copy">'
-      + '<div class="qr-god">' + escapeHtml(me.god) + '</div>'
-      + '<div class="qr-role">' + escapeHtml(me.role) + '</div>'
-    + '</div>'
-    + (frame ? '<img class="qr-frame" src="' + escapeHtml(frame) + '" alt="">' : '')
-    + '</div>';
+  const sceneHtml = quizCardSceneHtml(me.god, gift, { role: me.role, behind: shadowHtml });
 
   const godLink = (typeof godHasInfo === 'function' && godHasInfo(me.god))
     ? '<div class="payment-help-link" style="margin:0 0 16px" onclick="openGodInfo(' + jsArg(me.god) + ')">Читать про ' + escapeHtml(me.god) + ' целиком</div>'
@@ -24964,9 +25080,10 @@ function renderQuizResult(){
 
   document.getElementById('quiz-inner').innerHTML =
       '<div class="quiz-hero">'
-      + '<div class="qr-stack">' + sigilHtml + shadowHtml + cardHtml + '</div>'
-      + (second ? '<div class="quiz-shadow-hint" style="position:static;margin:0 0 10px">'
+      + sceneHtml
+      + (second ? '<div class="qr-hint">'
                   + 'Нажми на теневую карточку, чтобы увидеть вторую натуру</div>' : '')
+      + quizGiftNoteHtml(gift)
       + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
       + '</div>'
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
@@ -25254,7 +25371,14 @@ function openQuizShadow(){
   const second = QUIZ_RESULTS[r.secondCode];
   const me = QUIZ_RESULTS[r.code];
   if (!second) return;
-  const art = quizGodArt(second.god);
+
+  // Карта второго бога — тем же публичным запросом, что и своя: у него та же
+  // рамка, тот же сигил и тот же знак. Ждать не заставляем, перерисуем по
+  // приезде — но только если человек всё ещё на этом экране
+  loadQuizGift(r.secondCode, function(){
+    if (quizResult === r && document.getElementById('quiz-shadow-scene')) openQuizShadow();
+  });
+  const gift = quizGiftOf(r.secondCode);
 
   const godLink = (typeof godHasInfo === 'function' && godHasInfo(second.god))
     ? '<div class="payment-help-link" style="margin:0 0 14px" onclick="openGodInfo(' + jsArg(second.god) + ')">Читать про ' + escapeHtml(second.god) + ' целиком</div>'
@@ -25262,13 +25386,11 @@ function openQuizShadow(){
 
   document.getElementById('quiz-inner').innerHTML =
       '<div class="payment-help-link" style="margin:0 0 14px;text-align:left" onclick="renderQuizResult()">← К результату</div>'
-    + '<div class="quiz-hero">'
-      + '<div class="quiz-hero-art" style="width:min(52vw,190px);margin:0 auto 14px;filter:grayscale(.55) brightness(.85)">'
-        + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '<div class="quiz-hero-ph">◆</div>')
-      + '</div>'
-      + '<div class="quiz-kicker">Твоя теневая сторона</div>'
-      + '<div class="quiz-name" style="font-size:26px">' + escapeHtml(second.god) + '</div>'
-      + '<div class="quiz-role">' + escapeHtml(second.role) + '</div>'
+    + '<div class="quiz-hero" id="quiz-shadow-scene">'
+      // Имя и роль печатаются НА карте, как на экране результата: под картой
+      // они были бы дублем и ослабляли бы саму карту
+      + quizCardSceneHtml(second.god, gift, { role: second.role, shadow: true })
+      + '<div class="quiz-kicker">' + escapeHtml(t('shadow.kicker')) + '</div>'
     + '</div>'
     + '<div class="quiz-text">' + escapeHtml(second.text) + '</div>'
     + (second.risk
@@ -25289,6 +25411,82 @@ function openQuizShadow(){
     + '</div>'
     + godLink
     + '<div class="payment-help-link" style="margin-top:2px" onclick="renderQuizResult()">← К результату</div>';
+}
+
+/* ══ МИНИ-ВОРОНКА ВОКРУГ ЗАМОРОЖЕННЫХ БАЛЛОВ ═══════════════════════════════
+   Карта за тест достаётся сразу и остаётся навсегда — а баллы внутри неё
+   открываются вступлением. Это лучший момент разговора о клубе: человеку уже
+   что-то принадлежит, и речь идёт не о покупке, а о том, чтобы забрать своё.
+
+   ⚠️ СУММУ БЕРЁМ С СЕРВЕРА (`gift_points`), а не пишем числом: она задана
+   константой в бэкенде, и вторая копия в аппе разошлась бы с ней молча.
+   ⚠️ СПИСОК «НА ЧТО ХВАТИТ» — ИЗ ЖИВОГО КАТАЛОГА НАГРАД, а не выдуманный:
+   обещание, которого нет в каталоге, всплывёт при первом же вступлении. */
+
+function closeGiftPoints(){
+  const ov = document.getElementById('giftpoints-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+async function openGiftPoints(){
+  const ov = document.getElementById('giftpoints-overlay');
+  const body = document.getElementById('giftpoints-body');
+  if (!ov || !body) return;
+  const gift = quizResult ? quizGiftOf(quizResult.code) : null;
+  const n = (gift && gift.gift_points) || 1000;
+  const member = (typeof isMember !== 'undefined' && isMember);
+  track('gift_points_open', member ? 'member' : 'guest');
+
+  body.innerHTML =
+      '<div class="gp-hero">' + escapeHtml(t('gift.funnel_title')) + '</div>'
+    + '<div class="gp-amount">' + n + '</div>'
+    + '<div class="gp-sub">' + escapeHtml(member ? t('gift.funnel_member') : t('gift.funnel_sub')) + '</div>'
+    + '<div id="gp-list"></div>'
+    + (member
+        ? '<button class="lec-link-btn access-btn" onclick="closeGiftPoints();closeQuiz();switchView(\'cards\')">Открыть альбом</button>'
+        : '<button class="lec-link-btn access-btn" onclick="giftPointsBuy()">' + escapeHtml(t('gift.funnel_cta')) + '</button>'
+          + '<div class="payment-help-link" style="margin-top:12px" onclick="giftPointsAbout()">'
+          + escapeHtml(t('gift.funnel_more')) + '</div>');
+  ov.classList.add('open');
+
+  // Каталог — необязательное украшение: без него окно уже осмысленно
+  if (!telegramId) return;
+  try { await loadRewardsData(); } catch(e){ return; }
+  const el = document.getElementById('gp-list');
+  if (!el || !lastRewardsData) return;
+  const fit = (lastRewardsData.rewards || [])
+    .filter(function(x){ return x.kind !== 'payment' && (x.cost || 0) <= n; })
+    .sort(function(a, b){ return (b.cost || 0) - (a.cost || 0); })
+    .slice(0, 3);
+  if (!fit.length) return;
+  el.innerHTML = '<div class="gp-sub" style="margin:0 0 8px">' + escapeHtml(t('gift.funnel_list')) + '</div>'
+    + '<div class="gp-list">'
+    + fit.map(function(x){
+        return '<div class="gp-item"><span>' + escapeHtml(x.title || '') + '</span>'
+             + '<span>' + (x.cost || 0) + '</span></div>';
+      }).join('')
+    + '</div>';
+}
+
+/* Тот же порядок, что у funnelBuy: сначала гасим слой теста, потом поднимаем
+   оболочку, и только затем оплату. Иначе вид переключится ПОД лежащим сверху
+   экраном теста, и человек решит, что кнопка не сработала */
+function giftPointsBuy(){
+  closeGiftPoints();
+  closeQuiz();
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  openAccessPage();
+}
+
+function giftPointsAbout(){
+  closeGiftPoints();
+  closeQuiz();
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  openClubInfoPage();
 }
 
 /* Пока личный план в библиотеке — заглушка, ведём туда: обещать больше, чем
