@@ -3723,9 +3723,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    почти целиком и был не виден вовсе. Правило: если сущность уже нарисована в
    макете, брать оттуда числа, а не изобретать похожие.
    z-index ниже теневой карточки: сигил — фон сцены, а не её участник */
-/* 1.66 из макета × 1.35 по просьбе Denis'а 23.08 = 2.24 */
+/* 1.66 из макета → 2.24 (+35%) → откат к 1.98 по просьбе Denis'а 23.08 */
 .qr-sigil{position:absolute;z-index:0;left:50%;top:45.4%;
-  width:calc(var(--qr-w) * 2.24);height:calc(var(--qr-w) * 2.24);
+  width:calc(var(--qr-w) * 1.98);height:calc(var(--qr-w) * 1.98);
   transform:translate(-50%,-50%);pointer-events:none;opacity:.29}
 .qr-sigil img{display:block;width:100%;height:100%;object-fit:contain}
 .qr-card-art{position:absolute;z-index:1;left:10.9%;right:10.9%;top:8.2%;bottom:8.3%;
@@ -3791,18 +3791,26 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    центру и светящаяся точка в позиции ответа — сразу видно, насколько человек
    ушёл от середины и в какую сторону. Числа взяты из макета. */
 .quiz-axes .quiz-axis-bar{display:block;position:relative;height:3px;border-radius:10px;
-  background:var(--line);overflow:visible}
+  background:var(--line);overflow:visible;
+  box-shadow:inset 0 1px 1px rgba(0,0,0,.28)}
 /* Засечка середины: без неё непонятно, от чего отсчитывается перевес */
 .quiz-axes .quiz-axis-bar::before{content:'';position:absolute;left:50%;top:-2px;
   width:1px;height:7px;background:var(--text-faint);opacity:.45}
+/* ⚠️ СВЕЧЕНИЕ — ТЕНЬЮ ПО ФОРМЕ ПОЛОСЫ, а не фильтром: `filter` дорог на
+   постоянной отрисовке и не переживает экспорт. Два слоя: мягкий широкий ореол
+   и узкий плотный у самой линии — иначе на светлом фоне ореол выглядит грязью,
+   а на тёмном не читается вовсе. */
 .quiz-axes .quiz-axis-fill{display:block;position:absolute;top:0;bottom:0;height:3px;
+  box-shadow:0 0 10px rgba(255,148,46,.55), 0 0 3px rgba(255,148,46,.75);
   /* ⚠️ ЦВЕТА ГРАДИЕНТА ЯВНЫЕ, БЕЗ var(). Переменная внутри linear-gradient
      разбирается не везде: движок, который её не понял, отбрасывает объявление
      целиком и полоса падает на плоскую заливку. Проверено замером — jsdom
      вернул именно плоский цвет. Числа те же, что в макете */
   border-radius:10px;background:linear-gradient(90deg,#bd5423,#ff9a2f)}
 .quiz-axes .quiz-axis-fill::after{content:'';position:absolute;top:50%;width:6px;height:6px;
-  border-radius:50%;background:#fff7e9;box-shadow:0 0 7px #ff9b31;transform:translateY(-50%)}
+  border-radius:50%;background:#fff7e9;
+  box-shadow:0 0 4px #fff2dc, 0 0 12px rgba(255,155,49,.9), 0 0 22px rgba(255,140,30,.45);
+  transform:translateY(-50%)}
 .quiz-axes .quiz-axis-fill[style*="right"]::after{left:-2px}
 .quiz-axes .quiz-axis-fill[style*="left"]::after{right:-2px}
 .qr-axis-pct{color:#f3a13a;font-weight:800;margin-left:6px;font-size:10px}
