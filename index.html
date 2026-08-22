@@ -3704,6 +3704,71 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .quiz-shadow-card{cursor:pointer}
 .quiz-shadow-hint{position:absolute;left:0;right:0;bottom:-19px;text-align:center;
   font-size:10.5px;color:var(--text-dim);letter-spacing:.02em}
+
+/* ══ ЭКРАН РЕЗУЛЬТАТА ТЕСТА — МАКЕТ 22.08.2026 ═════════════════════════════
+   Карта показывается В РАМКЕ, как в коллекции: тот же арт, та же рамка, что
+   записана экземпляру при дарении. Имя и роль печатаются НА карте — под ней
+   их больше нет, дубль съедал экран и ослаблял саму карту.
+   ⚠️ ГЕОМЕТРИЯ ОКНА ВЗЯТА ИЗ РАМКИ: окно 844x1202 в холсте 1080x1440, то есть
+   поля 10.9% по бокам и 8.2% сверху. Арт кладётся ровно в эти границы, иначе
+   он вылезет из-под рамки. Меняя рамку, менять и эти числа.
+   ⚠️ Высота стопки — ЧИСЛОМ от ширины, а не aspect-ratio: то же правило, что в
+   макете, оно же нужно рисовщику экспорта. */
+.qr-stack{--qr-w:min(69vw,286px);--qr-h:calc(var(--qr-w) * 4 / 3);
+  position:relative;width:var(--qr-w);height:var(--qr-h);margin:0 auto 22px;user-select:none}
+.qr-card{position:absolute;inset:0;z-index:3}
+.qr-card-art{position:absolute;z-index:1;left:10.9%;right:10.9%;top:8.2%;bottom:8.3%;
+  overflow:hidden;border-radius:18px;background:#171722}
+.qr-card-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 24%}
+/* Затемнение низа, чтобы имя читалось на любом арте */
+.qr-card-art::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 49%,rgba(5,6,11,.13) 61%,rgba(6,6,11,.88) 79%,#08080d 100%)}
+.qr-frame{position:absolute;inset:0;z-index:6;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.qr-badge{position:absolute;z-index:7;left:14.2%;top:11.4%;width:44px;height:48px;
+  display:grid;place-items:center;color:var(--warm)}
+.qr-badge::before{content:'';position:absolute;inset:-6px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(8,8,14,.5),transparent 78%)}
+.qr-badge .god-sign{position:relative;z-index:1;width:26px;height:26px}
+.qr-copy{position:absolute;z-index:7;left:13%;right:13%;bottom:10%;text-align:center;
+  color:#f6efe6;text-shadow:0 1px 8px rgba(0,0,0,.55)}
+.qr-copy::before{content:'';position:absolute;left:0;right:0;top:-19px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,184,96,.54),transparent)}
+.qr-god{font-family:Georgia,'Times New Roman',serif;font-size:25px;letter-spacing:.12em;
+  font-weight:700;line-height:1;text-transform:uppercase}
+.qr-role{margin-top:7px;font-size:11px;font-weight:700;color:#f3a43e}
+/* Теневая карточка второй натуры — за основной, приглушённая */
+.qr-shadow{position:absolute;inset:0;z-index:1;border-radius:20px;overflow:hidden;
+  border:1px solid rgba(196,178,214,.16);background:#0c0c14;cursor:pointer;padding:0;
+  transform:translateX(-17%) rotate(-9deg);transform-origin:bottom right}
+.qr-shadow img{width:100%;height:100%;object-fit:cover;object-position:center 30%;
+  filter:grayscale(.5) brightness(.78) saturate(.7)}
+.qr-shadow::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(3,4,8,.08) 45%,rgba(6,6,10,.92) 100%)}
+.qr-shadow-name{position:absolute;z-index:10;left:8%;right:8%;top:9%;font-family:Georgia,serif;
+  letter-spacing:.12em;font-size:14px;color:#b9b0a9;text-align:center;text-transform:uppercase;
+  text-shadow:0 2px 8px #000;opacity:.72}
+.qr-shadow-sign{position:absolute;z-index:10;right:15%;bottom:12%;width:31px;height:31px;
+  border:1px solid rgba(221,180,127,.34);border-radius:50%;display:grid;place-items:center;
+  background:rgba(8,8,12,.6);color:#c3a179;opacity:.72}
+.qr-shadow-sign .god-sign{width:17px;height:17px}
+/* Проценты у победившей стороны оси */
+.qr-axis-pct{color:#f3a13a;font-weight:800;margin-left:7px}
+/* Блок союзника: знак кружком слева, текст справа */
+.qr-ally{display:grid;grid-template-columns:47px 1fr;gap:12px;align-items:center;
+  margin:0 0 12px;padding:11px 13px;border-radius:15px;text-align:left;
+  background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.035));
+  border:1px solid rgba(255,158,62,.16)}
+.qr-ally-sign{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid rgba(255,167,72,.75);color:var(--warm);
+  background:radial-gradient(circle at 35% 30%,rgba(255,170,76,.15),rgba(255,255,255,.02))}
+.qr-ally-sign .god-sign{width:25px;height:25px}
+.qr-ally-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.qr-ally-text{font-size:12px;line-height:1.4;color:var(--text-dim)}
+.qr-actions{margin:14px auto 0}
+.qr-actions-row{display:flex;gap:9px;margin-top:9px}
+.qr-actions-row>.lec-link-btn{flex:1 1 0;min-width:0;margin-top:0}
+.qr-tertiary{display:grid;gap:14px;justify-items:center;margin-top:14px}
+
 .quiz-block{background:var(--card-bg);border:1px solid var(--line);border-radius:14px;
   padding:14px 16px;margin-bottom:12px;text-align:left}
 .quiz-block-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
@@ -24555,6 +24620,20 @@ function smSliderFill(el){
   el.style.setProperty('--p', pct.toFixed(1) + '%');
 }
 
+/* ⚠️ ЗНАК ПО ИМЕНИ, А НЕ «МОЙ». Прежняя функция всегда брала бога из
+   сохранённого результата теста — для блока союзника и для карты на экране
+   результата этого мало: там нужен знак КОНКРЕТНОГО бога. Общая разметка одна,
+   поэтому godSignHtml теперь просто частный случай с моим богом. */
+function godSignFor(god, size){
+  var idx = (god && GOD_SIGNS[god] !== undefined) ? GOD_SIGNS[god] : -1;
+  if (idx < 0) return '';
+  var col = idx % 4, row = Math.floor(idx / 4);
+  var pos = (col * 100 / 3) + '% ' + (row * 100 / 3) + '%';
+  var sz = size ? (';width:' + size + 'px;height:' + size + 'px') : '';
+  return '<i class="god-sign" style="-webkit-mask-position:' + pos
+       + ';mask-position:' + pos + sz + '"></i>';
+}
+
 function godSignHtml(size){
   var idx = godSignIndex();
   if (idx < 0) return '';
@@ -24723,77 +24802,128 @@ function quizGodArt(godName){
   return withThumb ? withThumb.image_url : '';
 }
 
+/* ⚠️ КАРТА ЗА ТЕСТ — С СЕРВЕРА, А НЕ СОБРАННАЯ ЗДЕСЬ. Нужны арт и адрес
+   РАМКИ: рамка записывается экземпляру при дарении, и показать надо ровно ту,
+   что человек увидит потом в коллекции. Аноним получает ту же карту и
+   устойчиво выбранную рамку — иначе при перезагрузке она менялась бы. */
+var quizGift = null, quizGiftFor = null;
+
+function loadQuizGift(code, then){
+  // ⚠️⚠️ ПРИ ПОВТОРНОМ ВЫЗОВЕ `then` ЗВАТЬ НЕЛЬЗЯ. Отрисовка зовёт загрузку, а
+  // загрузка в ответе зовёт отрисовку — если отвечать «уже готово» вызовом
+  // then, эти двое уходят в бесконечную рекурсию и экран падает. Данные уже
+  // есть (или запрос в пути): просто выходим, перерисовка не нужна.
+  if (!code || quizGiftFor === code) return;
+  quizGiftFor = code;
+  var url = `${API_URL}/quiz/gift-card?code=` + encodeURIComponent(code)
+          + (telegramId ? ('&telegram_id=' + telegramId) : '');
+  apiRequest(url)
+    .then(function(d){ quizGift = (d && d.card) || null; if (then) then(); })
+    // Молчим намеренно: без карты экран показывает результат теста как раньше,
+    // а не ошибку. Это украшение, а не содержание
+    .catch(function(){ quizGift = null; if (then) then(); });
+}
+
 function renderQuizResult(){
   const r = quizResult;
   if (!r || !QUIZ_RESULTS[r.code]){ renderQuizIntro(); return; }
   const me = QUIZ_RESULTS[r.code];
   const second = QUIZ_RESULTS[r.secondCode];
-  const art = quizGodArt(me.god);
+
+  // Карту ждать не заставляем: рисуем сразу тем, что есть, и перерисовываем,
+  // когда приедет ответ. Пустой экран на время запроса был бы хуже
+  loadQuizGift(r.code, function(){ if (quizResult === r) renderQuizResult(); });
+
+  const art   = (quizGift && quizGift.art_url) || quizGodArt(me.god);
+  const frame = (quizGift && quizGift.frame_url) || '';
 
   // Полосы по осям: человек видит, ИЗ ЧЕГО получился его результат.
-  // Именно это отличает объяснимый тест от жребия
+  // Именно это отличает объяснимый тест от жребия. Процент печатаем у той
+  // стороны, что победила, — он и есть ответ на «насколько во мне этого»
   const axesHtml = (r.axes || []).map(function(a){
     const pct = Math.round((a.share || 0) * 100);
     const fill = a.leftWins
       ? '<div class="quiz-axis-fill" style="left:0;width:' + pct + '%"></div>'
       : '<div class="quiz-axis-fill" style="right:0;width:' + pct + '%"></div>';
+    const num = '<span class="qr-axis-pct">' + pct + '%</span>';
     return '<div class="quiz-axis">'
-      + '<span class="quiz-axis-side' + (a.leftWins ? ' on' : '') + '">' + a.leftName + '</span>'
+      + '<span class="quiz-axis-side' + (a.leftWins ? ' on' : '') + '">'
+        + escapeHtml(a.leftName) + (a.leftWins ? num : '') + '</span>'
       + '<span class="quiz-axis-bar">' + fill + '</span>'
-      + '<span class="quiz-axis-side right' + (a.leftWins ? '' : ' on') + '">' + a.rightName + '</span>'
+      + '<span class="quiz-axis-side right' + (a.leftWins ? '' : ' on') + '">'
+        + escapeHtml(a.rightName) + (a.leftWins ? '' : num) + '</span>'
       + '</div>';
   }).join('');
 
-  // Теневая карточка второй натуры. Если арта нет — показываем имя, иначе
-  // два одинаковых ромба-заглушки читались бы как ошибка вёрстки
+  // Теневая карточка второй натуры. Без арта показываем имя — два одинаковых
+  // ромба-заглушки читались бы как ошибка вёрстки
   const secondArt = second ? quizGodArt(second.god) : '';
+  const secondSign = second ? godSignFor(second.god, 0) : '';
   const shadowHtml = second
-    ? '<div class="quiz-shadow-card" onclick="openQuizShadow()">'
-      + (secondArt
-          ? '<img src="' + escapeHtml(secondArt) + '" alt="">'
-          : '<div class="quiz-shadow-name">' + escapeHtml(second.god) + '</div>')
+    ? '<div class="qr-shadow" onclick="openQuizShadow()">'
+      + (secondArt ? '<img src="' + escapeHtml(secondArt) + '" alt="">' : '')
+      + '<div class="qr-shadow-name">' + escapeHtml(second.god) + '</div>'
+      + (secondSign ? '<div class="qr-shadow-sign">' + secondSign + '</div>' : '')
       + '</div>'
-      + '<div class="quiz-shadow-hint">нажми на теневую карточку</div>'
     : '';
+
+  const mySign = godSignFor(me.god, 0);
+  const cardHtml = '<div class="qr-card">'
+    + '<div class="qr-card-art">'
+      + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '')
+    + '</div>'
+    + (mySign ? '<div class="qr-badge">' + mySign + '</div>' : '')
+    + '<div class="qr-copy">'
+      + '<div class="qr-god">' + escapeHtml(me.god) + '</div>'
+      + '<div class="qr-role">' + escapeHtml(me.role) + '</div>'
+    + '</div>'
+    + (frame ? '<img class="qr-frame" src="' + escapeHtml(frame) + '" alt="">' : '')
+    + '</div>';
 
   const godLink = (typeof godHasInfo === 'function' && godHasInfo(me.god))
     ? '<div class="payment-help-link" style="margin:0 0 16px" onclick="openGodInfo(' + jsArg(me.god) + ')">Читать про ' + escapeHtml(me.god) + ' целиком</div>'
     : '';
 
+  const allyHtml = second
+    ? '<div class="qr-ally">'
+      + '<div class="qr-ally-sign">' + (secondSign || '') + '</div>'
+      + '<div>'
+        + '<div class="qr-ally-title">За плечом — ' + escapeHtml(second.god) + '.</div>'
+        + '<div class="qr-ally-text">На одной из осей ты разделился почти пополам, '
+        + 'и вторая твоя сторона — ' + escapeHtml(second.role.toLowerCase()) + '. '
+        + '<span class="god-link" onclick="openQuizShadow()">Посмотреть теневую сторону</span></div>'
+      + '</div></div>'
+    : '';
+
   document.getElementById('quiz-inner').innerHTML =
       '<div class="quiz-hero">'
-      + '<div class="quiz-hero-stack">'
-        + shadowHtml
-        + '<div class="quiz-hero-art">'
-          + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '<div class="quiz-hero-ph">◆</div>')
-        + '</div>'
-      + '</div>'
+      + '<div class="qr-stack">' + shadowHtml + cardHtml + '</div>'
+      + (second ? '<div class="quiz-shadow-hint" style="position:static;margin:-12px 0 10px">'
+                  + 'Нажми на теневую карточку, чтобы увидеть вторую натуру</div>' : '')
       + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
-      + '<div class="quiz-name">' + escapeHtml(me.god) + '</div>'
-      + '<div class="quiz-role">' + escapeHtml(me.role) + '</div>'
       + '</div>'
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
     + '<div class="quiz-axes">' + axesHtml + '</div>'
-    + (second
-        ? '<div class="quiz-second"><b>За плечом — ' + escapeHtml(second.god) + '.</b> '
-          + 'На одной из осей ты разделился почти пополам, и вторая твоя сторона — '
-          + escapeHtml(second.role.toLowerCase()) + '. '
-          + '<span class="god-link" onclick="openQuizShadow()">Посмотреть теневую сторону</span>'
-          + '</div>'
-        : '')
+    + allyHtml
     + godLink
-    + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
-    // Отправка в бот только для тех, кто вошёл — анониму слать некуда
-    + (telegramId
-        ? '<button class="lec-link-btn" style="width:100%;margin-top:9px" id="quiz-bot-btn" onclick="sendQuizCardToBot()">Прислать картинку в бот</button>'
-        : '')
-    + '<button class="lec-link-btn" style="width:100%;margin-top:9px" onclick="shareQuizResult()">Поделиться ссылкой</button>'
-    // Действующему участнику рассказывать, что за клуб, незачем — он внутри
-    + ((typeof isMember !== 'undefined' && isMember)
-        ? ''
-        : '<button class="lec-link-btn" style="width:100%;margin-top:9px" onclick="openQuizAfterCta()">Что за клуб?</button>')
-    + '<div class="payment-help-link" style="margin-top:14px" onclick="openQuiz(true)">Пройти заново</div>';
+    + '<div class="qr-actions">'
+      + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
+      + '<div class="qr-actions-row">'
+        // Отправка в бот только для тех, кто вошёл — анониму слать некуда
+        + (telegramId
+            ? '<button class="lec-link-btn" id="quiz-bot-btn" onclick="sendQuizCardToBot()">В бот</button>'
+            : '')
+        + '<button class="lec-link-btn" onclick="shareQuizResult()">Ссылка</button>'
+      + '</div>'
+      + '<div class="qr-tertiary">'
+        // Действующему участнику рассказывать, что за клуб, незачем — он внутри
+        + ((typeof isMember !== 'undefined' && isMember)
+            ? ''
+            : '<span class="payment-help-link" onclick="openQuizAfterCta()">Что за клуб?</span>')
+        + '<span class="payment-help-link" onclick="openQuiz(true)">Пройти заново</span>'
+      + '</div>'
+    + '</div>';
 }
 
 /* ── Разбор точки входа ──────────────────────────────────────────────────────
