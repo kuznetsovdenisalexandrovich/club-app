@@ -3742,9 +3742,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   font-weight:700;line-height:1;text-transform:uppercase}
 .qr-role{margin-top:7px;font-size:11px;font-weight:700;color:#f3a43e}
 /* Теневая карточка второй натуры — за основной, приглушённая */
+/* ⚠️ ТЕНЕВАЯ КАРТА МЕНЬШЕ ОСНОВНОЙ ([stated] Denis: «арт за плечом слишком
+   большой»). Раньше она была ровно того же размера и, выглядывая из-за угла,
+   читалась второй главной картой. Уменьшение — часть смысла: это вторая
+   натура, а не равный участник. Масштаб от нижнего правого угла, чтобы
+   уменьшалась она «в сторону» основной карты, а не уезжала от неё */
 .qr-shadow{position:absolute;inset:0;z-index:1;border-radius:20px;overflow:hidden;
   border:1px solid rgba(196,178,214,.16);background:#0c0c14;cursor:pointer;padding:0;
-  transform:translateX(-17%) rotate(-9deg);transform-origin:bottom right}
+  transform:translateX(-13%) rotate(-8deg) scale(.88);transform-origin:bottom right}
 .qr-shadow img{width:100%;height:100%;object-fit:cover;object-position:center 30%;
   filter:grayscale(.5) brightness(.78) saturate(.7)}
 .qr-shadow::after{content:'';position:absolute;inset:0;
@@ -3761,11 +3766,20 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    растягивал полосу между плавающими колонками — проценты налезали на бар,
    а заливка во всю ширину читалась ошибкой. Правая колонка ШИРЕ левой
    намеренно: процент печатается у победившей стороны, и чаще справа */
-.quiz-axes .quiz-axis{display:grid;grid-template-columns:72px minmax(0,1fr) 89px;
-  align-items:center;gap:9px;font-size:11.2px}
-.quiz-axes .quiz-axis-side{width:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ⚠️⚠️ КОЛОНКИ ПО СОДЕРЖИМОМУ, А НЕ ФИКСИРОВАННЫЕ. Числа 72/89 из макета
+   рассчитаны на «Логик» и «Эмпат 75%», а у нас «Импровизация 100%» — в 89px
+   она не влезает и обрезается многоточием. Класс ошибки: перенёс из макета
+   ЧИСЛО вместо ПРАВИЛА. Теперь колонка занимает столько, сколько нужно
+   тексту, а сжимается полоса — ей есть куда, она декоративная.
+   ⚠️ Полосе оставлен минимум 34px: без него на длинных парах она схлопнулась
+   бы в точку и ось перестала бы читаться как шкала. */
+.quiz-axes{gap:9px;margin:16px 0 18px}
+.quiz-axes .quiz-axis{display:grid;
+  grid-template-columns:max-content minmax(34px,1fr) max-content;
+  align-items:center;gap:8px;font-size:11px}
+.quiz-axes .quiz-axis-side{width:auto;white-space:nowrap}
 .quiz-axes .quiz-axis-bar{height:4px}
-.qr-axis-pct{color:#f3a13a;font-weight:800;margin-left:7px;font-size:10px}
+.qr-axis-pct{color:#f3a13a;font-weight:800;margin-left:6px;font-size:10px}
 /* Блок союзника: знак кружком слева, текст справа */
 .qr-ally{display:grid;grid-template-columns:47px 1fr;gap:12px;align-items:center;
   margin:0 0 12px;padding:11px 13px;border-radius:15px;text-align:left;
