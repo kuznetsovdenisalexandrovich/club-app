@@ -3717,6 +3717,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .qr-stack{--qr-w:min(69vw,286px);--qr-h:calc(var(--qr-w) * 4 / 3);
   position:relative;width:var(--qr-w);height:var(--qr-h);margin:0 auto 22px;user-select:none}
 .qr-card{position:absolute;inset:0;z-index:3}
+/* Сигил бога ЗА картой — большой, приглушённый, наполовину выглядывает сверху.
+   z-index ниже теневой карточки: сигил — фон сцены, а не её участник */
+.qr-sigil{position:absolute;z-index:0;left:50%;top:-9%;width:118%;
+  transform:translateX(-50%);pointer-events:none;opacity:.5}
+.qr-sigil img{display:block;width:100%;height:auto}
 .qr-card-art{position:absolute;z-index:1;left:10.9%;right:10.9%;top:8.2%;bottom:8.3%;
   overflow:hidden;border-radius:18px;background:#171722}
 .qr-card-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 24%}
@@ -3751,8 +3756,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border:1px solid rgba(221,180,127,.34);border-radius:50%;display:grid;place-items:center;
   background:rgba(8,8,12,.6);color:#c3a179;opacity:.72}
 .qr-shadow-sign .god-sign{width:17px;height:17px}
-/* Проценты у победившей стороны оси */
-.qr-axis-pct{color:#f3a13a;font-weight:800;margin-left:7px}
+/* ══ ОСИ ПО МАКЕТУ 22.08: сетка 72px/полоса/89px, тонкие линии, процент
+   мельче названия. Прежний вид ([stated] Denis: «дизайн у статы кошмарный»)
+   растягивал полосу между плавающими колонками — проценты налезали на бар,
+   а заливка во всю ширину читалась ошибкой. Правая колонка ШИРЕ левой
+   намеренно: процент печатается у победившей стороны, и чаще справа */
+.quiz-axes .quiz-axis{display:grid;grid-template-columns:72px minmax(0,1fr) 89px;
+  align-items:center;gap:9px;font-size:11.2px}
+.quiz-axes .quiz-axis-side{width:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quiz-axes .quiz-axis-bar{height:4px}
+.qr-axis-pct{color:#f3a13a;font-weight:800;margin-left:7px;font-size:10px}
 /* Блок союзника: знак кружком слева, текст справа */
 .qr-ally{display:grid;grid-template-columns:47px 1fr;gap:12px;align-items:center;
   margin:0 0 12px;padding:11px 13px;border-radius:15px;text-align:left;
@@ -24836,6 +24849,9 @@ function renderQuizResult(){
 
   const art   = (quizGift && quizGift.art_url) || quizGodArt(me.god);
   const frame = (quizGift && quizGift.frame_url) || '';
+  // Сигил за картой: приглушённая версия своя, при её отсутствии — основная.
+  // Нет ни той ни другой — слоя просто нет, сцена живёт без него
+  const sigil = quizGift ? (quizGift.sigil_url_soft || quizGift.sigil_url || '') : '';
 
   // Полосы по осям: человек видит, ИЗ ЧЕГО получился его результат.
   // Именно это отличает объяснимый тест от жребия. Процент печатаем у той
@@ -24868,6 +24884,9 @@ function renderQuizResult(){
     : '';
 
   const mySign = godSignFor(me.god, 0);
+  const sigilHtml = sigil
+    ? '<div class="qr-sigil"><img src="' + escapeHtml(sigil) + '" alt=""></div>'
+    : '';
   const cardHtml = '<div class="qr-card">'
     + '<div class="qr-card-art">'
       + (art ? '<img src="' + escapeHtml(art) + '" alt="">' : '')
@@ -24897,8 +24916,8 @@ function renderQuizResult(){
 
   document.getElementById('quiz-inner').innerHTML =
       '<div class="quiz-hero">'
-      + '<div class="qr-stack">' + shadowHtml + cardHtml + '</div>'
-      + (second ? '<div class="quiz-shadow-hint" style="position:static;margin:-12px 0 10px">'
+      + '<div class="qr-stack">' + sigilHtml + shadowHtml + cardHtml + '</div>'
+      + (second ? '<div class="quiz-shadow-hint" style="position:static;margin:0 0 10px">'
                   + 'Нажми на теневую карточку, чтобы увидеть вторую натуру</div>' : '')
       + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
       + '</div>'
