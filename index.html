@@ -3257,6 +3257,48 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 @keyframes film-boot-pulse{0%,100%{opacity:.55}50%{opacity:1}}
 .film-boot.off{opacity:0}
 
+/* ══ ОКНО БОНУСОВ ПОСЛЕ ФИЛЬМА (23.08.2026) ═══════════════════════════════
+   [stated] Denis: «после окончания фильма — 15-минутное окно бонусов… таймер
+   сгорающим баром наверху с обратным отсчётом; клик по бару → попап со списком
+   бонусов + кнопка на страницу оплаты». Механика — РАМКА, не шлюз: бонусы
+   получают все вступившие, окно лишь придаёт решению срок.
+   Бар живёт НАД приложением на всех страницах: человек гуляет по аппу, а срок
+   идёт. Пилюлю снизу не трогаем — там навигация. */
+#bonus-bar{
+  position:fixed;left:10px;right:10px;top:calc(var(--safe-top,0px) + 8px);
+  z-index:858;display:none;cursor:pointer;
+  border-radius:14px;overflow:hidden;
+  background:var(--card,#1b2130);border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 10px 26px -12px rgba(0,0,0,.6);
+}
+#bonus-bar.on{display:block}
+.bb-row{display:flex;align-items:center;gap:10px;padding:9px 13px}
+.bb-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bb-time{flex:none;font-size:13px;font-weight:700;color:var(--warm);
+  font-variant-numeric:tabular-nums}
+/* Сгорающая полоса: ширина считается в коде раз в секунду. Анимацией её
+   задавать нельзя — при возврате в приложение она бы поехала с начала */
+.bb-fuse{height:3px;background:linear-gradient(90deg,#e8614a,#f0a15c);
+  width:100%;transition:width 1s linear}
+
+.bw-sheet-overlay{position:fixed;inset:0;z-index:907;display:none;
+  align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:16px}
+.bw-sheet-overlay.open{display:flex}
+.bw-sheet{width:100%;max-width:380px;background:var(--bg2);border-radius:20px;padding:16px;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+  max-height:82vh;overflow-y:auto;
+  animation:popupSlideUp .28s cubic-bezier(.34,1.56,.64,1) forwards}
+.bw-title{font-family:var(--disp);font-weight:700;font-size:16px;margin:2px 0 4px;text-align:center}
+.bw-sub{font-size:12.5px;color:var(--text-dim);text-align:center;margin-bottom:12px;line-height:1.4}
+.bw-item{display:flex;align-items:center;gap:11px;background:var(--card2);
+  border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.bw-cover{flex:none;width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--card)}
+.bw-item b{display:block;font-size:13.5px;font-weight:700}
+.bw-item i{display:block;font-style:normal;font-size:11.5px;color:var(--text-dim);margin-top:2px}
+.bw-cancel{text-align:center;font-size:13px;color:var(--text-dim);padding:10px;cursor:pointer}
+
 .film-chip{
   position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
   z-index:857;padding:8px 13px;border-radius:999px;
@@ -6149,6 +6191,26 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <!-- Вуаль под окном воронки: затемняет и размывает приложение за плечом,
      чтобы окно читалось, а демо оставалось видно -->
 <div id="funnel-veil"></div>
+
+<!-- Сгорающий бар окна бонусов. Живёт над всеми страницами, пока идёт срок -->
+<div id="bonus-bar" onclick="bwOpen()">
+  <div class="bb-row">
+    <div class="bb-txt" id="bb-txt" data-text="bw.bar">Бонусы за вступление — успей забрать</div>
+    <div class="bb-time" id="bb-time">15:00</div>
+  </div>
+  <div class="bb-fuse" id="bb-fuse"></div>
+</div>
+
+<div class="bw-sheet-overlay" id="bonus-window-sheet" onclick="if(event.target===this) bwClose()">
+  <div class="bw-sheet">
+    <div class="bw-title" data-text="bw.title">Бонусы за вступление</div>
+    <div class="bw-sub" id="bw-sub" data-text="bw.sub">Вступишь, пока идёт время — заберёшь всё это вместе с доступом.</div>
+    <div id="bw-list"></div>
+    <button class="lec-link-btn access-btn" style="width:100%;margin-top:6px"
+            onclick="bwBuy()" data-text="bw.buy">Получить доступ в клуб</button>
+    <div class="bw-cancel" onclick="bwClose()" data-text="bw.close">Закрыть</div>
+  </div>
+</div>
 
 <div class="center-msg funnel-screen" id="funnel-screen" style="display:none">
   <!-- «Не хочу смотреть» — не тупик: закрывший окно тут же ловится в тур по
@@ -13069,6 +13131,25 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     c:'Первый экран', l:'Кнопка «узнать подробнее» после фильма', w:'Экран после фильма', i:false,
     t:'Узнать подробнее о клубе' },
   // ── Фильм в PiP (23.08.2026) ──
+  // ── Окно бонусов после фильма (23.08.2026) ──
+  'bw.bar': {
+    c:'Первый экран', l:'Надпись на баре окна бонусов', w:'Полоса сверху после фильма', i:true,
+    t:'Бонусы за вступление — успей забрать' },
+  'bw.title': {
+    c:'Первый экран', l:'Заголовок окна бонусов', w:'Попап по нажатию на бар', i:true,
+    t:'Бонусы за вступление' },
+  'bw.sub': {
+    c:'Первый экран', l:'Пояснение в окне бонусов', w:'Попап по нажатию на бар', i:true,
+    t:'Вступишь, пока идёт время — заберёшь всё это вместе с доступом.' },
+  'bw.buy': {
+    c:'Первый экран', l:'Кнопка оплаты в окне бонусов', w:'Попап по нажатию на бар', i:true,
+    t:'Получить доступ в клуб' },
+  'bw.close': {
+    c:'Первый экран', l:'Кнопка «закрыть» в окне бонусов', w:'Попап по нажатию на бар', i:true,
+    t:'Закрыть' },
+  'bw.empty': {
+    c:'Первый экран', l:'Если список бонусов пуст', w:'Попап по нажатию на бар', i:true,
+    t:'Бонусы откроются вместе с доступом.' },
   'film.boot': {
     c:'Первый экран', l:'Подпись, пока грузится плеер', w:'Окно фильма', i:true,
     t:'Включаем фильм…' },
@@ -20204,6 +20285,134 @@ function filmMaybeResume(d){
 /* ⚠️ МЕДИА-ЭКСКЛЮЗИВНОСТЬ: любое другое медиа ставит фильм на паузу, иначе
    два звука. Эфирный блок сюда НЕ подключён сознательно — его iframe всегда
    стартует muted=true как превью и с фильмом по звуку не соревнуется. */
+/* ══ ОКНО БОНУСОВ: ОТСЧЁТ И ПОКАЗ ═════════════════════════════════════════
+   ⚠️ ИСТОЧНИК ВРЕМЕНИ — СЕРВЕР ДЛЯ ОПОЗНАННОГО, СВОЯ ОТМЕТКА ДЛЯ ВЕБ-ГОСТЯ.
+   У гостя без телеграма нет пользователя, и хранить точку отсчёта серверу
+   негде (ограничение принято Denis'ом 23.08). Опознанному сервер отдаёт
+   остаток сам — иначе окно обнулялось бы при смене устройства и продлевалось
+   бы перезагрузкой страницы. */
+let bwEndsAt = 0;        // момент истечения окна, мс
+let bwTimer = null;
+let bwList = null;       // список бонусов из /bonuses, грузим один раз
+
+function bwWindowMin(){
+  const v = parseInt(appSettings.funnel_bonus_window_min, 10);
+  return isNaN(v) ? 15 : v;
+}
+
+/* Досмотрел фильм — заводим окно. Опознанному ставим отметку на сервере,
+   веб-гостю хватит своей */
+async function bwOnFilmDone(){
+  if (!bwWindowMin()) return;      // окно выключено настройкой
+  let left = bwWindowMin() * 60;
+  if (telegramId){
+    try {
+      const d = await apiRequest(`${API_URL}/funnel/film-done`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ telegram_id: telegramId })
+      }, 8000);
+      if (d && d.known && typeof d.seconds_left === 'number') left = d.seconds_left;
+    } catch(e){ /* сеть молчит — считаем по своей отметке, окно важнее точности */ }
+  }
+  bwStart(left);
+}
+
+/* Запуск аппа: окно могло начаться в прошлой сессии — поднимаем бар обратно */
+async function bwResume(){
+  if (!bwWindowMin() || isMember) return;
+  let left = 0;
+  if (telegramId){
+    try {
+      const d = await apiRequest(`${API_URL}/funnel/window?telegram_id=${telegramId}`, {}, 8000);
+      if (d && d.known) left = d.active ? d.seconds_left : 0;
+    } catch(e){}
+  } else {
+    let doneAt = 0;
+    try { doneAt = parseInt(localStorage.getItem('club_app_film_done_at'), 10) || 0; } catch(e){}
+    if (doneAt) left = Math.floor((doneAt + bwWindowMin() * 60000 - Date.now()) / 1000);
+  }
+  if (left > 0) bwStart(left);
+}
+
+function bwStart(seconds){
+  if (!(seconds > 0) || isMember) return;
+  bwEndsAt = Date.now() + seconds * 1000;
+  const bar = document.getElementById('bonus-bar');
+  if (bar) bar.classList.add('on');
+  clearInterval(bwTimer);
+  bwTick();
+  bwTimer = setInterval(bwTick, 1000);
+  track('bonus_window_open');
+}
+
+function bwTick(){
+  const left = Math.max(0, Math.round((bwEndsAt - Date.now()) / 1000));
+  const t = document.getElementById('bb-time');
+  if (t){
+    const m = Math.floor(left / 60), s = left % 60;
+    t.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  const fuse = document.getElementById('bb-fuse');
+  if (fuse){
+    const total = Math.max(1, bwWindowMin() * 60);
+    fuse.style.width = Math.max(0, Math.min(100, left / total * 100)) + '%';
+  }
+  if (left <= 0) bwStop();
+}
+
+function bwStop(){
+  clearInterval(bwTimer);
+  bwTimer = null;
+  const bar = document.getElementById('bonus-bar');
+  if (bar) bar.classList.remove('on');
+  bwClose();
+}
+
+/* Список бонусов — тот же `GET /bonuses`, что и на главной. Гостю он отдаёт
+   названия и обложки без ссылок: показать есть что, а открыть нечего — это и
+   есть повод вступить */
+async function bwLoadList(){
+  if (bwList) return bwList;
+  try {
+    const d = await apiRequest(`${API_URL}/bonuses`, {}, 8000);
+    bwList = Array.isArray(d) ? d : [];
+  } catch(e){ bwList = []; }
+  return bwList;
+}
+
+async function bwOpen(){
+  const ov = document.getElementById('bonus-window-sheet');
+  if (ov) ov.classList.add('open');
+  track('bonus_window_peek');
+  const box = document.getElementById('bw-list');
+  if (!box) return;
+  const rows = await bwLoadList();
+  if (!rows.length){
+    box.innerHTML = '<div class="bw-sub" data-text="bw.empty">' +
+      ((typeof t === 'function' && t('bw.empty')) || 'Бонусы откроются вместе с доступом.') + '</div>';
+    return;
+  }
+  box.innerHTML = rows.map(function(b){
+    const cover = b.cover_url || b.image_url || '';
+    return '<div class="bw-item">' +
+      (cover ? '<img class="bw-cover" src="' + cover + '" alt="" loading="lazy">' : '<div class="bw-cover"></div>') +
+      '<span><b>' + escapeHtml(b.title || b.key || '') + '</b>' +
+      (b.subtitle ? '<i>' + escapeHtml(b.subtitle) + '</i>' : '') + '</span></div>';
+  }).join('');
+}
+
+function bwClose(){
+  const ov = document.getElementById('bonus-window-sheet');
+  if (ov) ov.classList.remove('open');
+}
+
+function bwBuy(){
+  bwClose();
+  track('bonus_window_buy');
+  if (typeof enterDemoMode === 'function') enterDemoMode();
+  openAccessPage();
+}
+
 /* Вуаль поднимается вместе с окном и уходит, как только окно закрылось или
    свернулось в PiP: в свёрнутом виде приложением пользуются, затемнять его
    нельзя */
@@ -20268,6 +20477,7 @@ function showFunnelScreen(){
   const box = document.getElementById('funnel-screen');
   if (box){ box.classList.remove('pip-mode'); box.style.display = 'flex'; }
   funnelVeil(true);
+  if (typeof bwResume === 'function') bwResume();
   const chip = document.getElementById('film-chip');
   if (chip) chip.style.display = 'none';
   track('funnel_open');
@@ -20445,6 +20655,7 @@ function showFunnelAfter(){
     localStorage.setItem('club_app_film_done_at', String(Date.now()));
   } catch(e){}
   track('funnel_film_done');
+  if (typeof bwOnFilmDone === 'function') bwOnFilmDone();
   /* ⚠️ ДВА ФИНАЛА (23.08.2026). Досмотрел в развёрнутом окне — экран «ну что,
      всё понятно?» как раньше. Досмотрел, пока фильм жил в PiP и человек лазил
      по приложению, — НЕ выдёргиваем его полноэкранным итогом: мини-плеер тихо
@@ -20660,6 +20871,8 @@ function startStoragePollOnce(){
 }
 
 function enterDemoMode(){
+  // Окно бонусов могло начаться в прошлой сессии — бар возвращается сам
+  if (typeof bwResume === 'function') setTimeout(bwResume, 400);
   startStoragePollOnce();
   isMember = false;
   // Скрываем экраны входа
