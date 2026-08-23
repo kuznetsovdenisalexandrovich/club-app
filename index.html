@@ -3090,10 +3090,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    Лечение: фильтр и заливка живут в `::before` (сам он fixed и лежит ниже
    содержимого), а слой воронки остаётся обычным — потомки ведут себя как
    положено. */
+/* ⚠️ ОКНО — КАРТОЧКА ПО ЦЕНТРУ, А НЕ ВЕСЬ ЭКРАН (23.08.2026). [stated] Denis:
+   «сам блок с плеером, окно, занимает весь экран» — уменьшенного плеера мало,
+   пока подложка закрыта сплошной панелью: приложение за плечом должно быть
+   видно ВОКРУГ окна, иначе демо не работает.
+   ⚠️⚠️ ЦЕНТРУЕМ ЧЕРЕЗ `inset:0 + margin:auto`, А НЕ ЧЕРЕЗ `transform`:
+   `translate` сделал бы окно содержащим блоком для потомков с `position:fixed`
+   — ровно те грабли, из-за которых уехали реквизиты (вуаль `::before` тоже
+   fixed и должна крыть весь экран, а не окно). */
 #funnel-screen,#funnel-after{
-  position:fixed;inset:0;z-index:855;margin:0;max-width:none;min-height:0;
+  position:fixed;inset:0;margin:auto;z-index:855;
+  width:min(92vw,430px);height:fit-content;max-height:88vh;min-height:0;max-width:none;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
-  background:transparent;
+  background:rgba(14,17,26,.93);
+  border:1px solid rgba(255,255,255,.09);border-radius:24px;
+  box-shadow:0 26px 70px -20px rgba(0,0,0,.75);
 }
 #funnel-screen::before,#funnel-after::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
@@ -3102,22 +3113,25 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 }
 /* Вертикальное центрование у длинного экрана срезало бы верх (флекс-ловушка
    justify-content:center + overflow) — воронка идёт сверху вниз */
-#funnel-screen{justify-content:flex-start;padding-top:calc(var(--safe-top,0px) + 44px);padding-bottom:28px}
+#funnel-screen,#funnel-after{justify-content:flex-start;padding:30px 20px 24px}
 /* ⚠️ ПЛЕЕР В ВОРОНКЕ МЕНЬШЕ, ЧЕМ БЫЛ (23.08.2026). [stated] Denis: «блок
    вокруг видео слишком большой, надо чтобы апп было видно лучше» — экран
    теперь лежит НА приложении, и фильм во весь рост закрывал ровно то, ради
    чего подложку и делали. Правило размера прежнее (ведём от высоты экрана,
    ширину считает пропорция 9:16), уменьшены только числа */
-#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(42vh,360px)}
+#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(38vh,320px)}
 #funnel-screen>h2,#funnel-screen>p,#funnel-after>h2,#funnel-after>p{max-width:420px}
 /* Светлая тема: бумажную карточку .center-msg::before не рисуем — она бы
    закрыла собой приложение за плечом; вуаль светлая, чтобы тёмный текст
    темы оставался читаемым */
+[data-theme="light"] #funnel-screen,[data-theme="light"] #funnel-after{
+  background:rgba(250,247,242,.97);border-color:rgba(0,0,0,.08);
+}
 [data-theme="light"] #funnel-screen::before,[data-theme="light"] #funnel-after::before{
-  background:rgba(238,232,223,.7);border-radius:0;inset:0;
+  background:rgba(238,232,223,.55);
 }
 .funnel-close{
-  position:fixed;top:calc(var(--safe-top,0px) + 12px);right:14px;z-index:3;
+  position:absolute;top:12px;right:12px;z-index:3;
   width:36px;height:36px;border-radius:50%;border:none;padding:0;
   background:rgba(0,0,0,.45);color:#fff;font-size:16px;line-height:1;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -3128,7 +3142,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* PiP: слой воронки остаётся в DOM (в нём живёт плеер), но становится
    прозрачным и пропускает нажатия; контейнер плеера — в угол над пилюлей */
 #funnel-screen.pip-mode{
-  background:transparent;pointer-events:none;overflow:hidden;padding:0;
+  inset:0;margin:0;width:auto;height:auto;max-height:none;
+  background:transparent;border:none;box-shadow:none;border-radius:0;
+  pointer-events:none;overflow:hidden;padding:0;
 }
 #funnel-screen.pip-mode::before{display:none}
 #funnel-screen.pip-mode > *:not(.film-dock){display:none!important}
