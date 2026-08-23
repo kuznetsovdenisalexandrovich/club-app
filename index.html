@@ -2347,19 +2347,27 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    (cardActionsHtml зовут с 'pr-cta pr-cta-inline'), плашка им не нужна.
    Соотношение сторон кнопки = соотношение сторон картинки, поэтому
    background-size:100% 100% ничего не растягивает. */
+/* ⚠️ КНОПКА КРУПНЕЕ И ОТДЕЛЕНА ОТ ФОНА. [stated] Denis 23.08: «единственная
+   кнопка слишком маленькая, под ней нужно тёмное размытое пятно, чтобы
+   отделить от фона». Задники наборов — насыщенные иллюстрации, и плашка на
+   них терялась.
+   Пятно — РАЗМЫТОЙ ТЕНЬЮ, а не отдельным слоем: слой пришлось бы класть под
+   кнопку, а она уже участвует в хореографии экрана, и лишний узел в этой
+   стопке ломает порядок появления. */
 #pr-cta{
-  width:min(340px,calc(100% - 88px))!important;
+  width:min(400px,calc(100% - 56px))!important;
   margin:10px auto 18px!important;
   aspect-ratio:1425/420;
   height:auto!important;
-  min-height:56px;
+  min-height:70px;
   padding:0 62px!important;
   border:0!important;
   border-radius:0!important;
   background:url("images/reveal/plate-dark.webp") center/100% 100% no-repeat!important;
-  box-shadow:none!important;
+  box-shadow:0 8px 30px 16px rgba(6,5,14,.42),
+             0 2px 10px 4px rgba(6,5,14,.34)!important;
   color:#f3d79f!important;
-  font:600 15px/1.2 var(--serif)!important;
+  font:600 17px/1.2 var(--serif)!important;
   letter-spacing:.02em;
   text-shadow:0 1px 0 rgba(0,0,0,.55),0 0 14px rgba(240,200,120,.22);
   transition:filter .25s ease,transform .18s ease;
@@ -2397,7 +2405,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .pr-scene.pr-phase-signature #pr-pack::before{opacity:0;animation:none}
 
 @media (max-width:559px){
-  #pr-cta{width:min(320px,calc(100% - 56px))!important;padding:0 54px!important}
+  #pr-cta{width:min(370px,calc(100% - 40px))!important;padding:0 54px!important;min-height:64px}
   .pr-fxVideo{width:min(114vw,500px)!important;height:min(114vw,500px)!important;top:49%}
 }
 
@@ -9186,7 +9194,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
         </div>
         <div id="pr-actions"></div>
       </div>
-      <button class="pr-cta" id="pr-cta" onclick="prCta()">Открой карту</button>
+      <button class="pr-cta" id="pr-cta" onclick="prCta()" data-text="pack.cta_start">Далее</button>
     </section>
   </main>
 </div>
@@ -13068,6 +13076,16 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'share.badge': {
     c:'Шеринг', l:'Кнопка поделиться Знаком', w:'Витрина Знака', i:true,
     t:'Показать знак' },
+  'pack.cta_start': {
+    c:'Карточки', l:'Кнопка на экране пака — первая карта', w:'Экран вскрытия', i:true,
+    t:'Далее' },
+  'pack.cta_next': {
+    c:'Карточки', l:'Кнопка на экране пака — есть ещё карты', w:'Экран вскрытия', i:true,
+    t:'Далее' },
+  'pack.cta_done': {
+    c:'Карточки', l:'Кнопка на экране пака — всё открыто', w:'Экран вскрытия', i:true,
+    t:'Готово' },
+
   'share.sheet_title': {
     c:'Шеринг', l:'Заголовок окна выбора', w:'Витрина карточки → поделиться', i:true,
     t:'Поделиться карточкой' },
@@ -23389,14 +23407,20 @@ function prApplyPlate(){
   const theme = card ? prTheme(card) : 'dark';
   const state = prPlateState();
   const kind  = 'plate' + state.charAt(0).toUpperCase() + state.slice(1);
-  /* Сначала плашка с запечённой надписью под ЭТО состояние, потом обычная
-     пустая. ⚠️ Для «есть ещё карты» разрешено падение на плашку «первая
-     карта»: действие то же самое, и набор с двумя плашками вместо трёх
-     остаётся рабочим. Обратно падать нельзя — «Продолжить» вместо
-     «Посмотреть» соврало бы про то, что будет дальше. */
-  let baked = prPickAssetStrict(kind, theme);
-  if (!baked && state === 'next') baked = prPickAssetStrict('plateStart', theme);
-  const src   = baked || prPickAsset('plate', theme);
+  /* ⚠️⚠️ ПЛАШКУ БЕРЁМ ПУСТУЮ, А НАДПИСЬ ПИШЕМ СВОЮ. Раньше первой шла плашка
+     с ЗАПЕЧЁННЫМ словом, и текст кнопки было не поменять иначе как перерисовкой
+     всех наборов. [stated] Denis 23.08: «Открой карту» непонятно — надо
+     «Далее»; при запечённых словах это стоило бы шести генераций вместо одной
+     строки в реестре текстов.
+     ⚠️ Плашки с надписями НЕ выбрасываем: если у набора нет пустой, берём их —
+     набор без пустой плашки остался бы вообще без кнопки. */
+  let baked = null;
+  let src = prPickAsset('plate', theme);
+  if (!src){
+    baked = prPickAssetStrict(kind, theme)
+         || (state === 'next' ? prPickAssetStrict('plateStart', theme) : null);
+    src = baked;
+  }
   if (src) stage.style.setProperty('--pr-plate-img', 'url("' + src + '")');
   else     stage.style.removeProperty('--pr-plate-img');
   /* Надпись прячем ВИЗУАЛЬНО, а не удаляем: текст остаётся в разметке для
@@ -23548,7 +23572,7 @@ function openPackReveal(demoCards){
   stage.style.removeProperty('--accent');
   stage.style.removeProperty('--accent-2');
   prEl('pr-sub').textContent = 'Открой карту, чтобы узнать награду';
-  prEl('pr-cta').textContent = 'Открой карту';
+  prEl('pr-cta').textContent = t('pack.cta_start');
   prApplyPlate();
   prEl('pr-details').classList.remove('pr-on');
   prEl('pr-aura').style.background =
@@ -23874,7 +23898,7 @@ async function prOpenCard(id){
     prEl('pr-details').classList.add('pr-on');
     const left = PR.ids.length - PR.opened.length;
     prEl('pr-sub').textContent = left ? ('Осталось карт: ' + left) : 'Пак открыт';
-    prEl('pr-cta').textContent = left ? 'Открой следующую' : 'Продолжить';
+    prEl('pr-cta').textContent = left ? t('pack.cta_next') : t('pack.cta_done');
     prApplyPlate();
     prLayout();
     PR.busy = false;
