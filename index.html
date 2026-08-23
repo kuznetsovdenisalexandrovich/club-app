@@ -3080,21 +3080,42 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    «свернуть» — это класс `pip-mode` на самом экране воронки: фон и тексты
    гаснут, слой перестаёт ловить нажатия, а контейнер с плеером прибивается
    в угол. Ни одного переноса узлов. */
+/* ⚠️⚠️ ВУАЛЬ — В ПСЕВДОЭЛЕМЕНТЕ, А НЕ НА САМОМ СЛОЕ (23.08.2026, по скриншоту
+   Denis'а). `backdrop-filter` на элементе делает его СОДЕРЖАЩИМ БЛОКОМ для
+   всех потомков с `position:fixed` — то есть прибитые к низу экрана реквизиты
+   прибились к низу ЭТОГО блока и поехали вместе с прокруткой поверх кнопок.
+   Тот же фокус ломал крестик. И он же — вероятная причина чёрного плеера:
+   iframe с видео внутри размытого слоя в мобильных вебвью нередко перестаёт
+   рисоваться.
+   Лечение: фильтр и заливка живут в `::before` (сам он fixed и лежит ниже
+   содержимого), а слой воронки остаётся обычным — потомки ведут себя как
+   положено. */
 #funnel-screen,#funnel-after{
   position:fixed;inset:0;z-index:855;margin:0;max-width:none;min-height:0;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
-  background:rgba(9,12,19,.6);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:transparent;
+}
+#funnel-screen::before,#funnel-after::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:rgba(9,12,19,.52);
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
 }
 /* Вертикальное центрование у длинного экрана срезало бы верх (флекс-ловушка
    justify-content:center + overflow) — воронка идёт сверху вниз */
-#funnel-screen{justify-content:flex-start;padding-top:calc(var(--safe-top,0px) + 52px)}
+#funnel-screen{justify-content:flex-start;padding-top:calc(var(--safe-top,0px) + 44px);padding-bottom:28px}
+/* ⚠️ ПЛЕЕР В ВОРОНКЕ МЕНЬШЕ, ЧЕМ БЫЛ (23.08.2026). [stated] Denis: «блок
+   вокруг видео слишком большой, надо чтобы апп было видно лучше» — экран
+   теперь лежит НА приложении, и фильм во весь рост закрывал ровно то, ради
+   чего подложку и делали. Правило размера прежнее (ведём от высоты экрана,
+   ширину считает пропорция 9:16), уменьшены только числа */
+#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(42vh,360px)}
 #funnel-screen>h2,#funnel-screen>p,#funnel-after>h2,#funnel-after>p{max-width:420px}
 /* Светлая тема: бумажную карточку .center-msg::before не рисуем — она бы
    закрыла собой приложение за плечом; вуаль светлая, чтобы тёмный текст
    темы оставался читаемым */
-[data-theme="light"] #funnel-screen,[data-theme="light"] #funnel-after{background:rgba(238,232,223,.72)}
-[data-theme="light"] #funnel-screen::before,[data-theme="light"] #funnel-after::before{content:none}
+[data-theme="light"] #funnel-screen::before,[data-theme="light"] #funnel-after::before{
+  background:rgba(238,232,223,.7);border-radius:0;inset:0;
+}
 .funnel-close{
   position:fixed;top:calc(var(--safe-top,0px) + 12px);right:14px;z-index:3;
   width:36px;height:36px;border-radius:50%;border:none;padding:0;
@@ -3107,9 +3128,9 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* PiP: слой воронки остаётся в DOM (в нём живёт плеер), но становится
    прозрачным и пропускает нажатия; контейнер плеера — в угол над пилюлей */
 #funnel-screen.pip-mode{
-  background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
-  pointer-events:none;overflow:hidden;padding:0;
+  background:transparent;pointer-events:none;overflow:hidden;padding:0;
 }
+#funnel-screen.pip-mode::before{display:none}
 #funnel-screen.pip-mode > *:not(.film-dock){display:none!important}
 #funnel-screen.pip-mode .film-dock{
   position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
@@ -6063,7 +6084,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <button class="lec-link-btn funnel-secondary" id="funnel-about" onclick="funnelAbout()" data-text="funnel.about">Узнать подробнее о клубе</button>
   </div>
   <div class="payment-help-link" id="funnel-login" style="margin-top:16px" onclick="funnelToLogin()" data-text="funnel.login">Уже участник — войти</div>
-  <div id="funnel-requisites" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+  <!-- ⚠️ РЕКВИЗИТЫ В ПОТОКЕ, А НЕ ПРИБИТЫ К НИЗУ ЭКРАНА (23.08.2026). Пока
+       воронка была страницей, `position:fixed` держал их у нижнего края. Теперь
+       это прокручиваемый слой: прибитая строка легла поверх кнопок и ездила
+       вместе с содержимым. Обычная строка в конце экрана — она и должна быть
+       последней, а не поверх всего -->
+  <div id="funnel-requisites" class="requisites" style="margin-top:18px;text-align:center;font-size:13px;opacity:.75">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
 </div>
 
 <!-- ══ ЭКРАН ПОСЛЕ ФИЛЬМА ═══════════════════════════════════════════════════
