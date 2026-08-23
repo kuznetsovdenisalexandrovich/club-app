@@ -5590,6 +5590,17 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
       </div>
       <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Свежий гость</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left">
+          Приложение стирает все местные отметки (фильм, тур, метки источников)
+          и при каждом запуске ведёт себя так, будто тебя не знает: воронка,
+          демо, гостевые сценарии. Действует до выключения кнопкой ниже.
+        </div>
+        <button class="help-btn" style="margin-bottom:8px" onclick="debugFreshGuestStart()">Зайти как свежий гость</button>
+        <button class="help-btn" onclick="debugFreshGuestStop()">Вернуться к себе</button>
+        <div style="font-size:12px;color:var(--warm);margin-top:8px;text-align:center" id="debug-fresh-note"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Демо-режим</div>
         <div style="display:flex;gap:8px">
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#ef4444"
@@ -13572,6 +13583,10 @@ function applyAppSettings(){
 function applyDebugMode(){
   const blocks = document.getElementById('debug-blocks');
   if (blocks) blocks.style.display = debugMode ? '' : 'none';
+  const freshNote = document.getElementById('debug-fresh-note');
+  if (freshNote) freshNote.textContent =
+    (typeof debugFreshGuestOn === 'function' && debugFreshGuestOn())
+      ? 'Режим включён — система тебя сейчас не узнаёт' : '';
   if (typeof apiRenderServerBlock === 'function') apiRenderServerBlock();   // ⚠️ временное
 }
 
@@ -13580,6 +13595,38 @@ function setDebugMode(on){
   try { localStorage.setItem('debug_mode', on ? '1' : '0'); } catch (e) {}
   applyDebugMode();
   showToast(on ? 'Отладочный режим включён' : 'Отладочный режим выключен');
+}
+
+/* ══ ОТЛАДКА: «СВЕЖИЙ ГОСТЬ» (23.08.2026) ═════════════════════════════════
+   [stated] Denis: «в отладочный режим добавить возможность заходить как
+   абсолютно свежий пользователь, чтобы все сценарии погонять». Режим делает
+   два дела: СТИРАЕТ все местные отметки (стадия фильма, позиция, тур, метки
+   источников — всё, что копит гостевой путь) и ВЫКЛЮЧАЕТ опознание — запуск
+   идёт веткой неузнанного, даже внутри Telegram с живым initData. Флаг
+   переживает перезапуски: сценарии гоняются по многу заходов подряд. */
+function debugFreshGuestOn(){
+  try { return localStorage.getItem('club_app_debug_fresh') === '1'; } catch(e){ return false; }
+}
+
+function debugFreshGuestStart(){
+  try {
+    /* Стираем всё, КРОМЕ служебного: тумблер отладки и выбор сервера должны
+       пережить очистку — иначе из режима не выбраться и не видно кнопок */
+    const keep = { 'debug_mode': 1, 'club_api_override': 1 };
+    const dead = [];
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (k && !keep[k]) dead.push(k);
+    }
+    dead.forEach(function(k){ localStorage.removeItem(k); });
+    localStorage.setItem('club_app_debug_fresh', '1');
+  } catch(e){}
+  location.reload();
+}
+
+function debugFreshGuestStop(){
+  try { localStorage.removeItem('club_app_debug_fresh'); } catch(e){}
+  location.reload();
 }
 
 function openSupportPopup(){
@@ -22087,7 +22134,13 @@ async function proceedToWebLogin(){
   // входа). Если нет — показываем форму входа по номеру телефона (SMS-код) — не через
   // Telegram Login Widget: закон 406-ФЗ запрещает иностранные сервисы авторизации на
   // российских сайтах, штрафы действуют с июля 2026.
+  /* ⚠️ Свежий гость (отладка): живую сессию НЕ пробуем — кука с прошлого
+     входа тут же вернула бы Denis'а в участники, и путь неузнанного было бы
+     не показать. Бросок уводит в общий catch — дальше всё как у настоящего
+     неузнанного: воронка или форма входа */
+  const freshGuestDebug = (typeof debugFreshGuestOn === 'function' && debugFreshGuestOn());
   try {
+    if (freshGuestDebug) throw new Error('свежий гость: сессию не пробуем');
     const r = await fetch(`${API_URL}/auth/me`, {
       credentials: 'include', headers: sessionHeaders(),
     });
@@ -22352,6 +22405,23 @@ async function init(){
   if (VIEW_TOKEN){
     initBranch = 'просмотр глазами участника';
     startViewMode();
+    return;
+  }
+
+  /* ⚠️ ОТЛАДКА: «СВЕЖИЙ ГОСТЬ» ПЕРЕХВАТЫВАЕТ ЗАПУСК ДО ВСЕХ ПЛОЩАДОК.
+     Опознание (initData Telegram, сессии ВК/MAX, веб-кука) не пробуется
+     вовсе — запуск идёт веткой неузнанного веба: воронка или демо. Телеграмная
+     настройка (полный экран, кнопка «назад») при этом нужна как обычно —
+     сценарии гоняются в настоящем Telegram. */
+  if (typeof debugFreshGuestOn === 'function' && debugFreshGuestOn()){
+    initBranch = 'отладка: свежий гость';
+    const tgF = window.Telegram?.WebApp;
+    if (tgF && (tgF.initData || isInsideTelegram())) tgSetupWhenReady();
+    applyWebSafeArea();
+    setTimeout(applyWebSafeArea, 300);
+    window.addEventListener('resize', applyWebSafeArea);
+    startWebSession();
+    openFromStartParam();
     return;
   }
 
