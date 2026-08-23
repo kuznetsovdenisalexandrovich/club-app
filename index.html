@@ -3244,6 +3244,46 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .cv-note{font-size:11px;margin-top:12px;color:rgba(241,234,224,.55)}
 .cv-note b{font-weight:700}
 
+/* Кнопка «назад» витрины — на месте, где её ждут по всему приложению:
+   слева сверху, стрелкой, а не широкой кнопкой внизу */
+.cv-back{position:absolute;left:14px;top:calc(12px + env(safe-area-inset-top, 0px));z-index:6;
+  width:38px;height:38px;border-radius:50%;border:1px solid rgba(241,234,224,.18);
+  background:rgba(20,17,30,.5);color:#f1eae0;font-size:19px;line-height:1;cursor:pointer;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.reveal-overlay.showcase .cv-back{display:flex}
+html[data-tg-native-back] .cv-back{display:none!important}
+.reveal-overlay[data-look] .cv-back{border-color:var(--cv-warm);color:var(--cv-title);
+  background:rgba(0,0,0,.22)}
+.reveal-overlay[data-look="light"] .cv-back{background:rgba(255,255,255,.5);color:#3a2d18}
+
+/* Круглая кнопка «поделиться» вместо широкой надписи. Одно действие на экране —
+   одна кнопка; что именно делать, человек выбирает в шторке */
+.cv-share{width:52px;height:52px;border-radius:50%;margin:14px auto 0;display:flex;
+  align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid rgba(255,168,58,.5);color:var(--cv-warm,#f5a33a);
+  background:radial-gradient(circle at 35% 30%,rgba(255,170,76,.18),rgba(255,255,255,.03));
+  font-size:21px;line-height:1}
+.cv-share:active{transform:scale(.94)}
+.cv-share svg{width:22px;height:22px;display:block}
+
+/* Шторка выбора. Слой 906 — см. комментарий в разметке */
+.cv-sheet-overlay{position:fixed;inset:0;z-index:906;display:none;align-items:flex-end;
+  justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:16px}
+.cv-sheet-overlay.open{display:flex}
+.cv-sheet{width:100%;max-width:380px;background:var(--bg2);border-radius:20px;padding:16px;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+  animation:popupSlideUp .28s cubic-bezier(.34,1.56,.64,1) forwards}
+.cv-sheet-title{font-family:var(--disp);font-weight:700;font-size:15px;margin:2px 0 12px;text-align:center}
+.cv-sheet-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:var(--card2);border:1px solid var(--border);border-radius:14px;
+  padding:13px 14px;margin-bottom:9px;color:var(--text);cursor:pointer;font-family:inherit}
+.cv-sheet-item:disabled{opacity:.55}
+.cv-sheet-item b{display:block;font-size:13.5px;font-weight:700}
+.cv-sheet-item i{display:block;font-style:normal;font-size:11.5px;color:var(--text-dim);margin-top:2px}
+.cv-sheet-ico{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  font-size:16px;color:var(--warm);background:rgba(232,97,74,.12)}
+.cv-sheet-cancel{text-align:center;font-size:13px;color:var(--text-dim);padding:10px;cursor:pointer}
+
 /* Рамка на полке. ⚠️ МЕЛКАЯ ВЕРСИЯ, а не полная: рамок полсотни по 750 КБ, и
    полноразмерные в сетке альбома съели бы сотни мегабайт трафика.
 
@@ -9121,12 +9161,34 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
      витрина: карточка крупно, свайп между своими, кнопки действий.
      Слоёв из концепта тут быть не должно: их стили уехали вместе с экраном -->
 <div class="reveal-overlay" id="reveal-overlay">
+  <!-- ⚠️ СВОЯ КНОПКА «НАЗАД» ПРЯЧЕТСЯ ВНУТРИ TELEGRAM: там сверху уже есть
+       штатная, и две кнопки рядом выглядят ошибкой. Тот же приём, что у
+       кнопки «Выйти» в партии — признак `data-tg-native-back` -->
+  <button class="cv-back" id="showcase-back" onclick="closeShowcase()" aria-label="Назад">&#8592;</button>
   <div class="reveal-title" id="reveal-title">Твой пак</div>
   <div class="reveal-sub" id="reveal-sub" data-text="cards.a7">Нажми на карточку, чтобы открыть</div>
   <div class="reveal-row" id="reveal-row"><div class="reveal-ring" id="reveal-ring"></div></div>
   <div class="reveal-big" id="reveal-big"></div>
   <div class="reveal-detail" id="reveal-detail"></div>
   <button class="lec-link-btn access-btn" id="reveal-done" style="margin-top:22px;display:none;min-width:180px;max-width:280px;width:auto;align-self:center;padding-left:32px;padding-right:32px" onclick="closeShowcase()">Готово</button>
+</div>
+
+<!-- Выбор пути шеринга карточки. ⚠️ СЛОЙ ВЫШЕ ВИТРИНЫ (800) и выше увеличения
+     (900): окно зовут именно с витрины, и на общем слое попапов оно открылось
+     бы ПОД ней — клик выглядел бы как «ничего не происходит» -->
+<div class="cv-sheet-overlay" id="card-share-sheet" onclick="if(event.target===this) closeCardShareSheet()">
+  <div class="cv-sheet">
+    <div class="cv-sheet-title">Поделиться карточкой</div>
+    <button class="cv-sheet-item" id="cv-share-bot" onclick="cardShareViaBot()">
+      <span class="cv-sheet-ico">&#9993;</span>
+      <span><b>Получить карту в боте</b><i>Придёт в чат — оттуда пересылай</i></span>
+    </button>
+    <button class="cv-sheet-item" id="cv-share-img" onclick="cardShareImage()">
+      <span class="cv-sheet-ico">&#8681;</span>
+      <span><b>Экспортировать картинку</b><i>Карта в своей рамке — файлом</i></span>
+    </button>
+    <div class="cv-sheet-cancel" onclick="closeCardShareSheet()">Отмена</div>
+  </div>
 </div>
 
 <div class="center-modal-overlay" id="bug-popup-overlay" onclick="if(event.target===this) closeBugPopup()">
@@ -9968,6 +10030,21 @@ function tgBackHandler(){
       if (typeof ggQuitAsk === 'function') ggQuitAsk();
       else if (typeof ggBackToList === 'function') ggBackToList();
       return;
+    }
+    /* Шторка выбора и увеличение — поверх витрины: закрываем сначала их,
+       иначе кнопка «назад» уносила бы человека мимо открытого окна */
+    const sheet = document.getElementById('card-share-sheet');
+    if (sheet && sheet.classList.contains('open')){ closeCardShareSheet(); return; }
+    const zoom = document.getElementById('zoom-overlay');
+    if (zoom && zoom.classList.contains('open')){
+      if (typeof closeCardZoom === 'function') closeCardZoom();
+      else zoom.classList.remove('open');
+      return;
+    }
+    /* Витрина карточки — свой экран поверх вкладки, из него возвращаемся в альбом */
+    const showcase = document.getElementById('reveal-overlay');
+    if (showcase && showcase.classList.contains('open') && showcase.classList.contains('showcase')){
+      closeShowcase(); return;
     }
     const field = document.getElementById('plan-field');
     if (field && field.classList.contains('show')){ closePlanField(); return; }
@@ -23909,7 +23986,10 @@ function prSeedAmbient(a, b){
    альбома. Раньше они жили внутри showCardDetail, и из-за этого экран вскрытия
    нельзя было переписать, не потеряв их. Теперь класс кнопки приходит
    параметром: витрина просит свой, экран раскрытия — стиль из концепта. */
-function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass){
+/* ⚠️ `skipShare` — для экрана просмотра карты: там шеринг живёт КРУГЛОЙ
+   кнопкой со своей шторкой выбора, и широкая надпись была бы вторым таким же
+   действием рядом. На экране вскрытия пака всё остаётся как было */
+function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass, skipShare){
   if (!card) return '';
   const cls = btnClass || 'lec-link-btn access-btn';
   let out = '';
@@ -23936,7 +24016,7 @@ function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass){
   // НА ДУБЛЕ КНОПКУ ПРЯЧЕМ: предложение похвастаться третьей одинаковой картой
   // читается издевательством, а не поводом для гордости
   const isDupe = (copies || 0) > 1;
-  if (telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
+  if (!skipShare && telegramId && card.key && (card.image_url || card.image_full_url) && !isDupe){
     const label = (card.card_class === 'badge') ? t('share.badge') : t('share.card');
     out += '<div style="margin-top:12px"><button class="' + cls + '" style="width:100%" '
         + 'id="card-share-btn" onclick="shareCollectionCard(' + jsArg(card.key) + ')">'
@@ -24021,7 +24101,7 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
     big.classList.add('on');
   }
 
-  const actions = cardActionsHtml(card, cardId, alreadyClaimed, copies, 'lec-link-btn access-btn');
+  const actions = cardActionsHtml(card, cardId, alreadyClaimed, copies, 'lec-link-btn access-btn', true);
 
   // Три плашки из концепта: бог, редкость, награда
   const statHtml =
@@ -24043,12 +24123,88 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   if ((copies || 0) > 1) noteBits.push('таких у тебя ' + copies);
   const noteHtml = noteBits.length ? '<div class="cv-note">' + noteBits.join(' · ') + '</div>' : '';
 
+  // Круглая кнопка шеринга — только для своих карточек и только когда есть
+  // что показывать. На дубле не предлагаем: похвастаться третьей одинаковой
+  // картой читается издевательством, а не поводом для гордости
+  const canShare = telegramId && card.key && (card.image_url || card.image_full_url)
+                   && !((copies || 0) > 1);
+  const shareBtn = canShare
+    ? '<div class="cv-share" id="card-share-btn" onclick="openCardShareSheet(' + jsArg(card.key) + ')"'
+      + ' title="Поделиться" aria-label="Поделиться">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
+      + ' stroke-linecap="round" stroke-linejoin="round">'
+      + '<circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle>'
+      + '<circle cx="18" cy="19" r="3"></circle>'
+      + '<line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line>'
+      + '<line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg></div>'
+    : '';
+
   el.innerHTML =
       statHtml
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
-    + (actions ? '<div class="cv-divider"></div>' + actions : '')
+    + ((actions || shareBtn) ? '<div class="cv-divider"></div>' + actions + shareBtn : '')
     + noteHtml;
+}
+
+/* ── Шторка выбора: как именно поделиться ────────────────────────────────────
+   Два пути, и они не заменяют друг друга. Бот удобен тем, кто уже в Telegram:
+   переслать фото из чата проще, чем скачать и залить заново. Картинка файлом
+   нужна для сторис и для всего, что вне Telegram. */
+let cardShareKey = '';
+
+function openCardShareSheet(cardKey){
+  cardShareKey = cardKey || '';
+  const ov = document.getElementById('card-share-sheet');
+  if (ov) ov.classList.add('open');
+}
+function closeCardShareSheet(){
+  const ov = document.getElementById('card-share-sheet');
+  if (ov) ov.classList.remove('open');
+}
+
+function cardShareViaBot(){
+  const key = cardShareKey;
+  closeCardShareSheet();
+  if (key) shareCollectionCard(key);
+}
+
+/* Картинка собирается НА СЕРВЕРЕ: арт в рамке ЭТОГО экземпляра. Скачивать
+   `image_full_url` напрямую было бы неверно — с 22.08 там лежит чистый арт, и
+   в файл не попадало бы ровно то, что делает карту уникальной */
+async function cardShareImage(){
+  const key = cardShareKey;
+  const btn = document.getElementById('cv-share-img');
+  if (!key || !telegramId){ closeCardShareSheet(); return; }
+  if (btn){ btn.disabled = true; }
+  try {
+    const url = `${API_URL}/cards/card.png?telegram_id=` + encodeURIComponent(telegramId)
+              + '&card_key=' + encodeURIComponent(key);
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('сервер ответил ' + resp.status);
+    const blob = await resp.blob();
+    const file = new File([blob], key + '.png', { type: 'image/png' });
+
+    // Системное меню С ФАЙЛОМ — то, что нужно для сторис. Поддержка есть не
+    // везде, поэтому сначала спрашиваем canShare именно про файлы
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share){
+      try { await navigator.share({ files: [file], title: 'Карточка пантеона' }); }
+      catch(e){ /* передумал — не ошибка */ }
+      closeCardShareSheet();
+      return;
+    }
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href; a.download = file.name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(href); }, 4000);
+    showToast('Картинка сохранена');
+    closeCardShareSheet();
+  } catch(e){
+    showToast('Не получилось собрать картинку: ' + (e.message || e));
+  } finally {
+    if (btn){ btn.disabled = false; }
+  }
 }
 
 /* Бот присылает карточку в чат, откуда её пересылают дальше. ССЫЛКА В ПОДПИСИ, а
@@ -24384,6 +24540,12 @@ function openAlbumCard(key){
   ov.classList.remove('compact');
   ov.classList.remove('all-open');
   ov.classList.add('showcase');   // рубашек нет, карточка на 80% экрана
+  // Штатная кнопка Telegram: витрина — это отдельный экран, и на нём кнопка
+  // обязана быть даже когда открыли её с корневой вкладки
+  try {
+    const tgw = window.Telegram && window.Telegram.WebApp;
+    if (tgw && tgw.BackButton) tgw.BackButton.show();
+  } catch(e){}
   browseResetShift();             // на случай, если прошлую анимацию прервали закрытием
   renderBrowseCard();
   ov.classList.add('open');
@@ -24397,6 +24559,14 @@ function closeShowcase(){
   // ⚠️ ТЕМУ СНИМАЕМ ОБЯЗАТЕЛЬНО. Она живёт на самом оверлее, и оставленная от
   // светлой карты, она красила бы следующий экран вскрытия пака в картон
   if (ov){ ov.classList.remove('open','showcase'); ov.removeAttribute('data-look'); }
+  closeCardShareSheet();
+  // Возвращаем штатной кнопке то состояние, которое положено вкладке под нами
+  try {
+    const active = document.querySelector('.view.active');
+    if (typeof syncTgBackButton === 'function'){
+      syncTgBackButton(active ? active.id.replace(/^view-/, '') : 'portal');
+    }
+  } catch(e){}
   loadCards();
 }
 
