@@ -3067,6 +3067,79 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border:1px solid var(--line, rgba(255,255,255,.16))!important;
   color:var(--text, #fff)!important;
 }
+/* ── ВОРОНКА НА ДЕМО-ПОДЛОЖКЕ + PiP ФИЛЬМА (23.08.2026) ───────────────────
+   [stated] Denis: «экран фильма для неучастника — на фоне самого аппа, чтобы
+   было прям очевидно, что за плечом у фильма целое большое интересное
+   приложение», а сам фильм «не закрывать насовсем, а сворачивать в PiP,
+   живущий на всех страницах».
+   Устройство: экраны воронки стали ФИКСИРОВАННЫМ СЛОЕМ поверх оболочки
+   (демо поднимается ПОД ними), а плеер живёт в одном контейнере `.film-dock`
+   с двумя состояниями. ⚠️ IFRAME НИКОГДА НЕ ПЕРЕВСТАВЛЯЕТСЯ В DOM: при
+   перевставке он перезагружается, теряется позиция и — главное — жест
+   человека, то есть звук снова попадает под запрет автозапуска. Поэтому
+   «свернуть» — это класс `pip-mode` на самом экране воронки: фон и тексты
+   гаснут, слой перестаёт ловить нажатия, а контейнер с плеером прибивается
+   в угол. Ни одного переноса узлов. */
+#funnel-screen,#funnel-after{
+  position:fixed;inset:0;z-index:855;margin:0;max-width:none;min-height:0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:rgba(9,12,19,.6);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+/* Вертикальное центрование у длинного экрана срезало бы верх (флекс-ловушка
+   justify-content:center + overflow) — воронка идёт сверху вниз */
+#funnel-screen{justify-content:flex-start;padding-top:calc(var(--safe-top,0px) + 52px)}
+#funnel-screen>h2,#funnel-screen>p,#funnel-after>h2,#funnel-after>p{max-width:420px}
+/* Светлая тема: бумажную карточку .center-msg::before не рисуем — она бы
+   закрыла собой приложение за плечом; вуаль светлая, чтобы тёмный текст
+   темы оставался читаемым */
+[data-theme="light"] #funnel-screen,[data-theme="light"] #funnel-after{background:rgba(238,232,223,.72)}
+[data-theme="light"] #funnel-screen::before,[data-theme="light"] #funnel-after::before{content:none}
+.funnel-close{
+  position:fixed;top:calc(var(--safe-top,0px) + 12px);right:14px;z-index:3;
+  width:36px;height:36px;border-radius:50%;border:none;padding:0;
+  background:rgba(0,0,0,.45);color:#fff;font-size:16px;line-height:1;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.film-dock{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;flex:none}
+.film-dock-cover,.film-dock-x,.film-dock-done{display:none}
+/* PiP: слой воронки остаётся в DOM (в нём живёт плеер), но становится
+   прозрачным и пропускает нажатия; контейнер плеера — в угол над пилюлей */
+#funnel-screen.pip-mode{
+  background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
+  pointer-events:none;overflow:hidden;padding:0;
+}
+#funnel-screen.pip-mode > *:not(.film-dock){display:none!important}
+#funnel-screen.pip-mode .film-dock{
+  position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
+  display:block;width:auto;margin:0;pointer-events:auto;z-index:857;
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.6);
+}
+#funnel-screen.pip-mode .funnel-film-slot{height:198px;margin:0;border-radius:14px}
+#funnel-screen.pip-mode .funnel-film-slot iframe{border-radius:14px}
+#funnel-screen.pip-mode .funnel-film{height:198px;margin:0;border-radius:14px}
+#funnel-screen.pip-mode .film-dock-cover{display:block;position:absolute;inset:0;cursor:pointer;z-index:2}
+#funnel-screen.pip-mode .film-dock-x{
+  display:flex;position:absolute;top:5px;right:5px;width:24px;height:24px;
+  border-radius:50%;border:none;padding:0;background:rgba(0,0,0,.55);color:#fff;
+  font-size:13px;line-height:1;align-items:center;justify-content:center;
+  cursor:pointer;z-index:3;
+}
+.film-dock-done{
+  position:absolute;left:0;right:0;bottom:0;padding:7px 8px;text-align:center;
+  font-size:11px;color:#fff;background:rgba(0,0,0,.62);z-index:2;
+}
+#funnel-screen.pip-mode .film-dock-done.on{display:block}
+/* Неяркая строка возврата — живёт там же, где стоял PiP */
+.film-chip{
+  position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
+  z-index:857;padding:8px 13px;border-radius:999px;
+  background:var(--card,#1c2230);border:1px solid var(--border,rgba(255,255,255,.14));
+  color:var(--text-dim,#cfd5e2);font-size:12px;cursor:pointer;
+  box-shadow:0 8px 20px -8px rgba(0,0,0,.5);
+}
 /* ═══ PR-CSS-END ═══ */
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
@@ -5939,23 +6012,35 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      запрещён, а немой фильм о клубе бессмыслен: человек увидел бы говорящую
      голову без звука и ушёл. Поэтому постер и явное нажатие. -->
 <div class="center-msg funnel-screen" id="funnel-screen" style="display:none">
+  <!-- «Не хочу смотреть» — не тупик: закрывший окно тут же ловится в тур по
+       приложению ([stated] Denis 23.08), а начатый фильм сворачивается в PiP -->
+  <button class="funnel-close" onclick="funnelMinimize()" aria-label="Свернуть">&#10005;</button>
   <div class="mark">БП</div>
   <h2 id="funnel-title" data-text="funnel.title">Смотри фильм о клубе</h2>
   <p id="funnel-sub" data-text="funnel.sub">За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.</p>
 
   <!-- Постер остаётся запасным путём: если плеер не встал (нет сети, домен
        недоступен), человек видит кадр и может нажать ещё раз -->
-  <div class="funnel-film" id="funnel-film" onclick="startFunnelFilm()">
-    <img src="images/film-ya-podumayu.jpg" alt="" class="funnel-film-poster" id="funnel-film-poster">
-    <!-- Знак «играть» рисуется целиком стилями (::before кружок, ::after
-         треугольник) — символ ▶ убран: в разных шрифтах он то квадратный,
-         то смещённый от центра -->
-    <div class="funnel-film-play" aria-hidden="true"></div>
+  <!-- ⚠️ КОНТЕЙНЕР ПЛЕЕРА — ОДИН НА ОБА СОСТОЯНИЯ (окно/PiP). Iframe отсюда
+       никогда не переносится: сворачивание — это класс pip-mode на слое
+       воронки, а не перестановка узлов -->
+  <div class="film-dock" id="film-dock">
+    <div class="funnel-film" id="funnel-film" onclick="startFunnelFilm()">
+      <img src="images/film-ya-podumayu.jpg" alt="" class="funnel-film-poster" id="funnel-film-poster">
+      <!-- Знак «играть» рисуется целиком стилями (::before кружок, ::after
+           треугольник) — символ ▶ убран: в разных шрифтах он то квадратный,
+           то смещённый от центра -->
+      <div class="funnel-film-play" aria-hidden="true"></div>
+    </div>
+    <!-- Плеер вставляется сюда по нажатию, а не лежит в разметке: иначе Boomstream
+         грузит своё окружение при каждом открытии приложения, даже если фильм
+         никто не смотрит -->
+    <div class="funnel-film-slot" id="funnel-film-slot" style="display:none"></div>
+    <!-- В PiP: прозрачная накладка (тап = развернуть) и крестик (закрыть) -->
+    <div class="film-dock-cover" id="film-dock-cover" onclick="filmDockExpand()"></div>
+    <button class="film-dock-x" id="film-dock-x" onclick="filmDockShut(event)" aria-label="Закрыть">&#10005;</button>
+    <div class="film-dock-done" id="film-dock-done" data-text="film.pip_done">Фильм закончился</div>
   </div>
-  <!-- Плеер вставляется сюда по нажатию, а не лежит в разметке: иначе Boomstream
-       грузит своё окружение при каждом открытии приложения, даже если фильм
-       никто не смотрит -->
-  <div class="funnel-film-slot" id="funnel-film-slot" style="display:none"></div>
 
   <!-- ⚠️ ДВЕ ДОРОГИ, А НЕ ТРИ. [stated] Denis 15.08: «на этом экране должно быть
        два выбора — купить или узнать подробнее». Осматриваться предлагаем НЕ
@@ -5986,6 +6071,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <button class="lec-link-btn funnel-secondary" onclick="funnelAbout()" data-text="funnel.after_about">Узнать подробнее о клубе</button>
   </div>
 </div>
+
+<!-- Строка «вернуться к фильму» после закрытия PiP крестиком —
+     [stated] Denis 23.08: «однозначно делаем» -->
+<div class="film-chip" id="film-chip" style="display:none" onclick="filmChipReturn()" data-text="film.chip">Вернуться к фильму</div>
 
 <div class="center-msg" id="web-login-screen" style="display:none">
   <div class="mark">БП</div>
@@ -10332,6 +10421,8 @@ let videoWatchWhich = '';
 
 function startVideoHeartbeat(which){
   stopVideoHeartbeat();
+  // Любое другое видео ставит фильм-PiP на паузу — иначе два звука
+  if (which && which !== 'funnel' && typeof filmPipPause === 'function') filmPipPause();
   videoWatchWhich = which || '';
   videoWatchSecs  = 0;
   videoWatchTimer = setInterval(function(){
@@ -12833,6 +12924,13 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'funnel.after_about': {
     c:'Первый экран', l:'Кнопка «узнать подробнее» после фильма', w:'Экран после фильма', i:false,
     t:'Узнать подробнее о клубе' },
+  // ── Фильм в PiP (23.08.2026) ──
+  'film.chip': {
+    c:'Первый экран', l:'Строка возврата к фильму', w:'После закрытия мини-плеера крестиком', i:true,
+    t:'Вернуться к фильму' },
+  'film.pip_done': {
+    c:'Первый экран', l:'Подпись на мини-плеере в конце', w:'Фильм закончился в свёрнутом виде', i:true,
+    t:'Фильм закончился' },
   'club.buy': {
     c:'О клубе', l:'Кнопка оплаты на странице описания', w:'Страница «О клубе»', i:false,
     t:'Получить доступ' },
@@ -14801,6 +14899,7 @@ function tourAdvanceOn(eventName){
    ⚠️ ДАННЫЕ БЕРЁМ ОДНИМ ЗАПРОСОМ `GET /tour/highlights` — он публичный и
    НИЧЕГО ЗАКРЫТОГО НЕ ОТДАЁТ: только названия, даты и числа. */
 let gtData = null;        // ответ /tour/highlights
+let gtFinale = 'fork';    // 'fork' — развилка, 'about' — страница о клубе (тур после закрытия фильма)
 let gtIdx = 0;
 let gtActive = false;
 
@@ -14859,8 +14958,9 @@ async function gtLoad(){
 /* Вход — кнопка «Осмотреться в приложении» на странице о клубе.
    ⚠️ РУБИЛЬНИК НА СЕРВЕРЕ (`guest_tour_enabled`): выключен — ведём человека
    в демо ровно как раньше, без тура */
-async function gtStart(){
-  track('guest_tour_start');
+async function gtStart(finale){
+  gtFinale = (finale === 'about') ? 'about' : 'fork';
+  track('guest_tour_start', gtFinale);
   await gtLoad();
   if (gtData && gtData.enabled === false){ gtLeave(); return; }
   gtActive = true; gtIdx = 0;
@@ -14901,6 +15001,17 @@ function gtSkip(){
 function gtFinish(){
   gtHide();
   gtActive = false;
+  /* ⚠️ ДВА ФИНАЛА (23.08.2026). Тур из «о клубе» кончается развилкой
+     (рубль/остаться). Тур, поймавший закрывшего фильм, кончается САМОЙ
+     страницей «о клубе» — [stated] Denis: «закончить экраном с информацией
+     о клубе». Пропуск тура ведёт туда же — пропустивший остаётся
+     сомневающимся, и второй продавец ему нужнее всех */
+  if (gtFinale === 'about'){
+    track('guest_tour_end', 'about');
+    openClubInfoPage();
+    refreshClubInfoButtons();
+    return;
+  }
   document.getElementById('gt-fin').classList.add('open');
   track('guest_tour_end');
 }
@@ -19845,10 +19956,98 @@ const FUNNEL_FILM_CODE = 'd9uzmOdM';    // фильм о клубе, код Boom
 const FUNNEL_FILM_LENGTH_MS = (31 * 60 + 30) * 1000;   // 31:30 — длина фильма
 let funnelFilmStarted = false;   // человек НАЖАЛ play в плеере
 let funnelPlayerReady = false;   // плеер вставлен на экран
+/* ── Состояние фильма для PiP и честного окончания (23.08.2026) ──
+   ⚠️ ОКОНЧАНИЕ БОЛЬШЕ НЕ ПО НАСТЕННЫМ 31:30 ОТ PLAY. Фильм теперь регулярно
+   стоит на паузе (свернулся в PiP, человек включил другое медиа) — настенный
+   таймер срабатывал бы посреди фильма. Считаем ЧИСТОЕ ВРЕМЯ ИГРЫ: копим
+   отрезки между play и pause/stop, запасной таймер заводится только на
+   остаток и снимается на паузе. Основные рубежи прежние: событие `stop` и
+   позиция `time >= duration - 3`. */
+let filmDone = false;            // фильм досмотрен в этой сессии
+let filmLastPos = 0;             // последняя позиция из события `time`, сек
+let filmDuration = 0;            // длительность из события `time`, сек
+let filmPosSavedAt = 0;          // когда позиция писалась в хранилище
+let filmPlayedAccum = 0;         // накопленное чистое время игры, мс
+let filmPlayStartedAt = null;    // момент последнего play (null = на паузе)
+let filmSeekDone = false;        // возобновление с сохранённой позиции — раз за сессию
+
+/* Команды чужому плееру — по его же документации:
+   postMessage({code, method:'action', action, data}). Шлём и объектом, и
+   строкой JSON: формат приёма у них не зафиксирован, а обе наши команды
+   (pause, seek) безвредны при повторе. */
+function filmSendAction(action, data){
+  try {
+    const fr = document.querySelector('#funnel-film-slot iframe');
+    if (!fr || !fr.contentWindow) return;
+    const msg = { code: FUNNEL_FILM_CODE, method: 'action', action: action, data: data };
+    fr.contentWindow.postMessage(msg, BOOMSTREAM_ORIGIN);
+    fr.contentWindow.postMessage(JSON.stringify(msg), BOOMSTREAM_ORIGIN);
+  } catch(e){}
+}
+
+/* Позиция пишется в хранилище (не в память): человек уходит из браузера, а
+   вернувшись назавтра, должен продолжить с того же места */
+function filmSavePos(){
+  const now = Date.now();
+  if (now - filmPosSavedAt < 5000) return;   // событие `time` идёт часто
+  filmPosSavedAt = now;
+  try { localStorage.setItem('club_app_film_pos', String(Math.floor(filmLastPos))); } catch(e){}
+}
+
+/* «Место помнит тебя»: при первом событии `time` после запуска — прыжок на
+   сохранённую позицию. Одна попытка за сессию; seek у Boomstream в ПРОЦЕНТАХ */
+function filmMaybeResume(d){
+  if (filmSeekDone) return;
+  filmSeekDone = true;
+  let saved = 0;
+  try { saved = parseFloat(localStorage.getItem('club_app_film_pos')) || 0; } catch(e){}
+  if (saved > 60 && d.duration > 0 && saved < d.duration - 30 && d.time < saved - 5){
+    filmSendAction('seek', Math.round(saved / d.duration * 1000) / 10);
+    track('funnel_film_resume', '', Math.floor(saved));
+  }
+}
+
+/* ⚠️ МЕДИА-ЭКСКЛЮЗИВНОСТЬ: любое другое медиа ставит фильм на паузу, иначе
+   два звука. Эфирный блок сюда НЕ подключён сознательно — его iframe всегда
+   стартует muted=true как превью и с фильмом по звуку не соревнуется. */
+function filmPipPause(){
+  if (!funnelFilmStarted || filmDone) return;
+  filmSendAction('pause');
+}
+
+/* Полная остановка фильма: плеер выгружен, слой воронки спрятан, состояние
+   сброшено. Постер возвращается — если воронку покажут снова, всё соберётся */
+function filmHardStop(){
+  clearTimeout(funnelAfterTimer);
+  if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
+  const slot = document.getElementById('funnel-film-slot');
+  if (slot){ slot.innerHTML = ''; slot.style.display = 'none'; }
+  const cover = document.getElementById('funnel-film');
+  if (cover) cover.style.display = 'block';
+  const done = document.getElementById('film-dock-done');
+  if (done) done.classList.remove('on');
+  const scr = document.getElementById('funnel-screen');
+  if (scr){ scr.classList.remove('pip-mode'); scr.style.display = 'none'; }
+  const chip = document.getElementById('film-chip');
+  if (chip) chip.style.display = 'none';
+  funnelPlayerReady = false;
+  funnelFilmStarted = false;
+}
 
 function showFunnelScreen(){
   hideSplash();
   vkTrack('film');
+  /* ⚠️ ДЕМО-ПОДЛОЖКА (23.08.2026). [stated] Denis: «сделать экран фильма для
+     неучастника не на отдельном синем фоне, а на фоне самого аппа — чтобы было
+     прям очевидно, что за плечом у фильма целое большое интересное приложение».
+     Воронка теперь слой ПОВЕРХ оболочки: если оболочка ещё не поднята —
+     поднимаем демо под неё. Участнику демо не включаем (воронка ему
+     показывается только запасным путём openFilmRoute). */
+  if (!isMember){
+    const shellEl = document.getElementById('app-shell');
+    const shellHidden = !shellEl || shellEl.style.display === 'none' || shellEl.style.display === '';
+    if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  }
   /* ⚠️ ПЛЕЕР СТАВИМ СРАЗУ (14.08.2026). Свой постер с кнопкой был нужен, пока
      я собирался запускать фильм командой — тогда наш клик имел смысл. Теперь
      запускает сам плеер (ради звука), и наш постер стал лишним нажатием перед
@@ -19863,7 +20062,9 @@ function showFunnelScreen(){
     if (el) el.style.display = 'none';
   });
   const box = document.getElementById('funnel-screen');
-  if (box) box.style.display = 'flex';
+  if (box){ box.classList.remove('pip-mode'); box.style.display = 'flex'; }
+  const chip = document.getElementById('film-chip');
+  if (chip) chip.style.display = 'none';
   track('funnel_open');
 }
 
@@ -19878,6 +20079,10 @@ function startFunnelFilm(){
   if (!slot || !cover) return;
   cover.style.display = 'none';
   slot.style.display = 'block';
+  /* ⚠️ ПЛЕЕР УЖЕ ЖИВЁТ — НЕ ПЕРЕВСТАВЛЯЕМ (23.08.2026). Экран воронки теперь
+     показывается повторно (возврат из PiP, строка «вернуться к фильму»), и
+     пересборка iframe убила бы позицию и разрешение на звук */
+  if (slot.querySelector('iframe')){ funnelPlayerReady = true; return; }
   // ⚠️ `allow="autoplay; fullscreen"` — прямое требование их документации,
   // без него плеер не отдаёт часть событий и не уходит в полный экран
   slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + FUNNEL_FILM_CODE
@@ -19957,46 +20162,103 @@ window.addEventListener('message', function(ev){
      `loaded` при этом остаётся полезным событием — просто ничего не делаем. */
 
   /* Настоящее начало просмотра: человек нажал кнопку В САМОМ ПЛЕЕРЕ. Только
-     теперь имеет смысл считать время и ждать конца */
-  if (d.method === 'play' && !funnelFilmStarted){
-    funnelFilmStarted = true;
-    setFunnelStage('started');   // начал смотреть — при следующем заходе снова фильм
-    track('funnel_film_start');
-    startVideoHeartbeat('funnel');
+     теперь имеет смысл считать время и ждать конца.
+     ⚠️ `play` приходит и после каждой паузы — запасной таймер каждый раз
+     заводится заново НА ОСТАТОК чистого времени, а не на все 31:30 */
+  if (d.method === 'play'){
+    if (!funnelFilmStarted){
+      funnelFilmStarted = true;
+      setFunnelStage('started');   // начал смотреть — при следующем заходе снова фильм
+      track('funnel_film_start');
+      startVideoHeartbeat('funnel');
+    }
+    /* Фильм заиграл — глушим свой аудио-плеер, иначе два звука */
+    try {
+      if (typeof plAudio !== 'undefined' && plAudio && !plAudio.paused){
+        plAudio.pause();
+        if (typeof plSetPlayIcon === 'function') plSetPlayIcon(false);
+      }
+    } catch(e){}
+    filmPlayStartedAt = Date.now();
     clearTimeout(funnelAfterTimer);
-    funnelAfterTimer = setTimeout(showFunnelAfter, FUNNEL_FILM_LENGTH_MS);
+    const rest = Math.max(FUNNEL_FILM_LENGTH_MS - filmPlayedAccum, 30000);
+    funnelAfterTimer = setTimeout(showFunnelAfter, rest);
+    return;
+  }
+
+  /* Пауза: копим отыгранное и снимаем запасной таймер — на паузе фильм не
+     «идёт», и настенные часы считать его не должны */
+  if (d.method === 'pause'){
+    if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
+    clearTimeout(funnelAfterTimer);
     return;
   }
 
   if (d.method === 'stop'){ showFunnelAfter(); return; }
 
   if (d.method === 'time' && d.duration > 0){
-    // Заодно считаем реальную позицию — это точнее нашего счётчика времени,
-    // который просто тикал, пока окно открыто
+    // Реальная позиция точнее любых наших часов: помним её для возврата
+    // («продолжить с того же места») и для честного окончания
+    filmLastPos = d.time;
+    filmDuration = d.duration;
+    /* ⚠️ СНАЧАЛА ВОЗОБНОВЛЕНИЕ, ПОТОМ ЗАПИСЬ. Наоборот первое же событие
+       `time` (секунда десятая) затирало сохранённую позицию до прыжка на
+       неё — поймано стендом 23.08 */
+    filmMaybeResume(d);
+    filmSavePos();
     if (d.time >= d.duration - 3) showFunnelAfter();
   }
 });
 
 function showFunnelAfter(){
-  if (!funnelFilmStarted) return;      // фильм не запускали — нечего подытоживать
+  if (!funnelFilmStarted || filmDone) return;  // не запускали или уже подытожили
   clearTimeout(funnelAfterTimer);
   stopVideoHeartbeat();
+  if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
+  filmDone = true;
+  setFunnelStage('done');       // досмотрел — фильм больше не повторяем
+  try {
+    localStorage.removeItem('club_app_film_pos');
+    // Точка отсчёта окна бонусов: следующий этап (сгорающий бар) читает её
+    // отсюда, для узнанных она уедет и на сервер
+    localStorage.setItem('club_app_film_done_at', String(Date.now()));
+  } catch(e){}
+  track('funnel_film_done');
+  /* ⚠️ ДВА ФИНАЛА (23.08.2026). Досмотрел в развёрнутом окне — экран «ну что,
+     всё понятно?» как раньше. Досмотрел, пока фильм жил в PiP и человек лазил
+     по приложению, — НЕ выдёргиваем его полноэкранным итогом: мини-плеер тихо
+     прощается подписью и уходит сам */
+  const cur = document.getElementById('funnel-screen');
+  if (cur && cur.classList.contains('pip-mode')){
+    const done = document.getElementById('film-dock-done');
+    if (done) done.classList.add('on');
+    setTimeout(filmHardStop, 4000);
+    return;
+  }
   const slot = document.getElementById('funnel-film-slot');
   if (slot) slot.innerHTML = '';        // выгружаем плеер, иначе звук играет под экраном
-  const cur = document.getElementById('funnel-screen');
+  funnelPlayerReady = false;
   if (cur) cur.style.display = 'none';
   const box = document.getElementById('funnel-after');
   if (box) box.style.display = 'flex';
-  setFunnelStage('done');       // досмотрел — фильм больше не повторяем
-  track('funnel_film_done');
 }
 
 function funnelRewatch(){
   const box = document.getElementById('funnel-after');
   if (box) box.style.display = 'none';
+  /* Пересмотр — с чистого листа: плеер выгружаем (иначе он встал бы на
+     последней секунде), сохранённую позицию забываем, возобновление глушим */
+  const slot = document.getElementById('funnel-film-slot');
+  if (slot){ slot.innerHTML = ''; slot.style.display = 'none'; }
   const cover = document.getElementById('funnel-film');
   if (cover) cover.style.display = 'block';
+  try { localStorage.removeItem('club_app_film_pos'); } catch(e){}
   funnelFilmStarted = false;
+  funnelPlayerReady = false;
+  filmDone = false;
+  filmPlayedAccum = 0;
+  filmPlayStartedAt = null;
+  filmSeekDone = true;    // при пересмотре прыгать на старую позицию не надо
   showFunnelScreen();
 }
 
@@ -20011,7 +20273,9 @@ function funnelRewatch(){
    потом открываем оплату. Заодно человек, вернувшись с оплаты, оказывается в
    приложении, а не на экране фильма, — и апп ловит платёж своим опросом. */
 function funnelBuy(){
-  funnelLeave();
+  /* [stated] Denis 23.08: «пускай фильм идёт фоном и на странице оплаты,
+     кому надо — нажмут паузу» — начатый фильм сворачивается в PiP */
+  funnelLeave(true);
   enterDemoMode();
   openAccessPage();
 }
@@ -20019,18 +20283,22 @@ function funnelBuy(){
 /* Общий выход из воронки. Раньше эти шаги были размазаны по трём функциям, и
    каждая новая кнопка требовала не забыть все сразу — что и случилось с
    «Получить доступ»: она не гасила ни плеер, ни экран */
-function funnelLeave(){
+function funnelLeave(keepFilm){
   markFunnelSeen();
+  const after = document.getElementById('funnel-after');
+  if (after) after.style.display = 'none';
+  /* ⚠️ ДВА ВЫХОДА (23.08.2026). `keepFilm` — начатый и не досмотренный фильм
+     сворачивается в PiP и живёт дальше (таймер остатка и счёт просмотра НЕ
+     снимаются: фильм не остановлен, он свернулся). Без него — полная
+     остановка, как раньше. Не начинали или досмотрели — сворачивать нечего. */
+  if (keepFilm && funnelFilmStarted && !filmDone){
+    const scr = document.getElementById('funnel-screen');
+    if (scr){ scr.classList.add('pip-mode'); scr.style.display = 'flex'; }
+    return;
+  }
   clearTimeout(funnelAfterTimer);
   stopVideoHeartbeat();
-  const slot = document.getElementById('funnel-film-slot');
-  if (slot) slot.innerHTML = '';        // иначе фильм играет под другим экраном
-  ['funnel-screen','funnel-after'].forEach(function(id){
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-  funnelFilmStarted = false;
-  funnelPlayerReady = false;
+  filmHardStop();
 }
 
 /* ⚠️ ИЗ ВОРОНКИ ТЕПЕРЬ ВЕДЁМ В ОПИСАНИЕ, А НЕ СРАЗУ В ДЕМО (15.08.2026).
@@ -20043,11 +20311,56 @@ function funnelLeave(){
    нельзя — ровно на этом мы уже спотыкались, когда кнопка забыла половину
    шагов и фильм продолжал играть под открытой страницей. */
 function funnelAbout(){
-  funnelLeave();
+  funnelLeave(true);        // фильм остаётся в PiP и на странице описания
   track('funnel_about');
   enterDemoMode();          // поднимаем оболочку, иначе страница ляжет под воронкой
   openClubInfoPage();
   refreshClubInfoButtons();
+}
+
+/* ══ КРЕСТИК НА ОКНЕ ФИЛЬМА (23.08.2026) ══════════════════════════════════
+   [stated] Denis: «если кто-то не захочет смотреть фильм — он закроет окно и
+   мы его тут же можем поймать в тур по аппу, только на этот раз закончить
+   экраном с информацией о клубе». Начатый фильм при этом сворачивается в PiP,
+   не начатый — просто закрывается. */
+function funnelMinimize(){
+  track('funnel_minimize');
+  funnelLeave(true);        // сам решит: PiP или полная остановка
+  if (isMember) return;     // участнику (запасной показ воронки) тур не нужен
+  const shellEl = document.getElementById('app-shell');
+  const shellHidden = !shellEl || shellEl.style.display === 'none' || shellEl.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  if (typeof gtStart === 'function') gtStart('about');
+  else if (typeof switchView === 'function') switchView('portal');
+}
+
+/* Тап по PiP — развернуть окно фильма обратно. Слой воронки и так открыт
+   (PiP живёт в нём), снимаем только режим сворачивания */
+function filmDockExpand(){
+  const scr = document.getElementById('funnel-screen');
+  if (scr) scr.classList.remove('pip-mode');
+  track('film_pip_expand');
+}
+
+/* Крестик на PiP: фильм на паузу, мини-плеер спрятан, но плеер ЖИВ — строка
+   «вернуться к фильму» возвращает его с той же позиции без перезагрузки */
+function filmDockShut(ev){
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  filmSendAction('pause');
+  const scr = document.getElementById('funnel-screen');
+  if (scr) scr.style.display = 'none';
+  const chip = document.getElementById('film-chip');
+  if (chip && funnelFilmStarted && !filmDone) chip.style.display = 'block';
+  track('film_pip_close');
+}
+
+function filmChipReturn(){
+  const chip = document.getElementById('film-chip');
+  if (chip) chip.style.display = 'none';
+  const scr = document.getElementById('funnel-screen');
+  if (scr) scr.classList.remove('pip-mode');
+  showFunnelScreen();
+  track('film_chip_return');
 }
 
 /* Осмотреться предлагаем уже ПОСЛЕ описания — кнопка живёт на самой странице */
@@ -26409,6 +26722,8 @@ function plLoadCurrent(autoplay){
 
 function plPlay(){
   if (!plAudio || !plQueue.length) return;
+  // Аудио глушит фильм-PiP (и наоборот — фильм глушит аудио на своём play)
+  if (typeof filmPipPause === 'function') filmPipPause();
   var p = plAudio.play();
   // На iOS play() может отвергнуться, если жеста не было — тогда честно
   // показываем паузу, а не врём иконкой
