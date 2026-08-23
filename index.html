@@ -3224,14 +3224,25 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 /* Плашки под картой. Тёмная и легендарная — картинкой из песочницы, светлая
    рисуется CSS: запечённая плашка на картоне читается грязным пятном */
-.reveal-overlay[data-look] .reveal-stats{gap:11px;margin:16px 0 4px;width:100%;max-width:330px}
+.reveal-overlay[data-look] .reveal-stats{gap:9px;margin:16px 0 4px;width:100%;max-width:340px;
+  align-items:stretch}
+.reveal-overlay[data-look] .reveal-stats>.reveal-stat{flex:1 1 0;min-width:0}
 .reveal-overlay[data-look] .reveal-stat{min-height:64px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;padding:10px 8px;border:0;border-radius:0;background:none}
 .reveal-overlay[data-look="dark"] .reveal-stat,
 .reveal-overlay[data-look="legendary"] .reveal-stat{
   background:url('images/card/plate.png') center/100% 100% no-repeat}
+/* ⚠️ СВЕТЛОЙ ТЕМЕ — СВОИ ЗАПЕЧЁННЫЕ ФАЙЛЫ, а не перекрашенные тёмные: плашка
+   и разделитель нарисованы под конкретный фон, и тёмный файл на картоне
+   читается грязным пятном (ровно это было видно под именем).
+   ⚠️ CSS-РИСОВКА ОСТАЁТСЯ ПОДЛОЖКОЙ, а не заменяется: пока файла нет в
+   репозитории, картинка просто не загрузится, и плашка останется той, что
+   рисуется правилами. Порядок в `background` решает: файл сверху, заливка
+   снизу */
 .reveal-overlay[data-look="light"] .reveal-stat{border-radius:14px;
-  background:linear-gradient(180deg,#fbf5e6,#f1e7d1);border:1px solid rgba(140,105,50,.34);
+  background:url('images/card/plate-light.png') center/100% 100% no-repeat,
+             linear-gradient(180deg,#fbf5e6,#f1e7d1);
+  border:1px solid rgba(140,105,50,.34);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -2px 4px rgba(140,105,50,.14)}
 .reveal-overlay[data-look] .reveal-stat-label{font-size:8.6px;letter-spacing:.08em;
   color:var(--cv-plate-label)}
@@ -3240,7 +3251,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Разделитель над действиями — тот же файл, что в песочнице */
 .cv-divider{width:100%;height:22px;margin:16px 0 2px;
   background:url('images/card/divider.png') center/contain no-repeat}
-.reveal-overlay[data-look="light"] .cv-divider{opacity:.55}
+/* Тёмный разделитель на картоне выглядел размытой кляксой — у светлой темы
+   свой файл. Нет файла — разделителя просто нет, и это лучше кляксы */
+.reveal-overlay[data-look="light"] .cv-divider{
+  background-image:url('images/card/divider-light.png')}
 .cv-note{font-size:11px;margin-top:12px;color:rgba(241,234,224,.55)}
 .cv-note b{font-weight:700}
 
@@ -3258,13 +3272,18 @@ html[data-tg-native-back] .cv-back{display:none!important}
 
 /* Круглая кнопка «поделиться» вместо широкой надписи. Одно действие на экране —
    одна кнопка; что именно делать, человек выбирает в шторке */
-.cv-share{width:52px;height:52px;border-radius:50%;margin:14px auto 0;display:flex;
-  align-items:center;justify-content:center;cursor:pointer;
-  border:1px solid rgba(255,168,58,.5);color:var(--cv-warm,#f5a33a);
-  background:radial-gradient(circle at 35% 30%,rgba(255,170,76,.18),rgba(255,255,255,.03));
-  font-size:21px;line-height:1}
+/* Кнопка «поделиться» стоит В ОДНОМ РЯДУ С ПЛАШКАМИ, а не отдельной строкой
+   ниже: [stated] Denis 23.08 — «повесить куда-нибудь вровень с плашками имени
+   и редкости». Ряд из-за неё не ломается — плашки делят остаток поровну */
+.cv-share{flex:none;width:46px;align-self:stretch;min-height:46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid rgba(255,168,58,.45);color:var(--cv-warm,#f5a33a);
+  background:radial-gradient(circle at 35% 30%,rgba(255,170,76,.16),rgba(255,255,255,.03))}
+.reveal-overlay[data-look="light"] .cv-share{border-color:rgba(140,105,50,.34);
+  background:linear-gradient(180deg,#fbf5e6,#f1e7d1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -2px 4px rgba(140,105,50,.14)}
 .cv-share:active{transform:scale(.94)}
-.cv-share svg{width:22px;height:22px;display:block}
+.cv-share svg{width:21px;height:21px;display:block}
 
 /* Шторка выбора. Слой 906 — см. комментарий в разметке */
 .cv-sheet-overlay{position:fixed;inset:0;z-index:906;display:none;align-items:flex-end;
@@ -3388,6 +3407,10 @@ html[data-tg-native-back] .cv-back{display:none!important}
 .reveal-big-card img{width:100%;height:100%;object-fit:cover;display:block}
 .reveal-big-card .reveal-big-ph{font-size:52px;color:var(--warm);opacity:.5}
 .reveal-overlay.showcase .reveal-row{display:none}
+/* ⚠️ «ГОТОВО» В ВИТРИНЕ НЕ НУЖНА: выход уже есть — стрелка слева сверху и
+   штатная кнопка Telegram. Две кнопки выхода на одном экране заставляют
+   выбирать там, где выбора нет. На экране вскрытия пака кнопка остаётся */
+.reveal-overlay.showcase #reveal-done{display:none!important}
 .reveal-big-count{position:absolute;top:8px;right:8px;background:var(--warm);color:#fff;
   font-size:12px;font-weight:700;border-radius:20px;padding:2px 9px}
 
@@ -24104,15 +24127,13 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   const actions = cardActionsHtml(card, cardId, alreadyClaimed, copies, 'lec-link-btn access-btn', true);
 
   // Три плашки из концепта: бог, редкость, награда
-  const statHtml =
-      '<div class="reveal-stats">'
-    + '<div class="reveal-stat"><div class="reveal-stat-label">Бог</div>'
+  const plates =
+      '<div class="reveal-stat"><div class="reveal-stat-label">Бог</div>'
     + '<div class="reveal-stat-value">' + (godNameHtml(card.god || '') || '—') + '</div></div>'
     + '<div class="reveal-stat"><div class="reveal-stat-label">Редкость</div>'
     + '<div class="reveal-stat-value">' + escapeHtml(CARD_RARITY_LABELS[card.rarity] || card.rarity || '—') + '</div></div>'
     + '<div class="reveal-stat"><div class="reveal-stat-label">Награда</div>'
-    + '<div class="reveal-stat-value">' + escapeHtml(cardGainLabel(card, pointsAwarded)) + '</div></div>'
-    + '</div>';
+    + '<div class="reveal-stat-value">' + escapeHtml(cardGainLabel(card, pointsAwarded)) + '</div></div>';
 
   // Номер экземпляра — это и есть уникальность карты: «твой №2 из семи
   // выданных». Пока сервер не считает выдачу по колоде целиком, честно
@@ -24128,22 +24149,23 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
   // картой читается издевательством, а не поводом для гордости
   const canShare = telegramId && card.key && (card.image_url || card.image_full_url)
                    && !((copies || 0) > 1);
+  // Системная иконка «поделиться» (коробка со стрелкой вверх) вместо трёх
+  // кружков: её узнают без подписи на любой платформе
   const shareBtn = canShare
     ? '<div class="cv-share" id="card-share-btn" onclick="openCardShareSheet(' + jsArg(card.key) + ')"'
       + ' title="Поделиться" aria-label="Поделиться">'
-      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"'
       + ' stroke-linecap="round" stroke-linejoin="round">'
-      + '<circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle>'
-      + '<circle cx="18" cy="19" r="3"></circle>'
-      + '<line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line>'
-      + '<line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg></div>'
+      + '<path d="M8.5 11H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1.5"></path>'
+      + '<line x1="12" y1="3" x2="12" y2="14"></line>'
+      + '<polyline points="8.6,6.4 12,3 15.4,6.4"></polyline></svg></div>'
     : '';
 
   el.innerHTML =
-      statHtml
+      '<div class="reveal-stats">' + plates + shareBtn + '</div>'
     + '<div class="reveal-detail-title">' + (card.title || '') + '</div>'
     + (card.description ? '<div class="reveal-detail-text">' + card.description + '</div>' : '')
-    + ((actions || shareBtn) ? '<div class="cv-divider"></div>' + actions + shareBtn : '')
+    + (actions ? '<div class="cv-divider"></div>' + actions : '')
     + noteHtml;
 }
 
