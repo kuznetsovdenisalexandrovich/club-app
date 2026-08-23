@@ -3224,11 +3224,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 
 /* Плашки под картой. Тёмная и легендарная — картинкой из песочницы, светлая
    рисуется CSS: запечённая плашка на картоне читается грязным пятном */
-.reveal-overlay[data-look] .reveal-stats{gap:9px;margin:16px 0 4px;width:100%;max-width:340px;
+/* ⚠️⚠️ ГЕОМЕТРИЯ РЯДА ПОДОГНАНА ПОД ПРОПОРЦИЮ САМОЙ ПЛАШКИ. Файлы нарисованы
+   широкими (тёмная 1.83:1, светлая 2.2:1), а плитка была почти квадратной —
+   картинку растягивало по вертикали, золотые ромбы по бокам расползались, и
+   текст лез на борт. Замерено в браузере: было 88x86 (1.0), стало 97x52
+   (1.87) — почти точно пропорция файла.
+   ⚠️ МЕНЯЯ ПЛАШКУ НА ДРУГУЮ — ПЕРЕСЧИТАТЬ ЭТИ ЧИСЛА: высоту ряда задаёт
+   `min-height`, ширину — `max-width` всего ряда за вычетом кнопки и зазоров */
+.reveal-overlay[data-look] .reveal-stats{gap:7px;margin:16px 0 4px;width:100%;max-width:360px;
   align-items:stretch}
 .reveal-overlay[data-look] .reveal-stats>.reveal-stat{flex:1 1 0;min-width:0}
-.reveal-overlay[data-look] .reveal-stat{min-height:64px;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:10px 8px;border:0;border-radius:0;background:none}
+.reveal-overlay[data-look] .reveal-stat{min-height:44px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:4px 11px;border:0;border-radius:0;background:none}
 .reveal-overlay[data-look="dark"] .reveal-stat,
 .reveal-overlay[data-look="legendary"] .reveal-stat{
   background:url('images/card/plate.png') center/100% 100% no-repeat}
@@ -3245,10 +3252,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .reveal-overlay[data-look="light"] .reveal-stat{border-radius:14px;border:0;box-shadow:none;
   background:url('images/card/plate-light.png') center/100% 100% no-repeat,
              linear-gradient(180deg,#fbf5e6,#f1e7d1)}
-.reveal-overlay[data-look] .reveal-stat-label{font-size:8.6px;letter-spacing:.08em;
+.reveal-overlay[data-look] .reveal-stat-label{font-size:7.6px;letter-spacing:.06em;
   color:var(--cv-plate-label)}
 .reveal-overlay[data-look] .reveal-stat-value{font-family:Georgia,'Times New Roman',serif;
-  font-size:13.5px;font-weight:400;color:var(--cv-plate-ink)}
+  font-size:12px;font-weight:400;color:var(--cv-plate-ink);max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Разделитель над действиями — тот же файл, что в песочнице */
 .cv-divider{width:100%;height:22px;margin:16px 0 2px;
   background:url('images/card/divider.png') center/contain no-repeat}
@@ -3278,16 +3286,16 @@ html[data-tg-native-back] .cv-back{display:none!important}
    и редкости». Ряд из-за неё не ломается — плашки делят остаток поровну */
 /* ⚠️ КНОПКА СТОИТ В РЯДУ С ПЛАШКАМИ, ЗНАЧИТ И МАТЕРИАЛ У НЕЁ ТОТ ЖЕ. Своя
    заливка рядом с запечённым золотом читалась дырой в ряду */
-.cv-share{flex:none;width:52px;align-self:stretch;min-height:46px;border-radius:14px;
+/* ⚠️ КНОПКЕ ЗАПЕЧЁННУЮ ПЛАШКУ НЕ ДАЁМ: она почти квадратная, а плашка широкая —
+   растянутая в квадрат, та выглядит смятой. Своя лёгкая подложка в тон */
+.cv-share{flex:none;width:44px;align-self:stretch;min-height:44px;border-radius:13px;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
-  border:0;color:var(--cv-warm,#f5a33a);
-  background:url('images/card/plate.png') center/100% 100% no-repeat,
-             radial-gradient(circle at 35% 30%,rgba(255,170,76,.16),rgba(255,255,255,.03))}
+  border:1px solid rgba(255,168,58,.45);color:var(--cv-warm,#f5a33a);
+  background:radial-gradient(circle at 35% 30%,rgba(255,170,76,.16),rgba(255,255,255,.03))}
 .reveal-overlay[data-look="light"] .cv-share{color:#b06f1d;
-  background:url('images/card/plate-light.png') center/100% 100% no-repeat,
-             linear-gradient(180deg,#fbf5e6,#f1e7d1)}
+  border-color:rgba(160,120,50,.45);background:linear-gradient(180deg,#fdf8ec,#f2e8d3)}
 .cv-share:active{transform:scale(.94)}
-.cv-share svg{width:21px;height:21px;display:block}
+.cv-share svg{width:19px;height:19px;display:block}
 
 /* Шторка выбора. Слой 906 — см. комментарий в разметке */
 .cv-sheet-overlay{position:fixed;inset:0;z-index:906;display:none;align-items:flex-end;
@@ -3304,7 +3312,8 @@ html[data-tg-native-back] .cv-back{display:none!important}
 .cv-sheet-item b{display:block;font-size:13.5px;font-weight:700}
 .cv-sheet-item i{display:block;font-style:normal;font-size:11.5px;color:var(--text-dim);margin-top:2px}
 .cv-sheet-ico{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
-  font-size:16px;color:var(--warm);background:rgba(232,97,74,.12)}
+  color:var(--warm);background:rgba(232,97,74,.12)}
+.cv-sheet-ico svg{width:18px;height:18px;display:block}
 .cv-sheet-cancel{text-align:center;font-size:13px;color:var(--text-dim);padding:10px;cursor:pointer}
 
 /* Рамка на полке. ⚠️ МЕЛКАЯ ВЕРСИЯ, а не полная: рамок полсотни по 750 КБ, и
@@ -9205,16 +9214,31 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
      бы ПОД ней — клик выглядел бы как «ничего не происходит» -->
 <div class="cv-sheet-overlay" id="card-share-sheet" onclick="if(event.target===this) closeCardShareSheet()">
   <div class="cv-sheet">
-    <div class="cv-sheet-title">Поделиться карточкой</div>
+    <!-- ⚠️ ВСЕ НАДПИСИ ЧЕРЕЗ РЕЕСТР `APP_TEXTS` (data-text), иначе Denis не
+         сможет править их из дашборда — правило для любого нового текста -->
+    <div class="cv-sheet-title" data-text="share.sheet_title">Поделиться карточкой</div>
     <button class="cv-sheet-item" id="cv-share-bot" onclick="cardShareViaBot()">
-      <span class="cv-sheet-ico">&#9993;</span>
-      <span><b>Получить карту в боте</b><i>Придёт в чат — оттуда пересылай</i></span>
+      <span class="cv-sheet-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 4.6 2.9 11.4c-.9.3-.9 1.5.1 1.7l4.8 1.3 1.8 5.1c.3.9 1.4 1 1.9.3l2.5-3.3 4.6 3.4c.7.5 1.7.1 1.9-.7l2.7-13.1c.2-.9-.7-1.7-1.7-1.5z"></path>
+          <path d="M8 14.4 19 6.6l-8.4 9.6"></path>
+        </svg>
+      </span>
+      <span><b data-text="share.bot_t">Получить карту в боте</b><i data-text="share.bot_x">Придёт в чат — оттуда пересылай</i></span>
     </button>
     <button class="cv-sheet-item" id="cv-share-img" onclick="cardShareImage()">
-      <span class="cv-sheet-ico">&#8681;</span>
-      <span><b>Экспортировать картинку</b><i>Карта в своей рамке — файлом</i></span>
+      <span class="cv-sheet-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"></path>
+          <line x1="12" y1="4" x2="12" y2="15"></line>
+          <polyline points="8.2,11.4 12,15.2 15.8,11.4"></polyline>
+        </svg>
+      </span>
+      <span><b data-text="share.img_t">Экспортировать картинку</b><i data-text="share.img_x">Карта в своей рамке — файлом</i></span>
     </button>
-    <div class="cv-sheet-cancel" onclick="closeCardShareSheet()">Отмена</div>
+    <div class="cv-sheet-cancel" data-text="share.cancel" onclick="closeCardShareSheet()">Отмена</div>
   </div>
 </div>
 
@@ -13044,6 +13068,24 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'share.badge': {
     c:'Шеринг', l:'Кнопка поделиться Знаком', w:'Витрина Знака', i:true,
     t:'Показать знак' },
+  'share.sheet_title': {
+    c:'Шеринг', l:'Заголовок окна выбора', w:'Витрина карточки → поделиться', i:true,
+    t:'Поделиться карточкой' },
+  'share.bot_t': {
+    c:'Шеринг', l:'Первый способ — заголовок', w:'Витрина карточки → поделиться', i:true,
+    t:'Получить карту в боте' },
+  'share.bot_x': {
+    c:'Шеринг', l:'Первый способ — пояснение', w:'Витрина карточки → поделиться', i:false,
+    t:'Придёт в чат — оттуда пересылай' },
+  'share.img_t': {
+    c:'Шеринг', l:'Второй способ — заголовок', w:'Витрина карточки → поделиться', i:true,
+    t:'Экспортировать картинку' },
+  'share.img_x': {
+    c:'Шеринг', l:'Второй способ — пояснение', w:'Витрина карточки → поделиться', i:false,
+    t:'Карта в своей рамке — файлом' },
+  'share.cancel': {
+    c:'Шеринг', l:'Отказ в окне выбора', w:'Витрина карточки → поделиться', i:false,
+    t:'Отмена' },
 
   'invite.card_hint': {
     c:'Приглашения', l:'Подсказка про карточку', w:'Пригласить друга', i:true,
