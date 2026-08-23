@@ -3841,9 +3841,16 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .qr-ally-sign .god-sign{width:25px;height:25px}
 .qr-ally-title{font-size:13px;font-weight:700;margin-bottom:2px}
 .qr-ally-text{font-size:12px;line-height:1.4;color:var(--text-dim)}
-.qr-actions{margin:14px auto 0}
+/* ⚠️ ШИРИНУ ЗАДАЁМ ЯВНО. `.quiz-inner` — колонка с выравниванием по центру,
+   поэтому блок кнопок сжимался по содержимому: ряд из двух кнопок выходил
+   85px на каждую, и надпись «Отправляю…» (91px) вылезала за кнопку. Замерено
+   в браузере, а не на глаз */
+.qr-actions{width:100%;margin:14px auto 0}
 .qr-actions-row{display:flex;gap:9px;margin-top:9px}
-.qr-actions-row>.lec-link-btn{flex:1 1 0;min-width:0;margin-top:0}
+/* Плюс страховка на случай длинной надписи в узком экране: перенос слов в
+   кнопке выглядит хуже, чем чуть меньший кегль */
+.qr-actions-row>.lec-link-btn{flex:1 1 0;min-width:0;margin-top:0;
+  white-space:nowrap;padding-left:6px;padding-right:6px}
 .qr-tertiary{display:grid;gap:14px;justify-items:center;margin-top:14px}
 
 /* ══ ТЕМА ЭКРАНА РЕЗУЛЬТАТА — ОТ КАРТЫ, А НЕ ОТ ПРИЛОЖЕНИЯ ══════════════════
