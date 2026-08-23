@@ -3120,9 +3120,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    кнопки, ссылка и реквизиты давали высоту во весь экран при любой рамке.
    [stated] Denis: «окно вокруг фильма занимает весь экран». Поэтому режем
    сами элементы, а не только контейнер. */
-#funnel-screen .mark,#funnel-after .mark{width:46px;height:46px;font-size:17px;border-radius:13px}
-#funnel-screen h2,#funnel-after h2{font-size:19px;line-height:1.25;margin:2px 0 0}
-#funnel-screen p,#funnel-after p{font-size:12.5px;line-height:1.4;margin:0;opacity:.8}
+/* ⚠️ ЗНАК И ОПИСАНИЕ УБРАНЫ ИЗ ОКНА ФИЛЬМА, НЕ ИЗ РАЗМЕТКИ (23.08.2026).
+   [stated] Denis: «лого можно убрать, текст тоже, оставь только надпись».
+   Прячем стилями: узлы и их ключи в реестре остаются на месте, вернуть —
+   одна строка. На экране «после фильма» знак и текст нужны как были. */
+#funnel-screen .mark,#funnel-screen #funnel-sub{display:none}
+#funnel-after .mark{width:46px;height:46px;font-size:17px;border-radius:13px}
+#funnel-screen h2{font-size:20px;line-height:1.25;margin:0}
+#funnel-after h2{font-size:19px;line-height:1.25;margin:2px 0 0}
+#funnel-after p{font-size:12.5px;line-height:1.4;margin:0;opacity:.8}
 #funnel-screen .lec-link-btn,#funnel-after .lec-link-btn{padding:11px 14px;font-size:14px}
 #funnel-screen .funnel-back,#funnel-after .funnel-back{font-size:12.5px;margin-top:6px}
 #funnel-screen .requisites{font-size:10.5px;margin-top:12px;opacity:.55}
@@ -3131,7 +3137,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    теперь лежит НА приложении, и фильм во весь рост закрывал ровно то, ради
    чего подложку и делали. Правило размера прежнее (ведём от высоты экрана,
    ширину считает пропорция 9:16), уменьшены только числа */
-#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(34vh,280px);margin:4px 0 0}
+#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(52vh,430px);margin:2px 0 0}
 #funnel-screen>h2,#funnel-screen>p,#funnel-after>h2,#funnel-after>p{max-width:420px}
 /* Светлая тема: бумажную карточку .center-msg::before не рисуем — она бы
    закрыла собой приложение за плечом; вуаль светлая, чтобы тёмный текст
@@ -6076,7 +6082,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
        приложению ([stated] Denis 23.08), а начатый фильм сворачивается в PiP -->
   <button class="funnel-close" onclick="funnelMinimize()" aria-label="Свернуть">&#10005;</button>
   <div class="mark">БП</div>
-  <h2 id="funnel-title" data-text="funnel.title">Смотри фильм о клубе</h2>
+  <h2 id="funnel-title" data-text="funnel.title">Как закрыть «Я подумаю»</h2>
   <p id="funnel-sub" data-text="funnel.sub">За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.</p>
 
   <!-- Постер остаётся запасным путём: если плеер не встал (нет сети, домен
@@ -13113,7 +13119,7 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   // ── Первый экран: воронка (14.08.2026) ──
   'funnel.title': {
     c:'Первый экран', l:'Заголовок над фильмом', w:'Первое открытие приложения', i:true,
-    t:'Смотри фильм о клубе' },
+    t:'Как закрыть «Я подумаю»' },
   'funnel.sub': {
     c:'Первый экран', l:'Подзаголовок над фильмом', w:'Первое открытие приложения', i:true,
     t:'За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.' },
