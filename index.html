@@ -3245,9 +3245,26 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .cv-note b{font-weight:700}
 
 /* Рамка на полке. ⚠️ МЕЛКАЯ ВЕРСИЯ, а не полная: рамок полсотни по 750 КБ, и
-   полноразмерные в сетке альбома съели бы сотни мегабайт трафика */
+   полноразмерные в сетке альбома съели бы сотни мегабайт трафика.
+
+   ⚠️⚠️ АРТ ОБЯЗАН СЕСТЬ В ОКНО РАМКИ, А НЕ В ПЛИТКУ. Первый заход рисовал
+   рамку поверх арта, растянутого на всю плитку, — и арт торчал из-под борта,
+   а сама рамка выглядела меньше картинки. Геометрия та же, что у крупной
+   карты и что в самих файлах рамок: окно 844x1202 в холсте 1080x1440, то есть
+   поля 10.9% по бокам и 8.2% сверху.
+   ⚠️ И СВОЯ КАЁМКА ПЛИТКИ СНИМАЕТСЯ: две рамки одна в другой читаются как
+   ошибка вёрстки. Плитка без рамки живёт как раньше */
 .album-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2}
 .album-art{position:relative}
+.album-art.framed{background:none}
+/* ⚠️ РАЗМЕР ЧИСЛАМИ, А НЕ ЧЕТЫРЬМЯ ОТСТУПАМИ. У картинки есть собственный
+   размер, и при `width:auto` абсолютные left+right её НЕ растягивают — браузер
+   берёт натуральную ширину. Замерено настоящим Chromium: арт вылезал на 600px
+   в плитке шириной 91. Поэтому 78.2% = 100 - 10.9*2 и 83.5% = 100 - 8.2 - 8.3 */
+.album-art.framed>img:not(.album-frame){position:absolute;left:10.9%;top:8.2%;
+  right:auto;bottom:auto;width:78.2%;height:83.5%;border-radius:6%/4.6%;object-fit:cover}
+.album-card.framed{border-color:transparent;background:none}
+.album-card.framed .album-name{padding-top:2px}
 
 /* Альбом */
 .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
@@ -20666,10 +20683,18 @@ function startApp(){
        открытия имеем и ответ, и картинки в кэше — переодевания не видно.
        ⚠️ ПОСЛЕ заставки и с задержкой: этот запрос не должен соперничать за
        сеть с тем, что человек видит прямо сейчас. */
+    /* ⚠️ КАРТИНКИ ГРЕЕМ ТОЛЬКО ТЕМ, У КОГО ЕСТЬ ЧТО ОТКРЫВАТЬ. Раньше их качал
+       КАЖДЫЙ вошедший, даже если пака у него нет и экран вскрытия он в этот
+       заход не увидит вовсе. Сам список наборов (это JSON, он лёгкий) просим
+       всегда — из него собирается выбор набора. */
     setTimeout(function(){
       if (typeof prLoadScreens !== 'function') return;
       prLoadScreens().then(function(){
-        try { prPickScreens(); prPrefetchAssets(); } catch(e){}
+        try {
+          prPickScreens();
+          const waiting = ((myCards && myCards.unopened_packs) || []).length;
+          if (waiting) prPrefetchAssets('key');
+        } catch(e){}
       });
     }, 2500);
     if (typeof startStoragePoll === 'function') startStoragePoll();
@@ -22743,6 +22768,10 @@ function renderPackBanner(){
   const sub = el.querySelector('.pack-banner-sub');
 
   if (packs.length){
+    // Пак мог приехать позже старта (выдали прямо сейчас) — тогда и греем
+    if (PR_SCREENS && Object.keys(PR_SCREENS).length){
+      try { if (!PR_PICKED) prPickScreens(); prPrefetchAssets('key'); } catch(e){}
+    }
     if (t) t.textContent = packs.length === 1
       ? 'Тебя ждёт закрытый пак'
       : ('Тебя ждут закрытые паки: ' + packs.length);
@@ -23262,16 +23291,25 @@ function prWarm(src){
   const img = new Image();
   img.src = src;
 }
-function prPrefetchAssets(){
-  PR.ids.forEach(function(id){
-    PR_THEMES.forEach(function(theme){
-      ['stage','idle','plate','close','ornament','pedestal'].forEach(function(kind){
-        prWarm(prPickAsset(kind, theme));
-      });
-      ['plateStart','plateNext','plateDone'].forEach(function(kind){
-        prWarm(prPickAssetStrict(kind, theme));
-      });
-    });
+/* ⚠️⚠️ ГРЕЕМ ЯРУСАМИ, А НЕ ВСЁ РАЗОМ. Одетый экран — это девять картинок на
+   тему, а тем три: полный прогрев тянет до двадцати семи файлов. На ВПН это
+   минуты, и пока они качаются, за ту же сеть борется всё остальное
+   приложение.
+
+   Ярус 'key' — задник и рубашка: без них сцена выглядит сломанной, их и ждёт
+   заставка. Всё прочее (плашки кнопок, крестик, орнамент, постамент) человек
+   видит уже НА открытом экране, значит и качать их можно после показа. */
+const PR_KEY_KINDS  = ['stage','back'];
+const PR_REST_KINDS = ['idle','plate','close','ornament','pedestal'];
+const PR_REST_STRICT = ['plateStart','plateNext','plateDone'];
+
+function prPrefetchAssets(level){
+  const key  = (level === 'key');
+  PR_THEMES.forEach(function(theme){
+    PR_KEY_KINDS.forEach(function(kind){ prWarm(prPickAsset(kind, theme)); });
+    if (key) return;
+    PR_REST_KINDS.forEach(function(kind){ prWarm(prPickAsset(kind, theme)); });
+    PR_REST_STRICT.forEach(function(kind){ prWarm(prPickAssetStrict(kind, theme)); });
   });
 }
 
@@ -24146,8 +24184,8 @@ function renderCardsAlbum(){
         // Название видно всегда — охотиться хочется за конкретным, а не за «???»
         const mark = (n && newKeys.indexOf(c.key) !== -1)
           ? '<div class="album-new">новая</div>' : '';
-        return '<div class="album-card fade-rise ' + (n ? 'owned' : 'locked') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
-          + '<div class="album-art">' + art + tileFrame + '</div>'
+        return '<div class="album-card fade-rise ' + (n ? 'owned' : 'locked') + (tileFrame ? ' framed' : '') + '" onclick="openAlbumCard(' + jsArg(c.key) + ')">'
+          + '<div class="album-art' + (tileFrame ? ' framed' : '') + '">' + art + tileFrame + '</div>'
           + (n > 1 ? '<div class="album-count">×' + n + '</div>' : '')
           + mark
           + '<div class="album-name">' + (c.title || c.key) + '</div>'
