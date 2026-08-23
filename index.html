@@ -3912,6 +3912,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .qr-stack.is-shadow .qr-sigil{opacity:.2}
 .qr-stack.is-shadow .qr-badge{color:#c3a179}
 
+/* ⚠️⚠️ ОКНО ЛЕЖИТ ВЫШЕ ЭКРАНА ТЕСТА. Общие попапы приложения живут на слое
+   200, а экран результата теста — на 870: открытое окно честно появлялось, но
+   ПОД ним, и клик по «подробнее» выглядел как «ничего не происходит».
+   Строка про коллекцию зовёт это окно именно с экрана теста, поэтому слой
+   обязан быть выше него. */
+.giftpoints-layer{z-index:900}
+
 /* Мини-воронка вокруг замороженных баллов */
 .gp-hero{font-family:var(--disp);font-weight:700;font-size:19px;margin:2px 0 6px}
 .gp-amount{font-family:var(--disp);font-weight:700;font-size:38px;line-height:1;
@@ -5650,7 +5657,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      Это не отказ, а предложение, поэтому и окно своё, а не общий пейволл:
      общий говорит «не вижу подписки», а здесь человеку уже что-то принадлежит,
      и разговор идёт о том, как это забрать. -->
-<div class="sched-popup-overlay" id="giftpoints-overlay" onclick="if(event.target===this) closeGiftPoints()">
+<div class="sched-popup-overlay giftpoints-layer" id="giftpoints-overlay" onclick="if(event.target===this) closeGiftPoints()">
   <div class="sched-popup" id="giftpoints-popup" style="text-align:center">
     <div class="sched-popup-handle"></div>
     <div id="giftpoints-body"></div>
