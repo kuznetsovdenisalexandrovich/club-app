@@ -3846,6 +3846,37 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .qr-actions-row>.lec-link-btn{flex:1 1 0;min-width:0;margin-top:0}
 .qr-tertiary{display:grid;gap:14px;justify-items:center;margin-top:14px}
 
+/* ══ ТЕМА ЭКРАНА РЕЗУЛЬТАТА — ОТ КАРТЫ, А НЕ ОТ ПРИЛОЖЕНИЯ ══════════════════
+   [stated] Denis 23.08: «тему экрана результата теста надо брать от темы
+   карточки, а не от темы всего аппа» — иначе светлая карта показывается на
+   тёмном экране и наоборот.
+
+   ⚠️ РАБОТАЕТ ПЕРЕОПРЕДЕЛЕНИЕМ ПЕРЕМЕННЫХ НА САМОМ СЛОЕ, а не вторым набором
+   правил: экран теста использует всего семь токенов (проверено разбором всех
+   его правил), и переопределить их на `.quiz-overlay` дешевле и надёжнее, чем
+   держать копию вёрстки под каждую тему. Значения — из песочницы, где Denis
+   их и утверждал.
+   ⚠️ Признак `data-look` ставится ТОЛЬКО когда карта известна. Нет карты —
+   атрибута нет, и экран честно живёт в теме приложения. */
+.quiz-overlay[data-look="dark"]{
+  --bg:#08070f; --card-bg:rgba(255,255,255,.05); --line:rgba(191,179,226,.22);
+  --text:#f4eff7; --text-dim:#9d96ab; --text-faint:#6f6980; --warm:#f5a33a;
+}
+.quiz-overlay[data-look="legendary"]{
+  --bg:#120a1e; --card-bg:rgba(255,255,255,.06); --line:rgba(216,178,255,.30);
+  --text:#f7eee0; --text-dim:#b3a6c8; --text-faint:#8d80a6; --warm:#ffc35c;
+}
+.quiz-overlay[data-look="light"]{
+  --bg:#f3ead8; --card-bg:#fbf5e6; --line:rgba(140,105,50,.30);
+  --text:#2b2318; --text-dim:#877a63; --text-faint:#a2957e; --warm:#b06f1d;
+}
+/* ⚠️ ДВА МЕСТА, ГДЕ ЦВЕТ ЗАШИТ ЧИСЛОМ, А НЕ ТОКЕНОМ: подложка под артом и фон
+   теневой карты. На светлой теме они оставались чёрными дырами — именно это
+   видно на скриншоте с ненагруженным артом */
+.quiz-overlay[data-look="light"] .qr-card-art{background:#e7dcc4}
+.quiz-overlay[data-look="light"] .qr-shadow{background:#e7dcc4;
+  border-color:rgba(140,105,50,.3)}
+
 /* ⚠️ ПОДСКАЗКА ПОДНЯТА НАД СИГИЛОМ. Сигил — позиционированный слой (z-index 0)
    и по правилам отрисовки ложится ПОВЕРХ обычного текста, идущего следом:
    строка «нажми на теневую карточку» пряталась под кругом. Лечится не
@@ -24884,6 +24915,10 @@ function closeQuiz(){
 }
 
 function renderQuizIntro(){
+  // ⚠️ ТЕМУ СНИМАЕМ НА ВХОДЕ В ТЕСТ, а не только на выходе. Иначе вопросы
+  // следующего прохода рисуются в теме карты ПРОШЛОГО результата — экран
+  // остаётся, например, светлым в тёмном приложении
+  qzSetLook(null);
   document.getElementById('quiz-inner').innerHTML =
       '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">'
     + '<div class="quiz-kicker">Пантеон продаж</div>'
@@ -24973,6 +25008,21 @@ var quizGifts = {}, quizGiftAsked = {};
 
 function quizGiftOf(code){ return (code && quizGifts[code]) || null; }
 
+/* Стиль арта → тема экрана. Те же три пары, что на сервере и в песочнице:
+   светлый → светлый, тёмный → тёмный, ОСОБЫЙ → ЛЕГЕНДАРНЫЙ */
+var QUIZ_LOOK_BY_STYLE = { light:'light', dark:'dark', special:'legendary' };
+
+function qzSetLook(gift){
+  var ov = document.getElementById('quiz-overlay');
+  if (!ov) return;
+  var look = gift && QUIZ_LOOK_BY_STYLE[(gift.style || '').trim()];
+  // Карты нет или у неё нет стиля — снимаем признак и отдаём экран теме
+  // приложения. Гадать «наверное тёмная» нельзя: у светлой темы это выглядит
+  // поломкой, а не решением
+  if (look) ov.setAttribute('data-look', look);
+  else ov.removeAttribute('data-look');
+}
+
 function loadQuizGift(code, then){
   // ⚠️⚠️ ПРИ ПОВТОРНОМ ВЫЗОВЕ `then` ЗВАТЬ НЕЛЬЗЯ. Отрисовка зовёт загрузку, а
   // загрузка в ответе зовёт отрисовку — если отвечать «уже готово» вызовом
@@ -25042,6 +25092,7 @@ function renderQuizResult(){
   loadQuizGift(r.code, function(){ if (quizResult === r) renderQuizResult(); });
 
   const gift = quizGiftOf(r.code);
+  qzSetLook(gift);
 
   // Полосы по осям: человек видит, ИЗ ЧЕГО получился его результат.
   // Именно это отличает объяснимый тест от жребия. Процент печатаем у той
@@ -25391,6 +25442,7 @@ function openQuizShadow(){
     if (quizResult === r && document.getElementById('quiz-shadow-scene')) openQuizShadow();
   });
   const gift = quizGiftOf(r.secondCode);
+  qzSetLook(gift);
 
   const godLink = (typeof godHasInfo === 'function' && godHasInfo(second.god))
     ? '<div class="payment-help-link" style="margin:0 0 14px" onclick="openGodInfo(' + jsArg(second.god) + ')">Читать про ' + escapeHtml(second.god) + ' целиком</div>'
