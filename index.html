@@ -3132,11 +3132,23 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border:1px solid rgba(255,255,255,.09);border-radius:24px;
   box-shadow:0 26px 70px -20px rgba(0,0,0,.75);
 }
-#funnel-screen::before,#funnel-after::before{
-  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:rgba(9,12,19,.52);
-  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+/* ⚠️ ВУАЛЬ — ОТДЕЛЬНЫЙ СЛОЙ-БРАТ, НЕ ПСЕВДОЭЛЕМЕНТ ОКНА (23.08.2026).
+   Пока она была `::before` внутри окна, окно успело стать маленькой
+   прокручиваемой карточкой (`overflow-y:auto`), и вуаль обрезалась по его
+   краю: экран за окном оставался нетронутым. Отдельный слой ниже окна
+   свободен от чужого `overflow` и кроет весь экран.
+   ⚠️ О ЦЕНЕ: размытие фона считается заново на каждый кадр, пока под ним
+   что-то движется. Здесь это терпимо (слой статичен, живёт секунды), а на
+   слабых телефонах гасится само: щадящий режим снимает `backdrop-filter`
+   правилом `html[data-lite] *`. Затемнение при этом остаётся — оно ничего
+   не стоит. */
+#funnel-veil{
+  position:fixed;inset:0;z-index:854;display:none;pointer-events:none;
+  background:rgba(6,8,14,.62);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
 }
+#funnel-veil.on{display:block}
+[data-theme="light"] #funnel-veil{background:rgba(232,226,216,.66)}
 /* Вертикальное центрование у длинного экрана срезало бы верх (флекс-ловушка
    justify-content:center + overflow) — воронка идёт сверху вниз */
 #funnel-screen,#funnel-after{justify-content:flex-start;padding:20px 16px 16px;gap:8px}
@@ -3171,9 +3183,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 [data-theme="light"] #funnel-screen,[data-theme="light"] #funnel-after{
   background:rgba(250,247,242,.97);border-color:rgba(0,0,0,.08);
 }
-[data-theme="light"] #funnel-screen::before,[data-theme="light"] #funnel-after::before{
-  background:rgba(238,232,223,.55);
-}
+
 .funnel-close{
   position:absolute;top:12px;right:12px;z-index:3;
   width:36px;height:36px;border-radius:50%;border:none;padding:0;
@@ -6103,6 +6113,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      ⚠️ ФИЛЬМ НЕ АВТОЗАПУСКАЕТСЯ. В мобильных браузерах автозапуск со звуком
      запрещён, а немой фильм о клубе бессмыслен: человек увидел бы говорящую
      голову без звука и ушёл. Поэтому постер и явное нажатие. -->
+<!-- Вуаль под окном воронки: затемняет и размывает приложение за плечом,
+     чтобы окно читалось, а демо оставалось видно -->
+<div id="funnel-veil"></div>
+
 <div class="center-msg funnel-screen" id="funnel-screen" style="display:none">
   <!-- «Не хочу смотреть» — не тупик: закрывший окно тут же ловится в тур по
        приложению ([stated] Denis 23.08), а начатый фильм сворачивается в PiP -->
@@ -20143,6 +20157,14 @@ function filmMaybeResume(d){
 /* ⚠️ МЕДИА-ЭКСКЛЮЗИВНОСТЬ: любое другое медиа ставит фильм на паузу, иначе
    два звука. Эфирный блок сюда НЕ подключён сознательно — его iframe всегда
    стартует muted=true как превью и с фильмом по звуку не соревнуется. */
+/* Вуаль поднимается вместе с окном и уходит, как только окно закрылось или
+   свернулось в PiP: в свёрнутом виде приложением пользуются, затемнять его
+   нельзя */
+function funnelVeil(on){
+  const v = document.getElementById('funnel-veil');
+  if (v) v.classList.toggle('on', !!on);
+}
+
 function filmPipPause(){
   if (!funnelFilmStarted || filmDone) return;
   filmSendAction('pause');
@@ -20161,6 +20183,7 @@ function filmHardStop(){
   if (done) done.classList.remove('on');
   const scr = document.getElementById('funnel-screen');
   if (scr){ scr.classList.remove('pip-mode'); scr.style.display = 'none'; }
+  funnelVeil(false);
   const chip = document.getElementById('film-chip');
   if (chip) chip.style.display = 'none';
   funnelPlayerReady = false;
@@ -20196,6 +20219,7 @@ function showFunnelScreen(){
   });
   const box = document.getElementById('funnel-screen');
   if (box){ box.classList.remove('pip-mode'); box.style.display = 'flex'; }
+  funnelVeil(true);
   const chip = document.getElementById('film-chip');
   if (chip) chip.style.display = 'none';
   track('funnel_open');
@@ -20363,6 +20387,7 @@ function showFunnelAfter(){
      прощается подписью и уходит сам */
   const cur = document.getElementById('funnel-screen');
   if (cur && cur.classList.contains('pip-mode')){
+    funnelVeil(false);
     const done = document.getElementById('film-dock-done');
     if (done) done.classList.add('on');
     setTimeout(filmHardStop, 4000);
@@ -20374,6 +20399,7 @@ function showFunnelAfter(){
   if (cur) cur.style.display = 'none';
   const box = document.getElementById('funnel-after');
   if (box) box.style.display = 'flex';
+  funnelVeil(true);
 }
 
 function funnelRewatch(){
@@ -20427,6 +20453,7 @@ function funnelLeave(keepFilm){
   if (keepFilm && funnelFilmStarted && !filmDone){
     const scr = document.getElementById('funnel-screen');
     if (scr){ scr.classList.add('pip-mode'); scr.style.display = 'flex'; }
+    funnelVeil(false);
     return;
   }
   clearTimeout(funnelAfterTimer);
@@ -20472,6 +20499,7 @@ function funnelMinimize(){
 function filmDockExpand(){
   const scr = document.getElementById('funnel-screen');
   if (scr) scr.classList.remove('pip-mode');
+  funnelVeil(true);
   track('film_pip_expand');
 }
 
@@ -20482,6 +20510,7 @@ function filmDockShut(ev){
   filmSendAction('pause');
   const scr = document.getElementById('funnel-screen');
   if (scr) scr.style.display = 'none';
+  funnelVeil(false);
   const chip = document.getElementById('film-chip');
   if (chip && funnelFilmStarted && !filmDone) chip.style.display = 'block';
   track('film_pip_close');
