@@ -7518,6 +7518,14 @@ body.api-override-on #api-override-bar{display:block}
   --gg-panel-blur:blur(24px) saturate(115%);
 
   --gg-card:rgba(255,255,255,.62);
+  /* ⚠️ ПЛОТНЫЕ ДВОЙНИКИ СТЕКЛА — ДЛЯ ЩАДЯЩЕГО РЕЖИМА. Там размытие снято
+     целиком, и полупрозрачная поверхность показывает то, что под ней. Раньше
+     подкладывался `--card` приложения, а он в светлой теме КАРТОННЫЙ — отсюда
+     кремовые карточки игр в Telegram ([stated] Denis 23.08). Значения
+     посчитаны сведением стекла с фоном вкладки: .62 белого на #f3f5fc и .56
+     белого на нём же */
+  --gg-solid:#fbfcfe;
+  --gg-solid-panel:#fafbfd;
   --gg-card-brd:rgba(255,255,255,.96);
   --gg-card-sh:0 12px 28px rgba(151,164,211,.10), inset 0 1px 0 rgba(255,255,255,.95);
 
@@ -7598,6 +7606,9 @@ body.api-override-on #api-override-bar{display:block}
   --gg-panel-blur:blur(28px) saturate(130%);
 
   --gg-card:linear-gradient(180deg,rgba(30,39,67,.78),rgba(25,34,60,.74));
+  /* Те же плотные двойники для тёмной: стекло сведено с фоном вкладки #0c1227 */
+  --gg-solid:#1a2239;
+  --gg-solid-panel:#171e34;
   --gg-card-brd:rgba(157,174,232,.10);
   --gg-card-sh:0 12px 28px rgba(0,0,0,.17), inset 0 1px 0 rgba(255,255,255,.04);
 
@@ -8563,9 +8574,23 @@ html[data-lite] .pf-dir-blob{display:none!important}
    подкладываем плотный фон темы */
 html[data-lite] .card,
 html[data-lite] .sched-popup,
+html[data-lite] #tabbar{background:var(--card)!important}
+/* ⚠️ У ВКЛАДКИ ИГР СВОЯ ПАЛИТРА, И ПОДКЛАДЫВАТЬ НАДО ЕЁ. Общий `--card` в
+   светлой теме картонный, а страница игр голубовато-белая: карточки выходили
+   кремовыми пятнами на чужом фоне. Правило идёт ПОСЛЕ общего, поэтому у
+   игровых поверхностей побеждает оно */
 html[data-lite] .gg-modal,
 html[data-lite] .gg-gm-card,
-html[data-lite] #tabbar{background:var(--card)!important}
+html[data-lite] .gg-bubble,
+html[data-lite] .gg-feedback,
+html[data-lite] .gg-block,
+html[data-lite] .gg-upsell,
+html[data-lite] .gg-composer,
+html[data-lite] .gg-exit{background:var(--gg-solid)!important}
+html[data-lite] .gg-arbiter{background:var(--gg-solid-panel)!important}
+/* Нижняя панель на вкладке игр — тоже её палитры, а не общей */
+html[data-lite][data-gg="1"] #tabbar,
+html[data-lite][data-gg="1"] .tabbar{background:var(--gg-solid-panel)!important}
 /* Анимированные фоны экрана вскрытия пака — самое тяжёлое, что есть */
 html[data-lite] .reveal-bg,
 html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
