@@ -2489,6 +2489,32 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   background-position:center!important;
 }
 
+/* ⚠️⚠️ ТЕНЬ ПЛАШКИ — `drop-shadow`, А НЕ `box-shadow` (23.08.2026).
+   `box-shadow` рисует тень по КОРОБКЕ элемента. Коробка кнопки имеет свою
+   пропорцию (2.6), а плашка вписывается в неё `contain` — то есть картинка
+   занимает не всю коробку, да и края у неё ажурные и прозрачные. Тень по
+   коробке получалась прямоугольной, крупнее самой плашки и с зазором:
+   вместо тени — тёмная кайма вокруг светлого мрамора, что Denis и увидел.
+   `filter:drop-shadow` рисует по АЛЬФЕ картинки — тень повторяет силуэт
+   плашки вместе с завитками.
+   ⚠️ И `filter` — ОДНО СВОЙСТВО: `brightness` при наведении обязан
+   перечислять тень заново, иначе она пропадает под курсором. */
+#pr-cta{
+  box-shadow:none!important;
+  filter:drop-shadow(0 9px 16px rgba(6,5,14,.5)) drop-shadow(0 2px 5px rgba(6,5,14,.4));
+}
+#pr-cta:hover{
+  filter:drop-shadow(0 9px 16px rgba(6,5,14,.5)) drop-shadow(0 2px 5px rgba(6,5,14,.4)) brightness(1.09);
+}
+/* На светлом наборе мрамор сам светлый — тень нужна мягче, иначе выглядит
+   грязным пятном под кнопкой */
+#pr-stage[data-pr-theme="light"] #pr-cta{
+  filter:drop-shadow(0 7px 13px rgba(58,44,22,.34)) drop-shadow(0 2px 4px rgba(58,44,22,.26));
+}
+#pr-stage[data-pr-theme="light"] #pr-cta:hover{
+  filter:drop-shadow(0 7px 13px rgba(58,44,22,.34)) drop-shadow(0 2px 4px rgba(58,44,22,.26)) brightness(1.06);
+}
+
 /* ⚠️ НАДПИСЬ, ЗАПЕЧЁННАЯ В ПЛАШКУ. Свой текст прячем ВИЗУАЛЬНО, а не
    через display:none — иначе кнопка становится безымянной картинкой для
    озвучки и поиска по странице. */
