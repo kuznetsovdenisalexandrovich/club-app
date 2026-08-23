@@ -3086,7 +3086,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border-bottom:12px solid transparent;
   filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
 }
-.funnel-film-slot{margin:14px auto 0;height:min(58vh,480px);aspect-ratio:9/16;max-width:100%}
+.funnel-film-slot{position:relative;margin:14px auto 0;height:min(58vh,480px);aspect-ratio:9/16;max-width:100%}
 .funnel-film-slot iframe{width:100%;height:100%;border:0;border-radius:16px;display:block;background:#000}
 .funnel-secondary{
   background:transparent!important;
@@ -3149,6 +3149,15 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 }
 #funnel-veil.on{display:block}
 [data-theme="light"] #funnel-veil{background:rgba(232,226,216,.66)}
+
+/* ⚠️⚠️ ВТОРОЕ ОКНО ВНУТРИ ОКНА (23.08.2026). [stated] Denis: «ты явно какие-то
+   два окна рисуешь». `.center-msg` в тёмной теме рисует СВОЮ карточку
+   псевдоэлементом `::before` — фон, рамка, скругление и собственное размытие.
+   Пока воронка была страницей, это и было её оформление; теперь у окна есть
+   своя карточка, и вторая рисовалась внутри неё.
+   Гасим псевдоэлемент у обоих экранов воронки в ЛЮБОЙ теме — оформление окна
+   задаётся правилами выше. Заодно уходит лишнее размытие внутри окна. */
+#funnel-screen::before,#funnel-after::before{content:none!important}
 /* Вертикальное центрование у длинного экрана срезало бы верх (флекс-ловушка
    justify-content:center + overflow) — воронка идёт сверху вниз */
 #funnel-screen,#funnel-after{justify-content:flex-start;padding:20px 16px 16px;gap:8px}
@@ -3224,6 +3233,30 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 }
 #funnel-screen.pip-mode .film-dock-done.on{display:block}
 /* Неяркая строка возврата — живёт там же, где стоял PiP */
+/* ⚠️ ЗАГЛУШКА НА ВРЕМЯ ЗАГРУЗКИ ПЛЕЕРА (23.08.2026). [stated] Denis: «долго
+   чёрный экран держится, может туда заглушку какую вставить пока грузится».
+   Boomstream до готовности рисует чёрный прямоугольник — на нашем окне это
+   выглядит поломкой. Кладём поверх слота кадр фильма с затемнением и живой
+   подписью.
+   ⚠️ `pointer-events:none` ОБЯЗАТЕЛЕН: под заглушкой — кнопка «играть» самого
+   плеера, и перехваченный тап значил бы, что фильм не запускается вовсе. */
+.film-boot{
+  position:absolute;inset:0;z-index:2;border-radius:16px;overflow:hidden;
+  pointer-events:none;display:flex;align-items:flex-end;justify-content:center;
+  background:#0b0d14 center/cover no-repeat;
+  transition:opacity .35s ease;
+}
+.film-boot::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,10,16,.45) 0%,rgba(8,10,16,.82) 100%);
+}
+.film-boot-txt{
+  position:relative;z-index:2;padding:0 0 16px;font-size:12.5px;color:#e7e3f2;
+  animation:film-boot-pulse 1.4s ease-in-out infinite;
+}
+@keyframes film-boot-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.film-boot.off{opacity:0}
+
 .film-chip{
   position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
   z-index:857;padding:8px 13px;border-radius:999px;
@@ -13036,6 +13069,9 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     c:'Первый экран', l:'Кнопка «узнать подробнее» после фильма', w:'Экран после фильма', i:false,
     t:'Узнать подробнее о клубе' },
   // ── Фильм в PiP (23.08.2026) ──
+  'film.boot': {
+    c:'Первый экран', l:'Подпись, пока грузится плеер', w:'Окно фильма', i:true,
+    t:'Включаем фильм…' },
   'film.chip': {
     c:'Первый экран', l:'Строка возврата к фильму', w:'После закрытия мини-плеера крестиком', i:true,
     t:'Вернуться к фильму' },
@@ -20117,6 +20153,17 @@ let filmPosSavedAt = 0;          // когда позиция писалась �
 let filmPlayedAccum = 0;         // накопленное чистое время игры, мс
 let filmPlayStartedAt = null;    // момент последнего play (null = на паузе)
 let filmSeekDone = false;        // возобновление с сохранённой позиции — раз за сессию
+let filmBootTimer = null;        // потолок ожидания заглушки
+
+/* Заглушка уходит по ПЕРВОМУ признаку жизни плеера — любое его сообщение
+   означает, что окружение встало и чёрного прямоугольника больше нет */
+function filmBootHide(){
+  clearTimeout(filmBootTimer);
+  const b = document.getElementById('film-boot');
+  if (!b || b.classList.contains('off')) return;
+  b.classList.add('off');
+  setTimeout(function(){ if (b && b.parentNode) b.parentNode.removeChild(b); }, 400);
+}
 
 /* Команды чужому плееру — по его же документации:
    postMessage({code, method:'action', action, data}). Шлём и объектом, и
@@ -20174,6 +20221,7 @@ function filmPipPause(){
    сброшено. Постер возвращается — если воронку покажут снова, всё соберётся */
 function filmHardStop(){
   clearTimeout(funnelAfterTimer);
+  clearTimeout(filmBootTimer);
   if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
   const slot = document.getElementById('funnel-film-slot');
   if (slot){ slot.innerHTML = ''; slot.style.display = 'none'; }
@@ -20244,6 +20292,20 @@ function startFunnelFilm(){
   // без него плеер не отдаёт часть событий и не уходит в полный экран
   slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + FUNNEL_FILM_CODE
     + '" allow="autoplay; fullscreen" frameborder="0" scrolling="no"></iframe>';
+  /* Заглушка — тем же кадром, что и постер: он уже в кэше, ждать нечего */
+  const boot = document.createElement('div');
+  boot.className = 'film-boot';
+  boot.id = 'film-boot';
+  boot.style.backgroundImage = 'url("images/film-ya-podumayu.jpg")';
+  boot.innerHTML = '<div class="film-boot-txt" data-text="film.boot">' +
+    ((typeof t === 'function' && t('film.boot')) || 'Включаем фильм…') + '</div>';
+  slot.appendChild(boot);
+  /* ⚠️ ПОТОЛОК НА СЛУЧАЙ МОЛЧАНИЯ. Плеер здоров, но событий может не быть
+     вовсе (другая версия, блокировка postMessage) — тогда заглушка висела бы
+     вечно поверх рабочего фильма. Через 12 секунд убираем в любом случае:
+     лучше чёрный прямоугольник, который человек ткнёт, чем наша картинка,
+     под которой уже идёт кино */
+  filmBootTimer = setTimeout(filmBootHide, 12000);
   /* ⚠️ ОТСЧЁТ НАЧИНАЕТСЯ НЕ ЗДЕСЬ. Плеер теперь ставится сразу при показе
      экрана, и если считать фильм запущенным с этого мгновения, то у человека,
      который его даже не включил, через 31:30 выскочит «ну что, всё понятно?».
@@ -20317,6 +20379,8 @@ window.addEventListener('message', function(ev){
      кнопку, и человек запустит фильм ею.
 
      `loaded` при этом остаётся полезным событием — просто ничего не делаем. */
+
+  filmBootHide();   // плеер заговорил — значит он готов, заглушка не нужна
 
   /* Настоящее начало просмотра: человек нажал кнопку В САМОМ ПЛЕЕРЕ. Только
      теперь имеет смысл считать время и ждать конца.
