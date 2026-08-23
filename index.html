@@ -3239,11 +3239,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    репозитории, картинка просто не загрузится, и плашка останется той, что
    рисуется правилами. Порядок в `background` решает: файл сверху, заливка
    снизу */
-.reveal-overlay[data-look="light"] .reveal-stat{border-radius:14px;
+/* ⚠️ У ЗАПЕЧЁННОЙ ПЛАШКИ СВОЙ БОРТ — СВОЙ СНИМАЕМ. Иначе поверх нарисованного
+   золота идёт вторая, CSS-рамка, и получается кайма в кайме. Ровно так же
+   сделано в тёмной теме */
+.reveal-overlay[data-look="light"] .reveal-stat{border-radius:14px;border:0;box-shadow:none;
   background:url('images/card/plate-light.png') center/100% 100% no-repeat,
-             linear-gradient(180deg,#fbf5e6,#f1e7d1);
-  border:1px solid rgba(140,105,50,.34);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -2px 4px rgba(140,105,50,.14)}
+             linear-gradient(180deg,#fbf5e6,#f1e7d1)}
 .reveal-overlay[data-look] .reveal-stat-label{font-size:8.6px;letter-spacing:.08em;
   color:var(--cv-plate-label)}
 .reveal-overlay[data-look] .reveal-stat-value{font-family:Georgia,'Times New Roman',serif;
@@ -3275,13 +3276,16 @@ html[data-tg-native-back] .cv-back{display:none!important}
 /* Кнопка «поделиться» стоит В ОДНОМ РЯДУ С ПЛАШКАМИ, а не отдельной строкой
    ниже: [stated] Denis 23.08 — «повесить куда-нибудь вровень с плашками имени
    и редкости». Ряд из-за неё не ломается — плашки делят остаток поровну */
-.cv-share{flex:none;width:46px;align-self:stretch;min-height:46px;border-radius:14px;
+/* ⚠️ КНОПКА СТОИТ В РЯДУ С ПЛАШКАМИ, ЗНАЧИТ И МАТЕРИАЛ У НЕЁ ТОТ ЖЕ. Своя
+   заливка рядом с запечённым золотом читалась дырой в ряду */
+.cv-share{flex:none;width:52px;align-self:stretch;min-height:46px;border-radius:14px;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
-  border:1px solid rgba(255,168,58,.45);color:var(--cv-warm,#f5a33a);
-  background:radial-gradient(circle at 35% 30%,rgba(255,170,76,.16),rgba(255,255,255,.03))}
-.reveal-overlay[data-look="light"] .cv-share{border-color:rgba(140,105,50,.34);
-  background:linear-gradient(180deg,#fbf5e6,#f1e7d1);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -2px 4px rgba(140,105,50,.14)}
+  border:0;color:var(--cv-warm,#f5a33a);
+  background:url('images/card/plate.png') center/100% 100% no-repeat,
+             radial-gradient(circle at 35% 30%,rgba(255,170,76,.16),rgba(255,255,255,.03))}
+.reveal-overlay[data-look="light"] .cv-share{color:#b06f1d;
+  background:url('images/card/plate-light.png') center/100% 100% no-repeat,
+             linear-gradient(180deg,#fbf5e6,#f1e7d1)}
 .cv-share:active{transform:scale(.94)}
 .cv-share svg{width:21px;height:21px;display:block}
 
