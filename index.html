@@ -5391,6 +5391,16 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
     </div>
 
+    <!-- Приглашение в тур — вместо тура «без спроса» после фильма
+         ([stated] Denis 24.08). Тот же стиль, что у плашки демо -->
+    <div class="demo-banner" id="guest-tour-banner" style="display:none;margin-top:-14px" onclick="gtStart('about')">
+      <div class="demo-banner-icon">🧭</div>
+      <div>
+        <div class="demo-banner-title" data-text="guest.tour_invite">Узнать, что есть в приложении</div>
+        <div class="demo-banner-sub" data-text="guest.tour_invite_sub">Короткая прогулка по разделам →</div>
+      </div>
+    </div>
+
     <div class="video-banner" id="sales-video-banner" style="display:none;background-image:url('images/film-ya-podumayu.jpg')" onclick="openVideoPopup('sales')">
       <div class="video-banner-play">▶</div>
       <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
@@ -11397,6 +11407,8 @@ async function loadProfile() {
 function renderDemoBanner(){
   const el = document.getElementById('demo-banner');
   if (el) el.style.display = isMember ? 'none' : 'flex';
+  const tourInvite = document.getElementById('guest-tour-banner');
+  if (tourInvite) tourInvite.style.display = isMember ? 'none' : 'flex';
   // Управление подпиской показываем только участникам: не-участнику нечем управлять
   const subManageBtn = document.getElementById('sub-manage-btn');
   if (subManageBtn) subManageBtn.style.display = isMember ? 'block' : 'none';
@@ -13162,6 +13174,12 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     c:'Первый экран', l:'Кнопка «узнать подробнее» после фильма', w:'Экран после фильма', i:false,
     t:'Узнать подробнее о клубе' },
   // ── Фильм в PiP (23.08.2026) ──
+  'guest.tour_invite': {
+    c:'Первый экран', l:'Плашка-приглашение в тур', w:'Главная в демо-режиме', i:true,
+    t:'Узнать, что есть в приложении' },
+  'guest.tour_invite_sub': {
+    c:'Первый экран', l:'Подстрока приглашения в тур', w:'Главная в демо-режиме', i:true,
+    t:'Короткая прогулка по разделам →' },
   // ── Окно бонусов после фильма (23.08.2026) ──
   'bw.bar': {
     c:'Первый экран', l:'Надпись на баре окна бонусов', w:'Полоса сверху после фильма', i:true,
@@ -20951,18 +20969,24 @@ function funnelAbout(){
    не начатый — просто закрывается. */
 function funnelMinimize(){
   track('funnel_minimize');
+  /* ⚠️ ТУР ЗДЕСЬ БОЛЬШЕ НЕ ЗАПУСКАЕТСЯ (24.08.2026). [stated] Denis: «мне не
+     очень нравится, как тур начинается без спроса. Давай просто сворачивать
+     видео в pip и оставлять человека в покое» — приглашение в тур переехало
+     в плашку на главной, где его выбирают сами */
   funnelLeave(true);        // сам решит: PiP или полная остановка
-  if (isMember) return;     // участнику (запасной показ воронки) тур не нужен
-  const shellEl = document.getElementById('app-shell');
-  const shellHidden = !shellEl || shellEl.style.display === 'none' || shellEl.style.display === '';
-  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
-  if (typeof gtStart === 'function') gtStart('about');
-  else if (typeof switchView === 'function') switchView('portal');
 }
 
 /* Тап по PiP — развернуть окно фильма обратно. Слой воронки и так открыт
    (PiP живёт в нём), снимаем только режим сворачивания */
 function filmDockExpand(){
+  /* [stated] Denis: «при клике по pip надо тур останавливать» — человек выбрал
+     фильм, тур гаснет ТИХО: без развилки и без страницы «о клубе», это не
+     финал, а уступка дороги */
+  if (typeof gtActive !== 'undefined' && gtActive){
+    try { gtHide(); } catch(e){}
+    gtActive = false;
+    track('guest_tour_end', 'film');
+  }
   const scr = document.getElementById('funnel-screen');
   if (scr) scr.classList.remove('pip-mode');
   funnelVeil(true);
