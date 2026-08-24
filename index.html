@@ -3205,15 +3205,20 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* PiP: слой воронки остаётся в DOM (в нём живёт плеер), но становится
    прозрачным и пропускает нажатия; контейнер плеера — в угол над пилюлей */
 #funnel-screen.pip-mode{
+  z-index:880;                      /* выше тура (860) и его вуали */
   inset:0;margin:0;width:auto;height:auto;max-height:none;
   background:transparent;border:none;box-shadow:none;border-radius:0;
   pointer-events:none;overflow:hidden;padding:0;
 }
 #funnel-screen.pip-mode::before{display:none}
 #funnel-screen.pip-mode > *:not(.film-dock){display:none!important}
+/* ⚠️⚠️ МИНИ-ПЛЕЕР ВЫШЕ ТУРА (23.08.2026). Слой тура — 860, а док стоял на 857:
+   свернувшись при закрытии окна (крестик сразу запускает тур), фильм оказывался
+   ПОД затемнением тура — [stated] Denis: «я вообще pip не увидел». Слой воронки
+   тоже поднят, иначе потолок контекста снова прижмёт док вниз. */
 #funnel-screen.pip-mode .film-dock{
   position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
-  display:block;width:auto;margin:0;pointer-events:auto;z-index:857;
+  display:block;width:auto;margin:0;pointer-events:auto;z-index:12;
   border-radius:14px;overflow:hidden;
   box-shadow:0 12px 30px -10px rgba(0,0,0,.6);
 }
@@ -3304,7 +3309,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    значок «играть» и место чуть выше */
 .film-chip{
   position:fixed;right:14px;bottom:calc(104px + env(safe-area-inset-bottom));
-  z-index:857;padding:9px 14px 9px 12px;border-radius:999px;
+  z-index:881;padding:9px 14px 9px 12px;border-radius:999px;
   display:flex;align-items:center;gap:7px;
   background:var(--card,#1c2230);border:1px solid var(--warm,#e8614a);
   color:var(--text,#eef1f7);font-size:12.5px;font-weight:600;cursor:pointer;
