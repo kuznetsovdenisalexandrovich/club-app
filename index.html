@@ -3126,7 +3126,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    fixed и должна крыть весь экран, а не окно). */
 #funnel-screen,#funnel-after{
   position:fixed;inset:0;margin:auto;z-index:855;
-  width:min(84vw,340px);height:fit-content;max-height:78vh;min-height:0;max-width:none;
+  width:min(92vw,391px);height:fit-content;max-height:88vh;min-height:0;max-width:none;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
   background:rgba(14,17,26,.93);
   border:1px solid rgba(255,255,255,.09);border-radius:24px;
@@ -3190,7 +3190,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    теперь лежит НА приложении, и фильм во весь рост закрывал ровно то, ради
    чего подложку и делали. Правило размера прежнее (ведём от высоты экрана,
    ширину считает пропорция 9:16), уменьшены только числа */
-#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(52vh,430px);margin:2px 0 0}
+#funnel-screen .funnel-film,#funnel-screen .funnel-film-slot{height:min(56vh,495px);margin:2px 0 0}
 #funnel-screen>h2,#funnel-screen>p,#funnel-after>h2,#funnel-after>p{max-width:420px}
 /* Светлая тема: бумажную карточку .center-msg::before не рисуем — она бы
    закрыла собой приложение за плечом; вуаль светлая, чтобы тёмный текст
@@ -4984,6 +4984,13 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      фильма открывалось «Как пользоваться клубом» ([stated] Denis 24.08).
      Теперь каждый попап получает СВОЙ iframe в момент открытия — независимо
      и без гонки за общий конфиг. -->
+<!-- ⚠️ РУКОПОЖАТИЕ С ДОМЕНОМ ПЛЕЕРА ЗАРАНЕЕ (24.08.2026). Плеер вставляется
+     по нажатию, и до первого байта видео браузер успевает три раза сходить
+     туда-обратно: DNS, TLS, соединение. `preconnect` делает это в фоне, пока
+     человек ещё читает первый экран, — секунды на медленной сети -->
+<link rel="preconnect" href="https://play.boomstream.com" crossorigin>
+<link rel="dns-prefetch" href="https://play.boomstream.com">
+<link rel="preconnect" href="https://bs.boomstream.com" crossorigin>
 <script src="https://play.boomstream.com/assets/javascripts/biframesdk.js?v=1.1.1" async></script>
 <style>
 /* ── Журнал ───────────────────────────────────────────────────────────────
@@ -6291,7 +6298,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <div class="center-msg funnel-screen" id="funnel-screen" style="display:none">
   <!-- «Не хочу смотреть» — не тупик: закрывший окно тут же ловится в тур по
        приложению ([stated] Denis 23.08), а начатый фильм сворачивается в PiP -->
-  <button class="funnel-close" onclick="funnelMinimize()" aria-label="Свернуть">&#10005;</button>
+  <!-- [stated] Denis 24.08: «давай крестик сменим на птичку, типа свернуть» —
+       окно не закрывается, а уезжает вниз в мини-плеер, и знак должен об этом
+       говорить -->
+  <button class="funnel-close" onclick="funnelMinimize()" aria-label="Свернуть">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
   <div class="mark">БП</div>
   <h2 id="funnel-title" data-text="funnel.title">Как закрыть «Я подумаю»</h2>
   <p id="funnel-sub" data-text="funnel.sub">За полчаса поймёшь, как тут всё устроено и почему продажи перестают быть мучением.</p>
@@ -13960,6 +13972,8 @@ function debugFilmRefresh(){
   el.innerHTML =
     'плеер в разметке: <b>' + (slot && slot.querySelector('iframe') ? 'да' : 'нет') + '</b><br>' +
     'сообщений от плеера: <b>' + filmMsgCount + '</b> (последнее: ' + (filmLastMethod || '—') + ', ' + ago + ')<br>' +
+    'первый ответ через: <b>' + (filmFirstMsgMs ? (filmFirstMsgMs / 1000).toFixed(1) + ' с' : 'не дождались') + '</b>' +
+    ' · канал SDK: <b>' + (filmSdk ? 'открыт' : 'нет') + '</b><br>' +
     'слышали «play»: <b>' + (funnelFilmStarted ? 'да' : 'нет') + '</b> · досмотрен: <b>' + (filmDone ? 'да' : 'нет') + '</b><br>' +
     'позиция: <b>' + Math.round(filmLastPos) + '</b> из <b>' + Math.round(filmDuration) + '</b> с<br>' +
     'окно воронки: <b>' + (scr ? (scr.style.display === 'none' ? 'скрыто' : scr.style.display) : '—') + '</b>' +
@@ -20423,6 +20437,9 @@ let filmBootTimer = null;        // потолок ожидания заглуш
 let filmMsgCount = 0;
 let filmLastMethod = '';
 let filmLastMsgAt = 0;
+let filmMountedAt = 0;    // когда вставили плеер — для замера времени загрузки
+let filmFirstMsgMs = 0;   // сколько прошло до первого ответа плеера
+let filmSdk = null;       //официальный канал по документации Boomstream
 
 /* Заглушка уходит по ПЕРВОМУ признаку жизни плеера — любое его сообщение
    означает, что окружение встало и чёрного прямоугольника больше нет */
@@ -20520,6 +20537,14 @@ function filmTakeMediaSession(){
 }
 
 function filmSendAction(action, data){
+  /* Сначала официальный канал SDK, потом прежний ручной — второй остаётся
+     на случай, если скрипт SDK не загрузился */
+  try {
+    if (filmSdk && typeof filmSdk[action] === 'function'){
+      filmSdk[action](data);
+      return;
+    }
+  } catch(e){}
   try {
     const fr = document.querySelector('#funnel-film-slot iframe');
     if (!fr || !fr.contentWindow) return;
@@ -20809,6 +20834,8 @@ function filmHardStop(){
   if (chip) chip.style.display = 'none';
   funnelPlayerReady = false;
   funnelFilmStarted = false;
+  filmSdk = null;           // iframe выгружен, канал больше не к чему привязан
+  filmMountedAt = 0;
   msRelease('film');
 }
 
@@ -20885,6 +20912,18 @@ function startFunnelFilm(){
      лучше чёрный прямоугольник, который человек ткнёт, чем наша картинка,
      под которой уже идёт кино */
   filmBootTimer = setTimeout(filmBootHide, 12000);
+  filmMountedAt = Date.now();
+  /* ⚠️ ОФИЦИАЛЬНАЯ СВЯЗЬ С ПЛЕЕРОМ (24.08.2026). По их документации команды
+     передаются через `new bIframeSDK(КОД)` — объект сам находит на странице
+     iframe с этим кодом и держит канал. Мы слали `postMessage` вручную и,
+     похоже, поэтому не слышали ответов: канал не был открыт. Создаём объект
+     сразу после вставки iframe; если скрипт SDK не доехал — ничего не
+     ломается, остаётся прежний ручной путь */
+  try {
+    if (typeof bIframeSDK === 'function' && !filmSdk){
+      filmSdk = new bIframeSDK(FUNNEL_FILM_CODE);
+    }
+  } catch(e){ filmSdk = null; }
   /* ⚠️ ЗАБИРАЕМ КАРТОЧКУ СРАЗУ ПРИ ВСТАВКЕ ПЛЕЕРА, А НЕ ПО СОБЫТИЮ «PLAY».
      Событий от чужого плеера может не быть вовсе — а звук будет, и тап по
      «острову» уже уведёт не туда */
@@ -20964,6 +21003,7 @@ window.addEventListener('message', function(ev){
      `loaded` при этом остаётся полезным событием — просто ничего не делаем. */
 
   filmMsgCount++;
+  if (!filmFirstMsgMs && filmMountedAt) filmFirstMsgMs = Date.now() - filmMountedAt;
   filmLastMethod = d.method || '?';
   filmLastMsgAt = Date.now();
   filmBootHide();   // плеер заговорил — значит он готов, заглушка не нужна
