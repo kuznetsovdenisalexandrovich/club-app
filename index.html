@@ -3183,7 +3183,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 #funnel-after h2{font-size:19px;line-height:1.25;margin:2px 0 0}
 #funnel-after p{font-size:12.5px;line-height:1.4;margin:0;opacity:.8}
 #funnel-screen .lec-link-btn,#funnel-after .lec-link-btn{padding:11px 14px;font-size:14px}
-#funnel-screen .funnel-back,#funnel-after .funnel-back{font-size:12.5px;margin-top:6px}
+/* ⚠️ «ПЕРЕСМОТРЕТЬ ФИЛЬМ» — В ПОТОК, А НЕ В УГОЛ ЭКРАНА (24.08.2026).
+   Кнопка была `position:absolute` с отступом от безопасной зоны — расчёт на
+   ПОЛНОЭКРАННЫЙ экран воронки. Когда экран стал маленькой карточкой по центру,
+   она встала по её внутренним координатам и легла прямо на заголовок
+   ([stated] Denis: «тут чутка наложилось всё друг на друга»).
+   Класс тот же, что с реквизитами 23.08: **делая из полноэкранной страницы
+   окно, проверить ВСЁ, что позиционировано абсолютно или прибито к краю.** */
+#funnel-screen .funnel-back,#funnel-after .funnel-back{
+  position:static;align-self:flex-start;
+  font-size:12.5px;margin:0 0 4px;padding:2px 2px;
+}
 #funnel-screen .requisites{font-size:10.5px;margin-top:12px;opacity:.55}
 /* ⚠️ ПЛЕЕР В ВОРОНКЕ МЕНЬШЕ, ЧЕМ БЫЛ (23.08.2026). [stated] Denis: «блок
    вокруг видео слишком большой, надо чтобы апп было видно лучше» — экран
