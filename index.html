@@ -3299,12 +3299,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .bw-item i{display:block;font-style:normal;font-size:11.5px;color:var(--text-dim);margin-top:2px}
 .bw-cancel{text-align:center;font-size:13px;color:var(--text-dim);padding:10px;cursor:pointer}
 
+/* ⚠️ Строка возврата была неяркой и вставала ровно туда, где только что был
+   мини-плеер — её просто не замечали. Делаем заметной: акцентная рамка,
+   значок «играть» и место чуть выше */
 .film-chip{
-  position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
-  z-index:857;padding:8px 13px;border-radius:999px;
-  background:var(--card,#1c2230);border:1px solid var(--border,rgba(255,255,255,.14));
-  color:var(--text-dim,#cfd5e2);font-size:12px;cursor:pointer;
-  box-shadow:0 8px 20px -8px rgba(0,0,0,.5);
+  position:fixed;right:14px;bottom:calc(104px + env(safe-area-inset-bottom));
+  z-index:857;padding:9px 14px 9px 12px;border-radius:999px;
+  display:flex;align-items:center;gap:7px;
+  background:var(--card,#1c2230);border:1px solid var(--warm,#e8614a);
+  color:var(--text,#eef1f7);font-size:12.5px;font-weight:600;cursor:pointer;
+  box-shadow:0 10px 24px -8px rgba(0,0,0,.6);
+}
+.film-chip::before{
+  content:"";flex:none;width:0;height:0;
+  border-left:9px solid var(--warm,#e8614a);
+  border-top:6px solid transparent;border-bottom:6px solid transparent;
 }
 /* ═══ PR-CSS-END ═══ */
 
@@ -20917,13 +20926,25 @@ function filmDockExpand(){
    «вернуться к фильму» возвращает его с той же позиции без перезагрузки */
 function filmDockShut(ev){
   if (ev && ev.stopPropagation) ev.stopPropagation();
+  track('film_pip_close');
+  /* ⚠️⚠️ ЕСЛИ ПЛЕЕР С НАМИ НЕ РАЗГОВАРИВАЕТ — ПАУЗУ ЕМУ НЕ ПОСЛАТЬ (23.08.2026).
+     Команды идут тем же каналом, что и его сообщения: не пришло ни одного —
+     значит и `pause` не дойдёт. Спрятать окно в такой ситуации означает ровно
+     то, что поймал Denis: «нажал на крестик, звук остался, видео пропало
+     полностью». Поэтому глушим по-настоящему — выгружаем плеер. Возврат
+     соберёт его заново (позицию всё равно нечем было запомнить). */
+  const deaf = (filmMsgCount === 0);
+  const chip = document.getElementById('film-chip');
+  if (deaf){
+    filmHardStop();
+    if (chip && !filmDone) chip.style.display = 'block';
+    return;
+  }
   filmSendAction('pause');
   const scr = document.getElementById('funnel-screen');
   if (scr) scr.style.display = 'none';
   funnelVeil(false);
-  const chip = document.getElementById('film-chip');
   if (chip && (funnelPlayerReady || funnelFilmStarted) && !filmDone) chip.style.display = 'block';
-  track('film_pip_close');
 }
 
 function filmChipReturn(){
@@ -20931,6 +20952,7 @@ function filmChipReturn(){
   if (chip) chip.style.display = 'none';
   const scr = document.getElementById('funnel-screen');
   if (scr) scr.classList.remove('pip-mode');
+  // Плеер мог быть выгружен (см. filmDockShut) — showFunnelScreen соберёт заново
   showFunnelScreen();
   track('film_chip_return');
 }
