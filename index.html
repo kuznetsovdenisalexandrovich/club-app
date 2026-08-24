@@ -5756,6 +5756,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
       </div>
       <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Фильм воронки</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left" id="debug-film-state">—</div>
+        <button class="help-btn" onclick="debugFilmRefresh()">Обновить</button>
+      </div>
+      <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Свежий гость</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left">
           Приложение стирает все местные отметки (фильм, тур, метки источников)
@@ -13800,6 +13805,7 @@ function applyAppSettings(){
 function applyDebugMode(){
   const blocks = document.getElementById('debug-blocks');
   if (blocks) blocks.style.display = debugMode ? '' : 'none';
+  if (debugMode && typeof debugFilmRefresh === 'function') debugFilmRefresh();
   const freshNote = document.getElementById('debug-fresh-note');
   if (freshNote) freshNote.textContent =
     (typeof debugFreshGuestOn === 'function' && debugFreshGuestOn())
@@ -13821,6 +13827,25 @@ function setDebugMode(on){
    источников — всё, что копит гостевой путь) и ВЫКЛЮЧАЕТ опознание — запуск
    идёт веткой неузнанного, даже внутри Telegram с живым initData. Флаг
    переживает перезапуски: сценарии гоняются по многу заходов подряд. */
+/* ⚠️ ДИАГНОСТИКА ФИЛЬМА. Показывает ровно то, чего не видно снаружи: слышим
+   ли мы чужой плеер вообще. Если «сообщений: 0» при играющем фильме — значит
+   учёт просмотра, честное окончание и пауза при сворачивании не работают, и
+   лечить надо связь с плеером, а не наши экраны */
+function debugFilmRefresh(){
+  const el = document.getElementById('debug-film-state');
+  if (!el) return;
+  const slot = document.getElementById('funnel-film-slot');
+  const scr = document.getElementById('funnel-screen');
+  const ago = filmLastMsgAt ? Math.round((Date.now() - filmLastMsgAt) / 1000) + ' с назад' : '—';
+  el.innerHTML =
+    'плеер в разметке: <b>' + (slot && slot.querySelector('iframe') ? 'да' : 'нет') + '</b><br>' +
+    'сообщений от плеера: <b>' + filmMsgCount + '</b> (последнее: ' + (filmLastMethod || '—') + ', ' + ago + ')<br>' +
+    'слышали «play»: <b>' + (funnelFilmStarted ? 'да' : 'нет') + '</b> · досмотрен: <b>' + (filmDone ? 'да' : 'нет') + '</b><br>' +
+    'позиция: <b>' + Math.round(filmLastPos) + '</b> из <b>' + Math.round(filmDuration) + '</b> с<br>' +
+    'окно воронки: <b>' + (scr ? (scr.style.display === 'none' ? 'скрыто' : scr.style.display) : '—') + '</b>' +
+    ' · свёрнуто: <b>' + (scr && scr.classList.contains('pip-mode') ? 'да' : 'нет') + '</b>';
+}
+
 function debugFreshGuestOn(){
   try { return localStorage.getItem('club_app_debug_fresh') === '1'; } catch(e){ return false; }
 }
@@ -20235,6 +20260,12 @@ let filmPlayedAccum = 0;         // накопленное чистое врем
 let filmPlayStartedAt = null;    // момент последнего play (null = на паузе)
 let filmSeekDone = false;        // возобновление с сохранённой позиции — раз за сессию
 let filmBootTimer = null;        // потолок ожидания заглушки
+/* ⚠️ СЧЁТЧИКИ ДЛЯ ДИАГНОСТИКИ. Весь наш учёт фильма (начало, конец, пауза при
+   сворачивании) держится на сообщениях чужого плеера — а приходят они или нет,
+   вслепую не узнать. Показываем это в отладке */
+let filmMsgCount = 0;
+let filmLastMethod = '';
+let filmLastMsgAt = 0;
 
 /* Заглушка уходит по ПЕРВОМУ признаку жизни плеера — любое его сообщение
    означает, что окружение встало и чёрного прямоугольника больше нет */
@@ -20250,6 +20281,87 @@ function filmBootHide(){
    postMessage({code, method:'action', action, data}). Шлём и объектом, и
    строкой JSON: формат приёма у них не зафиксирован, а обе наши команды
    (pause, seek) безвредны при повторе. */
+/* ══ СИСТЕМНАЯ КАРТОЧКА ВОСПРОИЗВЕДЕНИЯ (Media Session), 23.08.2026 ═══════
+   [stated] Denis: тап по играющему медиа в «острове» открывал постороннее
+   приложение вместо нашего.
+
+   ⚠️⚠️ ПРИЧИНА КЛАССА: пока никто не объявил себя владельцем воспроизведения,
+   система отдаёт нажатие ПОСЛЕДНЕМУ, кто ставил метаданные, — то есть чужому
+   приложению. Молчание здесь не нейтрально: оно означает «карточка не моя».
+   Ровно та же ошибка была с аудио-плеером 10.08 — лечение оказалось потеряно
+   при позднейших переработках, поэтому теперь оно ОДНО НА ВСЕ ИСТОЧНИКИ ЗВУКА
+   и живёт в общем месте: любой новый плеер обязан позвать `msTake` на старте
+   и `msRelease` в конце.
+
+   ⚠️ ОБЛОЖКА — ТОЛЬКО АБСОЛЮТНЫМ АДРЕСОМ: относительный путь система не
+   разбирает и карточка остаётся без картинки. */
+function msAbsUrl(path){
+  try { return new URL(path, location.href).href; } catch(e){ return path; }
+}
+
+/* Кто сейчас владеет карточкой: 'film' | 'audio' | ''. Нужен, чтобы плеер,
+   которого уже перебили, не сбрасывал чужую карточку своим завершением */
+let msOwner = '';
+
+function msTake(owner, meta, handlers){
+  const ms = navigator.mediaSession;
+  if (!ms) return;
+  msOwner = owner;
+  try {
+    if (window.MediaMetadata){
+      ms.metadata = new MediaMetadata({
+        title: meta.title || 'Ты Боженька Продаж',
+        artist: meta.artist || 'Ты Боженька Продаж',
+        album: meta.album || '',
+        artwork: meta.cover ? [
+          { src: msAbsUrl(meta.cover), sizes: '512x512', type: 'image/jpeg' }
+        ] : [],
+      });
+    }
+  } catch(e){}
+  try { ms.playbackState = 'playing'; } catch(e){}
+  /* ⚠️ КАЖДЫЙ ОБРАБОТЧИК В СВОЁМ `try`: неизвестное системе действие бросает
+     исключение и уронило бы регистрацию остальных */
+  const all = ['play','pause','stop','previoustrack','nexttrack','seekbackward','seekforward','seekto'];
+  all.forEach(function(a){
+    try { ms.setActionHandler(a, (handlers && handlers[a]) || null); } catch(e){}
+  });
+}
+
+function msState(playing){
+  const ms = navigator.mediaSession;
+  if (!ms) return;
+  try { ms.playbackState = playing ? 'playing' : 'paused'; } catch(e){}
+}
+
+/* Снимаем карточку — иначе система продолжает показывать закрытый плеер.
+   Свою и только свою: если владельца уже перехватили, молчим */
+function msRelease(owner){
+  const ms = navigator.mediaSession;
+  if (!ms || (owner && msOwner !== owner)) return;
+  msOwner = '';
+  try { ms.metadata = null; } catch(e){}
+  try { ms.playbackState = 'none'; } catch(e){}
+  ['play','pause','stop','previoustrack','nexttrack','seekbackward','seekforward','seekto']
+    .forEach(function(a){ try { ms.setActionHandler(a, null); } catch(e){} });
+}
+
+/* ⚠️ ФИЛЬМ ИГРАЕТ В ЧУЖОМ IFRAME, и метаданных от него не будет никогда —
+   их обязаны выставить мы, из своего документа. Иначе «остров» уводит в
+   постороннее приложение ровно так, как поймал Denis */
+function filmTakeMediaSession(){
+  msTake('film', {
+    title: (typeof t === 'function' && t('funnel.title')) || 'Как закрыть «Я подумаю»',
+    artist: 'Ты Боженька Продаж',
+    album: 'Фильм о клубе',
+    cover: 'images/film-ya-podumayu.jpg',
+  }, {
+    play:  function(){ filmSendAction('play');  msState(true);  filmDockExpand(); },
+    pause: function(){ filmSendAction('pause'); msState(false); },
+    stop:  function(){ filmHardStop(); },
+  });
+}
+
 function filmSendAction(action, data){
   try {
     const fr = document.querySelector('#funnel-film-slot iframe');
@@ -20422,7 +20534,7 @@ function funnelVeil(on){
 }
 
 function filmPipPause(){
-  if (!funnelFilmStarted || filmDone) return;
+  if (!(funnelPlayerReady || funnelFilmStarted) || filmDone) return;
   filmSendAction('pause');
 }
 
@@ -20445,6 +20557,7 @@ function filmHardStop(){
   if (chip) chip.style.display = 'none';
   funnelPlayerReady = false;
   funnelFilmStarted = false;
+  msRelease('film');
 }
 
 function showFunnelScreen(){
@@ -20497,7 +20610,11 @@ function startFunnelFilm(){
   /* ⚠️ ПЛЕЕР УЖЕ ЖИВЁТ — НЕ ПЕРЕВСТАВЛЯЕМ (23.08.2026). Экран воронки теперь
      показывается повторно (возврат из PiP, строка «вернуться к фильму»), и
      пересборка iframe убила бы позицию и разрешение на звук */
-  if (slot.querySelector('iframe')){ funnelPlayerReady = true; return; }
+  if (slot.querySelector('iframe')){
+    funnelPlayerReady = true;
+    filmTakeMediaSession();
+    return;
+  }
   // ⚠️ `allow="autoplay; fullscreen"` — прямое требование их документации,
   // без него плеер не отдаёт часть событий и не уходит в полный экран
   slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + FUNNEL_FILM_CODE
@@ -20516,6 +20633,10 @@ function startFunnelFilm(){
      лучше чёрный прямоугольник, который человек ткнёт, чем наша картинка,
      под которой уже идёт кино */
   filmBootTimer = setTimeout(filmBootHide, 12000);
+  /* ⚠️ ЗАБИРАЕМ КАРТОЧКУ СРАЗУ ПРИ ВСТАВКЕ ПЛЕЕРА, А НЕ ПО СОБЫТИЮ «PLAY».
+     Событий от чужого плеера может не быть вовсе — а звук будет, и тап по
+     «острову» уже уведёт не туда */
+  filmTakeMediaSession();
   /* ⚠️ ОТСЧЁТ НАЧИНАЕТСЯ НЕ ЗДЕСЬ. Плеер теперь ставится сразу при показе
      экрана, и если считать фильм запущенным с этого мгновения, то у человека,
      который его даже не включил, через 31:30 выскочит «ну что, всё понятно?».
@@ -20590,6 +20711,9 @@ window.addEventListener('message', function(ev){
 
      `loaded` при этом остаётся полезным событием — просто ничего не делаем. */
 
+  filmMsgCount++;
+  filmLastMethod = d.method || '?';
+  filmLastMsgAt = Date.now();
   filmBootHide();   // плеер заговорил — значит он готов, заглушка не нужна
 
   /* Настоящее начало просмотра: человек нажал кнопку В САМОМ ПЛЕЕРЕ. Только
@@ -20611,6 +20735,7 @@ window.addEventListener('message', function(ev){
       }
     } catch(e){}
     filmPlayStartedAt = Date.now();
+    filmTakeMediaSession();   // подтверждаем владение и на каждом play
     clearTimeout(funnelAfterTimer);
     const rest = Math.max(FUNNEL_FILM_LENGTH_MS - filmPlayedAccum, 30000);
     funnelAfterTimer = setTimeout(showFunnelAfter, rest);
@@ -20621,6 +20746,7 @@ window.addEventListener('message', function(ev){
      «идёт», и настенные часы считать его не должны */
   if (d.method === 'pause'){
     if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
+    msState(false);
     clearTimeout(funnelAfterTimer);
     return;
   }
@@ -20671,6 +20797,7 @@ function showFunnelAfter(){
   const slot = document.getElementById('funnel-film-slot');
   if (slot) slot.innerHTML = '';        // выгружаем плеер, иначе звук играет под экраном
   funnelPlayerReady = false;
+  msRelease('film');
   if (cur) cur.style.display = 'none';
   const box = document.getElementById('funnel-after');
   if (box) box.style.display = 'flex';
@@ -20725,7 +20852,15 @@ function funnelLeave(keepFilm){
      сворачивается в PiP и живёт дальше (таймер остатка и счёт просмотра НЕ
      снимаются: фильм не остановлен, он свернулся). Без него — полная
      остановка, как раньше. Не начинали или досмотрели — сворачивать нечего. */
-  if (keepFilm && funnelFilmStarted && !filmDone){
+  /* ⚠️⚠️ СВОРАЧИВАЕМ ПО ФАКТУ ЖИВОГО ПЛЕЕРА, А НЕ ПО УСЛЫШАННОМУ «PLAY»
+     (23.08.2026). Условие стояло на `funnelFilmStarted`, а он поднимается
+     ТОЛЬКО сообщением от Boomstream. Если сообщения не доходят (другой формат,
+     другая версия плеера, блокировка postMessage), выходило худшее из
+     возможного: фильм играет и слышен, а окошка нет — [stated] Denis: «видео
+     на фоне звук издаёт, а вот окошка нигде не видно».
+     `funnelPlayerReady` — наш собственный факт: плеер вставлен нами. Если он
+     в DOM, значит и звук из него, и сворачивать есть что. */
+  if (keepFilm && (funnelPlayerReady || funnelFilmStarted) && !filmDone){
     const scr = document.getElementById('funnel-screen');
     if (scr){ scr.classList.add('pip-mode'); scr.style.display = 'flex'; }
     funnelVeil(false);
@@ -20787,7 +20922,7 @@ function filmDockShut(ev){
   if (scr) scr.style.display = 'none';
   funnelVeil(false);
   const chip = document.getElementById('film-chip');
-  if (chip && funnelFilmStarted && !filmDone) chip.style.display = 'block';
+  if (chip && (funnelPlayerReady || funnelFilmStarted) && !filmDone) chip.style.display = 'block';
   track('film_pip_close');
 }
 
@@ -27186,6 +27321,7 @@ function plPlay(){
   if (!plAudio || !plQueue.length) return;
   // Аудио глушит фильм-PiP (и наоборот — фильм глушит аудио на своём play)
   if (typeof filmPipPause === 'function') filmPipPause();
+  plTakeMediaSession();
   var p = plAudio.play();
   // На iOS play() может отвергнуться, если жеста не было — тогда честно
   // показываем паузу, а не врём иконкой
@@ -27202,7 +27338,30 @@ function plTogglePlay(){
 var PL_ICON_PLAY  = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.4c0-.8.9-1.3 1.6-.86l9.4 6.6a1 1 0 0 1 0 1.72l-9.4 6.6c-.7.45-1.6-.05-1.6-.86z"/></svg>';
 var PL_ICON_PAUSE = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="4.6" width="3.9" height="14.8" rx="1.3"/><rect x="13.6" y="4.6" width="3.9" height="14.8" rx="1.3"/></svg>';
 
+/* Тот же приём, что и у фильма: пока карточка не наша, «остров» уводит в
+   чужое приложение. Кнопки системы зовут ТЕ ЖЕ функции, что и наши кнопки —
+   иначе поведение пришлось бы поддерживать в двух местах */
+function plTakeMediaSession(){
+  var lec = plQueue[plIndex];
+  if (!lec) return;
+  msTake('audio', {
+    title: lec.title || 'Занятие',
+    artist: 'Ты Боженька Продаж',
+    album: (typeof plSourceTitle === 'function' ? plSourceTitle() : '') || '',
+    cover: lec.cover_url || lec.image_url || 'images/icon-512.png',
+  }, {
+    play:  function(){ plPlay(); },
+    pause: function(){ if (plAudio){ plAudio.pause(); plSetPlayIcon(false); } },
+    previoustrack: function(){ plPrev(); },
+    nexttrack:     function(){ plNext(); },
+    seekbackward:  function(){ plSkip(-15); },
+    seekforward:   function(){ plSkip(15); },
+    seekto: function(d){ if (plAudio && d && typeof d.seekTime === 'number') plAudio.currentTime = d.seekTime; },
+  });
+}
+
 function plSetPlayIcon(playing){
+  if (typeof msState === 'function' && msOwner === 'audio') msState(!!playing);
   var mp = plEl('mp-play'), fp = plEl('fp-play');
   var html = playing ? PL_ICON_PAUSE : PL_ICON_PLAY;
   var label = playing ? 'Пауза' : 'Слушать';
