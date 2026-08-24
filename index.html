@@ -4977,8 +4977,13 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   background:linear-gradient(135deg,var(--lav,#9b8cf2),var(--coral,#e8614a));
   color:#fff;font-size:19px;cursor:pointer}
 </style>
-<script src="https://play.boomstream.com/d9uzmOdM/config.jsonp" async></script>
-<script src="https://play.boomstream.com/i6QVY0Lg/config.jsonp" async></script>
+<!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
+     на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
+     `config.jsonp`. Их сборщик держит ОДИН текущий ролик на страницу: чей
+     конфиг приехал последним, тот и подставлялся в оба места — в виджете
+     фильма открывалось «Как пользоваться клубом» ([stated] Denis 24.08).
+     Теперь каждый попап получает СВОЙ iframe в момент открытия — независимо
+     и без гонки за общий конфиг. -->
 <script src="https://play.boomstream.com/assets/javascripts/biframesdk.js?v=1.1.1" async></script>
 <style>
 /* ── Журнал ───────────────────────────────────────────────────────────────
@@ -5415,7 +5420,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
     </div>
 
-    <div class="video-banner" id="sales-video-banner" style="display:none;background-image:url('images/film-ya-podumayu.jpg')" onclick="openVideoPopup('sales')">
+    <!-- ⚠️ ВИДЖЕТ ВЕДЁТ В ОКНО ВОРОНКИ, А НЕ В СТАРЫЙ ПОПАП (24.08.2026).
+         [stated] Denis: «мы построили то же самое, но круче… в режиме pip я
+         кликаю по виджету фильма, pip ставится на паузу, открывается второе
+         окно с фильмом». Два плеера на один фильм — лишние: `filmWidgetOpen`
+         разворачивает уже идущий, а не заводит второй -->
+    <div class="video-banner" id="sales-video-banner" style="display:none;background-image:url('images/film-ya-podumayu.jpg')" onclick="filmWidgetOpen()">
       <div class="video-banner-play">▶</div>
       <div class="video-banner-title">Как отработать «Я ПОДУМАЮ»?</div>
     </div>
@@ -6070,7 +6080,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
 Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!
 
-Узнать про клуб подробнее ты можешь <span class="club-info-video-link" onclick="event.stopPropagation();openVideoPopup('sales')">в этом видео</span>.</div>
+Узнать про клуб подробнее ты можешь <span class="club-info-video-link" onclick="event.stopPropagation();filmWidgetOpen()">в этом видео</span>.</div>
         <div class="club-info-gradient" id="club-info-gradient">
           <div class="club-info-readmore">Читать далее ↓</div>
         </div>
@@ -6845,9 +6855,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          занятие из библиотеки. ⚠️ КЛАСС `icon-btn`, А НЕ `gg-*`: попап живёт
          вне `#gg-root`, и здесь работают стили самого приложения -->
     <button class="icon-btn fullscreen-popup-share" type="button" aria-label="Поделиться" onclick="shareFilm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg></button>
-    <div class="video-embed-player">
-      <span data-boomstream-code="d9uzmOdM" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
-    </div>
+    <div class="video-embed-player" id="video-slot-sales"></div>
     <button class="lec-link-btn access-btn" style="margin-top:14px" onclick="closeVideoPopup('sales');openAccessPage()">Получить доступ</button>
   </div>
 </div>
@@ -6855,9 +6863,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <div class="fullscreen-popup-overlay" id="video-popup-onboarding-overlay" onclick="if(event.target===this) closeVideoPopup('onboarding')">
   <div class="fullscreen-popup-card">
     <button class="icon-btn fullscreen-popup-close" onclick="closeVideoPopup('onboarding')">✕</button>
-    <div class="video-embed-player">
-      <span data-boomstream-code="i6QVY0Lg" data-boomstream-mode="adaptive" data-boomstream-use-fullscreen-mode="0"></span>
-    </div>
+    <div class="video-embed-player" id="video-slot-onboarding"></div>
   </div>
 </div>
 
@@ -14216,6 +14222,20 @@ function botLinkForPlatform(){
   if (typeof isInsideVk === 'function' && isInsideVk()) return BOT_LINK_VK;
   return BOT_LINK;
 }
+
+/* ⚠️ «ОТКРОЙ БОТА» БЕЗ АДРЕСА НУЖНОГО СООБЩЕНИЯ — ТУПИК (24.08.2026).
+   [stated] Denis: «в веб-версии мы говорим, что человеку нужно зайти в бота
+   для оплаты, но мы не даём ему диплинк на сообщение с доступами. В ТГ это
+   ?start=dostup». Человек попадал в бота и оставался наедине с его меню.
+   В Telegram ведём прямо на нужную ветку; у ВК и MAX своих команд нет —
+   там остаётся обычная ссылка. */
+const BOT_START_ACCESS = 'dostup';
+
+function botLinkForAccess(){
+  if (typeof isInsideMax === 'function' && isInsideMax()) return BOT_LINK_MAX;
+  if (typeof isInsideVk === 'function' && isInsideVk()) return BOT_LINK_VK;
+  return BOT_LINK + '?start=' + BOT_START_ACCESS;
+}
 /* Личка Denis'а — сюда ведёт окошко «не могу оплатить». Отдельно от бота:
    человеку, у которого не проходит платёж, нужен ЖИВОЙ собеседник */
 const SUPPORT_DM_LINK = 'https://t.me/kuznetsov_denis';
@@ -21225,7 +21245,46 @@ function funnelToLogin(){
   proceedToWebLogin();
 }
 
+/* ⚠️ КАЖДЫЙ РОЛИК — СВОИМ IFRAME, вставленным в момент открытия. Так плееры
+   не делят общий конфиг (см. комментарий у предзагрузки), а заодно не грузят
+   чужое окружение, пока их никто не смотрит */
+const VIDEO_POPUP_CODES = { sales: 'd9uzmOdM', onboarding: 'i6QVY0Lg' };
+
+function videoPopupMount(which){
+  const slot = document.getElementById('video-slot-' + which);
+  const code = VIDEO_POPUP_CODES[which];
+  if (!slot || !code || slot.querySelector('iframe')) return;
+  slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + code +
+    '" allow="autoplay; fullscreen" frameborder="0" scrolling="no" ' +
+    'style="width:100%;height:100%;border:0;display:block;background:#000"></iframe>';
+}
+
+function videoPopupUnmount(which){
+  const slot = document.getElementById('video-slot-' + which);
+  if (slot) slot.innerHTML = '';   // иначе ролик продолжает звучать под закрытым окном
+}
+
+/* ⚠️ ОДИН ФИЛЬМ — ОДИН ПЛЕЕР. Идёт в мини-плеере — разворачиваем его (позиция
+   и звук сохранятся); идёт в окне — просто показываем окно; не запускался —
+   открываем воронку. Заводить второй плеер того же фильма нельзя: они начнут
+   глушить друг друга медиа-эксклюзивностью */
+function filmWidgetOpen(){
+  track('film_widget_open');
+  const scr = document.getElementById('funnel-screen');
+  if (scr && funnelPlayerReady && !filmDone){
+    if (scr.classList.contains('pip-mode')){ filmDockExpand(); return; }
+    scr.style.display = 'flex';
+    funnelVeil(true);
+    return;
+  }
+  const chip = document.getElementById('film-chip');
+  if (chip) chip.style.display = 'none';
+  if (typeof showFunnelScreen === 'function') showFunnelScreen();
+  else openVideoPopup('sales');
+}
+
 function openVideoPopup(which){
+  videoPopupMount(which);
   document.getElementById(`video-popup-${which}-overlay`).classList.add('open');
   /* Бар сам не узнает, что поверх него лег плеер — толкаем перерисовку */
   if (typeof renderLevelCard === 'function') renderLevelCard();
@@ -21234,6 +21293,7 @@ function openVideoPopup(which){
 }
 function closeVideoPopup(which){
   document.getElementById(`video-popup-${which}-overlay`).classList.remove('open');
+  videoPopupUnmount(which);
   stopVideoHeartbeat();
   if (typeof renderLevelCard === 'function') renderLevelCard();
 }
@@ -21409,7 +21469,7 @@ async function openAccessPage(){
                      && !!(typeof vkUserId === 'function' && vkUserId());
   if (!telegramId && !hasVkIdent) {
     el.innerHTML = '<div class="empty" style="line-height:1.5">Оплата проходит в боте — так платёж сразу свяжется с твоим аккаунтом.</div>'
-      + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(botLinkForPlatform())">Открыть бота</button>';
+      + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(botLinkForAccess())">Открыть бота</button>';
     return;
   }
 
