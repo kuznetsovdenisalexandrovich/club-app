@@ -3222,15 +3222,21 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    свернувшись при закрытии окна (крестик сразу запускает тур), фильм оказывался
    ПОД затемнением тура — [stated] Denis: «я вообще pip не увидел». Слой воронки
    тоже поднят, иначе потолок контекста снова прижмёт док вниз. */
+/* ⚠️⚠️ РАЗМЕРЫ МИНИ-ПЛЕЕРА — ЯВНЫМИ ЧИСЛАМИ (24.08.2026). Стояло
+   `width:auto` у дока и ширина слота от `aspect-ratio` — в настольном
+   Chromium это давало 111×198, но связка «прижатый к размеру содержимого
+   fixed-блок → ребёнок, чья ширина выводится из пропорции» в мобильном
+   WebKit может схлопнуться в ноль: звук идёт, окошка нет. Явная ширина
+   рвёт этот круг и не оставляет движку простора для трактовок. */
 #funnel-screen.pip-mode .film-dock{
   position:fixed;right:14px;bottom:calc(96px + env(safe-area-inset-bottom));
-  display:block;width:auto;margin:0;pointer-events:auto;z-index:12;
+  display:block;width:112px;margin:0;pointer-events:auto;z-index:12;
   border-radius:14px;overflow:hidden;
   box-shadow:0 12px 30px -10px rgba(0,0,0,.6);
 }
-#funnel-screen.pip-mode .funnel-film-slot{height:198px;margin:0;border-radius:14px}
+#funnel-screen.pip-mode .funnel-film-slot{width:112px;height:198px;aspect-ratio:auto;max-width:none;margin:0;border-radius:14px}
 #funnel-screen.pip-mode .funnel-film-slot iframe{border-radius:14px}
-#funnel-screen.pip-mode .funnel-film{height:198px;margin:0;border-radius:14px}
+#funnel-screen.pip-mode .funnel-film{width:112px;height:198px;margin:0;border-radius:14px}
 #funnel-screen.pip-mode .film-dock-cover{display:block;position:absolute;inset:0;cursor:pointer;z-index:2}
 #funnel-screen.pip-mode .film-dock-x{
   display:flex;position:absolute;top:5px;right:5px;width:24px;height:24px;
@@ -13863,7 +13869,30 @@ function debugFilmRefresh(){
     'слышали «play»: <b>' + (funnelFilmStarted ? 'да' : 'нет') + '</b> · досмотрен: <b>' + (filmDone ? 'да' : 'нет') + '</b><br>' +
     'позиция: <b>' + Math.round(filmLastPos) + '</b> из <b>' + Math.round(filmDuration) + '</b> с<br>' +
     'окно воронки: <b>' + (scr ? (scr.style.display === 'none' ? 'скрыто' : scr.style.display) : '—') + '</b>' +
-    ' · свёрнуто: <b>' + (scr && scr.classList.contains('pip-mode') ? 'да' : 'нет') + '</b>';
+    ' · свёрнуто: <b>' + (scr && scr.classList.contains('pip-mode') ? 'да' : 'нет') + '</b><br>' +
+    debugFilmDockLine();
+}
+
+/* ⚠️ ЗАМЕР МИНИ-ПЛЕЕРА НА САМОМ УСТРОЙСТВЕ. Настольный браузер дважды
+   показывал «всё видно» там, где телефон ничего не рисовал — меряем там,
+   где болит: место дока на экране и КТО лежит в его центре */
+function debugFilmDockLine(){
+  try {
+    const dock = document.getElementById('film-dock');
+    if (!dock) return 'мини-плеер: узла нет';
+    const r = dock.getBoundingClientRect();
+    const cs = getComputedStyle(dock);
+    let topName = '—';
+    if (r.width > 0 && r.height > 0){
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      topName = top ? (top.id || String(top.className).slice(0, 24) || top.tagName) : 'ничего';
+    }
+    return 'мини-плеер: <b>' + Math.round(r.width) + '×' + Math.round(r.height) + '</b>' +
+      ' на (' + Math.round(r.left) + ', ' + Math.round(r.top) + ')' +
+      ' · рисование: <b>' + cs.display + '/' + cs.visibility + '</b>' +
+      ' · в центре: <b>' + topName + '</b>' +
+      ' · экран: ' + window.innerWidth + '×' + window.innerHeight;
+  } catch(e){ return 'мини-плеер: замер упал (' + e + ')'; }
 }
 
 function debugFreshGuestOn(){
