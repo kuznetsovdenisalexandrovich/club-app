@@ -3289,6 +3289,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   box-shadow:0 10px 26px -12px rgba(0,0,0,.6);
 }
 #bonus-bar.on{display:block}
+/* Финальные минуты: бар становится тревожнее. Правило висит на признаке
+   документа — так же смогут реагировать любые другие блоки */
+html[data-funnel-window="last"] #bonus-bar{border-color:var(--warm);box-shadow:0 10px 26px -10px rgba(232,97,74,.55)}
+html[data-funnel-window="last"] .bb-time{animation:bb-pulse 1.6s ease-in-out infinite}
+@keyframes bb-pulse{0%,100%{opacity:1}50%{opacity:.45}}
 .bb-row{display:flex;align-items:center;gap:10px;padding:9px 13px}
 .bb-txt{flex:1;min-width:0;font-size:12.5px;line-height:1.25;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -5391,6 +5396,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
     </div>
 
+    <!-- Окно бонусов истекло, но его можно вернуть один раз -->
+    <div class="demo-banner" id="bonus-return-banner" style="display:none;margin-top:-14px" onclick="bwReturnWindow()">
+      <div class="demo-banner-icon">⏳</div>
+      <div>
+        <div class="demo-banner-title" data-text="bw.back">Бонусы ещё можно забрать</div>
+        <div class="demo-banner-sub" data-text="bw.back_sub">Вернуть время на решение →</div>
+      </div>
+    </div>
+
     <!-- Приглашение в тур — вместо тура «без спроса» после фильма
          ([stated] Denis 24.08). Тот же стиль, что у плашки демо -->
     <div class="demo-banner" id="guest-tour-banner" style="display:none;margin-top:-14px" onclick="gtStart('about')">
@@ -5790,6 +5804,17 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugResetPoints()">Сбросить</button>
         </div>
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Окно бонусов</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left">
+          Запускает режим финальных минут так, будто фильм только что досмотрен:
+          бар с обратным отсчётом, попап бонусов, фазы окна.
+        </div>
+        <button class="help-btn" style="margin-bottom:8px" onclick="debugWindowStart()">Запустить окно «15 минут»</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="debugWindowLast()">Перемотать к финальным минутам</button>
+        <button class="help-btn" onclick="debugWindowEnd()">Завершить окно</button>
+        <div style="font-size:12px;color:var(--warm);margin-top:8px;text-align:center" id="debug-window-state"></div>
       </div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Фильм воронки</div>
@@ -13174,6 +13199,12 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
     c:'Первый экран', l:'Кнопка «узнать подробнее» после фильма', w:'Экран после фильма', i:false,
     t:'Узнать подробнее о клубе' },
   // ── Фильм в PiP (23.08.2026) ──
+  'bw.back': {
+    c:'Первый экран', l:'Плашка возврата окна бонусов', w:'Главная, окно истекло', i:true,
+    t:'Бонусы ещё можно забрать' },
+  'bw.back_sub': {
+    c:'Первый экран', l:'Подстрока возврата окна', w:'Главная, окно истекло', i:true,
+    t:'Вернуть время на решение →' },
   'guest.tour_invite': {
     c:'Первый экран', l:'Плашка-приглашение в тур', w:'Главная в демо-режиме', i:true,
     t:'Узнать, что есть в приложении' },
@@ -13850,6 +13881,7 @@ function applyDebugMode(){
   const blocks = document.getElementById('debug-blocks');
   if (blocks) blocks.style.display = debugMode ? '' : 'none';
   if (debugMode && typeof debugFilmRefresh === 'function') debugFilmRefresh();
+  if (debugMode && typeof debugWindowRefresh === 'function') debugWindowRefresh();
   const freshNote = document.getElementById('debug-fresh-note');
   if (freshNote) freshNote.textContent =
     (typeof debugFreshGuestOn === 'function' && debugFreshGuestOn())
@@ -13875,6 +13907,44 @@ function setDebugMode(on){
    ли мы чужой плеер вообще. Если «сообщений: 0» при играющем фильме — значит
    учёт просмотра, честное окончание и пауза при сворачивании не работают, и
    лечить надо связь с плеером, а не наши экраны */
+/* ══ ОТЛАДКА ОКНА БОНУСОВ ═════════════════════════════════════════════════
+   [stated] Denis: «добавь мне в отладку режим "15 минут"». Гонять окно,
+   каждый раз досматривая получасовой фильм, невозможно — здесь оно
+   заводится с любой точки. */
+function debugWindowStart(){
+  try { localStorage.setItem('club_app_film_done_at', String(Date.now())); } catch(e){}
+  bwReturnUsed = false;
+  try { localStorage.removeItem('club_app_window_back'); } catch(e){}
+  bwPhase = 'none';
+  if (typeof bwOnFilmDone === 'function') bwOnFilmDone();
+  else bwStart(bwWindowMin() * 60);
+  debugWindowRefresh();
+}
+
+/* Перемотка к финальным минутам — сдвигаем конец окна, а не ждём */
+function debugWindowLast(){
+  if (!bwTimer) debugWindowStart();
+  const lastSec = Math.max(30, (bwLastMin || 5) * 60 - 20);
+  bwEndsAt = Date.now() + lastSec * 1000;
+  bwTick();
+  debugWindowRefresh();
+}
+
+function debugWindowEnd(){
+  bwEndsAt = Date.now() - 1000;
+  bwTick();
+  debugWindowRefresh();
+}
+
+function debugWindowRefresh(){
+  const el = document.getElementById('debug-window-state');
+  if (!el) return;
+  const left = Math.max(0, Math.round((bwEndsAt - Date.now()) / 1000));
+  el.textContent = 'фаза: ' + bwPhase + ' · осталось: ' + left + ' с' +
+    ' · финальные: ' + (bwLastMin || 0) + ' мин' +
+    ' · возврат: ' + (bwCanReturn() ? 'доступен' : (bwReturnUsed ? 'использован' : 'нет'));
+}
+
 function debugFilmRefresh(){
   const el = document.getElementById('debug-film-state');
   if (!el) return;
@@ -20479,6 +20549,11 @@ function bwWindowMin(){
   return isNaN(v) ? 15 : v;
 }
 
+function bwSyncLastMin(){
+  const v = parseInt(appSettings.funnel_window_last_min, 10);
+  if (!isNaN(v)) bwLastMin = v;
+}
+
 /* Досмотрел фильм — заводим окно. Опознанному ставим отметку на сервере,
    веб-гостю хватит своей */
 async function bwOnFilmDone(){
@@ -20503,7 +20578,12 @@ async function bwResume(){
   if (telegramId){
     try {
       const d = await apiRequest(`${API_URL}/funnel/window?telegram_id=${telegramId}`, {}, 8000);
-      if (d && d.known) left = d.active ? d.seconds_left : 0;
+      if (d && d.known){
+        left = d.active ? d.seconds_left : 0;
+        bwReturnUsed = !!d.used_return;
+        if (typeof d.last_min === 'number') bwLastMin = d.last_min;
+        if (!d.active && d.phase === 'over'){ bwPhase = 'over'; bwRenderReturn(); }
+      }
     } catch(e){}
   } else {
     let doneAt = 0;
@@ -20513,8 +20593,38 @@ async function bwResume(){
   if (left > 0) bwStart(left);
 }
 
+/* ══ ФАЗА ОКНА — ОДНА ТОЧКА ПРАВДЫ (24.08.2026) ══════════════════════════
+   [stated] Denis: «сразу его как-то обозначь в аппе и на сервере, чтобы мы
+   могли в него потом врезать уведомления, напоминания, какие-то возможности
+   взаимодействовать с человеком».
+   Фаза живёт в трёх видах, и все три — производные от одной функции:
+     • `bwPhase` — для кода;
+     • `data-funnel-window` на <html> — для СТИЛЕЙ: любой блок сможет
+       подсветиться в финальные минуты, не зная про окно ничего;
+     • событие `funnel-window` на window — для БУДУЩИХ ВРЕЗОК: слушатель
+       узнаёт о переходе, не влезая в этот код.
+   ⚠️ Фазы: 'open' — идёт, 'last' — финальные минуты, 'over' — истекло,
+   'none' — окна нет. Врезать напоминания надо на ПЕРЕХОД, а не на тик. */
+let bwPhase = 'none';
+let bwLastMin = 5;
+
+function bwSetPhase(next, secondsLeft){
+  if (next === bwPhase) return;
+  const prev = bwPhase;
+  bwPhase = next;
+  try { document.documentElement.setAttribute('data-funnel-window', next); } catch(e){}
+  try {
+    window.dispatchEvent(new CustomEvent('funnel-window', {
+      detail: { phase: next, prev: prev, secondsLeft: secondsLeft || 0 }
+    }));
+  } catch(e){}
+  if (next === 'last') track('bonus_window_last');
+  if (next === 'over') track('bonus_window_over');
+}
+
 function bwStart(seconds){
   if (!(seconds > 0) || isMember) return;
+  bwSyncLastMin();
   bwEndsAt = Date.now() + seconds * 1000;
   const bar = document.getElementById('bonus-bar');
   if (bar) bar.classList.add('on');
@@ -20536,12 +20646,16 @@ function bwTick(){
     const total = Math.max(1, bwWindowMin() * 60);
     fuse.style.width = Math.max(0, Math.min(100, left / total * 100)) + '%';
   }
+  const lastSec = (bwLastMin || 0) * 60;
+  bwSetPhase(left <= 0 ? 'over' : (lastSec && left <= lastSec ? 'last' : 'open'), left);
   if (left <= 0) bwStop();
 }
 
 function bwStop(){
   clearInterval(bwTimer);
   bwTimer = null;
+  bwSetPhase('over', 0);
+  bwRenderReturn();
   const bar = document.getElementById('bonus-bar');
   if (bar) bar.classList.remove('on');
   bwClose();
@@ -20550,6 +20664,50 @@ function bwStop(){
 /* Список бонусов — тот же `GET /bonuses`, что и на главной. Гостю он отдаёт
    названия и обложки без ссылок: показать есть что, а открыть нечего — это и
    есть повод вступить */
+/* ══ ВОЗВРАТ ИСТЁКШЕГО ОКНА (24.08.2026) ══════════════════════════════════
+   [stated] Denis: «окно прошло, но можем один раз его вернуть». Одноразовость
+   проверяет СЕРВЕР — на своей стороне её было бы не удержать: очистил память
+   браузера и получил новое окно. Веб-гостю без телеграма возврат даём по
+   своей отметке, приняв это ограничение осознанно (у него нет пользователя). */
+let bwReturnUsed = false;
+
+function bwCanReturn(){
+  if (isMember || !bwWindowMin() || bwPhase !== 'over') return false;
+  if (telegramId) return !bwReturnUsed;
+  try { return localStorage.getItem('club_app_window_back') !== '1'; } catch(e){ return false; }
+}
+
+function bwRenderReturn(){
+  const el = document.getElementById('bonus-return-banner');
+  if (el) el.style.display = bwCanReturn() ? 'flex' : 'none';
+}
+
+async function bwReturnWindow(){
+  const el = document.getElementById('bonus-return-banner');
+  if (el) el.style.display = 'none';
+  track('bonus_window_return');
+  let left = bwWindowMin() * 60;
+  if (telegramId){
+    try {
+      const d = await apiRequest(`${API_URL}/funnel/window/return`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ telegram_id: telegramId })
+      }, 8000);
+      if (d && d.known){
+        if (!d.ok){ bwReturnUsed = true; bwRenderReturn(); return; }
+        if (typeof d.seconds_left === 'number') left = d.seconds_left;
+      }
+    } catch(e){ /* сеть молчит — окно важнее точности, отдаём по-своему */ }
+  }
+  bwReturnUsed = true;
+  try {
+    localStorage.setItem('club_app_window_back', '1');
+    localStorage.setItem('club_app_film_done_at', String(Date.now()));
+  } catch(e){}
+  bwPhase = 'none';           // чтобы переход в 'open' случился заново
+  bwStart(left);
+}
+
 async function bwLoadList(){
   if (bwList) return bwList;
   try {
