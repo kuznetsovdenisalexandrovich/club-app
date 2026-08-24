@@ -3142,8 +3142,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    слабых телефонах гасится само: щадящий режим снимает `backdrop-filter`
    правилом `html[data-lite] *`. Затемнение при этом остаётся — оно ничего
    не стоит. */
+/* ⚠️⚠️ ВУАЛЬ ОБЯЗАНА ЛОВИТЬ НАЖАТИЯ (23.08.2026). С `pointer-events:none`
+   клики мимо окна падали СКВОЗЬ вуаль в живое демо: Denis попал в виджет
+   фильма на главной (второй плеер + пауза первого) и в баннер тура — три
+   окна поверх друг друга. Подложка — декорация, и пока окно открыто, всё
+   вокруг него принадлежит окну. Тап по вуали делает то, чего человек этим
+   тапом и просит — «уберите окно»: фильм в мини-плеер, дальше тур */
 #funnel-veil{
-  position:fixed;inset:0;z-index:854;display:none;pointer-events:none;
+  position:fixed;inset:0;z-index:854;display:none;
   background:rgba(6,8,14,.5);
   backdrop-filter:blur(3.5px);-webkit-backdrop-filter:blur(3.5px);
 }
@@ -6209,7 +6215,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      голову без звука и ушёл. Поэтому постер и явное нажатие. -->
 <!-- Вуаль под окном воронки: затемняет и размывает приложение за плечом,
      чтобы окно читалось, а демо оставалось видно -->
-<div id="funnel-veil"></div>
+<div id="funnel-veil" onclick="funnelVeilTap()"></div>
 
 <!-- Сгорающий бар окна бонусов. Живёт над всеми страницами, пока идёт срок -->
 <div id="bonus-bar" onclick="bwOpen()">
@@ -20537,6 +20543,13 @@ function bwBuy(){
   track('bonus_window_buy');
   if (typeof enterDemoMode === 'function') enterDemoMode();
   openAccessPage();
+}
+
+/* Тап мимо окна = «уберите окно»: то же, что крестик. Начатый фильм уедет в
+   мини-плеер, не начатый закроется, дальше тур по приложению */
+function funnelVeilTap(){
+  track('funnel_veil_tap');
+  funnelMinimize();
 }
 
 /* Вуаль поднимается вместе с окном и уходит, как только окно закрылось или
