@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -3179,7 +3179,8 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    одна строка. На экране «после фильма» знак и текст нужны как были. */
 #funnel-screen .mark,#funnel-screen #funnel-sub{display:none}
 #funnel-after .mark{width:46px;height:46px;font-size:17px;border-radius:13px}
-#funnel-screen h2{font-size:20px;line-height:1.25;margin:0}
+/* Место под кнопку «свернуть» — иначе длинный заголовок уходит под неё */
+#funnel-screen h2{font-size:20px;line-height:1.25;margin:0;padding:0 34px}
 #funnel-after h2{font-size:19px;line-height:1.25;margin:2px 0 0}
 #funnel-after p{font-size:12.5px;line-height:1.4;margin:0;opacity:.8}
 #funnel-screen .lec-link-btn,#funnel-after .lec-link-btn{padding:11px 14px;font-size:14px}
@@ -3209,13 +3210,18 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   background:rgba(250,247,242,.97);border-color:rgba(0,0,0,.08);
 }
 
+/* ⚠️ КНОПКА «СВЕРНУТЬ» НЕ ДОЛЖНА ЛЕЖАТЬ НА ЗАГОЛОВКЕ (25.08.2026). Была
+   тёмным кругом 36px поверх текста: на светлой теме — серое пятно, а длинный
+   заголовок заезжал под неё. Кружок меньше и в цветах темы, а заголовку
+   отведено место справа (см. `#funnel-screen h2`). */
 .funnel-close{
-  position:absolute;top:12px;right:12px;z-index:3;
-  width:36px;height:36px;border-radius:50%;border:none;padding:0;
-  background:rgba(0,0,0,.45);color:#fff;font-size:16px;line-height:1;
+  position:absolute;top:10px;right:10px;z-index:3;
+  width:30px;height:30px;border-radius:50%;padding:0;
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--text-dim);line-height:1;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
 }
+.funnel-close:active{background:var(--card)}
 .film-dock{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;flex:none}
 .film-dock-cover,.film-dock-x,.film-dock-done{display:none}
 /* PiP: слой воронки остаётся в DOM (в нём живёт плеер), но становится
@@ -3334,6 +3340,18 @@ html[data-funnel-window="last"] .bb-time{animation:bb-pulse 1.6s ease-in-out inf
 /* ⚠️ Строка возврата была неяркой и вставала ровно туда, где только что был
    мини-плеер — её просто не замечали. Делаем заметной: акцентная рамка,
    значок «играть» и место чуть выше */
+/* ══ ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ НА СТАРТОВЫХ ЭКРАНАХ (25.08.2026) ═════════════════
+   Тот же самый `.theme-switch`, что в шапке приложения, — не копия: разные
+   переключатели разъехались бы по виду и поведению при первой же правке.
+   Кладём его в угол экрана. На экране «добавь на главный» его нет
+   сознательно ([stated] Denis): там тёмная тема и один-единственный шаг. */
+.start-theme{position:absolute;top:12px;left:12px;z-index:4}
+/* ⚠️ ПЕРЕКЛЮЧАТЕЛЬ ТОЛЬКО ТАМ, ГДЕ ЗА ОКНОМ НИЧЕГО НЕТ (25.08.2026).
+   [stated] Denis: «если сзади видно основной экран с его темой — переключатель
+   на окно выносить не нужно; я говорил про экраны, где апп на заднем плане не
+   виден». Окно фильма и экран «после фильма» лежат НА приложении и берут его
+   тему — там переключателя нет. Он остаётся на экране входа по номеру: тот
+   открывается на пустом фоне, и сменить тему больше негде. */
 .film-chip{
   position:fixed;right:14px;bottom:calc(104px + env(safe-area-inset-bottom));
   z-index:881;padding:9px 14px 9px 12px;border-radius:999px;
@@ -6381,6 +6399,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <div class="film-chip" id="film-chip" style="display:none" onclick="filmChipReturn()" data-text="film.chip">Вернуться к фильму</div>
 
 <div class="center-msg" id="web-login-screen" style="display:none">
+  <div class="theme-switch start-theme" onclick="event.stopPropagation();toggleTheme()" aria-label="Тема">
+    <div class="theme-switch-thumb start-theme-thumb">☀</div>
+  </div>
   <div class="mark">БП</div>
   <div id="tg-fallback-notice" class="tg-fallback-notice" style="display:none"></div>
   <h2 id="web-login-title">Вход по номеру телефона</h2>
@@ -10138,7 +10159,15 @@ document.addEventListener('error', function(ev){
 
 
 function applyThemeIcon(theme){
-  document.getElementById('theme-thumb').textContent = theme === 'dark' ? '☾' : '☀';
+  const sign = theme === 'dark' ? '☾' : '☀';
+  const main = document.getElementById('theme-thumb');
+  if (main) main.textContent = sign;
+  /* ⚠️ ПЕРЕКЛЮЧАТЕЛЕЙ ТЕПЕРЬ НЕСКОЛЬКО (шапка + стартовые экраны), и значок
+     обязан меняться у ВСЕХ: человек видит на первом экране один, а войдя —
+     другой, и решает, что тема не применилась */
+  document.querySelectorAll('.start-theme-thumb').forEach(function(el){
+    el.textContent = sign;
+  });
 }
 function toggleTheme(){
   const html = document.documentElement;
@@ -10164,8 +10193,12 @@ function swapPlanImagesTheme(theme){
   });
 }
 (function initTheme(){
-  let saved = 'dark';
-  try{ saved = localStorage.getItem('club_app_theme') || 'dark'; }catch(e){}
+  /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
+     экраны начинаются с тёмной темы — давай сделаем светлую по умолчанию».
+     Меняется ТОЛЬКО значение для тех, кто ещё не выбирал: у всех, кто хоть раз
+     переключал тему, выбор сохранён и останется прежним. */
+  let saved = 'light';
+  try{ saved = localStorage.getItem('club_app_theme') || 'light'; }catch(e){}
   document.documentElement.dataset.theme = saved;
   document.addEventListener('DOMContentLoaded', () => applyThemeIcon(saved));
 })();
@@ -23094,8 +23127,16 @@ async function proceedToWebLogin(){
   renderLoginStage();
 }
 
+let addHomeThemeBefore = '';
+
 function proceedPastHomeScreenInstructions(){
   document.getElementById('web-add-home-screen-screen').style.display = 'none';
+  // Возвращаем тему, которая была до этого экрана (см. её принудительное затемнение)
+  if (addHomeThemeBefore){
+    document.documentElement.dataset.theme = addHomeThemeBefore;
+    applyThemeIcon(addHomeThemeBefore);
+    addHomeThemeBefore = '';
+  }
   proceedToWebLogin();
 }
 
@@ -23137,6 +23178,12 @@ function startWebSession(){
   } else {
     textEl.textContent = 'Открой эту страницу с телефона и добавь на главный экран через меню браузера — тогда апп будет работать как обычное приложение.';
   }
+  /* ⚠️ ЭТОТ ЭКРАН ВСЕГДА ТЁМНЫЙ ([stated] Denis 25.08): переключателя тут нет,
+     а картинки шагов нарисованы под тёмный фон. Выбор человека не затираем —
+     запоминаем и возвращаем, когда экран уходит */
+  addHomeThemeBefore = document.documentElement.dataset.theme || 'light';
+  document.documentElement.dataset.theme = 'dark';
+  applyThemeIcon('dark');
   document.getElementById('web-add-home-screen-screen').style.display = 'flex';
   hideSplash();
 }
