@@ -3850,7 +3850,15 @@ html[data-tg-native-back] .cv-back{display:none!important}
    карты), он создавал горизонтальную прокрутку — страницу можно было увести
    вбок, и крестик «уезжал за правый край». Клипом сигил не портится: он и
    задуман уходящим под края сцены */
-.quiz-overlay{position:fixed;inset:0;z-index:870;background:var(--bg);
+/* ⚠️⚠️ `color` ЗДЕСЬ ОБЯЗАТЕЛЕН, А НЕ УКРАШЕНИЕ (27.08.2026). Слой переопределяет
+   токены темы (`--bg`, `--text`, …) НА СЕБЕ, но цвет текста сам не задавал —
+   и всё, у чего нет собственного `color`, наследовало его от `body`, то есть
+   от темы ПРИЛОЖЕНИЯ. Из тёмной темы на светлый экран результата такие абзацы
+   приходили почти белыми и пропадали на бежевом фоне.
+   ⚠️ Подпись на самой карте (`.qr-copy`) этим не задета — у неё цвет свой,
+   зашитый числом, и это правильно: она лежит поверх тёмной полосы арта, а не
+   на фоне экрана. */
+.quiz-overlay{position:fixed;inset:0;z-index:870;background:var(--bg);color:var(--text);
   display:none;flex-direction:column;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .quiz-overlay.open{display:flex}
 .quiz-inner{width:100%;max-width:440px;margin:0 auto;padding:calc(var(--safe-top, 0px) + 18px) 20px
@@ -10269,7 +10277,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v315 · 26.08.2026';
+const APP_BUILD = 'v316 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
