@@ -9882,9 +9882,12 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
          по ошибке, отсюда можно пройти путь заново, не ища его в лекциях -->
     <div class="sm-group-title" data-text="settings.g_access">Доступы</div>
     <div class="sm-block">
-      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();grantVkAccessAndJoin()" data-text="settings.vk1">Получить доступ к ВКонтакте</button>
-      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openStepsPopup()" data-text="settings.tg1">Получить доступ в Telegram</button>
-      <button class="lec-link-btn access-btn" onclick="closeAppSettingsPopup();openOnPlatform('vk')" data-text="settings.open_vk">Открыть клуб во ВКонтакте</button>
+      <button class="lec-link-btn access-btn" id="acc-vk-grant" onclick="closeAppSettingsPopup();grantVkAccessAndJoin()" data-text="settings.vk1">Получить доступ к ВКонтакте</button>
+      <button class="lec-link-btn access-btn" id="acc-tg-grant" onclick="closeAppSettingsPopup();openStepsPopup()" data-text="settings.tg1">Получить доступ в Telegram</button>
+      <button class="lec-link-btn access-btn" id="acc-open-vk" onclick="closeAppSettingsPopup();openOnPlatform('vk')" data-text="settings.open_vk">Открыть клуб во ВКонтакте</button>
+      <!-- Видна ТОЛЬКО в ВК и только тем, у кого телеграм ещё не привязан -->
+      <button class="lec-link-btn access-btn" id="acc-tg-link" style="display:none" onclick="closeAppSettingsPopup();linkTelegramFromVk()" data-text="settings.tg_link">Подключить Telegram</button>
+      <div class="sm-hint" id="acc-tg-link-hint" style="display:none" data-text="settings.tg_link_hint">Занятия идут и в Telegram. Кнопка откроет бота — он узнает тебя и сам выдаст вход в канал и чат.</div>
     </div>
   </div>
 </div>
@@ -10242,7 +10245,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v311 · 26.08.2026';
+const APP_BUILD = 'v312 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12537,6 +12540,9 @@ function homeAddBlock(key){
 function openAppSettingsPopup(){
   document.getElementById('app-settings-overlay').classList.add('open');
   liteSyncButton();
+  // ⚠️ СОСТАВ СЧИТАЕМ ПРИ ОТКРЫТИИ, А НЕ ОДИН РАЗ ПРИ СТАРТЕ: привязка телеграма
+  // может случиться посреди сессии, и кнопка обязана исчезнуть сама
+  renderAccessRows();
 }
 function closeAppSettingsPopup(){
   document.getElementById('app-settings-overlay').classList.remove('open');
@@ -13815,6 +13821,15 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'settings.vk1': {
     c:'Настройки приложения', l:'Кнопка получения доступа в ВК', w:'Настройки приложения', i:true,
     t:'Получить доступ к ВКонтакте' },
+  'settings.tg_link': { c:'Настройки', l:'Кнопка рукопожатия ВК→Telegram', w:'Настройки → Доступы', i:false,
+    t:'Подключить Telegram' },
+
+  'settings.tg_link_hint': { c:'Настройки', l:'Пояснение под кнопкой рукопожатия', w:'Настройки → Доступы', i:false,
+    t:'Занятия идут и в Telegram. Кнопка откроет бота — он узнает тебя и сам выдаст вход в канал и чат.' },
+
+  'settings.tg_link_fail': { c:'Настройки', l:'Не удалось начать рукопожатие', w:'Всплывашка', i:false,
+    t:'Не получилось создать ссылку. Попробуй ещё раз через минуту.' },
+
   'settings.open_vk': {
     p:'Настройки приложения',
     t:'Открыть клуб во ВКонтакте' },
@@ -20391,6 +20406,52 @@ async function pollForTgAccess(attempts = 6, delayMs = 3000){
     await tgChannelFresh();
   }
   tgAccessWatch = false;
+}
+
+/* ═══ РУКОПОЖАТИЕ ВК → TELEGRAM (26.08.2026) ═══
+   Серверная половина построена давно (`/access/tg/start` + `/access/tg/claim`),
+   но приложение её ни разу не звало — человек, пришедший из ВК, попасть в
+   телеграмную часть клуба не мог никак.
+
+   ⚠️ РУКОПОЖАТИЕ ДЕЛАЕТ БОТ, А НЕ МИНИ-АПП: только он узнаёт telegram_id и
+   может выдать доступы. Поэтому ссылка ведёт в САМОГО бота (`?start=`), а
+   токен в ней — одноразовый: по открытому vk_id можно было бы привязать чужую
+   карточку к своему телеграму. */
+async function linkTelegramFromVk(){
+  const vk = Number(vkUserId()) || 0;
+  if (!vk && !telegramId){ showToast(t('settings.tg_link_fail')); return; }
+  showToast(t('tg.access_wait'));
+  try {
+    const r = await fetch(`${API_URL}/access/tg/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vk_id: vk || null, telegram_id: telegramId || null })
+    });
+    if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
+    const d = await r.json();
+    if (d && d.url){ openUrl(d.url); return; }
+    showToast(t('settings.tg_link_fail'));
+  } catch (e){ showToast(t('settings.tg_link_fail')); }
+}
+
+/* Строка доступов зависит от того, ГДЕ человек открыл клуб. Раньше три кнопки
+   висели одинаково на обеих площадках: сидящему в ВК предлагалось «открыть
+   клуб во ВКонтакте», а «получить доступ в Telegram» вело в шаги регистрации,
+   которым нужен telegram_id — то есть в никуда */
+/* ⚠️ ИМЯ С СУФФИКСОМ `Rows` НЕ СЛУЧАЙНО: `renderAccessButtons` в этом файле
+   УЖЕ ЗАНЯТО — оно рисует кнопки оплаты в round-trip'е. Вторая функция с тем
+   же именем молча переопределила бы первую */
+function renderAccessRows(){
+  const inVk = (typeof isInsideVk === 'function') && isInsideVk();
+  const linked = !!telegramId;
+  const show = (id, on) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? '' : 'none';
+  };
+  show('acc-open-vk', !inVk);              // в ВК звать в ВК незачем
+  show('acc-vk-grant', !inVk);             // доступ в группу ВК нужен телеграмным
+  show('acc-tg-grant', linked);            // шагам регистрации нужен telegram_id
+  show('acc-tg-link', inVk && !linked);    // рукопожатие — только непривязанным
+  show('acc-tg-link-hint', inVk && !linked);
 }
 
 function openLectureLink(index, platform, src) {
