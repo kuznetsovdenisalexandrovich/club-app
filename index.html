@@ -10245,7 +10245,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v313 · 26.08.2026';
+const APP_BUILD = 'v314 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -10787,13 +10787,20 @@ async function fetchWithTimeout(url, options, timeoutMs){
    ронять его, если сервер недоступен. */
 
 function track(event, ref, value){
-  if (!telegramId) return;          // некому приписать — не пишем
+  /* ⚠️ ГОСТЬ ИЗ ВК ТОЖЕ ДОЛЖЕН БЫТЬ ВИДЕН. Раньше здесь стояло «нет телеграмного
+     айди — не пишем», и вся ВК-половина воронки не существовала: человек мог
+     посмотреть фильм, пройти тур и упереться в оплату, не оставив ни следа.
+     Шлём подписанные параметры запуска — сервер сам проверит подпись и решит,
+     под кем писать. Голый vk_id не годится: по нему кто угодно набил бы
+     чужую ленту. */
+  const vkq = (typeof isInsideVk === 'function' && isInsideVk()) ? vkLaunchQuery() : '';
+  if (!telegramId && !vkq) return;   // некому приписать — не пишем
   try {
     fetch(`${API_URL}/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, event: event,
-                             ref: ref || '', value: value || 0 })
+      body: JSON.stringify({ telegram_id: telegramId || 0, vk_query: vkq,
+                             event: event, ref: ref || '', value: value || 0 })
     }).catch(function(){});
   } catch(e){}
 }
