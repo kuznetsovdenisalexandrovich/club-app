@@ -10245,7 +10245,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v312 · 26.08.2026';
+const APP_BUILD = 'v313 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16595,6 +16595,16 @@ function showSingleLecture(lec){
   if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/* ⚠️ ПРОСМОТР БЕСПЛАТНОЙ ВЕРСИИ — КЛЮЧЕВОЙ ШАГ ГОСТЯ, И ОН НЕ ОТМЕЧАЛСЯ.
+   Сервер ждал событие `free_lecture` с 15.08, а слать его было некому: кнопки
+   звали `openUrl` напрямую. Отмечаем НАЖАТИЕ, а не показ баннера: показ — наша
+   работа, а нажатие — его решение. Слаг в `ref`, чтобы видеть, какие занятия
+   заходят холодному человеку */
+function openFreeVersion(url, slug){
+  track('free_lecture', slug || '');
+  openUrl(url);
+}
+
 /* Гостю — бесплатная версия занятия, если она заведена */
 function showFreeVersion(lec){
   const box = document.getElementById('dl-banner');
@@ -16614,8 +16624,8 @@ function showFreeVersion(lec){
       '<div class="dl-banner-title">' + escapeHtml(t('deeplink.free_title')) + '</div>'
     + '<div class="dl-banner-text">' + escapeHtml(t('deeplink.free_text')) + '</div>'
     + '<div class="dl-banner-btns">'
-    + (tg ? '<button class="lec-link-btn access-btn" style="margin-bottom:0" onclick="openUrl(' + jsArg(tg) + ')">' + escapeHtml(t('deeplink.free_tg')) + '</button>' : '')
-    + (vk ? '<button class="lec-link-btn" style="margin-bottom:0" onclick="openUrl(' + jsArg(vk) + ')">' + escapeHtml(t('deeplink.free_vk')) + '</button>' : '')
+    + (tg ? '<button class="lec-link-btn access-btn" style="margin-bottom:0" onclick="openFreeVersion(' + jsArg(tg) + ',' + jsArg(lec.slug || '') + ')">' + escapeHtml(t('deeplink.free_tg')) + '</button>' : '')
+    + (vk ? '<button class="lec-link-btn" style="margin-bottom:0" onclick="openFreeVersion(' + jsArg(vk) + ',' + jsArg(lec.slug || '') + ')">' + escapeHtml(t('deeplink.free_vk')) + '</button>' : '')
     + '</div>';
   box.style.display = 'block';
 }
