@@ -10277,7 +10277,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v316 · 26.08.2026';
+const APP_BUILD = 'v317 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -24597,7 +24597,14 @@ function renderPackBanner(){
       ? 'Награда ждёт, чтобы её забрали'
       : ('Незабранных награды: ' + unclaimed.length);
     if (sub) sub.textContent = (unclaimed[0].title || '') + ' →';
-    el.onclick = function(){ switchView('cards'); };
+    // ⚠️ ОТКРЫВАЕМ САМУ КАРТУ, А НЕ ВКЛАДКУ. Раньше баннер высаживал в общий
+    // альбом, и какую из карточек он имел в виду, приходилось искать глазами
+    el.onclick = function(){
+      switchView('cards');
+      const key = unclaimed[0] && unclaimed[0].card_key;
+      // витрина строится по каталогу и владениям — им нужно успеть приехать
+      if (key) setTimeout(function(){ try { openAlbumCard(key); } catch(e){} }, 60);
+    };
     el.style.display = 'flex';
     return;
   }
@@ -25727,7 +25734,13 @@ function prSeedAmbient(a, b){
 /* ⚠️ `skipShare` — для экрана просмотра карты: там шеринг живёт КРУГЛОЙ
    кнопкой со своей шторкой выбора, и широкая надпись была бы вторым таким же
    действием рядом. На экране вскрытия пака всё остаётся как было */
-function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass, skipShare){
+/* ⚠️ `forceClaim` — ПРИЗНАК ЭКЗЕМПЛЯРА (27.08.2026). `card.needs_claim` приходит
+   из каталога и считается по ТИПУ карты, а с 22.08 награда может требовать
+   действия у ОДНОГО экземпляра: подарок за тест — обычная частая карта, у
+   которой заморожен именно подарочный экземпляр. Каталог о нём не знает и
+   отдаёт `false`, поэтому кнопки «Забрать» не было, хотя баннер награду обещал.
+   Кто такой экземпляр знает — тот и говорит об этом сюда. */
+function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass, skipShare, forceClaim){
   if (!card) return '';
   const cls = btnClass || 'lec-link-btn access-btn';
   let out = '';
@@ -25739,7 +25752,7 @@ function cardActionsHtml(card, cardId, alreadyClaimed, copies, btnClass, skipSha
 
   // Карточки, награда которых требует действия вне карточки, при перевороте
   // ничего не применяют — человек должен сам нажать «Забрать»
-  if (card.needs_claim && cardId){
+  if ((card.needs_claim || forceClaim) && cardId){
     out += alreadyClaimed
       ? '<div class="reveal-detail-gain">Забрано — Денис свяжется</div>'
       : '<div style="margin-top:14px"><button class="' + cls + '" style="width:100%" '
@@ -25801,7 +25814,7 @@ function cardArtSrc(card){
   return (card && (card.art_url || card.image_url)) || '';
 }
 
-function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
+function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies, forceClaim){
   const el = document.getElementById('reveal-detail');
   const big = document.getElementById('reveal-big');
   const ov  = document.getElementById('reveal-overlay');
@@ -25839,7 +25852,7 @@ function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies){
     big.classList.add('on');
   }
 
-  const actions = cardActionsHtml(card, cardId, alreadyClaimed, copies, 'lec-link-btn access-btn', true);
+  const actions = cardActionsHtml(card, cardId, alreadyClaimed, copies, 'lec-link-btn access-btn', true, forceClaim);
 
   // Три плашки из концепта: бог, редкость, награда
   const plates =
@@ -26321,7 +26334,10 @@ function renderBrowseCard(){
     + 'нажми на карточку, чтобы увеличить';
   // Если у этой карточки есть незабранная копия — из витрины тоже можно забрать
   const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === c.key; });
-  showCardDetail(c, 0, pending ? pending.id : null, false, n);
+  // `pending` — незабранный ЭКЗЕМПЛЯР из /cards/my. Он и есть источник правды
+  // про награду: каталог считает `needs_claim` по типу карты и подарок за тест
+  // пропускает
+  showCardDetail(c, 0, pending ? pending.id : null, false, n, !!pending);
 }
 
 function browseCard(delta){
