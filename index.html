@@ -3482,7 +3482,14 @@ html[data-lite] #funnel-screen .access-btn,html[data-lite] #funnel-after .access
    тёмный → тёмный, особый → легендарный. Признак `data-look` ставится только
    когда стиль карты известен; иначе витрина живёт в теме приложения. */
 .reveal-overlay.showcase{justify-content:flex-start;overflow-y:auto;
-  padding:22px 18px calc(26px + env(safe-area-inset-bottom, 0px))}
+  /* ⚠️ ОТСТУПЫ РАЗДЕЛЬНО + ПРОСТЫЕ ЗНАЧЕНИЯ ЗАПАСНЫМИ. Браузеры читают `calc`
+     в отступах прекрасно, а вот НАША ПРОВЕРКА В jsdom на них слепа: движок
+     склеивает раздельные свойства обратно в сокращённое `padding` и роняет
+     его целиком, отдавая 0. Отступы с `calc` здесь сторожатся разбором текста
+     стилей, а не вычисленным значением — не тратить время на «провал» теста */
+  padding:22px 18px 26px;
+  padding-top:calc(var(--safe-top, 0px) + 22px);
+  padding-bottom:calc(26px + env(safe-area-inset-bottom, 0px))}
 .reveal-overlay[data-look]{
   background:radial-gradient(420px 340px at 50% 22%,var(--cv-warm-soft),transparent 74%),
              linear-gradient(180deg,var(--cv-a) 0%,var(--cv-b) 57%,var(--cv-c) 100%)}
@@ -3600,7 +3607,7 @@ html[data-lite] #funnel-screen .access-btn,html[data-lite] #funnel-after .access
 
 /* Кнопка «назад» витрины — на месте, где её ждут по всему приложению:
    слева сверху, стрелкой, а не широкой кнопкой внизу */
-.cv-back{position:absolute;left:14px;top:calc(12px + env(safe-area-inset-top, 0px));z-index:6;
+.cv-back{position:absolute;left:14px;top:calc(var(--safe-top, 0px) + 12px);z-index:6;
   width:38px;height:38px;border-radius:50%;border:1px solid rgba(241,234,224,.18);
   background:rgba(20,17,30,.5);color:#f1eae0;font-size:19px;line-height:1;cursor:pointer;
   display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
@@ -3686,6 +3693,23 @@ html[data-tg-native-back] .cv-back{display:none!important}
    читается как «уже посещённая ссылка» и спорит с названиями карточек */
 .god-link{color:var(--warm);border-bottom:1px dotted var(--warm);cursor:pointer}
 .reveal-detail-god .god-link{border-bottom-color:rgba(232,97,74,.6)}
+
+/* ── ВИТРИНА: ПУСТОТА ВНИЗУ И БЕЗОПАСНАЯ ЗОНА СВЕРХУ (27.08.2026) ───────────
+   [stated] Denis: «много пустоты внизу, элементы забрались в сейф зону вверху».
+   Обе беды из одной раскладки: колонка прижата к верху, а верхний отступ был
+   плоскими 22px, без зоны под часами.
+
+   ⚠️ ЦЕНТРИРУЕМ АВТО-ОТСТУПАМИ, А НЕ `justify-content:center`. У колонки стоит
+   `overflow-y:auto`, и при контенте выше экрана `center` ОБРЕЗАЕТ ВЕРХ:
+   прокрутить обратно к заголовку становится нечем. Авто-отступ при нехватке
+   места честно схлопывается в ноль, и прокрутка работает как обычно.
+
+   ⚠️ БЛОК ОБЯЗАН ЛЕЖАТЬ НИЖЕ ПРАВИЛ `[data-look]` ПО ФАЙЛУ: специфичность у
+   них равная, а при равной побеждает то, что ниже. Выше переносить нельзя.
+   ⚠️ `#reveal-done` в витрине `display:none`, поэтому последний живой ребёнок
+   колонки — `.reveal-detail`, на нём и нижний авто-отступ. */
+.reveal-overlay.showcase .reveal-title{margin-top:auto}
+.reveal-overlay.showcase .reveal-detail{margin-bottom:auto}
 
 /* Описание бога. z-index между витриной карточки (800) и увеличением (900):
    слой открывается ПОВЕРХ витрины и не мешает увеличить арт после закрытия */
@@ -10245,7 +10269,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v314 · 26.08.2026';
+const APP_BUILD = 'v315 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
