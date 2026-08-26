@@ -10230,7 +10230,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v309 · 25.08.2026 22:10';
+const APP_BUILD = 'v310 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12145,7 +12145,7 @@ async function homeLoadMovedData(tries){
     else jobs.push(loadPlanProblems(), loadPlanAnswers().then(function(){
       // ⚠️ ТОЛЬКО ПОСЛЕ ОТВЕТОВ: серверу нужны уровень, глубина и темы, иначе
       // он не поймёт, какой плейлист подходит
-      return loadPlaylistHead(planAnswers);
+      return Promise.all([loadPlaylistHead(planAnswers), loadPlanSeed()]);
     }));
     await Promise.all(jobs);
     renderPersonalPlanBody();
@@ -13061,6 +13061,9 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'support.open_here': { c:'Поддержка', l:'Подпись ссылки внутрь приложения', w:'Ответ поддержки', i:false, t:'открыть в приложении' },
   'support.route_gone': { c:'Поддержка', l:'Ссылка из ответа не открылась', w:'Тост', i:false, t:'Не получилось открыть — напиши нам ещё раз' },
   'plan.building': { c:'Личный план', l:'Надпись на время сборки карты', w:'Поле выбора тем', i:false, t:'Собираю карту тем…' },
+  'plan.seed_group': { c:'Личный план', l:'Пометка остановки, пришедшей из теста', w:'Остановка карты', i:false,
+    t:'Подобрано по твоему архетипу' },
+
   'plan.guest_free': { c:'Личный план', l:'Кнопка открытой части занятия у гостя', w:'Остановка карты', i:false,
     t:'Смотреть открытую часть' },
   'plan.guest_shut': { c:'Личный план', l:'Пояснение, если у занятия нет открытой части', w:'Остановка карты', i:false,
@@ -17305,7 +17308,9 @@ async function loadLibrary() {
        Denis: «карта медленно подтягивалась» — вот прямая причина. */
     const lecturesPromise = fetch(`${API_URL}/lectures?limit=100`).then(r => r.json());
     const planPromise = Promise.all([loadPlanProblems(),
-      loadPlanAnswers().then(function(){ return loadPlaylistHead(planAnswers); })]);
+      loadPlanAnswers().then(function(){
+        return Promise.all([loadPlaylistHead(planAnswers), loadPlanSeed()]);
+      })]);
 
     const data = await lecturesPromise;
     // ЕСЛИ НИЧЕГО НЕ ИЗМЕНИЛОСЬ — НЕ ПЕРЕРИСОВЫВАЕМ. Иначе при каждом заходе
@@ -17537,6 +17542,30 @@ function planLecturesFor(key, answers, used){
    Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
    (`planStopList`) синхронная, ходить в сеть из неё нельзя. */
 let planPlaylistHead = [];
+
+/* ═══ ЗАСЕВ ПО АРХЕТИПУ — ОТДЕЛЬНЫЙ СЛОЙ ПУТИ (26.08.2026) ═══
+   Бэкенд считал `/plan/seed` с 19.08, но апп его ни разу не спрашивал: путь
+   собирался ТОЛЬКО из отмеченных вручную тем, и персонализация по тесту не
+   доезжала до карты вообще. Теперь засев — первый слой, живёт отдельно от
+   слоя тем, и пересборка анкеты его не трогает.
+
+   ⚠️ КОД БЕРЁМ И БЕЗ ВХОДА: тест проходят ДО вступления, у гостя результат
+   лежит только в localStorage. Иначе засев был бы ровно у тех, кому он уже
+   не нужен. */
+let planSeedStops = [];
+
+async function loadPlanSeed(){
+  planSeedStops = [];
+  let code = '';
+  try { const q = savedQuizResult(); code = (q && q.code) || ''; } catch(e){}
+  if (!telegramId && !code) return;
+  try {
+    const qs = telegramId ? ('telegram_id=' + telegramId) : ('code=' + encodeURIComponent(code));
+    const r = await fetch(`${API_URL}/plan/seed?${qs}`);
+    const d = await r.json();
+    planSeedStops = (d && d.seed) || [];
+  } catch(e){ planSeedStops = []; }   // молча: путь и без засева рабочий
+}
 
 async function loadPlaylistHead(answers){
   planPlaylistHead = [];
@@ -17829,11 +17858,35 @@ function planSaveMarks(){
 }
 
 // Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
 function planStopList(answers){
+  answers = answers || { problems: [] };
   /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
      болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
      этого курированная лекция всплывала бы в пути дважды. */
   const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
   // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
   const head = [];
   planPlaylistHead.forEach(function(it){
@@ -17861,8 +17914,15 @@ function planStopList(answers){
     };
   }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
 
-  // Курированное начало — как есть, в порядке Denis'а
   const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
   head.forEach(function(r){
     if (!r.lec || seen[r.lec.slug]) return;
     seen[r.lec.slug] = true;
@@ -17887,9 +17947,14 @@ function planStopList(answers){
      с открытой частью поднимаем наверх, СОХРАНЯЯ порядок внутри каждой
      половины — сортировка устойчивая, поэтому логика подбора не рушится */
   if (!isMember){
-    const open = [], shut = [];
-    stops.forEach(function(st){ (planStopHasFree(st) ? open : shut).push(st); });
-    return open.concat(shut).slice(0, PLAN_STOPS_MAX);
+    /* ⚠️ ПЕРЕСТАНОВКА ИДЁТ ВНУТРИ СЛОЁВ, А НЕ ПОВЕРХ НИХ. Иначе засев
+       расползался бы по всей карте и переставал читаться как «это про тебя» */
+    const seedPart = [], rest = [];
+    stops.forEach(function(st){ (st.fromSeed ? seedPart : rest).push(st); });
+    const sOpen = [], sShut = [], open = [], shut = [];
+    seedPart.forEach(function(st){ (planStopHasFree(st) ? sOpen : sShut).push(st); });
+    rest.forEach(function(st){ (planStopHasFree(st) ? open : shut).push(st); });
+    return sOpen.concat(sShut, open, shut).slice(0, PLAN_STOPS_MAX);
   }
   /* Путь обрезается десятью остановками: это стартовый маршрут новичка, и
      ровно столько цифр нарисовано. Обрезка здесь, а не в отрисовке, чтобы
@@ -18135,12 +18200,16 @@ function renderPersonalPlanBody(){
   if (!el) return;
 
   const link = document.getElementById('plan-open-link');
-  const hasPlan = planAnswers && (planAnswers.problems || []).length;
+  const hasPlan = planHasAnything();
+  const seedOnly = hasPlan && !planHasThemes();
 
   if (link){
     link.style.display = '';
-    link.textContent = hasPlan ? 'Открыть полностью →' : 'Составить план →';
-    link.dataset.mode = hasPlan ? 'open' : 'make';
+    /* Засев без тем — путь уже есть, но он куцый: зовём дособрать, а не
+       «составить с нуля», иначе выглядит так, будто теста и не было */
+    link.textContent = seedOnly ? 'Добавить свои темы →'
+                     : (hasPlan ? 'Открыть полностью →' : 'Составить план →');
+    link.dataset.mode = hasPlan && !seedOnly ? 'open' : 'make';
   }
 
   if (!hasPlan){
@@ -18156,7 +18225,7 @@ function renderPersonalPlanBody(){
     return;
   }
 
-  el.innerHTML = planRailHtml(planAnswers);
+  el.innerHTML = planRailHtml(planAnswersSafe());
 }
 
 /* Призрачная лента для пустого состояния — те же кружки, но без данных.
@@ -18202,7 +18271,7 @@ function renderPlanScreen(){
     }
     return;
   }
-  if (!planAnswers || !(planAnswers.problems || []).length){
+  if (!planHasAnything()){
     /* ⚠️ ВО ВРЕМЯ ЗНАКОМСТВА ЭКРАН НЕ ЗАПУСКАЕТ АНКЕТУ САМ: поле выбора тем
        полноэкранное, оно съедало бы шаг целиком ещё до того, как человек
        прочитал, о чём он ([stated] Denis 19.08). Поле открывает кнопка шага */
@@ -18220,8 +18289,9 @@ function renderPlanScreen(){
     renderPlanQuestion();
     return;
   }
-  el.innerHTML = planMapHtml(planAnswers)
-    + '<div class="payment-help-link" style="margin-top:16px" onclick="startPlanQuiz()">Пересобрать план →</div>';
+  el.innerHTML = planMapHtml(planAnswersSafe())
+    + '<div class="payment-help-link" style="margin-top:16px" onclick="startPlanQuiz()">'
+    + (planHasThemes() ? 'Пересобрать план →' : 'Добавить свои темы →') + '</div>';
 }
 
 /* ── Анкета ──────────────────────────────────────────────────────────────── */
