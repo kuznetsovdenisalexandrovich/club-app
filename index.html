@@ -8449,6 +8449,30 @@ body.api-override-on #api-override-bar{display:block}
 .gg-time{font-size:11px;color:var(--gg-muted-2);margin:5px 5px 0}
 .gg-msg.gg-me .gg-time{text-align:right}
 .gg-ticks{color:var(--gg-accent);margin-left:5px;letter-spacing:-3px}
+
+/* ── КАРТОЧКА ПЕРВОГО ХОДА (27.08.2026) ────────────────────────────────────
+   ⚠️ ПОЧЕМУ ОНА ЕСТЬ. По статистике 92 партии из 161 брошены НА НУЛЕВОМ ХОДУ —
+   человек дошёл до поля ввода и ушёл, не написав ни слова. Правила он видел:
+   попап открывается перед стартом. Но попап закрывается, а на самом экране
+   партии не остаётся ничего, что говорит, КАК выглядит ход. Кнопка «✦» ведёт
+   в тот же попап — её не ищут те, кто не понял задачу.
+   ⚠️ ЭТО НЕ ПОДСКАЗКА О КАЧЕСТВЕ, а объяснение задачи: правило «подсказка
+   только после хода» не нарушено. Пример нарочно из ЧУЖОГО ремесла — скопировать
+   его в свою реплику нельзя.
+   ⚠️ Карточка живёт В ЛЕНТЕ, а не липкой плашкой: после первого хода она
+   уезжает вверх сама и перестаёт занимать место. */
+.gg-hint-card{align-self:stretch;max-width:100%;margin:2px 0 4px;
+  border-radius:18px;padding:13px 15px;
+  background:var(--gg-bubble);
+  /* ⚠️ РАМКА РАЗДЕЛЬНЫМИ СВОЙСТВАМИ: сокращённое `border` с `var()` внутри не
+     читается нашей проверкой в jsdom (переменные она не вычисляет) и правило
+     выбрасывается целиком. Браузеру всё равно, а проверка перестаёт быть слепой */
+  border-style:dashed;border-width:1px;border-color:var(--gg-bubble-brd)}
+.gg-hint-h{font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gg-accent);margin-bottom:6px}
+.gg-hint-t{font-size:14.5px;line-height:1.45;color:var(--gg-ink-2)}
+.gg-hint-ex{font-size:13.5px;line-height:1.45;color:var(--gg-muted-2);
+  margin-top:8px;padding-top:8px;border-top:1px solid var(--gg-bubble-brd)}
 .gg-feedback{align-self:flex-end;max-width:84%;background:var(--gg-card);border:1px solid var(--gg-card-brd);
   border-radius:24px;padding:14px 16px 15px;box-shadow:var(--gg-card-sh);
   backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
@@ -10277,7 +10301,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v317 · 26.08.2026';
+const APP_BUILD = 'v318 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13059,6 +13083,25 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.arbiter': { c:'Игры', l:'Подпись арбитра', w:'Экран партии', i:false, t:'Арбитр' },
   'games.arbiter_copy': { c:'Игры', l:'Что делает арбитр', w:'Экран партии', i:false, t:'Арбитр наблюдает за разговором и взвешивает каждую реплику.' },
   'games.placeholder': { c:'Игры', l:'Подсказка в поле ввода', w:'Экран партии', i:false, t:'Твой ответ клиенту...' },
+  /* ⚠️ КАРТОЧКА ПЕРВОГО ХОДА. Ключ подбирается по ключу игры:
+     `games.first_<ключ>`, а если такого нет — общий `games.first`. Заводя новую
+     игру, Denis добавляет пару ключей здесь; до этого она живёт на общем тексте */
+  'games.first_h': { c:'Игры', l:'Заголовок карточки первого хода', w:'Экран партии', i:false, t:'Что от тебя нужно' },
+  'games.first': { c:'Игры', l:'Первый ход — общий текст', w:'Экран партии', i:false,
+    t:'Ответь клиенту одной короткой фразой. Не объясняй, как ты работаешь — скажи, что он получит.' },
+  'games.first_icho': { c:'Игры', l:'Первый ход — «И чё?»', w:'Экран партии', i:false,
+    t:'Клиент не понимает, зачем ему твоя работа. Одной фразой скажи, что он получит в итоге, а не что ты будешь делать.' },
+  'games.first_focus': { c:'Игры', l:'Первый ход — «Фокус»', w:'Экран партии', i:false,
+    t:'Результат назови так, чтобы его можно было увидеть как кино: кто, что и когда делает по-другому.' },
+  'games.first_soft_power': { c:'Игры', l:'Первый ход — «Мягкая сила»', w:'Экран партии', i:false,
+    t:'Тот же результат скажи мягче: не обещай его напрямую, а назови своей задачей.' },
+  'games.ex_h': { c:'Игры', l:'Подпись перед примером', w:'Экран партии', i:false, t:'Например' },
+  'games.ex_icho': { c:'Игры', l:'Пример — «И чё?»', w:'Экран партии', i:false,
+    t:'Не «проведу аудит склада», а «перестанешь терять товар на пересорте».' },
+  'games.ex_focus': { c:'Игры', l:'Пример — «Фокус»', w:'Экран партии', i:false,
+    t:'Не «склад заработает лучше», а «в пятницу остатки в базе сходятся с полкой, и ты уходишь в шесть».' },
+  'games.ex_soft_power': { c:'Игры', l:'Пример — «Мягкая сила»', w:'Экран партии', i:false,
+    t:'Не «остатки будут сходиться», а «моя задача — довести склад до того, чтобы остатки сходились».' },
   'games.empty': { c:'Игры', l:'Когда игр нет', w:'Список игр', i:false, t:'Игр пока нет. Загляни позже — они появятся.' },
   'games.load_err': { c:'Игры', l:'Список не загрузился', w:'Список игр', i:false, t:'Игры не загрузились. Потяни экран вниз или зайди позже.' },
   'games.other': { c:'Игры', l:'Заголовок игр вне треков', w:'Список игр', i:false, t:'Отдельные игры' },
@@ -28994,6 +29037,10 @@ async function ggStart(key){
     ggScale(ggS.score);
     ggShow('play');
     ggRemember();
+    /* ⚠️ КАРТОЧКА ЗАДАЧИ ИДЁТ ПЕРВОЙ, А РЕПЛИКА КЛИЕНТА ПОСЛЕ НЕЁ: последним
+       в ленте должен остаться вопрос клиента — на него и отвечают. Инструкция
+       над ним читается как условие, инструкция под ним перебивала бы вопрос */
+    ggFirstMoveHint(key);
     /* Вводные показываем репликой клиента: так человек сразу в разговоре, а
        не читает инструкцию поверх пустого чата */
     if (d.intro) ggMsg(d.intro, false);
@@ -29048,6 +29095,31 @@ function ggMsg(text, mine){
   wrap.appendChild(ava); wrap.appendChild(col);
   feed.appendChild(wrap);
   return wrap;
+}
+
+/* Карточка «что от тебя нужно» первым сообщением партии.
+   Текст берётся по ключу игры, при его отсутствии — общий. Пример
+   необязателен: нет ключа — блока с примером просто не будет */
+function ggFirstMoveHint(key){
+  const feed = document.getElementById('gg-feed');
+  if (!feed) return;
+  const body = t('games.first_' + key) || t('games.first');
+  if (!body) return;                     // нет текста — нет и карточки
+  const ex = t('games.ex_' + key);
+  const card = document.createElement('div');
+  card.className = 'gg-hint-card';
+  const h = document.createElement('div'); h.className = 'gg-hint-h';
+  h.textContent = t('games.first_h') || 'Что от тебя нужно';
+  const b = document.createElement('div'); b.className = 'gg-hint-t';
+  b.textContent = body;
+  card.appendChild(h); card.appendChild(b);
+  if (ex){
+    const e = document.createElement('div'); e.className = 'gg-hint-ex';
+    e.textContent = (t('games.ex_h') || 'Например') + ': ' + ex;
+    card.appendChild(e);
+  }
+  feed.appendChild(card);
+  return card;
 }
 
 function ggTyping(on){
