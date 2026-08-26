@@ -9766,6 +9766,18 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="tg-access-overlay" onclick="if(event.target===this) document.getElementById('tg-access-overlay').classList.remove('open')">
+  <div class="center-modal" id="tg-access-modal">
+    <div class="center-modal-header">
+      <div class="center-modal-title">Занятия в закрытом канале</div>
+      <button class="icon-btn" onclick="document.getElementById('tg-access-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px" data-text="tg.gate_body">Занятия лежат в закрытом канале клуба — сначала откроем тебе туда вход. Это часть регистрации, кнопка ниже всё сделает сама.</div>
+    <button class="lec-link-btn access-btn" onclick="grantTgAccessAndJoin()">Открыть доступ к каналу</button>
+    <div class="payment-help-link" style="margin-top:10px" onclick="alreadyHaveTgAccess()">Я уже в канале</div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="plan-stop-overlay" style="z-index:660" onclick="if(event.target===this) closePlanStop()">
   <div class="center-modal" id="plan-stop-modal">
     <div class="center-modal-header" style="margin-bottom:10px">
@@ -10230,7 +10242,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v310 · 26.08.2026';
+const APP_BUILD = 'v311 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -10894,7 +10906,7 @@ function openContinue() {
   if (welcomeLectureData){
     const l = welcomeLectureData;
     rememberLastLecture(l);         // дальше это уже обычная «последняя лекция»
-    openUrl(l.link || l.link_vk);
+    if (l.link) openTgVideo(l.link); else openUrl(l.link_vk);
     // Гасим ПОСЛЕ открытия, а не при показе: человек мог не заметить виджет
     // и вернуться позже — до тапа он должен видеть его снова при каждом заходе
     if (telegramId){
@@ -13101,6 +13113,9 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.resume_gone': { c:'Игры', l:'Партия уже закрыта', w:'Тост', i:false, t:'Та партия уже закрыта — начнём заново' },
   'games.share': { c:'Игры', l:'Кнопка «позвать друга»', w:'Финал партии', i:false, t:'Позвать друга сыграть' },
   'games.share_text': { c:'Игры', l:'Текст при отправке ссылки на игру ({игра} — название)', w:'Шторка шеринга', i:false, t:'Затянуло: тренажёр продаж с живым клиентом. Попробуй обойти мой результат.' },
+  'tg.gate_not_yet': { c:'Доступы', l:'Ответ на «я уже в канале», когда членство не подтвердилось', w:'Всплывашка', i:false,
+    t:'Пока не вижу тебя в канале. Нажми «Открыть доступ к каналу» — вход выдастся сам.' },
+
   'tg.access_wait': { c:'Доступы', l:'Пока делаем персональную ссылку', w:'Канал и чат', i:false,
     t:'Готовлю ссылку…' },
   'tg.access_members': { c:'Доступы', l:'Канал и чат только участникам', w:'Канал и чат', i:false,
@@ -15018,6 +15033,7 @@ document.addEventListener('visibilitychange', async () => {
   }
   // Вернулся из ВК после подачи заявки — ждём подтверждения от бэкенда
   if (vkAccessWatch && !vkAccessGranted) pollForVkAccess();
+  if (tgAccessWatch && !channelJoined) pollForTgAccess();
 
   // Человек вернулся в приложение — обновляем тот экран, на котором он стоит.
   // force: возврат в апп это как раз тот момент, когда данные могли устареть
@@ -19411,7 +19427,7 @@ function openInsightsModal(index, src){
   const links = [];
   if (isMember) {
     // Участник — обычные кнопки видео
-    if (l.link)    links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link}')">Смотреть в ТГ</button>`);
+    if (l.link)    links.push(`<button class="lec-link-btn" style="flex:1" onclick="openTgVideo('${l.link}')">Смотреть в ТГ</button>`);
     if (l.link_vk) links.push(`<button class="lec-link-btn" style="flex:1" onclick="openUrl('${l.link_vk}')">Смотреть в VK</button>`);
   } else {
     // Демо — кнопки с замком, ведут на paywall
@@ -20290,9 +20306,97 @@ async function pollForVkAccess(attempts = 8, delayMs = 3000){
   vkAccessWatch = false;
 }
 
+/* ═══ ВОРОТА TELEGRAM — ЗЕРКАЛО ВОРОТ ВК (26.08.2026) ═══
+   Кнопка «Смотреть в ТГ» отдавала ссылку любому участнику, дошедшему до
+   карточки, включая пропустившего вступление в канал. Ссылка при этом и ЕСТЬ
+   доступ: пересылается в два касания.
+
+   ⚠️ ЗАПИРАЕМ ТОЛЬКО ПО КАНАЛУ. [stated] Denis 26.08: «только канал» —
+   занятия лежат там, чат к просмотру отношения не имеет.
+
+   ⚠️ ВОРОТА И ШАГ РЕГИСТРАЦИИ ВЕДУТ В ОДНУ ЦЕПОЧКУ: обе кнопки зовут
+   `openTgAccess('channel')`. Второй механики получения доступа в приложении
+   быть не должно — иначе они разъедутся при первой же правке. */
+let tgAccessWatch = false;
+let pendingTgIndex = null, pendingTgSrc = 'lib', pendingTgUrl = null;
+
+/* Спрашиваем сервер в момент показа ворот. `channelJoined` — слепок с момента
+   запуска: человек уходит вступать, возвращается, а слепок всё ещё говорит
+   «не вступил». `fresh=true` заставляет сервер спросить сам Telegram */
+async function tgChannelFresh(){
+  if (!telegramId) return channelJoined;
+  try {
+    const r = await fetch(`${API_URL}/access/tg/state?telegram_id=${telegramId}&fresh=true`);
+    const d = await r.json();
+    if (d && d.found) channelJoined = !!d.in_channel;
+  } catch (e) {}
+  return channelJoined;
+}
+
+async function openTgAccessGate(index, src){
+  pendingTgIndex = index;
+  pendingTgSrc = src || 'lib';
+  pendingTgUrl = null;
+  if (await tgChannelFresh()){ proceedAfterTgAccess(); return; }
+  document.getElementById('tg-access-overlay').classList.add('open');
+}
+
+async function openTgGateForUrl(url){
+  pendingTgIndex = null;
+  pendingTgUrl = url;
+  if (await tgChannelFresh()){ proceedAfterTgAccess(); return; }
+  document.getElementById('tg-access-overlay').classList.add('open');
+}
+
+/* ЕДИНСТВЕННАЯ ДВЕРЬ К ВИДЕО В TELEGRAM. Ссылку отдавали пять разных мест —
+   библиотека, карточка лекции, «продолжить смотреть», плеер плана и попап
+   главных идей. Ворота на одном из них не закрыли бы ничего */
+function openTgVideo(url){
+  if (!url) return;
+  // ⚠️ БЕЗ TELEGRAM_ID ВОРОТА БЕССМЫСЛЕННЫ: сервер не сможет ни проверить
+  // членство, ни выдать ссылку. Это человек из ВК или веб-версии — пускаем,
+  // как пускали раньше. Настоящий путь для него — рукопожатие ВК→ТГ
+  if (!telegramId || channelJoined){ openUrl(url); return; }
+  openTgGateForUrl(url);
+}
+
+function grantTgAccessAndJoin(){
+  document.getElementById('tg-access-overlay').classList.remove('open');
+  tgAccessWatch = true;
+  openTgAccess('channel');     // та же цепочка, что у шага регистрации
+}
+
+/* ⚠️ «Я УЖЕ В КАНАЛЕ» ПРОВЕРЯЕМ, А НЕ ВЕРИМ НА СЛОВО. У ВК проверить нечем, и
+   там отметка ставится по нажатию. В Telegram есть getChatMember — пускать по
+   заявлению значило бы своими руками оставить дыру в воротах */
+async function alreadyHaveTgAccess(){
+  if (await tgChannelFresh()){ proceedAfterTgAccess(); return; }
+  showToast(t('tg.gate_not_yet'));
+}
+
+function proceedAfterTgAccess(){
+  document.getElementById('tg-access-overlay').classList.remove('open');
+  const idx = pendingTgIndex, url = pendingTgUrl;
+  pendingTgIndex = null; pendingTgUrl = null;
+  if (url) { openUrl(url); return; }
+  if (idx !== null) openLectureLink(idx, 'tg', pendingTgSrc);
+}
+
+// Вернулся из Telegram — доступ мог появиться секунду назад. Опрашиваем
+// несколько раз: вступление доезжает до нас не мгновенно
+async function pollForTgAccess(attempts = 6, delayMs = 3000){
+  for (let i = 0; i < attempts; i++){
+    if (channelJoined) break;
+    await new Promise(res => setTimeout(res, delayMs));
+    await tgChannelFresh();
+  }
+  tgAccessWatch = false;
+}
+
 function openLectureLink(index, platform, src) {
   if (!isMember) { openPaywall(); return; }
   if (platform === 'vk' && !vkAccessGranted) { openVkAccessGate(index, src); return; }
+  if (platform !== 'vk' && telegramId && !channelJoined) { openTgAccessGate(index, src); return; }
   const l = cardList(src)[index];
   if (!l) return;
   rememberLastLecture(l);
@@ -20313,7 +20417,7 @@ function openLecture(index) {
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
-  openUrl(l.link || l.link_vk);
+  if (l.link) openTgVideo(l.link); else openUrl(l.link_vk);
 }
 
 
