@@ -8970,8 +8970,12 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 
 /* ── ⚠️ ФИНАЛ: экран был «бедный сверху, обрезанный снизу». Верх сжат, низ
    получил отступ под пилюлю, робот меньше — вердикт со счётом виден сразу ── */
-#gg-root #gg-final-wrap{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-#gg-root .gg-final{padding:calc(max(var(--safe-top,0px),8px) + 10px) 0 0}
+/* ⚠️ ОТСТУП СВЕРХУ ЖИВЁТ НА `#gg-final-wrap`, А НЕ НА `.gg-final`: класса
+   `gg-final` в разметке финала НЕТ ВОВСЕ — экран собирается в innerHTML и
+   начинается сразу с `gg-final-hero`. Правило висело мёртвым, и робот
+   заезжал под часы. Класс ошибки: стиль на класс, которого нет в разметке */
+#gg-root #gg-final-wrap{padding-top:calc(max(var(--safe-top,0px),8px) + 10px);
+  padding-bottom:calc(96px + env(safe-area-inset-bottom))}
 #gg-root .gg-final-hero{padding:0 0 18px}
 #gg-root .gg-final-robot{width:92px;height:92px;margin-bottom:10px}
 #gg-root .gg-final-robot .gg-robot{width:92px}
@@ -10345,7 +10349,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v320 · 26.08.2026';
+const APP_BUILD = 'v321 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -29065,8 +29069,13 @@ function ggResumeNo(){
 }
 
 async function ggStart(key){
-  // Первая партия — один раз объясняем, кто такой арбитр
-  showOnbTip('onb.tip_arbiter', '.gg-arbiter', 1400);
+  /* Первая партия — один раз объясняем, кто такой арбитр.
+     ⚠️ ЦЕЛИМСЯ В НИЗ ЛЕНТЫ, А НЕ В ПЛАШКУ АРБИТРА. Подсказка встаёт ПОД
+     целью, а под плашкой арбитра сразу же разворачивается карточка «что от
+     тебя нужно» — мелкое окошко наплывало на большое (поймал Denis). Низ
+     ленты — единственное место, где заведомо пусто. Ждём дольше: к этому
+     моменту карточка и первая реплика клиента уже на экране */
+  showOnbTip('onb.tip_arbiter', '#gg-feed > *:last-child', 2600);
   if (ggBusy) return;
   ggBusy = true;
   vkTrack('game');
