@@ -5782,6 +5782,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
               <span class="gg-scale-name" id="gg-scale-name"></span>
               <strong class="gg-chance" id="gg-chance">0%</strong>
             </div>
+            <!-- ⚠️ ПРАВИЛА В БЛОКЕ АРБИТРА, а не только звёздочкой у поля:
+                 человек, который растерялся посреди партии, ищет помощь
+                 наверху, у судьи, а не рядом с клавиатурой -->
+            <button class="gg-arb-rules" id="gg-arb-rules" onclick="ggRules()"
+                    data-text="games.rules_btn">Правила игры</button>
             <div class="gg-progress"><div class="gg-progress-clip"><i id="gg-fill"></i></div></div>
             <div class="gg-scale-legend"><span>0%</span><span>50%</span><span>100%</span></div>
           </div>
@@ -8985,6 +8990,45 @@ html[data-gg="1"] .reward-level-badge{background:var(--gg-me);
 #gg-root .gg-feed{padding-top:16px}
 #gg-root .gg-arbiter{margin-bottom:2px}
 
+/* ── Кнопка правил внутри блока арбитра.
+   ⚠️ СЕЛЕКТОР СО СПЕЦИФИЧНОСТЬЮ НЕ НИЖЕ (1,1,0): `.gg-arb-content` — не тот
+   контейнер, но в этом файле уже дважды ловили, как голое правило проигрывает
+   правилу вида `КОНТЕЙНЕР>*` (уроки про кнопку шеринга и плашку «пройдена»).
+   Раздельные свойства и запасной цвет выше по правилу — вычисленные значения
+   с var() врут при разборе (урок 233) */
+#gg-root .gg-arb-rules,
+.gg-arb-rules{display:inline-flex;align-items:center;gap:6px;margin-top:9px;
+  padding:7px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.16);
+  border:1px solid var(--gg-pill-brd);
+  background:rgba(255,255,255,.08);
+  background:var(--gg-pill);
+  color:#e9e4dc;
+  color:var(--gg-ink-3);
+  font-family:inherit;font-size:12.5px;font-weight:600;line-height:1;
+  backdrop-filter:blur(14px)}
+#gg-root .gg-arb-rules::before{content:"?";display:grid;place-items:center;
+  width:15px;height:15px;border-radius:50%;font-size:10.5px;font-weight:700;
+  background:rgba(255,255,255,.14)}
+#gg-root .gg-arb-rules:active{transform:scale(.96)}
+
+/* Плашка «не понял правила» в ленте. Спокойная, не тревожная: это подсказка,
+   а не ошибка — человек и так растерян */
+#gg-root .gg-confused,
+.gg-confused{margin:10px 0 2px;padding:13px 15px;border-radius:18px;
+  border:1px solid rgba(255,255,255,.14);
+  border:1px solid var(--gg-pill-brd);
+  background:rgba(255,255,255,.06);
+  background:var(--gg-pill)}
+#gg-root .gg-confused-h{font-size:13.5px;font-weight:700;margin-bottom:4px;
+  color:#e9e4dc;color:var(--gg-ink-2)}
+#gg-root .gg-confused-p{font-size:12.5px;line-height:1.4;margin-bottom:9px;
+  color:#b9b2a8;color:var(--gg-ink-3)}
+#gg-root .gg-confused .gg-arb-rules{margin-top:0}
+@media(max-width:480px){
+  #gg-root .gg-arb-rules{margin-top:7px;padding:6px 11px;font-size:12px}
+}
+
 /* ── ⚠️ ПОЛЕ СТАРТУЕТ РОВНО В ОДНУ СТРОКУ. Высота задаётся явно: без неё
    textarea считает свою по `rows`, а с нашими паддингами это давало запас на
    вторую строку ещё до первого символа. Дальше высоту ведёт ggAutoGrow ── */
@@ -10301,7 +10345,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v318 · 26.08.2026';
+const APP_BUILD = 'v319 · 26.08.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13081,6 +13125,9 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'games.sub': { c:'Игры', l:'Подпись под заголовком', w:'Вкладка «Игры»', i:false, t:'Тренировка на живом собеседнике' },
   'games.exit': { c:'Игры', l:'Кнопка выхода из партии', w:'Экран партии', i:false, t:'← Выйти' },
   'games.arbiter': { c:'Игры', l:'Подпись арбитра', w:'Экран партии', i:false, t:'Арбитр' },
+  'games.rules_btn': { c:'Игры', l:'Кнопка правил у арбитра', w:'Экран партии', i:false, t:'Правила игры' },
+  'games.confused_h': { c:'Игры', l:'Заголовок подсказки «не понял правила»', w:'Экран партии', i:false, t:'Кажется, правила потерялись' },
+  'games.confused_btn': { c:'Игры', l:'Кнопка в подсказке о правилах', w:'Экран партии', i:false, t:'Открыть правила' },
   'games.arbiter_copy': { c:'Игры', l:'Что делает арбитр', w:'Экран партии', i:false, t:'Арбитр наблюдает за разговором и взвешивает каждую реплику.' },
   'games.placeholder': { c:'Игры', l:'Подсказка в поле ввода', w:'Экран партии', i:false, t:'Твой ответ клиенту...' },
   /* ⚠️ КАРТОЧКА ПЕРВОГО ХОДА. Ключ подбирается по ключу игры:
@@ -28813,14 +28860,28 @@ function ggTap(key){
   ggRulesFor(g);
 }
 
-function ggRulesFor(g){
+/* `inPlay` — открыли правила ПОСРЕДИ партии.
+   ⚠️ ТОГДА КНОПКУ СТАРТА ПРЯЧЕМ. Раньше она показывалась всегда, и нажатие
+   «Начать партию» посреди игры запускало НОВУЮ — текущая теряласьбез
+   предупреждения. Класс ошибки: один попап на два разных состояния */
+function ggRulesFor(g, inPlay){
   document.getElementById('gg-rules-h').textContent = g.title || '';
-  document.getElementById('gg-rules-p').textContent = g.intro || g.description || '';
-  document.getElementById('gg-rules-go').onclick = function(){ ggClose('gg-m-rules'); ggStart(g.key); };
+  // Правила пишет Denis в карточке игры. Если их нет — показываем вводную,
+  // как было раньше: пустой попап хуже неточного
+  const body = (g.rules_text || '').trim() || g.intro || g.description || '';
+  document.getElementById('gg-rules-p').textContent = body;
+  const go = document.getElementById('gg-rules-go');
+  if (inPlay){
+    go.style.display = 'none';
+    go.onclick = null;
+  } else {
+    go.style.display = '';
+    go.onclick = function(){ ggClose('gg-m-rules'); ggStart(g.key); };
+  }
   ggPop('gg-m-rules');
 }
 function ggRules(){
-  if (ggS) { const g = ggFind(ggS.game_key); if (g) ggRulesFor(g); }
+  if (ggS) { const g = ggFind(ggS.game_key); if (g) ggRulesFor(g, true); }
 }
 
 /* ═══ ПАРТИЯ ═══════════════════════════════════════════════════════════════ */
@@ -29220,6 +29281,25 @@ function ggNote(d){
   feed.appendChild(box);
 }
 
+/* ⚠️ ПОДСКАЗКА О ПРАВИЛАХ — НЕ РАЗБОР ХОДА, а вежливость, поэтому показываем
+   и гостю тоже: человек, не понявший правил, просто уйдёт, и продавать ему
+   нечего. Судья присылает признак отдельным полем, на очки он не влияет и за
+   партию приходит один раз — сервер следит, чтобы не упрекать дважды */
+function ggConfused(d){
+  if (!d || !d.confused) return;
+  const feed = document.getElementById('gg-feed');
+  if (!feed) return;
+  const box = document.createElement('div');
+  box.className = 'gg-confused';
+  const note = String(d.confused_note || '').trim();
+  box.innerHTML = '<div class="gg-confused-h">'
+    + escapeHtml(t('games.confused_h') || 'Кажется, правила потерялись') + '</div>'
+    + (note ? '<div class="gg-confused-p">' + escapeHtml(note) + '</div>' : '')
+    + '<button class="gg-arb-rules" onclick="ggRules()">'
+    + escapeHtml(t('games.confused_btn') || 'Открыть правила') + '</button>';
+  feed.appendChild(box);
+}
+
 /* ⚠️ ХОД ПРИХОДИТ ОДНИМ ОТВЕТОМ: реплика клиента, дельта шкалы и разбор
    вместе. Поэтому «печатает» гаснет один раз, и всё появляется разом — двух
    моментов появления быть не должно */
@@ -29264,6 +29344,7 @@ async function ggSend(){
     ggS.turn_no = d.turn_no || (ggS.turn_no + 1);
     ggTurnLabel();
     ggNote(d);
+    ggConfused(d);
     ggScrollDown();
     /* ⚠️ ПАУЗА ПЕРЕД ЭКРАНОМ ПОБЕДЫ — ПО ДЛИНЕ ОТВЕТА КЛИЕНТА.
        [stated] Denis 19.08.2026: «слишком быстро экран победы появляется, а
