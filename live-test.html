@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Пробник эфира</title>
+<style>
+  :root { --bg:#f4f1ec; --card:#fffdfa; --text:#2b2721; --dim:#8a8177; --line:#e4ded4; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--text);
+         font:15px/1.5 -apple-system, system-ui, sans-serif; }
+  h1 { font-size:19px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px;
+          padding:14px; margin-bottom:14px; }
+  .card h2 { font-size:15px; margin:0 0 10px; }
+  .frame { position:relative; width:100%; aspect-ratio:16/9; border-radius:12px;
+           overflow:hidden; background:#000; }
+  .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  a.btn { display:block; text-align:center; padding:12px; border-radius:12px;
+          background:#2b2721; color:#fffdfa; text-decoration:none; font-weight:600; }
+  pre { margin:0; padding:12px; background:#f7f4ef; border:1px solid var(--line);
+        border-radius:12px; font-size:12px; line-height:1.45; white-space:pre-wrap;
+        word-break:break-word; overflow-x:auto; }
+  .row { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .row input { flex:1; min-width:0; padding:10px; border:1px solid var(--line);
+               border-radius:10px; font-size:14px; background:#fff; color:var(--text); }
+  .row button { padding:10px 14px; border:0; border-radius:10px; background:#2b2721;
+                color:#fffdfa; font-size:14px; font-weight:600; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<h1>Пробник эфира</h1>
+<p class="sub">Открывать во время эфира. Домен тот же, что у приложения.</p>
+
+<div class="card">
+  <h2>Шаг 1. Что отдаёт сервер</h2>
+  <pre id="now">запрашиваю…</pre>
+  <div class="hint">Смотреть is_live, embed_link, is_streaming.</div>
+</div>
+
+<div class="card">
+  <h2>Шаг 2. Встроенный плеер — как в приложении</h2>
+  <div class="row">
+    <input id="code" placeholder="код плеера" value="0cC5BU2yehQEG6QjQQC8pj">
+    <button id="go">Вставить</button>
+  </div>
+  <div class="frame"><iframe id="emb" allow="autoplay; fullscreen; encrypted-media"
+        allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  <div class="hint">Код подставится из ответа сервера, если он там есть.</div>
+</div>
+
+<div class="card">
+  <h2>Шаг 3. Публичная страница Кинескопа</h2>
+  <a class="btn" id="pub" href="#" target="_blank" rel="noopener">Открыть в новой вкладке</a>
+  <div class="hint">Идёт здесь, но не в шаге 2 — значит запрещено встраивание на нашем домене.</div>
+</div>
+
+<script>
+var API = 'https://api.youselllikeagod-magazine.ru';
+
+function setCode(code){
+  code = (code || '').trim();
+  if (!code) return;
+  document.getElementById('code').value = code;
+  document.getElementById('emb').src =
+    'https://kinescope.io/embed/' + code + '?muted=true&autoplay=true';
+  document.getElementById('pub').href = 'https://kinescope.io/' + code;
+}
+
+document.getElementById('go').addEventListener('click', function(){
+  setCode(document.getElementById('code').value);
+});
+
+fetch(API + '/schedule/now?x=' + Date.now())
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    document.getElementById('now').textContent = JSON.stringify(d, null, 2);
+    setCode(d.play_code || document.getElementById('code').value);
+  })
+  .catch(function(e){
+    document.getElementById('now').textContent = 'не ответил: ' + e;
+    setCode(document.getElementById('code').value);
+  });
+</script>
+
+</body>
+</html>
