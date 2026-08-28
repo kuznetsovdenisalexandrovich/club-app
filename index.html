@@ -6393,6 +6393,21 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   </div>
 </div>
 
+<!-- ЗАСЛОНКА «РАЗРЕШИ БОТУ ПИСАТЬ» ([stated] Denis 28.08: «если пользователь
+     не разрешил сразу — не даём ему ничего включить внутри приложения, пока не
+     разрешит»). Живёт поверх всего: её задача — остановить действие, а не
+     заменить экран. ⚠️ Только Telegram: в ВК и MAX такого метода нет вовсе -->
+<div class="center-msg funnel-screen" id="botaccess-screen" style="display:none;z-index:880">
+  <div class="mark">БП</div>
+  <h2 data-text="botaccess.title">Разреши боту писать тебе</h2>
+  <p data-text="botaccess.sub">Без этого я не смогу прислать ссылку на оплату, доступы и материалы — они приходят сообщением от бота.</p>
+  <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:10px">
+    <button class="lec-link-btn access-btn" onclick="botAccessAsk()" data-text="botaccess.cta">Разрешить</button>
+    <a class="lec-link-btn funnel-secondary" id="botaccess-bot-link" href="#" target="_blank" rel="noopener"
+       style="display:none;text-align:center" data-text="botaccess.open_bot">Открыть бота и нажать «Начать»</a>
+  </div>
+</div>
+
 <div class="center-msg funnel-screen" id="funnel-screen" style="display:none">
   <!-- «Не хочу смотреть» — не тупик: закрывший окно тут же ловится в тур по
        приложению ([stated] Denis 23.08), а начатый фильм сворачивается в PiP -->
@@ -10349,7 +10364,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v326 · 28.08.2026 ник из Telegram в уведомления';
+const APP_BUILD = 'v327 · 28.08.2026 заслонка «разреши боту писать»';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -10889,6 +10904,100 @@ async function fetchWithTimeout(url, options, timeoutMs){
    просмотр продающего видео, страница доступа, упор в замок, журнал.
    Отправка «выстрелил и забыл»: аналитика не должна ни тормозить экран, ни
    ронять его, если сервер недоступен. */
+
+/* ══ РАЗРЕШЕНИЕ БОТУ ПИСАТЬ В ЛС ═══════════════════════════════════════════
+   [stated] Denis 28.08: «если пользователь не разрешил сразу — значит не даём
+   ему ничего включить внутри приложения, пока не разрешит… если бота не
+   запустить, ссылок на оплату не будет в любом случае».
+
+   Он прав технически: ссылки на оплату и доступы приходят round-trip'ом —
+   приложение просит блок в Salebot, блок отвечает СООБЩЕНИЕМ в личку. Тому,
+   кто боту не разрешал, оно не доедет, и человек упрётся в вечное ожидание
+   вместо кнопки. Заслонка закрывает этот тупик, а не только экономит контент.
+
+   ⚠️ ТОЛЬКО TELEGRAM. requestWriteAccess — метод Telegram; в ВК, MAX и вебе
+   его нет. Безусловная заслонка закрыла бы площадки, которые мы специально
+   мирили с приложением, — поэтому там пропускаем молча.
+
+   ТРИ СОСТОЯНИЯ, а не два: null — «ещё не знаем» (спрашиваем Telegram),
+   true — пускаем, false — заслонка. Новый гость это не «отказавшийся». */
+let botCanWrite = null;      // null | true | false
+let botAccessNext = null;    // что сделать, когда разрешит
+
+function botAccessNeeded(){
+  // Участнику не мешаем: он уже прошёл всё это при оплате
+  if (typeof isMember !== 'undefined' && isMember) return false;
+  if (typeof isInsideVk === 'function' && isInsideVk()) return false;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) return false;
+  return botCanWrite !== true;
+}
+
+async function loadBotAccess(){
+  try {
+    if (!telegramId) return;
+    const r = await fetch(API_URL + '/bot/write-access?telegram_id=' + telegramId);
+    const d = await r.json();
+    botCanWrite = (d && typeof d.can_write === 'boolean') ? d.can_write : null;
+  } catch(e){}
+}
+
+function botAccessTell(granted){
+  botCanWrite = !!granted;
+  try {
+    fetch(API_URL + '/bot/write-access', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ telegram_id: telegramId || 0, granted: !!granted })
+    }).catch(function(){});
+  } catch(e){}
+}
+
+/* Главный вход: обернуть любое действие, которое «включает» материал */
+function ensureBotAccess(next){
+  if (!botAccessNeeded()){ if (typeof next === 'function') next(); return true; }
+  botAccessNext = (typeof next === 'function') ? next : null;
+  const el = document.getElementById('botaccess-screen');
+  const link = document.getElementById('botaccess-bot-link');
+  if (link){
+    link.style.display = 'none';
+    if (typeof BOT_LINK !== 'undefined') link.href = BOT_LINK + '?start=writeaccess';
+  }
+  if (el) el.style.display = '';
+  return false;
+}
+
+function botAccessClose(){
+  const el = document.getElementById('botaccess-screen');
+  if (el) el.style.display = 'none';
+}
+
+function botAccessAsk(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  /* ⚠️ ЗАПАСНОЙ ПУТЬ ОБЯЗАТЕЛЕН. Кто однажды отказал, тому Telegram то же окно
+     второй раз может не показать: метод вернёт отказ мгновенно, без окна. Без
+     кнопки «открыть бота» такой человек заперт навсегда, причём молча — жмёт
+     «Разрешить», и ничего не происходит. В боте он нажимает «Начать», и право
+     появляется само. То же самое, если версия Telegram старая и метода нет */
+  if (!tg || typeof tg.requestWriteAccess !== 'function'){ botAccessShowFallback(); return; }
+  try {
+    tg.requestWriteAccess(function(granted){
+      if (granted){
+        botAccessTell(true);
+        botAccessClose();
+        const next = botAccessNext; botAccessNext = null;
+        if (typeof next === 'function') next();
+      } else {
+        botAccessTell(false);
+        botAccessShowFallback();
+      }
+    });
+  } catch(e){ botAccessShowFallback(); }
+}
+
+function botAccessShowFallback(){
+  const link = document.getElementById('botaccess-bot-link');
+  if (link) link.style.display = '';
+}
 
 /* ── КОНТАКТ ИЗ САМОГО TELEGRAM ─────────────────────────────────────────────
    ⚠️ ЛУЧШИЙ ИСТОЧНИК НИКА — ЗДЕСЬ, А НЕ В SALEBOT. Telegram отдаёт ник и имя
@@ -13660,6 +13769,19 @@ const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «к
   'funnel.after_browse': {
     c:'Первый экран', l:'Вторая кнопка после фильма', w:'Сразу после фильма', i:true,
     t:'Сначала осмотрюсь' },
+  'botaccess.title': {
+    c:'Первый экран', l:'Заголовок заслонки «разреши боту писать»', w:'Перед включением любого материала', i:true,
+    t:'Разреши боту писать тебе' },
+  'botaccess.sub': {
+    c:'Первый экран', l:'Пояснение, зачем разрешение', w:'Перед включением любого материала', i:true,
+    t:'Без этого я не смогу прислать ссылку на оплату, доступы и материалы — они приходят сообщением от бота.' },
+  'botaccess.cta': {
+    c:'Первый экран', l:'Кнопка «разрешить»', w:'Перед включением любого материала', i:true,
+    t:'Разрешить' },
+  'botaccess.open_bot': {
+    c:'Первый экран', l:'Запасной путь, если окно уже не показывается', w:'Перед включением любого материала', i:true,
+    t:'Открыть бота и нажать «Начать»' },
+
   'login.demo_film': {
     c:'Первый экран', l:'Кнопка «посмотреть фильм» в окошке для не-участника', w:'Окошко «Заглянуть в клуб»', i:true,
     t:'Посмотреть фильм о клубе' },
@@ -16814,6 +16936,7 @@ function showFreeVersion(lec){
 
 /* mode: '' | 'audio' | 'insights' */
 async function openLectureByKey(key, mode){
+  if (!ensureBotAccess(function(){ openLectureByKey(key, mode); })) return;
   await ensureLibrary();
   const lec = lectureBySafeKey(key);
   if (!lec){
@@ -17117,6 +17240,7 @@ function openBonusLink(bonusKey, itemKey, url){
    тот способ работает, потому что скрипт Boomstream сканирует страницу при
    загрузке. Наши коды приходят с сервера уже после неё, и сканировать некому */
 function playBonusVideo(bonusKey, itemKey){
+  if (!ensureBotAccess(function(){ playBonusVideo(bonusKey, itemKey); })) return;
   const b = findBonus(bonusKey);
   const it = b && (b.items || []).find(x => x.key === itemKey);
   if (!it || !it.boomstream) return;
@@ -21701,6 +21825,9 @@ function funnelRewatch(){
    потом открываем оплату. Заодно человек, вернувшись с оплаты, оказывается в
    приложении, а не на экране фильма, — и апп ловит платёж своим опросом. */
 function funnelBuy(){
+  // ⚠️ ЗАСЛОНКА ПЕРЕД ОПЛАТОЙ ВАЖНЕЕ ВСЕГО: ссылка на оплату приходит
+  // СООБЩЕНИЕМ от бота, и без разрешения человек упрётся в вечное ожидание
+  if (!ensureBotAccess(funnelBuy)) return;
   /* [stated] Denis 23.08: «пускай фильм идёт фоном и на странице оплаты,
      кому надо — нажмут паузу» — начатый фильм сворачивается в PiP */
   funnelLeave(true);
@@ -22070,6 +22197,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function openAccessPage(){
+  if (!ensureBotAccess(openAccessPage)) return;
   switchView('access');
   track('access_open');
   const el = document.getElementById('access-buttons');
@@ -22619,6 +22747,9 @@ function applyTelegramSafeAreaSoon(){
 
 function startApp(){
   track('app_open');
+  // Состояние разрешения нужно ДО первого действия, иначе заслонка мигнёт у
+  // того, кто давно всё разрешил
+  if (typeof loadBotAccess === 'function') loadBotAccess();
   /* Ссылка «оплатил переводом», открытая до опознания, ждёт в хранилище */
   try { if (typeof paidClaimRetryIfPending === 'function') paidClaimRetryIfPending(); } catch(e){}
   document.getElementById('app-shell').style.display = 'block';
@@ -24055,6 +24186,7 @@ function magazineTileHtml(){
 }
 
 function openMagazine(){
+  if (!ensureBotAccess(openMagazine)) return;
   switchView('magazine');
 }
 
@@ -28934,6 +29066,7 @@ function ggFind(key){
    ⚠️ ЖДЁМ ПРОФИЛЬ И СПИСОК, а не паузу: до прихода `/users/me` участник
    выглядит гостём и упирается в чужой пейвол */
 async function ggOpenTo(key, mode){
+  if (!ensureBotAccess(function(){ ggOpenTo(key, mode); })) return;
   const shell = document.getElementById('app-shell');
   const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
   if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
