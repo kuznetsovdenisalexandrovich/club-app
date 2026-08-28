@@ -10349,7 +10349,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v321 · 26.08.2026';
+const APP_BUILD = 'v322 · 28.08.2026 диплинк оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16594,9 +16594,21 @@ function payFromUrl(){
   rememberEntrySource(src);
   setTimeout(function(){
     if (isMember) { switchView('portal'); return; }
-    openPaywall();
+    /* ⚠️ 28.08: БЫЛ ПЕЙВОЛ, СТАЛА САМА СТРАНИЦА ОПЛАТЫ. [stated] Denis:
+       «нужен диплинк напрямую на страницу оплаты». Пейвол — окно «не вижу
+       твоей подписки» с кнопкой «Открыть доступ»: человеку, пришедшему по
+       ссылке «оплатить», он добавлял лишнее нажатие и лишний повод уйти.
+       Ссылка ведёт туда, что на ней написано. */
+    openAccessPage();
   }, 80);
   return true;
+}
+
+/* Голая ссылка на оплату — без метки источника. Для кнопок «Вступить» там,
+   где считать источник незачем. Метку по-прежнему несёт `pay_<метка>`. */
+function openBuyRoute(){
+  if (isMember){ switchView('portal'); return; }
+  openAccessPage();
 }
 
 /* Готовая ссылка на оплату с меткой источника — её вставляют в кнопку в конце
@@ -16662,6 +16674,13 @@ const DEEPLINKS = {
   'deck-rules':  { go: () => switchView('deck-rules'),    guests: true  },
   'support':     { go: () => openSupportPopup(),          guests: true  },
   'help':        { go: () => switchView('payment-help'), guests: true  },
+  /* [stated] Denis 28.08: «нужен диплинк напрямую на страницу оплаты».
+     ⚠️ guests:true ОБЯЗАТЕЛЬНО: при false не-участник получил бы пейвол —
+     то самое лишнее окно, ради обхода которого ссылка и заводится.
+     Участника уводим на главную: страница оплаты ему выглядела бы ошибкой */
+  'pay':         { go: () => openBuyRoute(),              guests: true  },
+  'buy':         { go: () => openBuyRoute(),              guests: true  },
+  'oplata':      { go: () => openBuyRoute(),              guests: true  },
   'guide':       { go: () => openHelpDocs(),              guests: true  },
 
   // — Только для участников: гость упирается в пейвол —
