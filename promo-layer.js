@@ -164,12 +164,43 @@
     });
   };
 
+  /* ── ЗАСЛОНЫ ДО ВХОДА ─────────────────────────────────────────────
+     Экраны, которые приложение показывает РАНЬШЕ первого запроса к
+     бэкенду — перехват fetch до них не доходит. Ловим их появление и
+     проходим сквозь штатной функцией самого приложения.
+
+     Проверяем ИНЛАЙНОВЫЙ style.display (его ставит код приложения), а не
+     вычисленный — потому что сами же прячем эти экраны стилем ниже,
+     иначе они успевали бы мелькнуть в кадре. */
+  var GATES = [
+    { id: 'web-add-home-screen-screen', pass: 'proceedPastHomeScreenInstructions' }
+  ];
+
+  var gateTicks = 0;
+  var gateTimer = setInterval(function () {
+    if (++gateTicks > 300) { clearInterval(gateTimer); return; }  // ~20 секунд
+    GATES.forEach(function (g) {
+      var el = document.getElementById(g.id);
+      if (!el) return;
+      var d = el.style.display;
+      if (!d || d === 'none') return;
+      el.style.display = 'none';
+      var fn = window[g.pass];
+      if (typeof fn === 'function') {
+        try { fn(); } catch (e) {}
+      }
+      try { console.log('[promo] пропущен заслон:', g.id); } catch (e) {}
+    });
+  }, 66);
+
   /* ── КОСМЕТИКА ────────────────────────────────────────────────────── */
 
   var css = document.createElement('style');
   css.textContent = [
     /* служебное, чему не место в кадре */
     '#debug-blocks{display:none !important}',
+    /* заслоны не должны мелькать, пока их снимает код выше */
+    '#web-add-home-screen-screen{display:none !important}',
     '.app-build,.build-tag,#app-build{display:none !important}'
   ].join('\n');
   document.head.appendChild(css);
