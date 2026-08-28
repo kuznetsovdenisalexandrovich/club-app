@@ -10349,7 +10349,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v325 · 28.08.2026 игры, демо и статистика по всем ссылкам';
+const APP_BUILD = 'v326 · 28.08.2026 ник из Telegram в уведомления';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -10890,6 +10890,24 @@ async function fetchWithTimeout(url, options, timeoutMs){
    Отправка «выстрелил и забыл»: аналитика не должна ни тормозить экран, ни
    ронять его, если сервер недоступен. */
 
+/* ── КОНТАКТ ИЗ САМОГО TELEGRAM ─────────────────────────────────────────────
+   ⚠️ ЛУЧШИЙ ИСТОЧНИК НИКА — ЗДЕСЬ, А НЕ В SALEBOT. Telegram отдаёт ник и имя
+   приложению при каждом запуске; в базе же в поле `username` лежит свободная
+   строка, склеенная из пометки площадки, ника и айди («@ТГ: @romakh,
+   id: 233309867»). По ней нельзя нажать и нельзя надёжно разобрать.
+   Шлём вместе с событием: событие уходит при каждом заходе, значит и ник
+   обновится сам, когда человек его сменит. */
+function tgContactFields(){
+  try {
+    const u = window.Telegram && Telegram.WebApp
+           && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user;
+    if (!u) return {};
+    return { tg_username:   String(u.username   || ''),
+             tg_first_name: String(u.first_name || ''),
+             tg_last_name:  String(u.last_name  || '') };
+  } catch(e){ return {}; }
+}
+
 function track(event, ref, value){
   /* ⚠️ ГОСТЬ ИЗ ВК ТОЖЕ ДОЛЖЕН БЫТЬ ВИДЕН. Раньше здесь стояло «нет телеграмного
      айди — не пишем», и вся ВК-половина воронки не существовала: человек мог
@@ -10903,8 +10921,10 @@ function track(event, ref, value){
     fetch(`${API_URL}/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId || 0, vk_query: vkq,
-                             event: event, ref: ref || '', value: value || 0 })
+      body: JSON.stringify(Object.assign(
+        { telegram_id: telegramId || 0, vk_query: vkq,
+          event: event, ref: ref || '', value: value || 0 },
+        tgContactFields()))
     }).catch(function(){});
   } catch(e){}
 }
