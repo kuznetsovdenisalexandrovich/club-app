@@ -10349,7 +10349,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v323 · 28.08.2026 маршруты в статистику';
+const APP_BUILD = 'v324 · 28.08.2026 замок эфира в статистику';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19880,7 +19880,12 @@ function openLiveGate(reason){
   document.getElementById('live-gate-second').textContent =
     t(liveGateReason === 'free_end' ? 'live.gate.end_second' : 'live.gate.chat_second');
   box.style.display = 'flex';
-  track('live_gate_shown', { reason: liveGateReason });
+  /* ⚠️ СТРОКОЙ, А НЕ ОБЪЕКТОМ — тот же класс ошибки, что был у payment_stuck.
+     Поле `ref` на сервере объявлено строкой, объект отбивается кодом 422, и
+     событие не доезжает ВООБЩЕ. Отказ молчаливый: `fetch` внутри track()
+     гасит ошибку, чтобы не мешать человеку, поэтому снаружи это неотличимо
+     от «показ замка просто не случился». Проверено на живом сервере. */
+  track('live_gate_shown', String(liveGateReason || ''));
 }
 
 function closeLiveGate(){
