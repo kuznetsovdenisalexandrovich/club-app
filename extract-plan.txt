@@ -1,0 +1,432 @@
+r;line-height:1.5">
+          Если версия не та, что выдана последней, — открыт старый файл из кэша.
+          Закрой приложение из переключателя задач и открой заново.
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Окно бонусов</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left">
+          Запускает режим финальных минут так, будто фильм только что досмотрен:
+          бар с обратным отсчётом, попап бонусов, фазы окна.
+        </div>
+        <button class="help-btn" style="margin-bottom:8px" onclick="debugWindowStart()">Запустить окно «15 минут»</button>
+        <button class="help-btn" style="margin-bottom:8px" onclick="debugWindowLast()">Перемотать к финальным минутам</button>
+        <button class="help-btn" onclick="debugWindowEnd()">Завершить окно</button>
+        <div style="font-size:12px;color:var(--warm);margin-top:8px;text-align:center" id="debug-window-state"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Фильм воронки</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left" id="debug-film-state">—</div>
+        <button class="help-btn" onclick="debugFilmRefresh()">Обновить</button>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Свежий гость</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left">
+          Приложение стирает все местные отметки (фильм, тур, метки источников)
+          и при каждом запуске ведёт себя так, будто тебя не знает: воронка,
+          демо, гостевые сценарии. Действует до выключения кнопкой ниже.
+        </div>
+        <button class="help-btn" style="margin-bottom:8px" onclick="debugFreshGuestStart()">Зайти как свежий гость</button>
+        <button class="help-btn" onclick="debugFreshGuestStop()">Вернуться к себе</button>
+        <div style="font-size:12px;color:var(--warm);margin-top:8px;text-align:center" id="debug-fresh-note"></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Демо-режим</div>
+        <div style="display:flex;gap:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#ef4444"
+            onclick="isMember=false;renderDemoBanner();document.getElementById('debug-level-result').textContent='Демо-режим включён'">
+            Включить демо
+          </button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px;color:#4ade80"
+            onclick="isMember=true;renderDemoBanner();document.getElementById('debug-level-result').textContent='Режим участника включён'">
+            Режим участника
+          </button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Быстрые тесты</div>
+        <div id="debug-magazine-unlock" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('showLevelUpPopup(4,{reward_keys:[\"Архивные лекции\"],unlock_keys:[\"Скачивание PDF-выжимок\"]});'')">Попап уровня</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('launchConfetti()')">Конфетти</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPdfLockNotice(3)')">Замок PDF</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugRunCmd('openPaywall()')">Пейволл</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetPlan()">Сбросить план</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugShowLevelFlag()">Флаг поздравления</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugResetLevelFlag()">Сбросить флаг</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="debugPackReveal()">Экран пака</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:12px;padding:8px" onclick="openRevealLab()">Лаборатория экрана</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input id="debug-cmd-input" placeholder="JS выражение..." style="flex:1;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--text)">
+          <button class="lec-card" style="border:none;font-size:12px;padding:6px 12px" onclick="debugRunCmd(document.getElementById('debug-cmd-input').value)">▶</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;min-height:20px" id="debug-cmd-output"></div>
+      </div>
+    </div>
+
+    <div class="section-label" id="profile-legal-label">Документы</div>
+    <div class="card" id="profile-legal-card">
+      <div class="payment-help-link" style="margin:0 0 8px" onclick="openLegalDoc('offer')">Оферта клуба</div>
+      <div class="payment-help-link" style="margin:0 0 8px" onclick="openLegalDoc('rules')">Правила пользования</div>
+      <div class="payment-help-link" style="margin:0 0 8px" onclick="openLegalDoc('privacy')" data-text="legal.a1">Согласие на обработку персональных данных</div>
+      <div class="payment-help-link" style="margin:0" onclick="openLegalDoc('terms')">Пользовательское соглашение</div>
+    </div>
+
+    <div id="requisites-line" style="text-align:center;font-size:13px;color:#fff;margin-top:28px">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Коллекция карточек ── -->
+  <div class="view" id="view-cards">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Коллекция</span>
+      <span onclick="switchView('deck-rules')" style="cursor:pointer;font-size:12px;color:var(--text-dim);text-decoration:underline">Правила</span>
+    </div>
+    <div class="card" id="cards-collection-head" style="margin-bottom:12px">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5" data-text="cards.a2">Карточки приходят паками за продление участия. Собери весь пантеон.</div>
+      <div id="cards-collection-progress" style="font-size:14px;font-weight:700;margin-top:8px"></div>
+      <div id="cards-secret-toggle"></div>
+    </div>
+    <div id="cards-album"><div class="sm-hint" style="padding:20px 0;text-align:center">Загружаю коллекцию…</div></div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Личный план: анкета ── -->
+  <div class="view" id="view-plan">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span class="inline-back" onclick="switchView('library')">←</span>
+      <span>Личный план</span>
+    </div>
+    <div class="card">
+      <div id="plan-inner"></div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- Поле выбора тем — шаг 1 личного плана, особенный экран -->
+  <div id="plan-field">
+    <div id="plan-dir-blobs"></div>
+    <div id="plan-glow"></div>
+    <div id="plan-world"></div>
+    <svg id="plan-grain" width="100%" height="100%"><filter id="pfn"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#pfn)" opacity=".5"/></svg>
+    <div id="plan-vignette"></div>
+    <div class="pf-hud">
+      <div class="pf-eyebrow">Твой путь · шаг 1</div>
+      <div class="pf-title">Осмотрись и собери своё</div>
+      <div class="pf-lead" data-text="plan.a1">Поле двигается пальцем. Тапай темы — они распускаются.</div>
+    </div>
+    <button class="pf-back" onclick="closePlanField()">✕</button>
+  <!-- Видно, пока считается раскладка: лучше надпись, чем пустота -->
+  <div class="pf-wait" id="pf-wait" style="display:none">
+    <div class="pf-wait-dot"></div>
+    <span data-text="plan.building">Собираю карту тем…</span>
+  </div>
+
+    <div class="pf-dock">
+      <div class="pf-fill" id="pf-fill"></div>
+      <div class="pf-picked" id="pf-picked">Пока ничего не выбрано</div>
+      <button class="pf-reset" onclick="planFieldReset()">Начать сначала</button>
+      <button class="pf-go" id="pf-go" onclick="planFieldDone()">Готово</button>
+    </div>
+  </div>
+
+  <!-- ── Правила колоды ── -->
+  <div class="view" id="view-deck-rules">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span class="inline-back" onclick="switchView('cards')">←</span>
+      <span>Правила колоды</span>
+    </div>
+    <div class="card">
+      <div style="font-size:13.5px;line-height:1.6;color:var(--text)">
+        <p style="margin-bottom:12px" data-text="cards.a3">Пак из трёх карточек приходит за каждое продление участия в клубе. Карточки нельзя купить — ни за деньги, ни за баллы.</p>
+        <p style="margin-bottom:12px" data-text="cards.a4">Продление со скидкой за баллы пак не даёт: паки идут только за полную оплату месяца.</p>
+        <div class="section-label" style="margin:14px 0 8px">Насколько часто что выпадает</div>
+        <div id="deck-rules-chances" style="font-size:13px;line-height:1.7"></div>
+        <div class="section-label" style="margin:16px 0 8px">Чтобы никого не обделить</div>
+        <p style="margin-bottom:12px" data-text="cards.a5">Чем дольше тебе не выпадает редкая карточка, тем выше её шанс в следующем паке. Самые редкие карточки ограничены по количеству — их физически не может выпасть больше определённого числа за период.</p>
+        <div class="section-label" style="margin:16px 0 8px">Если пак не открыть</div>
+        <p data-text="cards.a6">Закрытые паки не сгорают и ждут тебя. Если их накопится больше трёх, самый старый откроется сам — чтобы баллы из него не лежали без дела.</p>
+      </div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Баллы: справочная страница (не попап) ── -->
+  <div class="view" id="view-points-info">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span><span>Баллы</span>
+    </div>
+
+    <div class="card points-card" style="cursor:default">
+      <div class="points-value" id="pi-points">0</div>
+      <div class="points-caption">баллов на балансе</div>
+    </div>
+
+    <div class="section-label">Что такое баллы и уровень</div>
+    <div class="card">
+      <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и особенно за <span style="color:var(--warm);font-weight:700;cursor:pointer" onclick="comingSoon()">приглашение друзей в клуб</span>. Баллы можно потратить на кучу разных ништяков — от личной консультации до доступа к очень особенным материалам. Ими даже можно оплатить участие в клубе.</div>
+      <div class="reward-hint" style="margin-top:12px" data-text="points.a2">Уровень — это твой ранг. Если баллы можно тратить, то уровень лишь растёт. Уровень сам по себе открывает доступ к разным материалам и функциям. Например, с какого-то уровня ты сможешь скачивать себе красивые выжимки занятий и скрипты продаж в PDF — и оставлять их себе, даже после окончания подписки.</div>
+    </div>
+
+    <div class="section-label">Как заработать</div>
+    <div class="card">
+      <div class="step-row"><span>Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
+      <div class="step-row"><span>Посетить живое занятие</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
+      <div class="step-row"><span>Быть участником</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+500 / мес</span></div>
+      <div class="step-row"><span data-text="plan.a2">Составить свою личную карту контента</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+1000</span></div>
+      <div class="step-row"><span>Пройти карту</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+2000</span></div>
+      <div class="step-row"><span data-text="points.a3">Активничать — иногда просто так, по решению Дениса</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
+      <div class="step-row" style="cursor:pointer" onclick="document.getElementById('donate-section').scrollIntoView({behavior:'smooth'})"><span style="color:var(--warm)" data-text="points.a4">Или просто задонатить любую сумму ↓</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">1₽ = 1</span></div>
+    </div>
+
+    <div class="section-label">Откуда взялись твои баллы</div>
+    <div class="card" id="pi-feed-card">
+      <div id="pi-feed"><div class="loading">Загрузка...</div></div>
+    </div>
+
+    <div class="section-label">На что потратить</div>
+    <div class="card" id="pi-rewards-card">
+      <div id="pi-rewards-list"><div class="loading">Загрузка...</div></div>
+    </div>
+
+    <div class="section-label">Уровни клуба</div>
+    <div class="card">
+      <div class="reward-hint" style="margin-bottom:10px" data-text="points.a5">Чем больше баллов заработано за всё время, тем выше уровень — и тем больше открывается наград.</div>
+      <button class="lec-link-btn access-btn" onclick="openLevelsPopup()">Посмотреть уровни</button>
+    </div>
+
+    <div class="section-label" id="donate-section">Поддержать проект</div>
+    <div class="card">
+      <div class="reward-hint" style="margin-bottom:10px" data-text="points.donate_hint">Любая сумма превращается в баллы 1:1 — и заодно помогает клубу.</div>
+      <input type="number" class="ai-question-input" id="donate-amount" placeholder="Сумма в ₽" min="10" style="margin-bottom:10px">
+      <button class="lec-link-btn access-btn" id="donate-btn" onclick="submitDonation()">Задонатить</button>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Расписание ── -->
+  <div class="view" id="view-schedule">
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px"><span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span><span>Расписание</span></span>
+      <button class="notif-btn-small" onclick="openNotificationsSection()">Настроить уведомления</button>
+    </div>
+
+    <div class="section-label" id="teaser-label" style="display:none">Скоро в клубе</div>
+    <div id="teaser-list"></div>
+
+    <div id="cat-filter-row" class="tag-filter-row" style="display:none"></div>
+
+    <div class="card" id="schedule-calendar-card" style="padding:16px">
+      <div class="cal-header">
+        <button class="icon-btn" onclick="calShiftMonth(-1)">‹</button>
+        <div class="cal-month-label" id="cal-month-label">—</div>
+        <button class="icon-btn" onclick="calShiftMonth(1)">›</button>
+      </div>
+      <div class="cal-weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="section-label" id="notif-section">Уведомления</div>
+    <div class="card" id="notif-channel-card" style="margin-bottom:10px">
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:10px">Где присылать</div>
+      <div id="notif-channel-row" style="display:flex;gap:6px"></div>
+      <div id="notif-channel-hint" style="font-size:12px;color:var(--text-dim);line-height:1.45;margin-top:9px"></div>
+    </div>
+    <div class="card" id="notif-list">
+      <div class="loading">Загрузка...</div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── О клубе (демо/пейволл) ── -->
+  <div class="view" id="view-club-info">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span>О клубе</span>
+    </div>
+    <div class="card">
+      <div class="club-info-fade-wrap" id="club-info-fade-wrap" onclick="expandClubInfo()">
+        <div class="club-info-text">Клубешник это:
+
+<b>- Занятия по продажам</b>, маркетингу, автоворонкам, сценариям и офферам, продажам в переписке (и ещё куче всего);
+<b>- Живые занятия</b> с практикой;
+<b>- Записи лекций</b>, аудиоверсии, выжимки и файлы презентаций;
+<b>- Разборы ТВОИХ задач</b>;
+<b>- Книжный клуб</b>;
+<b>- Онлайн-журнал</b> по продажам (для любящих estetique, хохохо, бонжуууур);
+<b>- Персонализированные пиночки</b> действовать, вдохновляться и расти (целые потоки по мотивации);
+<b>- Обучение трафику</b>;
+- Самый нежный чат на свете;
+
+<b>- Удобные плейлисты занятий, аудиоверсии</b>, мы всё смонтировали, ужали до самой сути, собрали в плейлисты. Минимум твоего времени, максимум пользы, и всё организованно предельно понятно;
+
+- Бонус: <b>мастер-класс по продажам</b>, трафику, отработке возражений и презентации продукта;
+- "За кадром" - полный <b>разбор фильма "Я Подумаю"</b>, (сценарий, смыслы, съёмки).
+
+<b>- Дайджесты</b> раз в месяц - для тех, кто не успевает "всё смотреть".
+
+Короче всё, чтобы окружить тебя заботой, инструментами, силами и желанием идти и делать жизнь ОХЕРЕННОЙ. Го к нам!
+
+Узнать про клуб подробнее ты можешь <span class="club-info-video-link" onclick="event.stopPropagation();filmWidgetOpen()">в этом видео</span>.</div>
+        <div class="club-info-gradient" id="club-info-gradient">
+          <div class="club-info-readmore">Читать далее ↓</div>
+        </div>
+      </div>
+    </div>
+    <button class="lec-link-btn access-btn" onclick="openAccessPage()" data-text="club.buy">Получить доступ</button>
+    <!-- ⚠️ ОСМОТРЕТЬСЯ ПРЕДЛАГАЕМ ЗДЕСЬ, А НЕ ПОД ФИЛЬМОМ. [stated] Denis:
+         «на странице информации о клубе можно уже дать возможность
+         осмотреться в приложении». Кнопка нужна только тому, кто ещё не
+         вошёл, — участнику осматриваться незачем, он уже внутри -->
+    <!-- ⚠️ КЛАСС `access-btn` ОБЯЗАТЕЛЕН: голый `lec-link-btn` — это `flex:1`,
+         кнопка из ряда, и в одиночке она встаёт по ширине текста слева -->
+    <button class="lec-link-btn access-btn" id="club-info-browse" style="display:none" onclick="clubInfoBrowse()" data-text="club.browse">Осмотреться в приложении</button>
+    <!-- Человек с подпиской, которого апп не узнал, попадает сюда из
+         предупреждения о демо-режиме и без этого выхода упирался в тупик.
+         ⚠️ ИМЕННО НАДПИСЬ, НЕ КНОПКА — [stated] Denis: третья кнопка рядом
+         с «получить доступ» съедает конверсию. На экране оплаты её НЕТ сознательно -->
+    <div class="payment-help-link" id="club-info-login" style="display:none" onclick="clubInfoLogin()" data-text="club.already">Я уже участник — войти</div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Получить доступ (персональные ссылки на оплату) ── -->
+  <div class="view" id="view-access">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span>Получить доступ</span>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:10px">ВОТ ЭТО НАСТРОЙ!</div>
+      <div class="access-intro">Выбирай комфортный для тебя вариант, спокойно оплачивай, все бонусы твои.<br><br>А, и на всякий случай: оплата обрабатывается 1-2 минуты, бот проведёт тебя за ручку через регистрацию и выдаст и доступы, и бонусы.<br><br>Добро пожаловать!</div>
+      <div id="access-buttons"><div class="loading">Готовим ссылки...</div></div>
+    </div>
+    <!-- ⚠️ ВЫХОД С ЭКРАНА ЦЕНЫ ОБЯЗАТЕЛЕН. Нечаянно нажал «получить доступ» —
+         и дальше либо плати, либо закрывай приложение: тупик здесь стоит
+         дороже всего, человек уходит не подумав, а обидевшись -->
+    <div class="payment-help-link" onclick="openClubInfoPage()" data-text="access.about">Сначала узнать подробнее о клубе</div>
+
+    <!-- ОКОШКО ЗАСТРЯВШЕГО. Появляется, когда человек вернулся с оплаты
+         несколько раз подряд без результата — см. noteAccessReturn() -->
+    <div class="stuck-box" id="access-stuck" style="display:none">
+      <div class="stuck-title" data-text="access.stuck_title">Проблема с оплатой?</div>
+      <button class="lec-link-btn access-btn" style="margin-bottom:8px" onclick="openPaymentTrouble()" data-text="access.stuck_yes">Да, не могу оплатить</button>
+      <div class="payment-help-link" style="margin:0" onclick="hideAccessStuck()" data-text="access.stuck_no">Нет, всё в порядке</div>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+  <!-- ── Оплата не из РФ / проблема с оплатой ── -->
+  <div class="view" id="view-payment-help">
+    <div class="section-label" style="display:flex;align-items:center;gap:8px">
+      <span onclick="switchView('access')" style="cursor:pointer;font-size:16px">←</span>
+      <span data-text="pay.a1">Оплата не из РФ / проблема с оплатой</span>
+    </div>
+    <div class="card">
+      <div class="access-intro">После оплаты приложение само поймает платёж — обычно на это уходят секунды, иногда до пары минут. Никуда уходить не нужно, просто вернись сюда, и я сразу покажу, что делать дальше.<br><br>Если оплатить не получается или карта не РФ, дай знать:</div>
+      <button class="lec-link-btn access-btn" onclick="openUrl('https://t.me/kuznetsov_denis?text=Приветики_хочу_оплатить_доступ_зарубежной_картой')">Оплата не из РФ</button>
+      <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_получается_оплатить_доступ')">Проблемы с оплатой</button>
+    </div>
+    <div class="scroll-spacer"></div>
+  </div>
+
+</div>
+
+<!-- ── СПРАВКА КЛУБА — полноэкранный слой поверх аппа ──────────────────────
+     Denis: «сделаем в полный экран как самостоятельную страницу, а не просто
+     заберём у неё элементы». Поэтому это НЕ `.view` внутри аппа с его шапкой
+     и табами, а отдельный слой поверх всего (как первый экран для пришедшего
+     по чужой карточке) — со своей вёрсткой один в один из присланного файла:
+     плавающая верхняя панель, боковое меню, статья-карточка.
+     Тема НЕ своя: кнопка переключения зовёт общий toggleTheme() аппа, чтобы
+     не разошлись два независимых состояния светло/темно.
+     Все стили изолированы внутрь #hd-overlay — на остальной апп не влияют,
+     и апп не влияет на них ── -->
+<div id="hd-overlay">
+  <div class="top">
+    <div class="icon-sq burger" id="hd-burger" role="button" tabindex="0" aria-label="Открыть меню" aria-expanded="false" onclick="helpDocsToggleSide()">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </div>
+    <div class="icon-sq" aria-label="Закрыть справку" onclick="closeHelpDocs()">
+      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+    </div>
+    <div class="top-logo">Ты <span>Боженька</span> Продаж</div>
+    <div class="top-sub" data-text="helpdocs.title">справка</div>
+    <div class="top-right">
+      <div class="icon-sq" aria-label="Тема" onclick="toggleTheme();helpDocsSyncThemeIcon()">
+        <svg id="hd-theme-icon" viewBox="0 0 24 24"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="side-backdrop" id="hd-side-backdrop" onclick="helpDocsToggleSide(false)"></div>
+
+  <div class="layout">
+    <nav class="side" id="hd-side"></nav>
+    <main class="main" id="hd-main"></main>
+  </div>
+</div>
+
+<!-- Пейволл-алерт -->
+<div class="sched-popup-overlay" id="paywall-overlay" onclick="if(event.target===this) closePaywall()">
+  <div class="sched-popup" id="paywall-popup" style="text-align:center">
+    <div class="sched-popup-handle"></div>
+    <div style="font-size:34px;margin:6px 0 10px">🔒</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px" data-text="pay.a2">Вот ёшки, не вижу твоей подписки(</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px" data-text="pay.a3">Этот контент доступен только участникам клуба</div>
+    <button class="lec-link-btn access-btn" onclick="closePaywall();openAccessPage()">Открыть доступ</button>
+    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePaywall();openClubInfoPage()">Узнать подробнее</button>
+  </div>
+</div>
+
+<!-- ⚠️ МИНИ-ВОРОНКА ВОКРУГ ЗАМОРОЖЕННЫХ БАЛЛОВ ПОДАРОЧНОЙ КАРТЫ.
+     Гость получает карту за тест сразу, а баллы внутри открываются вступлением.
+     Это не отказ, а предложение, поэтому и окно своё, а не общий пейволл:
+     общий говорит «не вижу подписки», а здесь человеку уже что-то принадлежит,
+     и разговор идёт о том, как это забрать. -->
+<div class="sched-popup-overlay giftpoints-layer" id="giftpoints-overlay" onclick="if(event.target===this) closeGiftPoints()">
+  <div class="sched-popup" id="giftpoints-popup" style="text-align:center">
+    <div class="sched-popup-handle"></div>
+    <div id="giftpoints-body"></div>
+  </div>
+</div>
+
+<!-- Ожидание оплаты: апп сам ловит момент, когда платёж дошёл -->
+<div class="sched-popup-overlay" id="postpay-overlay" onclick="if(event.target===this) closePostPay()">
+  <div class="sched-popup" id="postpay-popup" style="text-align:center">
+    <div class="sched-popup-handle"></div>
+    <div id="postpay-body"></div>
+  </div>
+</div>
+
+<!-- Срочная новость для ВСЕХ — видна и до логина (тут), и в ленте новостей после логина -->
+<div id="web-urgent-news-banner" class="news-block news-block--urgent"></div>
+
+<!-- Не в Telegram — веб-вход по номеру. Один и тот же экран работает в двух режимах:
+     с SMS-кодом и без него (зависит от глобального тумблера sms_login_enabled) -->
+<!-- ══ ПРИЁМ ССЫЛКИ «ОПЛАТИЛ ПЕРЕВОДОМ» (20.08.2026) ═════════════════════
+     ⚠️ РАНЬШЕ ЭТО БЫЛ ТОСТ. Человек открывал ссылку, апп молча дёргал сервер
+     и показывал полусекундную подпись поверх гостевого экрана — снаружи
+     выглядело как «ничего не произошло, меня пустили в демо». Проверено на
+     живом человеке 20.08. Теперь у приёма есть свой экран: он говорит, что
+     происходит, и не исчезает сам. -->
+<div class="center-modal-overlay" id="paid-claim-overlay" style="z-index:880">
+  <div class="center-modal" style="text-align:center">
+    <div class="center-modal-title" id="paid-claim-title" style="margin-bottom:8px"></div>
+    <div id="paid-claim-text" style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:18px"></div>
+    <div id="paid-claim-actions" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</div>
+
+<div class="center-modal-overlay" id="demo-entry-overlay" onclick="if(event.target===this)closeDemoEntryPopup()" style="z-index:700">
+  <div class="center-modal" style="text-align:center">
+    <div class="center-modal-header" style="justify-content:flex-end">
+      <button class="icon-btn" onclick="closeDemoEntryPopup()">✕</button>
+    </div>
+    <div style="font-size:22px;margin-bottom:8px">👀</div>
+    <div class="center-modal-title" style="margin-bottom:8px">Заглянуть в клуб</div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:20px" data-text="login.demo_offer">Можешь посмотреть что внутри — без входа. Или сразу оплатить участие.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <!-- ⚠️ ПЕРВЫМ — ФИЛЬМ (14.08.2026). Раньше окошко предлагало сразу «демо»
+           или «оплатить»: человек, который ещё ничего про клуб не знает,
+           выбирал между «п
