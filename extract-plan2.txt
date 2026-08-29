@@ -1,0 +1,4611 @@
+ора тем (шаг 1 личного плана) ═══════════════════════════════
+   Единственный экран в аппе, который выглядит иначе — как первая настройка,
+   а не как рабочий интерфейс. Тёмная сцена, светящиеся капсулы, поле, по
+   которому можно ездить. Всё остальное приложение таким не становится. */
+
+#plan-field{position:fixed;inset:0;z-index:60;display:none;
+  background:#0b080c;color:#f6efe6;
+  overflow:hidden;touch-action:none;
+  opacity:0;transition:opacity .38s ease;}
+#plan-field.show{display:block}
+#plan-field.in{opacity:1}
+#plan-world{position:absolute;left:0;top:0;will-change:transform}
+#plan-grain{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.4;mix-blend-mode:overlay}
+.pf-hud{position:absolute;left:0;right:0;top:0;z-index:3;pointer-events:none;
+  padding:calc(max(var(--safe-top,0px), 8px) + 20px) 20px 30px;
+  background:linear-gradient(180deg, rgba(11,8,12,.94) 34%, transparent)}
+.pf-eyebrow{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#98908a;margin-bottom:7px}
+.pf-title{font-family:var(--disp),sans-serif;font-weight:700;font-size:20px;line-height:1.25;color:#f6efe6}
+.pf-lead{font-size:12.5px;color:#98908a;margin-top:5px}
+.pf-back{position:absolute;right:16px;top:calc(max(var(--safe-top,0px), 8px) + 18px);z-index:4;
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(246,239,230,.22);
+  background:rgba(246,239,230,.08);color:#f6efe6;font-size:15px;cursor:pointer;pointer-events:auto}
+.pf-node{position:absolute;left:0;top:0;
+  padding:12px 17px;border-radius:999px;
+  font-size:13px;font-weight:500;line-height:1.3;white-space:nowrap;color:#f6efe6;
+  cursor:pointer;user-select:none;
+  background:
+    linear-gradient(175deg, rgba(255,255,255,.10), rgba(255,255,255,0) 55%),
+    radial-gradient(120% 160% at 50% 115%, var(--c) 0%, transparent 72%),
+    rgba(255,255,255,.03);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.22),
+    inset 0 -10px 20px rgba(0,0,0,.45),
+    0 10px 26px -12px rgba(0,0,0,.85);
+  /* ВАЖНО: transform и filter капсулы целиком принадлежат JS (pfAnimFrame).
+     Пока парение жило CSS-анимацией на transform, она перехватывала переезд —
+     капсула не подъезжала к новому месту, а прыгала */
+  animation:pfHue var(--hue-dur,14s) ease-in-out var(--hue-delay,0s) infinite;}
+.pf-node.open{box-shadow:
+  inset 0 1px 1px rgba(255,255,255,.28),
+  inset 0 -10px 20px rgba(0,0,0,.4),
+  0 0 0 1px rgba(255,255,255,.16),
+  0 10px 26px -12px rgba(0,0,0,.85)}
+.pf-node.root{padding:15px 20px;font-family:var(--disp),sans-serif;font-size:13.5px;font-weight:700}
+.pf-node.on{color:#fff;
+  box-shadow:
+    inset 0 1.5px 1.5px rgba(255,255,255,.5),
+    inset 0 0 24px 2px var(--c),
+    0 0 0 1.5px var(--c),
+    0 0 34px -2px var(--c),
+    0 12px 30px -12px rgba(0,0,0,.85);}
+.pf-node.bud{animation:pfPop .68s ease backwards, pfHue var(--hue-dur,14s) ease-in-out var(--hue-delay,0s) infinite}
+/* Капсулы чужих веток не исчезают, но отходят на второй план — так на экране
+   разом меньше того, что не относится к раскрытой теме */
+.pf-node.far{opacity:.34}
+.pf-node{transition:box-shadow .45s, color .3s, opacity .5s}
+/* Ореол облачка — очень слабое размытое пятно позади капсул ветки */
+#plan-glow{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
+.pf-glow{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;
+  filter:blur(46px);opacity:.2;
+  background:radial-gradient(closest-side, var(--c), transparent 72%)}
+просто
+   РАСТЁТ вместе с раскрытием ветки: territory-маркер направления на фоне */
+/* Затемнение по краям: капсула, уходящая в темноту, читается как «поле
+   продолжается, подвинь», а обрезанная резким краем — как «не влезло».
+   Слой над капсулами (z-index 3), но кликам не мешает */
+#plan-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:
+    linear-gradient(to right,  #0b080c 0%, rgba(11,8,12,0) 13%),
+    linear-gradient(to left,   #0b080c 0%, rgba(11,8,12,0) 13%),
+    linear-gradient(to bottom, #0b080c 0%, rgba(11,8,12,0) 9%),
+    linear-gradient(to top,    #0b080c 0%, rgba(11,8,12,0) 14%)}
+#plan-dir-blobs{position:absolute;left:0;top:0;z-index:0;pointer-events:none}
+/* Надпись на время расчёта раскладки — поверх поля, по центру */
+.pf-wait{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+  gap:10px;font-size:13.5px;color:#cfc6bb;pointer-events:none}
+.pf-wait-dot{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.55;
+  animation:pfWaitPulse 1s ease-in-out infinite}
+.pf-dir-blob{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;
+  filter:blur(70px);opacity:.09;
+  background:radial-gradient(closest-side, var(--c), transparent 70%);
+  transition:transform 1.4s cubic-bezier(.22,.8,.3,1), opacity .8s ease}
+радиус), изменены
+   только размеры — пилюля ниже и по ширине контента */
+/* Пилюля стала крупнее и выше — прежний размер "терялся" на фоне поля.
+   Заполнение до трёх тем: три — это уже достаточно для хорошего пути,
+   не обязательный максимум, поэтому шкала не тянет добирать до десяти */
+.pf-dock{/* absolute (не relative!) — держит пилюлю прибитой к низу поля. absolute
+     САМ ПО СЕБЕ создаёт контекст позиционирования для .pf-fill внутри, поэтому
+     смена на relative была лишней и вдобавок ломала fixed-расположение —
+     пилюля вываливалась в обычный поток документа и уезжала наверх */
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 18px);
+  max-width:calc(100% - 32px);z-index:4;
+  border-radius:28px;padding:10px 10px 10px 20px;
+  display:flex;align-items:center;gap:12px;white-space:nowrap;
+  overflow:hidden;
+  /* Значения --card/--border тёмной темы вписаны числами СОЗНАТЕЛЬНО: поле
+     выбора всегда тёмное независимо от темы приложения, а в светлой теме
+     var(--card) — непрозрачный бежевый, и стекло превратилось бы в плашку */
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 12px 34px -8px rgba(0,0,0,0.4);}
+/* Свечение растёт слева направо ПОД содержимым (z-index:0), а не поверх —
+   иначе заливка съедала бы читаемость текста и особенно тонкую обводку
+   «Начать сначала». Ширина зависит от доли выбранного, слой сам следит */
+.pf-fill{position:absolute;inset:0;z-index:0;width:0%;
+  background:linear-gradient(90deg, rgba(90,200,140,.32), rgba(90,200,140,.08) 70%, transparent);
+  box-shadow:inset -1px 0 24px 2px rgba(120,230,170,.22);
+  transition:width .5s cubic-bezier(.22,.8,.3,1)}
+.pf-dock > *:not(.pf-fill){position:relative;z-index:1}
+.pf-picked{font-size:12.5px;color:#98908a}
+.pf-picked b{color:#ffb37c;font-weight:600}
+.pf-reset{padding:11px 16px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(246,239,230,.18);background:rgba(246,239,230,.06);color:#e8e0d6;
+  font-family:inherit;font-size:13px;font-weight:600}
+/* «Готово» — стекло, а не пластиковый градиент: полупрозрачная зелёная
+   заливка поверх того же материала, что у самой пилюли, плюс мягкий блик */
+.pf-go{padding:11px 22px;border-radius:999px;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:#eafff2;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.22), rgba(255,255,255,0) 55%),
+    rgba(70,190,130,.28);
+  border:1px solid rgba(120,230,170,.4);
+  box-shadow:inset 0 1.5px 1.5px rgba(255,255,255,.35);
+  opacity:.5;transition:opacity .3s, box-shadow .3s}
+.pf-go.ready{opacity:1;
+  box-shadow:inset 0 1.5px 1.5px rgba(255,255,255,.4), 0 0 22px -4px rgba(90,220,150,.55)}
+/* Появление поля: капсулы рождаются в центре сцены и разлетаются по местам.
+   Конечная точка в кадре 100% не указана СПЕЦИАЛЬНО — тогда анимация едет
+   к инлайновому transform самой ноды, и раскладка остаётся хозяином позиции */
+.pf-node.born{animation:pfBirth .8s cubic-bezier(.2,.85,.28,1.06) backwards}
+.pf-hud > *{animation:pfHudIn .7s ease backwards}
+.pf-hud .pf-eyebrow{animation-delay:.1s}
+.pf-hud .pf-title{animation-delay:.2s}
+.pf-hud .pf-lead{animation-delay:.32s}
+.pf-dock.born{animation:pfDockIn .6s cubic-bezier(.2,.9,.3,1.1) backwards;animation-delay:.5s}
+.pf-node{transition:box-shadow .45s,color .3s}
+.pf-node.bud,.pf-node.born{animation:none}
+.pf-hud > *,.pf-dock.born{animation:none}
+#plan-field{transition:none}
+/* ── Пустое состояние личного плана (07.08.2026) ──
+   Вместо надписи «пока пусто» — призрачная лента под вуалью и одна кнопка.
+   Вуаль намеренно НЕ полностью непрозрачная: сквозь неё видно, что появится */
+.plan-empty-wrap{position:relative;min-height:76px;display:flex;align-items:center;justify-content:center}
+.plan-empty-ghost{opacity:.5;filter:saturate(.35);pointer-events:none;width:100%}
+.plan-ghost-row{display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:10px 4px;flex-wrap:nowrap;overflow:hidden}
+.plan-ghost-stop{flex:0 0 auto;width:40px;height:40px;display:block}
+.plan-ghost-stop img{width:100%;height:100%;object-fit:contain;display:block}
+.plan-empty-veil{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.55) 62%,rgba(255,255,255,.72));
+  backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+[data-theme="dark"] .plan-empty-veil{background:linear-gradient(180deg,rgba(12,10,21,.12),rgba(12,10,21,.6) 62%,rgba(12,10,21,.78))}
+.plan-empty-cta{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:auto;min-width:172px;margin:0;white-space:nowrap;z-index:2}
+/* Ссылка справа от заголовка блока — ведёт на полную карту или в анкету */
+.plan-open-link{font-size:12px;font-weight:600;color:var(--lav-deep);cursor:pointer;
+  text-transform:none;letter-spacing:0;white-space:nowrap}
+[data-theme="dark"] .plan-open-link{color:var(--lav)}
+/* Карточка личного плана держит вертикальные поля меньше обычных 18px:
+   внутри неё только счётчик и лента, и стандартный отступ читался как пустота
+   (07.08.2026, просьба Denis'а «уменьшить блок до высоты цепочки») */
+#personal-plan-card{padding-top:12px;padding-bottom:12px}
+/* Заголовок направления в анкете плана. НЕ похож на .quiz-answer сознательно:
+   когда они выглядели одинаково, экран превращался в кашу — было не понять,
+   где категория, а где сам выбор */
+.plan-group{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  background:none;border:none;padding:16px 4px 8px;margin:0;cursor:pointer;
+  font-family:inherit;color:var(--text-faint);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em}
+.plan-group .plan-group-name{flex:1}
+.plan-group .plan-group-count{color:var(--warm);text-transform:none;letter-spacing:0;font-size:11px}
+.plan-group .plan-group-chevron{font-size:14px;opacity:.5;transition:transform .2s ease}
+.plan-group.open .plan-group-chevron{transform:rotate(90deg)}
+.plan-group-items{border-left:2px solid var(--line);padding-left:12px;margin-bottom:6px}
+.plan-sub{margin-left:14px}
+о в готовой ленте: человек заранее видит, во что превратится
+   блок, когда план появится. Размытие делаем filter'ом ПО ФОНОВОМУ СЛОЮ —
+   это один статичный элемент, он не перерисовывается при прокрутке.
+   inset:-18px и лёгкое увеличение прячут мягкие края размытия под обрезкой */
+.plan-empty-wrap{position:relative;display:block;height:140px;min-height:0;
+  border-radius:14px;overflow:hidden;margin:8px -16px 0;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
+          mask-image:linear-gradient(to right,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%)}
+/* Вертикальная растушёвка — на самом слое арта, горизонтальная на обёртке:
+   маску по двум осям одним слоем без склейки не собрать. У .plan-empty-art
+   свои проценты, потому что он на 18px выше обёртки с каждой стороны */
+.plan-empty-art{position:absolute;inset:-18px;transform:scale(1.06);
+  filter:blur(9px) saturate(.9);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22%,#000 78%,transparent 100%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 22%,#000 78%,transparent 100%)}
+[data-theme="light"] .plan-empty-art{background:url(images/plan/rail-light.webp) 0 center/auto 100% repeat-x}
+[data-theme="dark"]  .plan-empty-art{background:url(images/plan/rail-dark.webp) 0 center/auto 100% repeat-x}
+/* Вуаль без backdrop-filter: размытие уже сделано слоем выше, а второе
+   честное размытие на том же месте стоило бы прокрутки на слабых телефонах */
+.plan-empty-veil{position:absolute;inset:0;pointer-events:none;z-index:1;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+  background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.55),rgba(255,255,255,.12) 72%)}
+[data-theme="dark"] .plan-empty-veil{background:radial-gradient(ellipse at 50% 50%,rgba(10,11,20,.62),rgba(10,11,20,.18) 72%)}
+.plan-empty-cta{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  z-index:2;width:auto;min-width:0;margin:0;border:none;cursor:pointer;
+  font-family:inherit;font-size:15.5px;font-weight:700;letter-spacing:.005em;
+  color:#fff;white-space:nowrap;padding:15px 32px;border-radius:999px;
+  background:linear-gradient(135deg,var(--lav) 0%,var(--lav-deep) 100%);
+  box-shadow:0 12px 30px rgba(0,0,0,.26),
+             inset 0 1px 0 rgba(255,255,255,.34),
+             inset 0 -1px 0 rgba(0,0,0,.12);
+  transition:transform .16s ease,box-shadow .16s ease}
+.plan-empty-cta>span{position:relative;z-index:2}
+/* Мягкий ореол вокруг кнопки — дышит, чтобы взгляд её нашёл. Анимируется
+   ОДИН элемент и только прозрачностью с масштабом: перерисовки нет */
+.plan-empty-cta::before{content:'';position:absolute;left:50%;top:50%;
+  width:132%;height:190%;transform:translate(-50%,-50%);border-radius:999px;
+  z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,var(--lav-dim),transparent 70%);
+  animation:planCtaHalo 3.2s ease-in-out infinite}
+.plan-empty-cta:active{transform:translate(-50%,-50%) scale(.96);
+  box-shadow:0 6px 16px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.3)}
+.plan-empty-cta::before{animation:none}
+/* Свечения поля выбора тем: размытие 46 и 70 пикселей на каждое
+   направление, поверх двигающихся капсул — самое дорогое на экране */
+html[data-lite] .pf-glow,
+html[data-lite] .pf-dir-blob{display:none!important}
+const el = document.getElementById('personal-plan-saved');
+  if (!el) return;
+  const saved = allLectures.filter(l => savedSlugs.has(l.slug));
+  if (!saved.length){// Пустой блок отложенного просто НЕ ПОКАЗЫВАЕМ (07.08.2026). Раньше здесь
+    // висела строка «Пока пусто — сохраняй лекции звёздочкой»: она лежала
+    // внутри карточки личного плана и читалась так, будто пуста САМА КАРТА,
+    // хотя карта рядом полна остановок. Denis на неё и споткнулся
+    el.innerHTML = '';
+    return;}
+const el = document.getElementById('personal-plan-body');
+  if (!el) return;
+
+  const link = document.getElementById('plan-open-link');
+  const hasPlan = planHasAnything();
+  const seedOnly = hasPlan && !planHasThemes();
+
+  if (link){link.style.display = '';
+    /* Засев без тем — путь уже есть, но он куцый: зовём дособрать, а не
+       «составить с нуля», иначе выглядит так, будто теста и не было */
+    link.textContent = seedOnly ? 'Добавить свои темы →'
+                     : (hasPlan ? 'Открыть полностью →' : 'Составить план →');
+    link.dataset.mode = hasPlan && !seedOnly ? 'open' : 'make';}
+);
+
+  const dock = f.querySelector('.pf-dock');
+  if (dock){// Перезапуск анимации: класс мог остаться с прошлого открытия, и тогда
+    // браузер посчитал бы её уже отыгранной
+    dock.classList.remove('born');
+    void dock.offsetWidth;
+    dock.classList.add('born');}
+onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers ={problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,}
+switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({behavior: 'smooth', block: 'start'}
+
+/* JS */
+
+function planGuestAnswers(){
+  try {
+    const raw = localStorage.getItem(PLAN_GUEST_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return (d && (d.problems || []).length) ? d : null;
+  } catch (e) { return null; }
+}
+function planGuestSave(answers){
+  try { localStorage.setItem(PLAN_GUEST_KEY, JSON.stringify(answers || {})); } catch (e) {}
+}
+
+async function loadPlanAnswers(){
+  /* ⚠️⚠️ ОТМЕТКУ СТАВИМ ВО ВСЕХ ИСХОДАХ, ВКЛЮЧАЯ НЕУДАЧНЫЕ. Она значит
+     «СПРАШИВАТЬ БОЛЬШЕ НЕ НАДО», а не «ответ получен». Раньше выход по
+     «нет telegram_id» (гость в вебе), по коду ответа и по исключению
+     оставлял её ложной — а `renderPlanScreen` в этом случае звал загрузку
+     и перерисовывался снова: приложение вставало намертво (поймал Denis
+     20.08 в демо, кнопка «Составить план»). Классика: флаг «данные не
+     приехали» перепутан с флагом «данных нет» */
+  try {
+    /* ⚠️ У ГОСТЯ КАРТА ЖИВЁТ НА УСТРОЙСТВЕ. Ему негде храниться на сервере —
+       телеграма нет, а карту он собирает сам и она должна пережить закрытие
+       вкладки. При опознании (вход, подписка на бота) её надо будет перенести
+       на сервер — точка переноса `planGuestAnswers()` */
+    if (!telegramId){ planAnswers = planGuestAnswers(); return; }
+    const r = await fetch(`${API_URL}/plan-answers/${telegramId}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    planAnswers = d.exists ? { problems: d.problems || [], level: d.level || '',
+                               depth: d.depth || '', note: d.note || '' } : null;
+  } catch(e){
+    console.warn('[личный план] ответы не приехали:', e && e.message || e);
+  } finally {
+    planAnswersLoaded = true;
+  }
+}
+
+// Проблема, под которой нет ни одной лекции, участнику НЕ показывается: он бы
+// её выбрал, а плана не получил. Пустые остаются в справочнике у Дениса как
+// подсказка, что стоит снять
+function planProblemsWithContent(){
+  const has = {};
+  allLectures.forEach(function(l){
+    (l.problems || []).forEach(function(p){ if (p && p.key) has[p.key] = true; });
+  });
+  return planProblems.filter(function(p){ return has[p.key]; });
+}
+
+function planProblemLabel(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+/* ── Сборка плана ────────────────────────────────────────────────────────── */
+
+// Насколько лекция подходит под ответы. Уровень и глубина СОРТИРУЮТ, а не
+// отсекают: если единственная лекция по нужной боли размечена для начинающих,
+// человек всё равно должен её получить — просто ниже совпавших
+function planScore(lec, entry, answers){
+  let score = entry.weight === 'touch' ? 0 : 100;
+  const lvl = lec.level || '';
+  if (lvl && answers.level){
+    if (lvl === answers.level) score += 30;
+    else if (lvl === 'any') score += 15;
+  } else if (lvl === 'any') score += 15;
+  if (lec.depth && answers.depth && lec.depth === answers.depth) score += 12;
+  return score;
+}
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) re
+
+function planGuestSave(answers){
+  try { localStorage.setItem(PLAN_GUEST_KEY, JSON.stringify(answers || {})); } catch (e) {}
+}
+
+async function loadPlanAnswers(){
+  /* ⚠️⚠️ ОТМЕТКУ СТАВИМ ВО ВСЕХ ИСХОДАХ, ВКЛЮЧАЯ НЕУДАЧНЫЕ. Она значит
+     «СПРАШИВАТЬ БОЛЬШЕ НЕ НАДО», а не «ответ получен». Раньше выход по
+     «нет telegram_id» (гость в вебе), по коду ответа и по исключению
+     оставлял её ложной — а `renderPlanScreen` в этом случае звал загрузку
+     и перерисовывался снова: приложение вставало намертво (поймал Denis
+     20.08 в демо, кнопка «Составить план»). Классика: флаг «данные не
+     приехали» перепутан с флагом «данных нет» */
+  try {
+    /* ⚠️ У ГОСТЯ КАРТА ЖИВЁТ НА УСТРОЙСТВЕ. Ему негде храниться на сервере —
+       телеграма нет, а карту он собирает сам и она должна пережить закрытие
+       вкладки. При опознании (вход, подписка на бота) её надо будет перенести
+       на сервер — точка переноса `planGuestAnswers()` */
+    if (!telegramId){ planAnswers = planGuestAnswers(); return; }
+    const r = await fetch(`${API_URL}/plan-answers/${telegramId}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    planAnswers = d.exists ? { problems: d.problems || [], level: d.level || '',
+                               depth: d.depth || '', note: d.note || '' } : null;
+  } catch(e){
+    console.warn('[личный план] ответы не приехали:', e && e.message || e);
+  } finally {
+    planAnswersLoaded = true;
+  }
+}
+
+// Проблема, под которой нет ни одной лекции, участнику НЕ показывается: он бы
+// её выбрал, а плана не получил. Пустые остаются в справочнике у Дениса как
+// подсказка, что стоит снять
+function planProblemsWithContent(){
+  const has = {};
+  allLectures.forEach(function(l){
+    (l.problems || []).forEach(function(p){ if (p && p.key) has[p.key] = true; });
+  });
+  return planProblems.filter(function(p){ return has[p.key]; });
+}
+
+function planProblemLabel(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+/* ── Сборка плана ────────────────────────────────────────────────────────── */
+
+// Насколько лекция подходит под ответы. Уровень и глубина СОРТИРУЮТ, а не
+// отсекают: если единственная лекция по нужной боли размечена для начинающих,
+// человек всё равно должен её получить — просто ниже совпавших
+function planScore(lec, entry, answers){
+  let score = entry.weight === 'touch' ? 0 : 100;
+  const lvl = lec.level || '';
+  if (lvl && answers.level){
+    if (lvl === answers.level) score += 30;
+    else if (lvl === 'any') score += 15;
+  } else if (lvl === 'any') score += 15;
+  if (lec.depth && answers.depth && lec.depth === answers.depth) score += 12;
+  return score;
+}
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows
+
+function planProblemsWithContent(){
+  const has = {};
+  allLectures.forEach(function(l){
+    (l.problems || []).forEach(function(p){ if (p && p.key) has[p.key] = true; });
+  });
+  return planProblems.filter(function(p){ return has[p.key]; });
+}
+
+function planProblemLabel(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+/* ── Сборка плана ────────────────────────────────────────────────────────── */
+
+// Насколько лекция подходит под ответы. Уровень и глубина СОРТИРУЮТ, а не
+// отсекают: если единственная лекция по нужной боли размечена для начинающих,
+// человек всё равно должен её получить — просто ниже совпавших
+function planScore(lec, entry, answers){
+  let score = entry.weight === 'touch' ? 0 : 100;
+  const lvl = lec.level || '';
+  if (lvl && answers.level){
+    if (lvl === answers.level) score += 30;
+    else if (lvl === 'any') score += 15;
+  } else if (lvl === 'any') score += 15;
+  if (lec.depth && answers.depth && lec.depth === answers.depth) score += 12;
+  return score;
+}
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers),
+                  viaParent: k !== key });
+    });
+    rows.sort(function(a, b){ return b.score - a.score; });
+    rows.slice(0, PLAN_PER_PROBLEM - out.length).forEach(function(r){
+      used[r.lec.slug] = true;
+      out.push(r);
+    });
+  });
+  return out;
+}
+
+/* ══ ПЛЕЙЛИСТЫ — КУРИРОВАННЫЙ КОСТЯК ПУТИ (14.08.2026) ═══════════════════
+   [stated] Denis: плейлист гибридно решает две задачи — «подбирает контент,
+   актуальный болям пользователя», и даёт ему «возможность заранее создать
+   курированные списки контента, который я лично считаю более качественным».
+
+   Отсюда устройство: подходящий плейлист даёт НАЧАЛО пути (его слоты идут
+   первыми, в заданном Denis'ом порядке), а дальше путь достраивается обычным
+   подбором по болям до тех же десяти остановок. Плейлиста нет или он ничего
+   не нашёл — человек получает ровно то, что получал раньше.
+
+   ⚠️ ПОРЯДОК ВНУТРИ ПЛЕЙЛИСТА НЕ ТРОГАЕМ. Обычный путь сортируется по фазам
+   воронки, но плейлист — это и есть кураторское знание о порядке; пересортировать
+   его значит выкинуть то, ради чего он заводился. */
+/* ⚠️ РАЗРЕШЕНИЕ СЛОТОВ ПЕРЕЕХАЛО НА СЕРВЕР (14.08.2026). Раньше апп подбирал
+   лекции под слоты сам — и предпросмотр в анализаторе считал бы СВОЮ копию
+   того же правила. Две реализации одного правила разъезжаются, у нас это уже
+   было с генераторами картинок. Теперь `/playlists/resolve` — единственное
+   место, а апп только рисует то, что оно вернуло.
+
+   Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
+   (`planStopList`) синхронная, ходить в сеть
+
+function planProblemLabel(key){
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+/* ── Сборка плана ────────────────────────────────────────────────────────── */
+
+// Насколько лекция подходит под ответы. Уровень и глубина СОРТИРУЮТ, а не
+// отсекают: если единственная лекция по нужной боли размечена для начинающих,
+// человек всё равно должен её получить — просто ниже совпавших
+function planScore(lec, entry, answers){
+  let score = entry.weight === 'touch' ? 0 : 100;
+  const lvl = lec.level || '';
+  if (lvl && answers.level){
+    if (lvl === answers.level) score += 30;
+    else if (lvl === 'any') score += 15;
+  } else if (lvl === 'any') score += 15;
+  if (lec.depth && answers.depth && lec.depth === answers.depth) score += 12;
+  return score;
+}
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers),
+                  viaParent: k !== key });
+    });
+    rows.sort(function(a, b){ return b.score - a.score; });
+    rows.slice(0, PLAN_PER_PROBLEM - out.length).forEach(function(r){
+      used[r.lec.slug] = true;
+      out.push(r);
+    });
+  });
+  return out;
+}
+
+/* ══ ПЛЕЙЛИСТЫ — КУРИРОВАННЫЙ КОСТЯК ПУТИ (14.08.2026) ═══════════════════
+   [stated] Denis: плейлист гибридно решает две задачи — «подбирает контент,
+   актуальный болям пользователя», и даёт ему «возможность заранее создать
+   курированные списки контента, который я лично считаю более качественным».
+
+   Отсюда устройство: подходящий плейлист даёт НАЧАЛО пути (его слоты идут
+   первыми, в заданном Denis'ом порядке), а дальше путь достраивается обычным
+   подбором по болям до тех же десяти остановок. Плейлиста нет или он ничего
+   не нашёл — человек получает ровно то, что получал раньше.
+
+   ⚠️ ПОРЯДОК ВНУТРИ ПЛЕЙЛИСТА НЕ ТРОГАЕМ. Обычный путь сортируется по фазам
+   воронки, но плейлист — это и есть кураторское знание о порядке; пересортировать
+   его значит выкинуть то, ради чего он заводился. */
+/* ⚠️ РАЗРЕШЕНИЕ СЛОТОВ ПЕРЕЕХАЛО НА СЕРВЕР (14.08.2026). Раньше апп подбирал
+   лекции под слоты сам — и предпросмотр в анализаторе считал бы СВОЮ копию
+   того же правила. Две реализации одного правила разъезжаются, у нас это уже
+   было с генераторами картинок. Теперь `/playlists/resolve` — единственное
+   место, а апп только рисует то, что оно вернуло.
+
+   Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
+   (`planStopList`) синхронная, ходить в сеть из неё нельзя. */
+let planPlaylistHead = [];
+
+/* ═══ ЗАСЕВ ПО АРХЕТИПУ — ОТДЕЛЬНЫЙ СЛОЙ ПУТИ (26.08.2026) ═══
+   Бэкенд считал `/plan/seed` с 19.08, но апп его ни разу не спрашивал: путь
+   собирался ТОЛЬКО из отмеченных вручную тем, и персонали
+
+function planScore(lec, entry, answers){
+  let score = entry.weight === 'touch' ? 0 : 100;
+  const lvl = lec.level || '';
+  if (lvl && answers.level){
+    if (lvl === answers.level) score += 30;
+    else if (lvl === 'any') score += 15;
+  } else if (lvl === 'any') score += 15;
+  if (lec.depth && answers.depth && lec.depth === answers.depth) score += 12;
+  return score;
+}
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers),
+                  viaParent: k !== key });
+    });
+    rows.sort(function(a, b){ return b.score - a.score; });
+    rows.slice(0, PLAN_PER_PROBLEM - out.length).forEach(function(r){
+      used[r.lec.slug] = true;
+      out.push(r);
+    });
+  });
+  return out;
+}
+
+/* ══ ПЛЕЙЛИСТЫ — КУРИРОВАННЫЙ КОСТЯК ПУТИ (14.08.2026) ═══════════════════
+   [stated] Denis: плейлист гибридно решает две задачи — «подбирает контент,
+   актуальный болям пользователя», и даёт ему «возможность заранее создать
+   курированные списки контента, который я лично считаю более качественным».
+
+   Отсюда устройство: подходящий плейлист даёт НАЧАЛО пути (его слоты идут
+   первыми, в заданном Denis'ом порядке), а дальше путь достраивается обычным
+   подбором по болям до тех же десяти остановок. Плейлиста нет или он ничего
+   не нашёл — человек получает ровно то, что получал раньше.
+
+   ⚠️ ПОРЯДОК ВНУТРИ ПЛЕЙЛИСТА НЕ ТРОГАЕМ. Обычный путь сортируется по фазам
+   воронки, но плейлист — это и есть кураторское знание о порядке; пересортировать
+   его значит выкинуть то, ради чего он заводился. */
+/* ⚠️ РАЗРЕШЕНИЕ СЛОТОВ ПЕРЕЕХАЛО НА СЕРВЕР (14.08.2026). Раньше апп подбирал
+   лекции под слоты сам — и предпросмотр в анализаторе считал бы СВОЮ копию
+   того же правила. Две реализации одного правила разъезжаются, у нас это уже
+   было с генераторами картинок. Теперь `/playlists/resolve` — единственное
+   место, а апп только рисует то, что оно вернуло.
+
+   Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
+   (`planStopList`) синхронная, ходить в сеть из неё нельзя. */
+let planPlaylistHead = [];
+
+/* ═══ ЗАСЕВ ПО АРХЕТИПУ — ОТДЕЛЬНЫЙ СЛОЙ ПУТИ (26.08.2026) ═══
+   Бэкенд считал `/plan/seed` с 19.08, но апп его ни разу не спрашивал: путь
+   собирался ТОЛЬКО из отмеченных вручную тем, и персонализация по тесту не
+   доезжала до карты вообще. Теперь засев — первый слой, живёт отдельно от
+   слоя тем, и пересборка анкеты его не трогает.
+
+   ⚠️ КОД БЕРЁМ И БЕЗ ВХОДА: тест проходят ДО вступления, у гостя результат
+   лежит только в localStorage. Иначе засев был бы ровно у тех, кому он уже
+   не нужен. */
+let planSeedStops = [];
+
+async function loadPlanSeed(){
+  planSeedStops = [];
+  let code = '';
+  try { const q = savedQui
+
+function planEntryFor(lec, key){
+  return (lec.problems || []).find(function(p){ return p && p.key === key; });
+}
+
+// Лекции под одну проблему. Если это частный случай («нет денег») и своих
+// лекций мало — добираем из родительской («возражения вообще»): именно ради
+// этого у проблем есть иерархия
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers),
+                  viaParent: k !== key });
+    });
+    rows.sort(function(a, b){ return b.score - a.score; });
+    rows.slice(0, PLAN_PER_PROBLEM - out.length).forEach(function(r){
+      used[r.lec.slug] = true;
+      out.push(r);
+    });
+  });
+  return out;
+}
+
+/* ══ ПЛЕЙЛИСТЫ — КУРИРОВАННЫЙ КОСТЯК ПУТИ (14.08.2026) ═══════════════════
+   [stated] Denis: плейлист гибридно решает две задачи — «подбирает контент,
+   актуальный болям пользователя», и даёт ему «возможность заранее создать
+   курированные списки контента, который я лично считаю более качественным».
+
+   Отсюда устройство: подходящий плейлист даёт НАЧАЛО пути (его слоты идут
+   первыми, в заданном Denis'ом порядке), а дальше путь достраивается обычным
+   подбором по болям до тех же десяти остановок. Плейлиста нет или он ничего
+   не нашёл — человек получает ровно то, что получал раньше.
+
+   ⚠️ ПОРЯДОК ВНУТРИ ПЛЕЙЛИСТА НЕ ТРОГАЕМ. Обычный путь сортируется по фазам
+   воронки, но плейлист — это и есть кураторское знание о порядке; пересортировать
+   его значит выкинуть то, ради чего он заводился. */
+/* ⚠️ РАЗРЕШЕНИЕ СЛОТОВ ПЕРЕЕХАЛО НА СЕРВЕР (14.08.2026). Раньше апп подбирал
+   лекции под слоты сам — и предпросмотр в анализаторе считал бы СВОЮ копию
+   того же правила. Две реализации одного правила разъезжаются, у нас это уже
+   было с генераторами картинок. Теперь `/playlists/resolve` — единственное
+   место, а апп только рисует то, что оно вернуло.
+
+   Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
+   (`planStopList`) синхронная, ходить в сеть из неё нельзя. */
+let planPlaylistHead = [];
+
+/* ═══ ЗАСЕВ ПО АРХЕТИПУ — ОТДЕЛЬНЫЙ СЛОЙ ПУТИ (26.08.2026) ═══
+   Бэкенд считал `/plan/seed` с 19.08, но апп его ни разу не спрашивал: путь
+   собирался ТОЛЬКО из отмеченных вручную тем, и персонализация по тесту не
+   доезжала до карты вообще. Теперь засев — первый слой, живёт отдельно от
+   слоя тем, и пересборка анкеты его не трогает.
+
+   ⚠️ КОД БЕРЁМ И БЕЗ ВХОДА: тест проходят ДО вступления, у гостя результат
+   лежит только в localStorage. Иначе засев был бы ровно у тех, кому он уже
+   не нужен. */
+let planSeedStops = [];
+
+async function loadPlanSeed(){
+  planSeedStops = [];
+  let code = '';
+  try { const q = savedQuizResult(); code = (q && q.code) || ''; } catch(e){}
+  if (!telegramId && !code) return;
+  try {
+    const qs = telegramId ? ('telegram_id=' + telegramId) : ('code=' + encodeURIComponent(code));
+    const r = await fetch(`${API_URL}/plan/seed?${qs}`);
+    const d = await r.json();
+    planSeedStops = (d && d.seed) || [];
+  } catch(e){ planSeedStops = []; }   // молча: путь
+
+function planLecturesFor(key, answers, used){
+  const dict = planProblems.find(function(x){ return x.key === key; });
+  const keys = [key];
+  if (dict && dict.parent_key) keys.push(dict.parent_key);
+
+  const out = [];
+  keys.forEach(function(k){
+    if (out.length >= PLAN_PER_PROBLEM) return;
+    const rows = [];
+    allLectures.forEach(function(lec){
+      if (used[lec.slug]) return;                    // одна лекция не попадает в план дважды
+      const entry = planEntryFor(lec, k);
+      if (!entry) return;
+      rows.push({ lec: lec, entry: entry, score: planScore(lec, entry, answers),
+                  viaParent: k !== key });
+    });
+    rows.sort(function(a, b){ return b.score - a.score; });
+    rows.slice(0, PLAN_PER_PROBLEM - out.length).forEach(function(r){
+      used[r.lec.slug] = true;
+      out.push(r);
+    });
+  });
+  return out;
+}
+
+/* ══ ПЛЕЙЛИСТЫ — КУРИРОВАННЫЙ КОСТЯК ПУТИ (14.08.2026) ═══════════════════
+   [stated] Denis: плейлист гибридно решает две задачи — «подбирает контент,
+   актуальный болям пользователя», и даёт ему «возможность заранее создать
+   курированные списки контента, который я лично считаю более качественным».
+
+   Отсюда устройство: подходящий плейлист даёт НАЧАЛО пути (его слоты идут
+   первыми, в заданном Denis'ом порядке), а дальше путь достраивается обычным
+   подбором по болям до тех же десяти остановок. Плейлиста нет или он ничего
+   не нашёл — человек получает ровно то, что получал раньше.
+
+   ⚠️ ПОРЯДОК ВНУТРИ ПЛЕЙЛИСТА НЕ ТРОГАЕМ. Обычный путь сортируется по фазам
+   воронки, но плейлист — это и есть кураторское знание о порядке; пересортировать
+   его значит выкинуть то, ради чего он заводился. */
+/* ⚠️ РАЗРЕШЕНИЕ СЛОТОВ ПЕРЕЕХАЛО НА СЕРВЕР (14.08.2026). Раньше апп подбирал
+   лекции под слоты сам — и предпросмотр в анализаторе считал бы СВОЮ копию
+   того же правила. Две реализации одного правила разъезжаются, у нас это уже
+   было с генераторами картинок. Теперь `/playlists/resolve` — единственное
+   место, а апп только рисует то, что оно вернуло.
+
+   Готовые позиции складываем в `planPlaylistHead` заранее: сборка пути
+   (`planStopList`) синхронная, ходить в сеть из неё нельзя. */
+let planPlaylistHead = [];
+
+/* ═══ ЗАСЕВ ПО АРХЕТИПУ — ОТДЕЛЬНЫЙ СЛОЙ ПУТИ (26.08.2026) ═══
+   Бэкенд считал `/plan/seed` с 19.08, но апп его ни разу не спрашивал: путь
+   собирался ТОЛЬКО из отмеченных вручную тем, и персонализация по тесту не
+   доезжала до карты вообще. Теперь засев — первый слой, живёт отдельно от
+   слоя тем, и пересборка анкеты его не трогает.
+
+   ⚠️ КОД БЕРЁМ И БЕЗ ВХОДА: тест проходят ДО вступления, у гостя результат
+   лежит только в localStorage. Иначе засев был бы ровно у тех, кому он уже
+   не нужен. */
+let planSeedStops = [];
+
+async function loadPlanSeed(){
+  planSeedStops = [];
+  let code = '';
+  try { const q = savedQuizResult(); code = (q && q.code) || ''; } catch(e){}
+  if (!telegramId && !code) return;
+  try {
+    const qs = telegramId ? ('telegram_id=' + telegramId) : ('code=' + encodeURIComponent(code));
+    const r = await fetch(`${API_URL}/plan/seed?${qs}`);
+    const d = await r.json();
+    planSeedStops = (d && d.seed) || [];
+  } catch(e){ planSeedStops = []; }   // молча: путь и без засева рабочий
+}
+
+async function loadPlaylistHead(answers){
+  planPlaylistHead = [];
+  if (!answers || !(answers.problems || []).length) return;
+  try {
+    const r = await fetch(`${API_URL}/playlists/resolve`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JS
+
+function planHtml(answers, compact){
+  const groups = buildPlan(answers);
+  if (!groups.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось. Попробуй отметить что-то ещё — или спроси ИИ-помощника своими словами.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+  // В библиотеке показываем только первую боль — карточка не должна разрастаться
+  // в простыню; всё остальное открывается на своём экране
+  const shown = compact ? groups.slice(0, 1) : groups;
+  let html = '';
+  planCardItems = [];
+  shown.forEach(function(g){
+    html += '<div class="section-label" style="margin:14px 0 8px">' + escapeHtml(g.label) + '</div>';
+    g.rows.forEach(function(r){
+      const i = planCardItems.length;
+      planCardItems.push(r.lec);
+      html += lecCardHtml(r.lec, i, 'plan');
+      const notes = [];
+      // Таймкод — главное, ради чего он собирался: человеку с одной болью
+      // трёхчасовой эфир без указателя бесполезен
+      if (r.entry.timecode) notes.push('про это на ' + escapeHtml(r.entry.timecode));
+      if (r.entry.weight === 'touch') notes.push('затронуто вскользь');
+      if (r.viaParent) notes.push('разбор темы шире');
+      if (notes.length) html += '<div class="reward-hint" style="margin:-6px 0 12px">' + notes.join(' · ') + '</div>';
+    });
+  });
+  if (compact && groups.length > 1){
+    html += '<button class="quiz-answer" style="margin-top:6px" onclick="switchView(\'plan\');renderPlanScreen()">Показать весь план</button>';
+  }
+  return html;
+}
+
+/* ══ Карта пути ══════════════════════════════════════════════════════════
+   Вместо списка карточек — тропинка с остановками. Порядок берётся из уже
+   расставленного Denis'ом порядка НАПРАВЛЕНИЙ: между болями идём по воронке,
+   внутри боли сначала основные лекции, потом задетые вскользь. Никакой
+   отдельной редакторской работы для этого не нужно. */
+
+const PMAP_X = [26, 50, 74, 50];      // змейка: влево — центр — вправо — центр
+/* УМЕНЬШЕНО 07.08.2026 по просьбе Denis'а: карта занимала пол-экрана на
+   вкладке «Что посмотреть». ПЕРВАЯ ПОПЫТКА (в тот же день) ошиблась: цифры
+   ниже проходят через planStopNode(), которая делит их на PLAN_IMG_FILL=0.68
+   (у картинки остановки нарисован отступ вокруг кружка). Реальный размер НА
+   ЭКРАНЕ — это PMAP_D / 0.68, а не сама цифра. Заданные тогда 60px рисовались
+   как 88px — вдвое меньше исходных 112px, но не вдвое меньше того, что
+   Denis реально видел на телефоне. Величины ниже подобраны В ОБРАТНУЮ
+   СТОРОНУ — от желаемого размера на экране (текущая остановка ~46px). Шаг и
+   размеры кружков всегда меняются СОГЛАСОВАННО — иначе тропинка перестаёт
+   попадать в кружки */
+const PMAP_STEP = 34;                 // расстояние между остановками, px
+const PMAP_TOP = 16;
+// Пастельные, а не плотные: под белой вуалью насыщенный цвет выглядит краской,
+// а не стеклом — референс Denis'а (иконка Figma) держится именно на пастели
+/* Запасная палитра — если справочник ещё не загружен и направление
+   определить не по чему */
+const PMAP_COLORS = ['#f0885a','#68b0e8','#e07a95','#5fc8ab','#a98cf0','#e8c25f'];
+
+/* Размер остановки говорит о её роли, а не о порядке:
+   пройденная маленькая, следующая крупная, будущие средние */
+/* Размер остановки говорит о её роли, а не о порядке:
+   пройденная маленькая, следующая крупная, будущие средние.
+   Значения укрупнены 04.08 — картинки теперь несут рисованную цифру,
+   и мелкий кружок её съедал */
+const 
+
+function planTheme(){
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
+
+/* Catmull-Rom проходит РОВНО через снятые точки, в отличие от Безье,
+   где они были бы лишь управляющими */
+function planSpline(p, t){
+  const n = p.length, s = t * (n - 1);
+  const i = Math.min(Math.floor(s), n - 2), u = s - i;
+  const a = p[Math.max(i-1,0)], b = p[i], c = p[i+1], d = p[Math.min(i+2,n-1)];
+  const f = (A,B,C,D) => 0.5*((2*B) + (-A+C)*u + (2*A-5*B+4*C-D)*u*u + (-A+3*B-3*C+D)*u*u*u);
+  return { x: f(a[0],b[0],c[0],d[0]), y: f(a[1],b[1],c[1],d[1]) };
+}
+
+/* Раскладка РАВНОМЕРНО ПО ДЛИНЕ ДУГИ, а не по параметру t: иначе на изгибах
+   остановки сбивались бы в кучу, а на прямых разъезжались */
+function planAlong(p, count){
+  const S = 400, samp = [], len = [0];
+  let tot = 0;
+  for (let i = 0; i <= S; i++) samp.push(planSpline(p, i / S));
+  for (let j = 1; j <= S; j++){
+    const dx = samp[j].x - samp[j-1].x, dy = samp[j].y - samp[j-1].y;
+    tot += Math.sqrt(dx*dx + dy*dy); len.push(tot);
+  }
+  const out = []; let k = 0;
+  for (let m = 0; m < count; m++){
+    const want = count === 1 ? 0 : tot * m / (count - 1);
+    while (k < S && len[k+1] < want) k++;
+    out.push(samp[k]);
+  }
+  return out;
+}
+
+/* Высота тропы ленты в точке t (0..100 по ширине плитки) */
+function planRailY(t){
+  const p = PLAN_RAIL_PATH[planTheme()];
+  for (let i = 1; i < p.length; i++){
+    if (p[i][0] >= t){
+      const a = p[i-1], b = p[i], u = (t - a[0]) / ((b[0] - a[0]) || 1);
+      return a[1] + (b[1] - a[1]) * u;
+    }
+  }
+  return p[p.length-1][1];
+}
+
+/* Прогрессивная прозрачность будущих. Считается ОТ СЛЕДУЮЩЕЙ, а не от первой
+   лекции — иначе по мере прохождения карта выцветала бы целиком. Диапазон
+   растягивается под число остановок: следующая всегда 1.0, самая дальняя
+   всегда PLAN_ALPHA_MIN, и эффект одинаково читается при 4 и при 10 */
+function planFutureAlpha(k, last){
+  if (k <= 0 || last <= 0) return 1;
+  return +(1 - (1 - PLAN_ALPHA_MIN) * (k / last)).toFixed(3);
+}
+
+/* ПЕРСПЕКТИВА: чем выше остановка на карте, тем она мельче */
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l =
+
+function planSpline(p, t){
+  const n = p.length, s = t * (n - 1);
+  const i = Math.min(Math.floor(s), n - 2), u = s - i;
+  const a = p[Math.max(i-1,0)], b = p[i], c = p[i+1], d = p[Math.min(i+2,n-1)];
+  const f = (A,B,C,D) => 0.5*((2*B) + (-A+C)*u + (2*A-5*B+4*C-D)*u*u + (-A+3*B-3*C+D)*u*u*u);
+  return { x: f(a[0],b[0],c[0],d[0]), y: f(a[1],b[1],c[1],d[1]) };
+}
+
+/* Раскладка РАВНОМЕРНО ПО ДЛИНЕ ДУГИ, а не по параметру t: иначе на изгибах
+   остановки сбивались бы в кучу, а на прямых разъезжались */
+function planAlong(p, count){
+  const S = 400, samp = [], len = [0];
+  let tot = 0;
+  for (let i = 0; i <= S; i++) samp.push(planSpline(p, i / S));
+  for (let j = 1; j <= S; j++){
+    const dx = samp[j].x - samp[j-1].x, dy = samp[j].y - samp[j-1].y;
+    tot += Math.sqrt(dx*dx + dy*dy); len.push(tot);
+  }
+  const out = []; let k = 0;
+  for (let m = 0; m < count; m++){
+    const want = count === 1 ? 0 : tot * m / (count - 1);
+    while (k < S && len[k+1] < want) k++;
+    out.push(samp[k]);
+  }
+  return out;
+}
+
+/* Высота тропы ленты в точке t (0..100 по ширине плитки) */
+function planRailY(t){
+  const p = PLAN_RAIL_PATH[planTheme()];
+  for (let i = 1; i < p.length; i++){
+    if (p[i][0] >= t){
+      const a = p[i-1], b = p[i], u = (t - a[0]) / ((b[0] - a[0]) || 1);
+      return a[1] + (b[1] - a[1]) * u;
+    }
+  }
+  return p[p.length-1][1];
+}
+
+/* Прогрессивная прозрачность будущих. Считается ОТ СЛЕДУЮЩЕЙ, а не от первой
+   лекции — иначе по мере прохождения карта выцветала бы целиком. Диапазон
+   растягивается под число остановок: следующая всегда 1.0, самая дальняя
+   всегда PLAN_ALPHA_MIN, и эффект одинаково читается при 4 и при 10 */
+function planFutureAlpha(k, last){
+  if (k <= 0 || last <= 0) return 1;
+  return +(1 - (1 - PLAN_ALPHA_MIN) * (k / last)).toFixed(3);
+}
+
+/* ПЕРСПЕКТИВА: чем выше остановка на карте, тем она мельче */
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="p
+
+function planAlong(p, count){
+  const S = 400, samp = [], len = [0];
+  let tot = 0;
+  for (let i = 0; i <= S; i++) samp.push(planSpline(p, i / S));
+  for (let j = 1; j <= S; j++){
+    const dx = samp[j].x - samp[j-1].x, dy = samp[j].y - samp[j-1].y;
+    tot += Math.sqrt(dx*dx + dy*dy); len.push(tot);
+  }
+  const out = []; let k = 0;
+  for (let m = 0; m < count; m++){
+    const want = count === 1 ? 0 : tot * m / (count - 1);
+    while (k < S && len[k+1] < want) k++;
+    out.push(samp[k]);
+  }
+  return out;
+}
+
+/* Высота тропы ленты в точке t (0..100 по ширине плитки) */
+function planRailY(t){
+  const p = PLAN_RAIL_PATH[planTheme()];
+  for (let i = 1; i < p.length; i++){
+    if (p[i][0] >= t){
+      const a = p[i-1], b = p[i], u = (t - a[0]) / ((b[0] - a[0]) || 1);
+      return a[1] + (b[1] - a[1]) * u;
+    }
+  }
+  return p[p.length-1][1];
+}
+
+/* Прогрессивная прозрачность будущих. Считается ОТ СЛЕДУЮЩЕЙ, а не от первой
+   лекции — иначе по мере прохождения карта выцветала бы целиком. Диапазон
+   растягивается под число остановок: следующая всегда 1.0, самая дальняя
+   всегда PLAN_ALPHA_MIN, и эффект одинаково читается при 4 и при 10 */
+function planFutureAlpha(k, last){
+  if (k <= 0 || last <= 0) return 1;
+  return +(1 - (1 - PLAN_ALPHA_MIN) * (k / last)).toFixed(3);
+}
+
+/* ПЕРСПЕКТИВА: чем выше остановка на карте, тем она мельче */
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем
+
+function planRailY(t){
+  const p = PLAN_RAIL_PATH[planTheme()];
+  for (let i = 1; i < p.length; i++){
+    if (p[i][0] >= t){
+      const a = p[i-1], b = p[i], u = (t - a[0]) / ((b[0] - a[0]) || 1);
+      return a[1] + (b[1] - a[1]) * u;
+    }
+  }
+  return p[p.length-1][1];
+}
+
+/* Прогрессивная прозрачность будущих. Считается ОТ СЛЕДУЮЩЕЙ, а не от первой
+   лекции — иначе по мере прохождения карта выцветала бы целиком. Диапазон
+   растягивается под число остановок: следующая всегда 1.0, самая дальняя
+   всегда PLAN_ALPHA_MIN, и эффект одинаково читается при 4 и при 10 */
+function planFutureAlpha(k, last){
+  if (k <= 0 || last <= 0) return 1;
+  return +(1 - (1 - PLAN_ALPHA_MIN) * (k / last)).toFixed(3);
+}
+
+/* ПЕРСПЕКТИВА: чем выше остановка на карте, тем она мельче */
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    re
+
+function planFutureAlpha(k, last){
+  if (k <= 0 || last <= 0) return 1;
+  return +(1 - (1 - PLAN_ALPHA_MIN) * (k / last)).toFixed(3);
+}
+
+/* ПЕРСПЕКТИВА: чем выше остановка на карте, тем она мельче */
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*
+
+function planPersp(y, topY){
+  let t = (100 - y) / Math.max(1, 100 - topY);
+  t = Math.max(0, Math.min(1, t));
+  return +(1 - (1 - PLAN_PERSP_MIN) * t).toFixed(3);
+}
+
+/* Сторона и ширина подписи — по СВОБОДНОМУ МЕСТУ до края арта, а не «через
+   раз»: у края пейзажа подпись иначе вылезает наружу */
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisite
+
+function planCapBox(x){
+  const half = 10;
+  const right = 100 - (x + half) - 2, left = (x - half) - 2;
+  const side = right >= left ? 'side-r' : 'side-l';
+  return { side: side, w: Math.min(46, Math.max(22, side === 'side-r' ? right : left)) };
+}
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+f
+
+function planImgVariant(seed){
+  let h = 0;
+  const str = String(seed || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return (h % PLAN_IMG_VARIANTS) + 1;
+}
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовате
+
+function planStopImg(i, stop){
+  const num = Math.min(i + 1, PLAN_IMG_MAX);
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  const v = planImgVariant((stop && stop.lec && stop.lec.slug) || ('stop' + i));
+  return 'images/plan/' + theme + '/' + num + '-' + v + '.jpg';
+}
+
+/* Одна разметка остановки на полную карту и на ленту — чтобы они не
+   разъезжались при правках. --d = сторона КВАДРАТА картинки, не диаметр сферы:
+   на это же значение опирается блок стилей */
+/* Есть ли у занятия открытая часть — единственное место, где это решается,
+   чтобы карта, попап и подписи не разошлись в ответе */
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+functi
+
+function planStopHasFree(stop){
+  const l = stop && stop.lec;
+  if (!l) return false;
+  return !!((l.free_tg_url || '').trim() || (l.free_vk_url || '').trim());
+}
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «иг
+
+function planStopNode(i, stop, d, done, skip, isNext, extraStyle){
+  return '<button class="pmap-stop' + (done ? ' done' : '') + (skip ? ' skipped' : '')
+      + (isNext ? ' next' : '') + '"'
+    + ' style="' + (extraStyle || '') + '"'
+    + ' onclick="openPlanStop(' + i + ')">'
+    + '<span class="pmap-blob"><b>' + (i + 1) + '</b>'
+      + (done ? '<span class="pmap-mark">✓</span>' : '')
+    + '</span>'
+    + '<span class="pmap-cap">' + escapeHtml((stop.lec && stop.lec.title) || '') + '</span>'
+    + '</button>';
+}
+
+/* ЦВЕТ БЕРЁТСЯ ОТ НАПРАВЛЕНИЯ — того же, что у капсулы на поле выбора тем.
+   Остановки одной ветки оказываются одного цвета, и путь читается как
+   переход между направлениями, а не как случайная радуга */
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого»
+
+function planStopColor(stop, i){
+  if (stop && stop.phase){
+    const roots = (typeof pfRoots === 'function') ? pfRoots() : [];
+    const idx = roots.indexOf('phase:' + stop.phase);
+    if (idx !== -1) return PF_COLORS[idx % PF_COLORS.length];
+  }
+  return PMAP_COLORS[i % PMAP_COLORS.length];
+}
+
+// Индекс первой непройденной и непропущенной остановки — она «текущая»
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote
+
+function planNextIdx(){
+  return planStops.findIndex(function(s){
+    return !planVisited.has(s.lec.slug) && !planSkipped.has(s.lec.slug);
+  });
+}
+
+const PMAP_DOTS = 4;   // точек тропинки между соседними остановками
+/* Отступ ленты сверху и снизу от крайних точек цепочки. Раньше был зашит
+   числом 8 сверху и 40+12 снизу (запас под подписи, которых в ленте нет) */
+const RAIL_PAD = 5;
+
+// Точка на кубической кривой Безье — тропинка рисуется точками по ней
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const 
+
+function planBez(p0, p1, p2, p3, t){
+  const m = 1 - t;
+  return { x: m*m*m*p0.x + 3*m*m*t*p1.x + 3*m*t*t*p2.x + t*t*t*p3.x,
+           y: m*m*m*p0.y + 3*m*m*t*p1.y + 3*m*t*t*p2.y + t*t*t*p3.y };
+}
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stop
+
+function planStopSize(i, nextIdx, done, map){
+  if (i === nextIdx) return map.next;
+  return done ? map.done : map.future;
+}
+
+let planStops = [];
+let planSkipped = new Set();
+let planVisited = new Set();
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    
+
+function planLoadMarks(){
+  try {
+    planSkipped = new Set(JSON.parse(localStorage.getItem('club_plan_skipped') || '[]'));
+    planVisited = new Set(JSON.parse(localStorage.getItem('club_plan_visited') || '[]'));
+  } catch(e){ planSkipped = new Set(); planVisited = new Set(); }
+}
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
+  head.forEach(function(r){
+
+function planSaveMarks(){
+  try {
+    localStorage.setItem('club_plan_skipped', JSON.stringify(Array.from(planSkipped)));
+    localStorage.setItem('club_plan_visited', JSON.stringify(Array.from(planVisited)));
+  } catch(e){}
+}
+
+// Плоская последовательность остановок из посекционного плана
+/* Темы человек мог не отмечать вовсе, а засев уже есть — тогда путь всё равно
+   существует. Обе проверки ниже спрашивают ЭТО, а не наличие анкеты */
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
+  head.forEach(function(r){
+    if (!r.lec || seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: r.entry || {}, viaParent: false,
+                 group: r.group, phase: '', fromPlaylist: true, slotNote: r.slotNote });
+  });
+  ordered.forEach(function(w){
+    // Внутри 
+
+function planHasThemes(){
+  return !!(planAnswers && (planAnswers.problems || []).length);
+}
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
+  head.forEach(function(r){
+    if (!r.lec || seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: r.entry || {}, viaParent: false,
+                 group: r.group, phase: '', fromPlaylist: true, slotNote: r.slotNote });
+  });
+  ordered.forEach(function(w){
+    // Внутри боли основные лекции идут раньше задетых вскользь
+    const rows = w.g.rows.slice().sort(function(a, b){
+      return (a.entry.weight === 'touch' ? 1 : 0) - (b.entry.weight === 'touch' ? 1 : 0);
+    });
+    rows.forEach(function(r){
+      if (!r.lec || seen[r.lec.slug]) return;   // одна лекция может закрывать две боли
+      seen[r.lec.slug] = true;
+      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent,
+                   
+
+function planHasAnything(){
+  return planHasThemes() || planSeedStops.length > 0;
+}
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
+  head.forEach(function(r){
+    if (!r.lec || seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: r.entry || {}, viaParent: false,
+                 group: r.group, phase: '', fromPlaylist: true, slotNote: r.slotNote });
+  });
+  ordered.forEach(function(w){
+    // Внутри боли основные лекции идут раньше задетых вскользь
+    const rows = w.g.rows.slice().sort(function(a, b){
+      return (a.entry.weight === 'touch' ? 1 : 0) - (b.entry.weight === 'touch' ? 1 : 0);
+    });
+    rows.forEach(function(r){
+      if (!r.lec || seen[r.lec.slug]) return;   // одна лекция может закрывать две боли
+      seen[r.lec.slug] = true;
+      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent,
+                   group: w.g.label, phase: w.phase });
+    });
+  });
+  /* ⚠️ ГОСТЮ — ОТКРЫТОЕ ВПЕРЁД. Порядок д
+
+function planAnswersSafe(){
+  return planAnswers || { problems: [], level: '', depth: '', note: '' };
+}
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
+  head.forEach(function(r){
+    if (!r.lec || seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: r.entry || {}, viaParent: false,
+                 group: r.group, phase: '', fromPlaylist: true, slotNote: r.slotNote });
+  });
+  ordered.forEach(function(w){
+    // Внутри боли основные лекции идут раньше задетых вскользь
+    const rows = w.g.rows.slice().sort(function(a, b){
+      return (a.entry.weight === 'touch' ? 1 : 0) - (b.entry.weight === 'touch' ? 1 : 0);
+    });
+    rows.forEach(function(r){
+      if (!r.lec || seen[r.lec.slug]) return;   // одна лекция может закрывать две боли
+      seen[r.lec.slug] = true;
+      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent,
+                   group: w.g.label, phase: w.phase });
+    });
+  });
+  /* ⚠️ ГОСТЮ — ОТКРЫТОЕ ВПЕРЁД. Порядок для участника выстроен по фазам
+     воронки и трогать его нельзя, но у гостя первая 
+
+function planStopList(answers){
+  answers = answers || { problems: [] };
+  /* ⚠️ ОБЩИЙ `used` НА ОБЕ ЧАСТИ: плейлист забирает лекции первым, добор по
+     болям идёт следом и уже не может выдать ту же лекцию второй раз. Без
+     этого курированная лекция всплывала бы в пути дважды. */
+  const used = {};
+  /* СЛОЙ ЗАСЕВА ЗАБИРАЕТ ЛЕКЦИИ ПЕРВЫМ. [stated] Denis: «игра в богов пускай
+     создаёт первые две-три лекции — их и показываем на карте, а третьим шагом
+     предлагаем добавить, что человеку интересно ещё, ПОВЕРХ этого» */
+  const seedRows = [];
+  planSeedStops.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    const base = t('plan.seed_group') || 'Подобрано по твоему архетипу';
+    seedRows.push({ lec: lec, group: base + (it.pole_label ? ' · ' + it.pole_label : '') });
+  });
+  // Позиции плейлиста уже разрешены сервером — сопоставляем их с библиотекой
+  const head = [];
+  planPlaylistHead.forEach(function(it){
+    const lec = allLectures.find(function(l){ return l.slug === it.slug; });
+    if (!lec || used[lec.slug]) return;
+    used[lec.slug] = true;
+    head.push({ lec: lec, entry: {}, group: it.title || '', slotNote: it.reason || '' });
+  });
+  const groups = buildPlan(answers, used);
+  const phaseIdx = {};
+  PLAN_PHASES.forEach(function(ph, i){ phaseIdx[ph.key] = i; });
+
+  const ordered = groups.map(function(g){
+    const p = planProblems.find(function(x){ return x.key === g.key; });
+    // У частного случая направление берём от родителя: он и задаёт место в воронке
+    const top = (p && p.parent_key)
+      ? planProblems.find(function(x){ return x.key === p.parent_key; }) || p
+      : p;
+    const ph = top ? top.phase : '';
+    return {
+      g: g,
+      phase: ph,                       // нужен остановке, чтобы взять цвет направления
+      ord: phaseIdx[ph] === undefined ? 99 : phaseIdx[ph],
+      sub: (top && top.sort_order) || 100,
+    };
+  }).sort(function(a, b){ return (a.ord - b.ord) || (a.sub - b.sub); });
+
+  const stops = [], seen = {};
+  // Засев — впереди курированного начала: это первое, что человек увидел о себе
+  seedRows.forEach(function(r){
+    if (seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: {}, viaParent: false, group: r.group,
+                 phase: '', fromSeed: true });
+  });
+  // Курированное начало — как есть, в порядке Denis'а
+  head.forEach(function(r){
+    if (!r.lec || seen[r.lec.slug]) return;
+    seen[r.lec.slug] = true;
+    stops.push({ lec: r.lec, entry: r.entry || {}, viaParent: false,
+                 group: r.group, phase: '', fromPlaylist: true, slotNote: r.slotNote });
+  });
+  ordered.forEach(function(w){
+    // Внутри боли основные лекции идут раньше задетых вскользь
+    const rows = w.g.rows.slice().sort(function(a, b){
+      return (a.entry.weight === 'touch' ? 1 : 0) - (b.entry.weight === 'touch' ? 1 : 0);
+    });
+    rows.forEach(function(r){
+      if (!r.lec || seen[r.lec.slug]) return;   // одна лекция может закрывать две боли
+      seen[r.lec.slug] = true;
+      stops.push({ lec: r.lec, entry: r.entry, viaParent: r.viaParent,
+                   group: w.g.label, phase: w.phase });
+    });
+  });
+  /* ⚠️ ГОСТЮ — ОТКРЫТОЕ ВПЕРЁД. Порядок для участника выстроен по фазам
+     воронки и трогать его нельзя, но у гостя первая остановка решает всё:
+     если она закрыта, вся карта читается как витрина с ценниками. Занятия
+     с о
+
+function planMapHtml(answers){
+  planLoadMarks();
+  planStops = planStopList(answers);
+  planCardItems = planStops.map(function(s){ return s.lec; });
+  if (!planStops.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось. Попробуй отметить что-то ещё — или спроси ИИ-помощника своими словами.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+
+  const n = planStops.length;
+  const nextIdx = planNextIdx();
+  const lastK = Math.max(0, n - 1 - Math.max(0, nextIdx));
+  const pos = planAlong(PLAN_PATH[planTheme()], n);
+  const topY = pos[pos.length - 1].y;
+
+  /* ⚠️ ОБЁРТКА .pmap ОБЯЗАТЕЛЬНА: остановки position:absolute, и без
+     позиционированного предка они отсчитываются от СТРАНИЦЫ и разлетаются.
+     Внутри неё два слоя арта — на них висит растушёвка краёв, чтобы гасить
+     пейзаж, а не сами остановки (первая и последняя стоят у самого края) */
+  let html = '<div class="pmap fade-rise">'
+    + '<div class="pmap-fade"><div class="pmap-art"></div></div>';
+
+  planStops.forEach(function(s, i){
+    const done = planVisited.has(s.lec.slug);
+    const skip = planSkipped.has(s.lec.slug);
+    const p = pos[i];
+    const cb = planCapBox(p.x);
+    const sz = planPersp(p.y, topY);
+    let st = 'left:' + p.x.toFixed(2) + '%;top:' + p.y.toFixed(2) + '%;'
+      + 'animation-delay:' + (i * 60) + 'ms;'
+      + '--pmcw:' + cb.w.toFixed(1) + 'cqw;'
+      + '--pmsz:' + sz + ';--pmfz:' + (0.8 + 0.2 * sz).toFixed(3) + ';'
+      /* ЧТО НИЖЕ — ТО БЛИЖЕ: слой берём из высоты, а не из номера. Номер
+         говорит о порядке в плане, глубину задаёт положение на пейзаже */
+      + 'z-index:' + Math.round(p.y * 10) + ';';
+    if (!done && i !== nextIdx) st += 'opacity:' + planFutureAlpha(i - nextIdx, lastK) + ';';
+    html += planStopNode(i, s, 0, done, skip, i === nextIdx,
+      st + ' ').replace('class="pmap-stop', 'class="pmap-stop ' + cb.side);
+  });
+  html += '</div>';
+
+  const skipped = planStops.filter(function(s){ return planSkipped.has(s.lec.slug); }).length;
+  if (skipped){
+    html += '<div class="payment-help-link" style="margin-top:6px" onclick="planUnskipAll()">'
+      + 'Вернуть пропущенные (' + skipped + ') →</div>';
+  }
+  return html;
+}
+
+/* Компактная карта для карточки в библиотеке — та же последовательность
+   остановок, что и на полном экране, поэтому индексы совпадают и попап
+   открывается тем же openPlanStop. Показываем ВСЕ остановки: лента
+   прокручивается, обрезать нечего */
+function planRailHtml(answers){
+  planLoadMarks();
+  planStops = planStopList(answers);
+  planCardItems = planStops.map(function(s){ return s.lec; });
+  if (!planStops.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+
+  const n = planStops.length;
+  const nextIdx = planNextIdx();
+  const lastK = Math.max(0, n - 1 - Math.max(0, nextIdx));
+  const w = Math.max(PLAN_RAIL_X0 * 2 + (n - 1) * PLAN_RAIL_STEP, 260);
+  /* Ширина плитки НА ЭКРАНЕ: полоса повторяется по горизонтали, поэтому
+     положение остановки внутри плитки берём остатком от деления */
+  const tileW = PLAN_RAIL_TILE[planTheme()] * PLAN_RAIL_H / PLAN_RAIL_TILE_H;
+
+  /* ⚠️ ОБЁРТКА .prail-wrap ОБЯЗАТЕЛЬНА: на ней висит боковая растушёвка.
+     На самой .prail она не работает — та прокручивается */
+  let html = '<div class="prail-wrap"><div cl
+
+function planRailHtml(answers){
+  planLoadMarks();
+  planStops = planStopList(answers);
+  planCardItems = planStops.map(function(s){ return s.lec; });
+  if (!planStops.length){
+    return '<div class="reward-hint">Под то, что выбрано, лекций пока не нашлось.</div>'
+      + '<button class="quiz-answer" style="margin-top:10px" onclick="startPlanQuiz()">Пройти заново</button>';
+  }
+
+  const n = planStops.length;
+  const nextIdx = planNextIdx();
+  const lastK = Math.max(0, n - 1 - Math.max(0, nextIdx));
+  const w = Math.max(PLAN_RAIL_X0 * 2 + (n - 1) * PLAN_RAIL_STEP, 260);
+  /* Ширина плитки НА ЭКРАНЕ: полоса повторяется по горизонтали, поэтому
+     положение остановки внутри плитки берём остатком от деления */
+  const tileW = PLAN_RAIL_TILE[planTheme()] * PLAN_RAIL_H / PLAN_RAIL_TILE_H;
+
+  /* ⚠️ ОБЁРТКА .prail-wrap ОБЯЗАТЕЛЬНА: на ней висит боковая растушёвка.
+     На самой .prail она не работает — та прокручивается */
+  let html = '<div class="prail-wrap"><div class="prail fade-rise"><div class="prail-inner" style="width:' + w
+    + 'px;height:' + PLAN_RAIL_H + 'px">';
+
+  planStops.forEach(function(s, i){
+    const done = planVisited.has(s.lec.slug);
+    const skip = planSkipped.has(s.lec.slug);
+    const px = PLAN_RAIL_X0 + i * PLAN_RAIL_STEP;
+    const py = planRailY((px % tileW) / tileW * 100) / 100 * PLAN_RAIL_H;
+    let st = 'left:' + (px / w * 100).toFixed(2) + '%;top:' + (py / PLAN_RAIL_H * 100).toFixed(2) + '%;'
+      + 'z-index:' + Math.round(py) + ';';
+    if (!done && i !== nextIdx) st += 'opacity:' + planFutureAlpha(i - nextIdx, lastK) + ';';
+    html += planStopNode(i, s, 0, done, skip, i === nextIdx, st);
+  });
+  html += '</div></div></div>';
+
+  const done = planStops.filter(function(s){ return planVisited.has(s.lec.slug); }).length;
+  return '<div class="prail-head">'
+      + '<div class="reward-hint" style="margin:0 0 0 auto">' + done + ' из ' + n + '</div>'
+    + '</div>' + html;
+}
+
+function planUnskipAll(){
+  planSkipped = new Set();
+  planSaveMarks();
+  renderPlanScreen();
+}
+
+/* Попап остановки. Сознательно бедный: обложка, название, кнопки. Описание
+   и теги остаются в библиотеке, где человек выбирает сам */
+function openPlanStop(i){
+  const s = planStops[i];
+  if (!s) return;
+  const el = document.getElementById('plan-stop-body');
+  const stepEl = document.getElementById('plan-stop-step');
+  if (!el) return;
+  if (stepEl) stepEl.textContent = 'Шаг ' + (i + 1) + ' из ' + planStops.length;
+
+  const color = planStopColor(s, i);
+  const notes = [];
+  if (s.entry && s.entry.timecode) notes.push('про это на ' + escapeHtml(s.entry.timecode));
+  if (s.entry && s.entry.weight === 'touch') notes.push('затронуто вскользь');
+  if (s.viaParent) notes.push('разбор темы шире');
+
+  const l = s.lec;
+  const hasFree = planStopHasFree(s);
+  /* ⚠️ ГОСТЮ ГОВОРИМ ПРАВДУ, А НЕ ПРЯЧЕМ ЗАНЯТИЕ. [stated] Denis 20.08:
+     «не стесняться и показывать, что лекция на эту тему есть, но бесплатной
+     части у неё нет. Хочешь — покупай». Закрытая остановка — доказательство,
+     что клуб закрывает его боль, а не насмешка. Замок в прежнем смысле
+     остаётся только участнику во время знакомства */
+  const locked = isMember ? tourActive : !hasFree;
+  const lockIcon = locked ? '🔒 ' : '';
+  const hasNext = i + 1 < planStops.length;
+
+  let acts;
+  if (!isMember && !hasFree){
+    // Открытой части нет — не рисуем кнопки-обманки, а прямо зовём в клуб
+    acts = '<div class="pstop-note" style="margin-top:10px">'
+        + escapeHtml(t('plan.guest_shut')
+
+function planUnskipAll(){
+  planSkipped = new Set();
+  planSaveMarks();
+  renderPlanScreen();
+}
+
+/* Попап остановки. Сознательно бедный: обложка, название, кнопки. Описание
+   и теги остаются в библиотеке, где человек выбирает сам */
+function openPlanStop(i){
+  const s = planStops[i];
+  if (!s) return;
+  const el = document.getElementById('plan-stop-body');
+  const stepEl = document.getElementById('plan-stop-step');
+  if (!el) return;
+  if (stepEl) stepEl.textContent = 'Шаг ' + (i + 1) + ' из ' + planStops.length;
+
+  const color = planStopColor(s, i);
+  const notes = [];
+  if (s.entry && s.entry.timecode) notes.push('про это на ' + escapeHtml(s.entry.timecode));
+  if (s.entry && s.entry.weight === 'touch') notes.push('затронуто вскользь');
+  if (s.viaParent) notes.push('разбор темы шире');
+
+  const l = s.lec;
+  const hasFree = planStopHasFree(s);
+  /* ⚠️ ГОСТЮ ГОВОРИМ ПРАВДУ, А НЕ ПРЯЧЕМ ЗАНЯТИЕ. [stated] Denis 20.08:
+     «не стесняться и показывать, что лекция на эту тему есть, но бесплатной
+     части у неё нет. Хочешь — покупай». Закрытая остановка — доказательство,
+     что клуб закрывает его боль, а не насмешка. Замок в прежнем смысле
+     остаётся только участнику во время знакомства */
+  const locked = isMember ? tourActive : !hasFree;
+  const lockIcon = locked ? '🔒 ' : '';
+  const hasNext = i + 1 < planStops.length;
+
+  let acts;
+  if (!isMember && !hasFree){
+    // Открытой части нет — не рисуем кнопки-обманки, а прямо зовём в клуб
+    acts = '<div class="pstop-note" style="margin-top:10px">'
+        + escapeHtml(t('plan.guest_shut') || '') + '</div>'
+      + '<button class="lec-link-btn access-btn" style="margin-top:10px" '
+        + 'onclick="planStopBuy(' + i + ')">' + escapeHtml(t('plan.guest_buy') || 'Открыть доступ') + '</button>';
+  } else {
+    const label = (!isMember && hasFree) ? (t('plan.guest_free') || 'Смотреть открытую часть') : '';
+    acts = '<div class="lec-links">'
+      + (l.link ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'tg\')">' + lockIcon + (label || 'Смотреть в ТГ') + '</button>' : '')
+      + ((l.link_vk && isMember) ? '<button class="lec-link-btn' + (locked ? ' locked' : '') + '" onclick="planStopWatch(' + i + ',\'vk\')">' + lockIcon + 'Смотреть в VK</button>' : '')
+      + '</div>';
+  }
+
+  el.innerHTML =
+      '<img class="pstop-img" src="images/lectures/' + l.slug + '.jpg" alt="" '
+    + 'onerror="this.outerHTML=\'<div class=&quot;pstop-img-fallback&quot; style=&quot;--pc:' + color + '&quot;></div>\'">'
+    + '<div class="pstop-title">' + escapeHtml(l.title || '') + '</div>'
+    + '<div class="pstop-note">' + escapeHtml(s.group || '')
+      + (notes.length ? ' · ' + notes.join(' · ') : '') + '</div>'
+    + acts
+    + (hasNext ? '<button class="lec-link-btn access-btn" style="margin-top:12px" onclick="planStopNext(' + i + ')">Открыть следующую</button>' : '')
+    + '<button class="pstop-skip" onclick="planStopSkip(' + i + ')">Это не хочу смотреть</button>';
+
+  document.getElementById('plan-stop-overlay').classList.add('open');
+}
+
+function closePlanStop(){
+  document.getElementById('plan-stop-overlay').classList.remove('open');
+}
+
+function planStopWatch(i, platform){
+  const s = planStops[i];
+  if (!s) return;
+  // Отмечаем пройденным сразу: ссылка уходит наружу, и возврата может не быть
+  planVisited.add(s.lec.slug);
+  planSkipped.delete(s.lec.slug);
+  planSaveMarks();
+  /* ⚠️ У ГОСТЯ СВОЯ ДОРОГА: `openLectureLink` первым делом упирает не-участн
+
+function planStopWatch(i, platform){
+  const s = planStops[i];
+  if (!s) return;
+  // Отмечаем пройденным сразу: ссылка уходит наружу, и возврата может не быть
+  planVisited.add(s.lec.slug);
+  planSkipped.delete(s.lec.slug);
+  planSaveMarks();
+  /* ⚠️ У ГОСТЯ СВОЯ ДОРОГА: `openLectureLink` первым делом упирает не-участника
+     в пейволл, и открытая часть до него не доживала. Открытую отдаём как есть */
+  if (!isMember){
+    closePlanStop();
+    showFreeVersion(s.lec);
+    return;
+  }
+  openLectureLink(i, platform, 'plan');
+}
+
+/* Кнопка с закрытой остановки. Отдельная функция, а не прямой `openAccessPage`,
+   чтобы в дашборде было видно, откуда пришёл человек */
+function planStopBuy(i){
+  const s = planStops[i];
+  track('plan_stop_buy', s && s.lec ? s.lec.slug : '');
+  closePlanStop();
+  openAccessPage();
+}
+
+function planStopNext(i){
+  if (i + 1 < planStops.length) openPlanStop(i + 1);
+  else closePlanStop();
+}
+
+/* Пропуск — сигнал о ПОДБОРЕ, а не о лекции. Пока он живёт только на телефоне;
+   отправка на сервер и вопрос «почему не то» — следующий шаг */
+function planStopSkip(i){
+  const s = planStops[i];
+  if (!s) return;
+  planSkipped.add(s.lec.slug);
+  planSaveMarks();
+  const hasNext = i + 1 < planStops.length;
+  if (hasNext) openPlanStop(i + 1);
+  else closePlanStop();
+  renderPlanScreen();
+  showToast('Убрал из пути');
+}
+
+// Сброс личного плана — для тестирования сборки карты с нуля
+async function debugResetPlan(){
+  planAnswers = null;
+  planStops = [];
+  planSkipped = new Set();
+  planVisited = new Set();
+  planSaveMarks();
+  const out = document.getElementById('debug-level-result');
+  if (telegramId){
+    try {
+      await fetch(`${API_URL}/plan-answers/${telegramId}`, { method: 'DELETE' });
+      if (out) out.textContent = 'План сброшен — можно собирать заново';
+    } catch(e){
+      if (out) out.textContent = 'Локально сброшен, сервер не ответил: ' + e.message;
+    }
+  } else if (out) out.textContent = 'План сброшен локально (нет telegram_id)';
+  renderPersonalPlanBody();
+  renderPlanScreen();
+}
+
+/* Блок в библиотеке: либо приглашение пройти анкету, либо лента плана.
+
+   ПЕРЕСТРОЕН 07.08.2026 по просьбе Denis'а:
+   — «Пересобрать план» уехал на ПОЛНУЮ карту (в блоке остаётся только просмотр);
+   — «Открыть всю карту» переехало наверх, к заголовку, и стало динамическим:
+     текст меняется в зависимости от того, есть план или нет;
+   — «Пока пусто» убрано, вместо него на пустой ленте лежит блёклое наложение
+     с одной кнопкой по центру — так пустое состояние выглядит приглашением,
+     а не сообщением об отсутствии. */
+function renderPersonalPlanBody(){
+  const el = document.getElementById('personal-plan-body');
+  if (!el) return;
+
+  const link = document.getElementById('plan-open-link');
+  const hasPlan = planHasAnything();
+  const seedOnly = hasPlan && !planHasThemes();
+
+  if (link){
+    link.style.display = '';
+    /* Засев без тем — путь уже есть, но он куцый: зовём дособрать, а не
+       «составить с нуля», иначе выглядит так, будто теста и не было */
+    link.textContent = seedOnly ? 'Добавить свои темы →'
+                     : (hasPlan ? 'Открыть полностью →' : 'Составить план →');
+    link.dataset.mode = hasPlan && !seedOnly ? 'open' : 'make';
+  }
+
+  if (!hasPlan){
+    // Пустое состояние: показываем ту же ленту-заглушку под вуалью, чтобы блок
+    // не схлопывался в текст и человек видел, ЧТО именно у него появится
+    el.innerHTML =
+      '<div class="plan-empty-wrap">'
+        + '<div class="plan-empty-art"></div
+
+function planStopBuy(i){
+  const s = planStops[i];
+  track('plan_stop_buy', s && s.lec ? s.lec.slug : '');
+  closePlanStop();
+  openAccessPage();
+}
+
+function planStopNext(i){
+  if (i + 1 < planStops.length) openPlanStop(i + 1);
+  else closePlanStop();
+}
+
+/* Пропуск — сигнал о ПОДБОРЕ, а не о лекции. Пока он живёт только на телефоне;
+   отправка на сервер и вопрос «почему не то» — следующий шаг */
+function planStopSkip(i){
+  const s = planStops[i];
+  if (!s) return;
+  planSkipped.add(s.lec.slug);
+  planSaveMarks();
+  const hasNext = i + 1 < planStops.length;
+  if (hasNext) openPlanStop(i + 1);
+  else closePlanStop();
+  renderPlanScreen();
+  showToast('Убрал из пути');
+}
+
+// Сброс личного плана — для тестирования сборки карты с нуля
+async function debugResetPlan(){
+  planAnswers = null;
+  planStops = [];
+  planSkipped = new Set();
+  planVisited = new Set();
+  planSaveMarks();
+  const out = document.getElementById('debug-level-result');
+  if (telegramId){
+    try {
+      await fetch(`${API_URL}/plan-answers/${telegramId}`, { method: 'DELETE' });
+      if (out) out.textContent = 'План сброшен — можно собирать заново';
+    } catch(e){
+      if (out) out.textContent = 'Локально сброшен, сервер не ответил: ' + e.message;
+    }
+  } else if (out) out.textContent = 'План сброшен локально (нет telegram_id)';
+  renderPersonalPlanBody();
+  renderPlanScreen();
+}
+
+/* Блок в библиотеке: либо приглашение пройти анкету, либо лента плана.
+
+   ПЕРЕСТРОЕН 07.08.2026 по просьбе Denis'а:
+   — «Пересобрать план» уехал на ПОЛНУЮ карту (в блоке остаётся только просмотр);
+   — «Открыть всю карту» переехало наверх, к заголовку, и стало динамическим:
+     текст меняется в зависимости от того, есть план или нет;
+   — «Пока пусто» убрано, вместо него на пустой ленте лежит блёклое наложение
+     с одной кнопкой по центру — так пустое состояние выглядит приглашением,
+     а не сообщением об отсутствии. */
+function renderPersonalPlanBody(){
+  const el = document.getElementById('personal-plan-body');
+  if (!el) return;
+
+  const link = document.getElementById('plan-open-link');
+  const hasPlan = planHasAnything();
+  const seedOnly = hasPlan && !planHasThemes();
+
+  if (link){
+    link.style.display = '';
+    /* Засев без тем — путь уже есть, но он куцый: зовём дособрать, а не
+       «составить с нуля», иначе выглядит так, будто теста и не было */
+    link.textContent = seedOnly ? 'Добавить свои темы →'
+                     : (hasPlan ? 'Открыть полностью →' : 'Составить план →');
+    link.dataset.mode = hasPlan && !seedOnly ? 'open' : 'make';
+  }
+
+  if (!hasPlan){
+    // Пустое состояние: показываем ту же ленту-заглушку под вуалью, чтобы блок
+    // не схлопывался в текст и человек видел, ЧТО именно у него появится
+    el.innerHTML =
+      '<div class="plan-empty-wrap">'
+        + '<div class="plan-empty-art"></div>'
+        + '<div class="plan-empty-veil"></div>'
+        + '<button class="plan-empty-cta" onclick="startPlanQuiz()">'
+          + '<span>Составить план</span></button>'
+      + '</div>';
+    return;
+  }
+
+  el.innerHTML = planRailHtml(planAnswersSafe());
+}
+
+/* Призрачная лента для пустого состояния — те же кружки, но без данных.
+   Рисуем прямо картинками остановок: они уже лежат в проекте, и человек
+   видит настоящий вид будущего пути, а не абстрактные серые кубики.
+   Центрируем флексом, а не абсолютными координатами: числа остановок
+   немного, и прижатая к левому краю лента выглядела обрезанной */
+function planGhostRailHtml(){
+  const theme = (document.doc
+
+function planStopNext(i){
+  if (i + 1 < planStops.length) openPlanStop(i + 1);
+  else closePlanStop();
+}
+
+/* Пропуск — сигнал о ПОДБОРЕ, а не о лекции. Пока он живёт только на телефоне;
+   отправка на сервер и вопрос «почему не то» — следующий шаг */
+function planStopSkip(i){
+  const s = planStops[i];
+  if (!s) return;
+  planSkipped.add(s.lec.slug);
+  planSaveMarks();
+  const hasNext = i + 1 < planStops.length;
+  if (hasNext) openPlanStop(i + 1);
+  else closePlanStop();
+  renderPlanScreen();
+  showToast('Убрал из пути');
+}
+
+// Сброс личного плана — для тестирования сборки карты с нуля
+async function debugResetPlan(){
+  planAnswers = null;
+  planStops = [];
+  planSkipped = new Set();
+  planVisited = new Set();
+  planSaveMarks();
+  const out = document.getElementById('debug-level-result');
+  if (telegramId){
+    try {
+      await fetch(`${API_URL}/plan-answers/${telegramId}`, { method: 'DELETE' });
+      if (out) out.textContent = 'План сброшен — можно собирать заново';
+    } catch(e){
+      if (out) out.textContent = 'Локально сброшен, сервер не ответил: ' + e.message;
+    }
+  } else if (out) out.textContent = 'План сброшен локально (нет telegram_id)';
+  renderPersonalPlanBody();
+  renderPlanScreen();
+}
+
+/* Блок в библиотеке: либо приглашение пройти анкету, либо лента плана.
+
+   ПЕРЕСТРОЕН 07.08.2026 по просьбе Denis'а:
+   — «Пересобрать план» уехал на ПОЛНУЮ карту (в блоке остаётся только просмотр);
+   — «Открыть всю карту» переехало наверх, к заголовку, и стало динамическим:
+     текст меняется в зависимости от того, есть план или нет;
+   — «Пока пусто» убрано, вместо него на пустой ленте лежит блёклое наложение
+     с одной кнопкой по центру — так пустое состояние выглядит приглашением,
+     а не сообщением об отсутствии. */
+function renderPersonalPlanBody(){
+  const el = document.getElementById('personal-plan-body');
+  if (!el) return;
+
+  const link = document.getElementById('plan-open-link');
+  const hasPlan = planHasAnything();
+  const seedOnly = hasPlan && !planHasThemes();
+
+  if (link){
+    link.style.display = '';
+    /* Засев без тем — путь уже есть, но он куцый: зовём дособрать, а не
+       «составить с нуля», иначе выглядит так, будто теста и не было */
+    link.textContent = seedOnly ? 'Добавить свои темы →'
+                     : (hasPlan ? 'Открыть полностью →' : 'Составить план →');
+    link.dataset.mode = hasPlan && !seedOnly ? 'open' : 'make';
+  }
+
+  if (!hasPlan){
+    // Пустое состояние: показываем ту же ленту-заглушку под вуалью, чтобы блок
+    // не схлопывался в текст и человек видел, ЧТО именно у него появится
+    el.innerHTML =
+      '<div class="plan-empty-wrap">'
+        + '<div class="plan-empty-art"></div>'
+        + '<div class="plan-empty-veil"></div>'
+        + '<button class="plan-empty-cta" onclick="startPlanQuiz()">'
+          + '<span>Составить план</span></button>'
+      + '</div>';
+    return;
+  }
+
+  el.innerHTML = planRailHtml(planAnswersSafe());
+}
+
+/* Призрачная лента для пустого состояния — те же кружки, но без данных.
+   Рисуем прямо картинками остановок: они уже лежат в проекте, и человек
+   видит настоящий вид будущего пути, а не абстрактные серые кубики.
+   Центрируем флексом, а не абсолютными координатами: числа остановок
+   немного, и прижатая к левому краю лента выглядела обрезанной */
+function planGhostRailHtml(){
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  let html = '<div class="plan-ghost-row">';
+  for (let i = 0; i < 6; i++){
+    html += '<
+
+function planStopSkip(i){
+  const s = planStops[i];
+  if (!s) return;
+  planSkipped.add(s.lec.slug);
+  planSaveMarks();
+  const hasNext = i + 1 < planStops.length;
+  if (hasNext) openPlanStop(i + 1);
+  else closePlanStop();
+  renderPlanScreen();
+  showToast('Убрал из пути');
+}
+
+// Сброс личного плана — для тестирования сборки карты с нуля
+async function debugResetPlan(){
+  planAnswers = null;
+  planStops = [];
+  planSkipped = new Set();
+  planVisited = new Set();
+  planSaveMarks();
+  const out = document.getElementById('debug-level-result');
+  if (telegramId){
+    try {
+      await fetch(`${API_URL}/plan-answers/${telegramId}`, { method: 'DELETE' });
+      if (out) out.textContent = 'План сброшен — можно собирать заново';
+    } catch(e){
+      if (out) out.textContent = 'Локально сброшен, сервер не ответил: ' + e.message;
+    }
+  } else if (out) out.textContent = 'План сброшен локально (нет telegram_id)';
+  renderPersonalPlanBody();
+  renderPlanScreen();
+}
+
+/* Блок в библиотеке: либо приглашение пройти анкету, либо лента плана.
+
+   ПЕРЕСТРОЕН 07.08.2026 по просьбе Denis'а:
+   — «Пересобрать план» уехал на ПОЛНУЮ карту (в блоке остаётся только просмотр);
+   — «Открыть всю карту» переехало наверх, к заголовку, и стало динамическим:
+     текст меняется в зависимости от того, есть план или нет;
+   — «Пока пусто» убрано, вместо него на пустой ленте лежит блёклое наложение
+     с одной кнопкой по центру — так пустое состояние выглядит приглашением,
+     а не сообщением об отсутствии. */
+function renderPersonalPlanBody(){
+  const el = document.getElementById('personal-plan-body');
+  if (!el) return;
+
+  const link = document.getElementById('plan-open-link');
+  const hasPlan = planHasAnything();
+  const seedOnly = hasPlan && !planHasThemes();
+
+  if (link){
+    link.style.display = '';
+    /* Засев без тем — путь уже есть, но он куцый: зовём дособрать, а не
+       «составить с нуля», иначе выглядит так, будто теста и не было */
+    link.textContent = seedOnly ? 'Добавить свои темы →'
+                     : (hasPlan ? 'Открыть полностью →' : 'Составить план →');
+    link.dataset.mode = hasPlan && !seedOnly ? 'open' : 'make';
+  }
+
+  if (!hasPlan){
+    // Пустое состояние: показываем ту же ленту-заглушку под вуалью, чтобы блок
+    // не схлопывался в текст и человек видел, ЧТО именно у него появится
+    el.innerHTML =
+      '<div class="plan-empty-wrap">'
+        + '<div class="plan-empty-art"></div>'
+        + '<div class="plan-empty-veil"></div>'
+        + '<button class="plan-empty-cta" onclick="startPlanQuiz()">'
+          + '<span>Составить план</span></button>'
+      + '</div>';
+    return;
+  }
+
+  el.innerHTML = planRailHtml(planAnswersSafe());
+}
+
+/* Призрачная лента для пустого состояния — те же кружки, но без данных.
+   Рисуем прямо картинками остановок: они уже лежат в проекте, и человек
+   видит настоящий вид будущего пути, а не абстрактные серые кубики.
+   Центрируем флексом, а не абсолютными координатами: числа остановок
+   немного, и прижатая к левому краю лента выглядела обрезанной */
+function planGhostRailHtml(){
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  let html = '<div class="plan-ghost-row">';
+  for (let i = 0; i < 6; i++){
+    html += '<span class="plan-ghost-stop">'
+      + '<img src="images/plan/' + theme + '/' + (i + 1) + '-1.jpg" alt="" decoding="async">'
+      + '</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+/* Кнопка у заголовка: ведёт на полную карту либо запускает анкет
+
+function planGhostRailHtml(){
+  const theme = (document.documentElement.dataset.theme === 'dark') ? 'dark' : 'light';
+  let html = '<div class="plan-ghost-row">';
+  for (let i = 0; i < 6; i++){
+    html += '<span class="plan-ghost-stop">'
+      + '<img src="images/plan/' + theme + '/' + (i + 1) + '-1.jpg" alt="" decoding="async">'
+      + '</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+/* Кнопка у заголовка: ведёт на полную карту либо запускает анкету */
+function openPlanFull(){
+  const link = document.getElementById('plan-open-link');
+  if (link && link.dataset.mode === 'make'){ startPlanQuiz(); return; }
+  switchView('plan');
+  renderPlanScreen();
+}
+
+function renderPlanScreen(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  // Ответы ещё не спрашивали — сначала спросим, потом решим, что показывать
+  if (!planAnswersLoaded){
+    /* ⚠️ ВТОРОЙ ЗАМОК ОТ ТОЙ ЖЕ ПЕТЛИ: даже если отметка почему-то снова не
+       встанет, повторно грузить и перерисовывать себя мы не будем */
+    el.innerHTML = '<div class="loading">Загрузка...</div>';
+    if (!window._planAnswersAsking){
+      window._planAnswersAsking = true;
+      loadPlanAnswers().then(function(){
+        window._planAnswersAsking = false;
+        planAnswersLoaded = true;
+        renderPlanScreen();
+      });
+    }
+    return;
+  }
+  if (!planHasAnything()){
+    /* ⚠️ ВО ВРЕМЯ ЗНАКОМСТВА ЭКРАН НЕ ЗАПУСКАЕТ АНКЕТУ САМ: поле выбора тем
+       полноэкранное, оно съедало бы шаг целиком ещё до того, как человек
+       прочитал, о чём он ([stated] Denis 19.08). Поле открывает кнопка шага */
+    if (onbActive && !onbTrying){
+      el.innerHTML = '<div class="empty">' + escapeHtml(t('onb.plan_empty')
+        || 'Пути пока нет — соберём его прямо сейчас.') + '</div>';
+      return;
+    }
+    // Справочник ещё едет — иначе мелькнёт «пока нечего выбрать»
+    if (!planProblems.length){
+      el.innerHTML = '<div class="loading">Загрузка...</div>';
+      loadPlanProblems().then(renderPlanQuestion);
+      return;
+    }
+    renderPlanQuestion();
+    return;
+  }
+  el.innerHTML = planMapHtml(planAnswersSafe())
+    + '<div class="payment-help-link" style="margin-top:16px" onclick="startPlanQuiz()">'
+    + (planHasThemes() ? 'Пересобрать план →' : 'Добавить свои темы →') + '</div>';
+}
+
+/* ── Анкета ──────────────────────────────────────────────────────────────── */
+
+// Все кнопки, ведущие сюда, называются «Пройти заново», «Собрать личный
+// план», «Пересобрать план →» — ни одна не обещает «продолжить с того же
+// места». Denis попросил вести себя буквально: полный сброс к пустым корням,
+// а не восстановление прежних галочек с заранее раскрытыми ветками
+async function startPlanQuiz(){
+  planStep = 0;
+  planDraft = { problems: [], expanded: [], level: '', depth: '', note: '' };
+  switchView('plan');
+  await loadPlanProblems();
+  renderPlanQuestion();
+}
+
+/* ══ Поле выбора тем ═══════════════════════════════════════════════════════
+   Корневые темы («двери») стоят кучно в центре и видны сразу. Тап раскрывает:
+   частные случаи уходят ВНИЗ, соседние темы — ВБОК. По направлению связи
+   человек читает её тип, без единой подписи.
+
+   Раскладка — пружины к «родному» месту плюс расталкивание пересечений:
+   распустившаяся тема физически раздвигает соседей, и это видно глазами. */
+
+const PF_W = 2200, PF_H = 2200, PF_CX = 1100, PF_CY = 1080;
+const PF_COLORS = ['#4f8fca','#c9a23a','#e2712f','#cd4a2e','#b0355e','#8b3fd1','#3f9c8b','#5b7fd4'];
+
+let pfPos = {}, pfSizes = {};        // ЦЕЛЕ
+
+function openPlanField(){
+  await loadPlanProblems();
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // новая раскладка при каждом открытии поля
+  const world = document.getElementById('plan-world');
+  world.style.width = PF_W + 'px';
+  world.style.height = PF_H + 'px';
+  const glow = document.getElementById('plan-glow');
+  if (glow){ glow.style.width = PF_W + 'px'; glow.style.height = PF_H + 'px'; glow.innerHTML = ''; }
+  const dirBlobs = document.getElementById('plan-dir-blobs');
+  if (dirBlobs){ dirBlobs.style.width = PF_W + 'px'; dirBlobs.style.height = PF_H + 'px'; dirBlobs.innerHTML = ''; }
+  pfDirBlobEls = {};   // слой очищен — кэш узлов тоже, иначе pfDirBlobs держится за удалённые DOM-элементы
+  pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
+  pfApply();
+  pfWire();
+
+  /* ⚠⚠ СНАЧАЛА ПОКАЗЫВАЕМ ЭКРАН, ПОТОМ СЧИТАЕМ. Раскладка —
+     синхронный блок на сотни проходов; если запустить её ДО показа,
+     браузер не успевает отрисовать ничего — и человек видит БЕЛЫЙ ЭКРАН
+     ровно столько, сколько считает его телефон. [stated] Denis: «важно, чтобы
+     они не покидали апп, если страница долго грузится».
+     Порядок: показать поле с надписью → отдать браузеру кадр → считать. */
+  const wait = document.getElementById('pf-wait');
+  if (wait) wait.style.display = 'flex';
+  f.classList.add('show');
+  planFieldChrome(true);
+  requestAnimationFrame(function(){ f.classList.add('in'); });
+
+  /* Два кадра, а не один: первый ставит стили, второй их рисует */
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      try { pfRender(); } finally {
+        if (wait) wait.style.display = 'none';
+      }
+      /* Замеряем плавность именно здесь: самый тяжёлый экран клуба */
+      if (typeof perfWatch === 'function') perfWatch(2000);
+    });
+  });
+
+  const dock = f.querySelector('.pf-dock');
+  if (dock){
+    // Перезапуск анимации: класс мог остаться с прошлого открытия, и тогда
+    // браузер посчитал бы её уже отыгранной
+    dock.classList.remove('born');
+    void dock.offsetWidth;
+    dock.classList.add('born');
+  }
+}
+
+/* Поле — самостоятельная сцена: бар уровня (z-index 500), значок уровня (501)
+   и таббар не должны висеть поверх неё. У самого поля z-index 60, поэтому
+   спрятать их можно только явно */
+function planFieldChrome(hide){
+  /* hide === true означает «спрятать хром», а прячем мы его ровно тогда, когда
+     поле ОТКРЫТО. То есть pfFieldOpen === hide. В v17 здесь стояло `!hide` —
+     флаг всегда получался обратным, защита в renderLevelCard() не срабатывала
+     НИ РАЗУ, и бар возвращался поверх поля при любом её вызове */
+  pfFieldOpen = hide;
+  // .scroll-fade — затемнение низа списка, оно живёт СНАРУЖИ .shell, а у той
+  // z-index:1 создаёт контекст наложения: z-index:60 поля считается внутри неё
+  // и наружу не выигрывает. Отсюда светлая полоса поверх тёмного поля
+  const fade = document.querySelector('.scroll-fade');
+  if (fade) fade.style.display = hide ? 'none' : '';
+  ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (hide){
+      // Запоминаем, что было: у бара и значка display зависит от уровня,
+      // и вернуть их «как было» иначе не получится
+      if (el.dataset.pfPrev === undefined) el.dataset.pfPrev = el.style.display ||
+
+function planFieldChrome(hide){
+  /* hide === true означает «спрятать хром», а прячем мы его ровно тогда, когда
+     поле ОТКРЫТО. То есть pfFieldOpen === hide. В v17 здесь стояло `!hide` —
+     флаг всегда получался обратным, защита в renderLevelCard() не срабатывала
+     НИ РАЗУ, и бар возвращался поверх поля при любом её вызове */
+  pfFieldOpen = hide;
+  // .scroll-fade — затемнение низа списка, оно живёт СНАРУЖИ .shell, а у той
+  // z-index:1 создаёт контекст наложения: z-index:60 поля считается внутри неё
+  // и наружу не выигрывает. Отсюда светлая полоса поверх тёмного поля
+  const fade = document.querySelector('.scroll-fade');
+  if (fade) fade.style.display = hide ? 'none' : '';
+  ['level-card', 'reward-level-badge', 'tabbar'].forEach(function(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (hide){
+      // Запоминаем, что было: у бара и значка display зависит от уровня,
+      // и вернуть их «как было» иначе не получится
+      if (el.dataset.pfPrev === undefined) el.dataset.pfPrev = el.style.display || '';
+      el.style.display = 'none';
+    } else if (el.dataset.pfPrev !== undefined){
+      el.style.display = el.dataset.pfPrev;
+      delete el.dataset.pfPrev;
+    }
+  });
+  /* Снимок display, снятый при ОТКРЫТИИ поля, мог быть уже неверным: например,
+     поле открыли из состояния, где бар был спрятан ИИ-попапом — тогда при
+     закрытии мы честно вернули бы «спрятан», и он пропал бы с обычного экрана
+     до следующей перерисовки. Пересчитываем от истины, а не от снимка */
+  if (!hide) try { renderLevelCard(); } catch(e){}
+}
+
+// «Начать сначала»: снимаем выбор и раскрытия, поле собирается заново
+function planFieldReset(){
+  planDraft.problems = [];
+  planDraft.expanded = [];
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // «Начать сначала» — тоже новая раскладка
+  pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
+  pfApply();
+  pfRender();
+}
+
+function hidePlanField(){
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  planFieldChrome(false);
+  pfStopAnim();
+  f.classList.remove('in');
+  // Ждём, пока погаснет, и только потом убираем — иначе экран щёлкал бы
+  setTimeout(function(){ f.classList.remove('show'); }, 380);
+}
+
+function closePlanField(){
+  hidePlanField();
+  switchView('library');
+}
+
+function planFieldDone(){
+  if (!planDraft.problems.length) return;
+  hidePlanField();
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function renderPlanQuestion(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  const total = 4;
+  const bar = '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:'
+    + Math.round(planStep / total * 100) + '%"></div></div>'
+    + '<div class="quiz-step">Шаг ' + (planStep + 1) + ' из ' + total + '</div>';
+  const back = planStep > 0
+    ? '<div class="payment-help-link" style="margin-top:14px" onclick="planBack()">← Назад</div>' : '';
+
+  if (planStep === 0){
+    // Первый шаг живёт на отдельном полноэкранном поле, не в карточке
+    openPlanField();
+    el.innerHTML = '';
+    return;
+  }
+
+  if (planStep === 1){
+    el.innerHTML = bar
+      + '<div class="quiz-question">На каком уровне сейчас твоё понимание продаж и маркетинга?</div>'
+      + PLAN_LEVELS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.level === o.key ? ' picked' : '') + '" onclick="planP
+
+function planFieldReset(){
+  planDraft.problems = [];
+  planDraft.expanded = [];
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // «Начать сначала» — тоже новая раскладка
+  pfOx = -(PF_CX - innerWidth/2); pfOy = -(PF_CY - innerHeight/2);
+  pfApply();
+  pfRender();
+}
+
+function hidePlanField(){
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  planFieldChrome(false);
+  pfStopAnim();
+  f.classList.remove('in');
+  // Ждём, пока погаснет, и только потом убираем — иначе экран щёлкал бы
+  setTimeout(function(){ f.classList.remove('show'); }, 380);
+}
+
+function closePlanField(){
+  hidePlanField();
+  switchView('library');
+}
+
+function planFieldDone(){
+  if (!planDraft.problems.length) return;
+  hidePlanField();
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function renderPlanQuestion(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  const total = 4;
+  const bar = '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:'
+    + Math.round(planStep / total * 100) + '%"></div></div>'
+    + '<div class="quiz-step">Шаг ' + (planStep + 1) + ' из ' + total + '</div>';
+  const back = planStep > 0
+    ? '<div class="payment-help-link" style="margin-top:14px" onclick="planBack()">← Назад</div>' : '';
+
+  if (planStep === 0){
+    // Первый шаг живёт на отдельном полноэкранном поле, не в карточке
+    openPlanField();
+    el.innerHTML = '';
+    return;
+  }
+
+  if (planStep === 1){
+    el.innerHTML = bar
+      + '<div class="quiz-question">На каком уровне сейчас твоё понимание продаж и маркетинга?</div>'
+      + PLAN_LEVELS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.level === o.key ? ' picked' : '') + '" onclick="planPickLevel(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  if (planStep === 2){
+    el.innerHTML = bar
+      + '<div class="quiz-question">Насколько глубоко тебе нравится заходить в материал?</div>'
+      + PLAN_DEPTHS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.depth === o.key ? ' picked' : '') + '" onclick="planPickDepth(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  el.innerHTML = bar
+    + '<div class="quiz-question">Хочешь добавить что-то своими словами?</div>'
+    + '<div class="reward-hint" style="margin-bottom:10px">Необязательно. Это читает Денис — так он понимает, чего не хватает в клубе.</div>'
+    + '<textarea id="plan-note" rows="4" style="width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);font-size:14px;font-family:inherit;resize:vertical" placeholder="Например: клиенты пропадают после того, как узнают цену">' + escapeHtml(planDraft.note || '') + '</textarea>'
+    + '<button class="quiz-answer picked" style="margin-top:12px" onclick="finishPlanQuiz()">Показать план</button>'
+    + back;
+}
+
+function planToggleGroup(key){
+  const cur = document.querySelector('#plan-inner');
+  const scrollY = window.scrollY;
+  planOpenPhases[key] = !planOpenPhases[key];
+  renderPlanQuestion();
+  // Не прыгаем наверх: человек раскрывает направление в середине списка
+  window.scrollTo(0, scrollY);
+}
+
+function planOptionHtml(p, isChild){
+  const on = planDraft.problems.indexOf(p.key) !== -1;
+  return '<button class="quiz-answ
+
+function closePlanField(){
+  hidePlanField();
+  switchView('library');
+}
+
+function planFieldDone(){
+  if (!planDraft.problems.length) return;
+  hidePlanField();
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function renderPlanQuestion(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  const total = 4;
+  const bar = '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:'
+    + Math.round(planStep / total * 100) + '%"></div></div>'
+    + '<div class="quiz-step">Шаг ' + (planStep + 1) + ' из ' + total + '</div>';
+  const back = planStep > 0
+    ? '<div class="payment-help-link" style="margin-top:14px" onclick="planBack()">← Назад</div>' : '';
+
+  if (planStep === 0){
+    // Первый шаг живёт на отдельном полноэкранном поле, не в карточке
+    openPlanField();
+    el.innerHTML = '';
+    return;
+  }
+
+  if (planStep === 1){
+    el.innerHTML = bar
+      + '<div class="quiz-question">На каком уровне сейчас твоё понимание продаж и маркетинга?</div>'
+      + PLAN_LEVELS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.level === o.key ? ' picked' : '') + '" onclick="planPickLevel(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  if (planStep === 2){
+    el.innerHTML = bar
+      + '<div class="quiz-question">Насколько глубоко тебе нравится заходить в материал?</div>'
+      + PLAN_DEPTHS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.depth === o.key ? ' picked' : '') + '" onclick="planPickDepth(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  el.innerHTML = bar
+    + '<div class="quiz-question">Хочешь добавить что-то своими словами?</div>'
+    + '<div class="reward-hint" style="margin-bottom:10px">Необязательно. Это читает Денис — так он понимает, чего не хватает в клубе.</div>'
+    + '<textarea id="plan-note" rows="4" style="width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);font-size:14px;font-family:inherit;resize:vertical" placeholder="Например: клиенты пропадают после того, как узнают цену">' + escapeHtml(planDraft.note || '') + '</textarea>'
+    + '<button class="quiz-answer picked" style="margin-top:12px" onclick="finishPlanQuiz()">Показать план</button>'
+    + back;
+}
+
+function planToggleGroup(key){
+  const cur = document.querySelector('#plan-inner');
+  const scrollY = window.scrollY;
+  planOpenPhases[key] = !planOpenPhases[key];
+  renderPlanQuestion();
+  // Не прыгаем наверх: человек раскрывает направление в середине списка
+  window.scrollTo(0, scrollY);
+}
+
+function planOptionHtml(p, isChild){
+  const on = planDraft.problems.indexOf(p.key) !== -1;
+  return '<button class="quiz-answer' + (on ? ' picked' : '') + (isChild ? ' plan-sub' : '') + '"'
+    + ' onclick="planToggleProblem(' + jsArg(p.key) + ')">'
+    + (isChild ? '<span style="opacity:.45">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
+}
+
+function planToggleProblem(key){
+  const i = planDraft.problems.indexOf(key);
+  if (i !== -1) planDraft.problems.splice(i, 1);
+  else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов');
+      return;
+    }
+    planDraft.problems.push(key);
+  }
+  const scrollY = window.scrollY;
+  renderPlanQuestion();
+  // Список перерисовывается целиком — без этого экран отскакивал 
+
+function planFieldDone(){
+  if (!planDraft.problems.length) return;
+  hidePlanField();
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function renderPlanQuestion(){
+  const el = document.getElementById('plan-inner');
+  if (!el) return;
+  const total = 4;
+  const bar = '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:'
+    + Math.round(planStep / total * 100) + '%"></div></div>'
+    + '<div class="quiz-step">Шаг ' + (planStep + 1) + ' из ' + total + '</div>';
+  const back = planStep > 0
+    ? '<div class="payment-help-link" style="margin-top:14px" onclick="planBack()">← Назад</div>' : '';
+
+  if (planStep === 0){
+    // Первый шаг живёт на отдельном полноэкранном поле, не в карточке
+    openPlanField();
+    el.innerHTML = '';
+    return;
+  }
+
+  if (planStep === 1){
+    el.innerHTML = bar
+      + '<div class="quiz-question">На каком уровне сейчас твоё понимание продаж и маркетинга?</div>'
+      + PLAN_LEVELS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.level === o.key ? ' picked' : '') + '" onclick="planPickLevel(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  if (planStep === 2){
+    el.innerHTML = bar
+      + '<div class="quiz-question">Насколько глубоко тебе нравится заходить в материал?</div>'
+      + PLAN_DEPTHS.map(function(o){
+          return '<button class="quiz-answer' + (planDraft.depth === o.key ? ' picked' : '') + '" onclick="planPickDepth(' + jsArg(o.key) + ')">' + escapeHtml(o.name) + '</button>';
+        }).join('') + back;
+    return;
+  }
+
+  el.innerHTML = bar
+    + '<div class="quiz-question">Хочешь добавить что-то своими словами?</div>'
+    + '<div class="reward-hint" style="margin-bottom:10px">Необязательно. Это читает Денис — так он понимает, чего не хватает в клубе.</div>'
+    + '<textarea id="plan-note" rows="4" style="width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--input-bg);color:var(--text);font-size:14px;font-family:inherit;resize:vertical" placeholder="Например: клиенты пропадают после того, как узнают цену">' + escapeHtml(planDraft.note || '') + '</textarea>'
+    + '<button class="quiz-answer picked" style="margin-top:12px" onclick="finishPlanQuiz()">Показать план</button>'
+    + back;
+}
+
+function planToggleGroup(key){
+  const cur = document.querySelector('#plan-inner');
+  const scrollY = window.scrollY;
+  planOpenPhases[key] = !planOpenPhases[key];
+  renderPlanQuestion();
+  // Не прыгаем наверх: человек раскрывает направление в середине списка
+  window.scrollTo(0, scrollY);
+}
+
+function planOptionHtml(p, isChild){
+  const on = planDraft.problems.indexOf(p.key) !== -1;
+  return '<button class="quiz-answer' + (on ? ' picked' : '') + (isChild ? ' plan-sub' : '') + '"'
+    + ' onclick="planToggleProblem(' + jsArg(p.key) + ')">'
+    + (isChild ? '<span style="opacity:.45">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
+}
+
+function planToggleProblem(key){
+  const i = planDraft.problems.indexOf(key);
+  if (i !== -1) planDraft.problems.splice(i, 1);
+  else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов');
+      return;
+    }
+    planDraft.problems.push(key);
+  }
+  const scrollY = window.scrollY;
+  renderPlanQuestion();
+  // Список перерисовывается целиком — без этого экран отскакивал бы наверх
+  // после каждой галочки
+  window.scrollTo(0, scrollY);
+}
+
+func
+
+function planToggleGroup(key){
+  const cur = document.querySelector('#plan-inner');
+  const scrollY = window.scrollY;
+  planOpenPhases[key] = !planOpenPhases[key];
+  renderPlanQuestion();
+  // Не прыгаем наверх: человек раскрывает направление в середине списка
+  window.scrollTo(0, scrollY);
+}
+
+function planOptionHtml(p, isChild){
+  const on = planDraft.problems.indexOf(p.key) !== -1;
+  return '<button class="quiz-answer' + (on ? ' picked' : '') + (isChild ? ' plan-sub' : '') + '"'
+    + ' onclick="planToggleProblem(' + jsArg(p.key) + ')">'
+    + (isChild ? '<span style="opacity:.45">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
+}
+
+function planToggleProblem(key){
+  const i = planDraft.problems.indexOf(key);
+  if (i !== -1) planDraft.problems.splice(i, 1);
+  else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов');
+      return;
+    }
+    planDraft.problems.push(key);
+  }
+  const scrollY = window.scrollY;
+  renderPlanQuestion();
+  // Список перерисовывается целиком — без этого экран отскакивал бы наверх
+  // после каждой галочки
+  window.scrollTo(0, scrollY);
+}
+
+function updatePlanNextState(){
+  const btn = document.getElementById('plan-next');
+  if (!btn) return;
+  const ok = planDraft.problems.length > 0;
+  btn.style.opacity = ok ? '1' : '.45';
+  btn.textContent = ok ? 'Дальше' : 'Отметь хотя бы один пункт';
+}
+
+function planNext(){
+  if (!planDraft.problems.length) return;
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function planBack(){
+  if (planStep > 0) planStep--;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+// Экран плана уходит — поле не должно остаться висеть поверх приложения
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+ 
+
+function planOptionHtml(p, isChild){
+  const on = planDraft.problems.indexOf(p.key) !== -1;
+  return '<button class="quiz-answer' + (on ? ' picked' : '') + (isChild ? ' plan-sub' : '') + '"'
+    + ' onclick="planToggleProblem(' + jsArg(p.key) + ')">'
+    + (isChild ? '<span style="opacity:.45">↳ </span>' : '') + escapeHtml(p.label) + '</button>';
+}
+
+function planToggleProblem(key){
+  const i = planDraft.problems.indexOf(key);
+  if (i !== -1) planDraft.problems.splice(i, 1);
+  else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов');
+      return;
+    }
+    planDraft.problems.push(key);
+  }
+  const scrollY = window.scrollY;
+  renderPlanQuestion();
+  // Список перерисовывается целиком — без этого экран отскакивал бы наверх
+  // после каждой галочки
+  window.scrollTo(0, scrollY);
+}
+
+function updatePlanNextState(){
+  const btn = document.getElementById('plan-next');
+  if (!btn) return;
+  const ok = planDraft.problems.length > 0;
+  btn.style.opacity = ok ? '1' : '.45';
+  btn.textContent = ok ? 'Дальше' : 'Отметь хотя бы один пункт';
+}
+
+function planNext(){
+  if (!planDraft.problems.length) return;
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function planBack(){
+  if (planStep > 0) planStep--;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+// Экран плана уходит — поле не должно остаться висеть поверх приложения
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.n
+
+function planToggleProblem(key){
+  const i = planDraft.problems.indexOf(key);
+  if (i !== -1) planDraft.problems.splice(i, 1);
+  else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' пунктов');
+      return;
+    }
+    planDraft.problems.push(key);
+  }
+  const scrollY = window.scrollY;
+  renderPlanQuestion();
+  // Список перерисовывается целиком — без этого экран отскакивал бы наверх
+  // после каждой галочки
+  window.scrollTo(0, scrollY);
+}
+
+function updatePlanNextState(){
+  const btn = document.getElementById('plan-next');
+  if (!btn) return;
+  const ok = planDraft.problems.length > 0;
+  btn.style.opacity = ok ? '1' : '.45';
+  btn.textContent = ok ? 'Дальше' : 'Отметь хотя бы один пункт';
+}
+
+function planNext(){
+  if (!planDraft.problems.length) return;
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function planBack(){
+  if (planStep > 0) planStep--;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+// Экран плана уходит — поле не должно остаться висеть поверх приложения
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 1
+
+function planNext(){
+  if (!planDraft.problems.length) return;
+  planStep = 1;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+function planBack(){
+  if (planStep > 0) planStep--;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+// Экран плана уходит — поле не должно остаться висеть поверх приложения
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
+function openUrl(url) {
+  if (!url) return;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  if (inTg && tg) {
+    /* внутри Telegram: t.me — только `openTelegramLink`, иначе iOS уведёт в браузер */
+    if (/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+    if (tg.openLink) { tg.openLink(url); return; }
+  }
+  /* Всё остальное — обычным способом. Всплывающее окно в чужом webview
+     часто блокируется МОЛЧА — тогда уходим текущей вкладкой */
+  let w = null;
+  try { w = window.open(url, '_blank'); } catch (e) {}
+  if (!w) { try
+
+function planBack(){
+  if (planStep > 0) planStep--;
+  renderPlanQuestion();
+  window.scrollTo(0, 0);
+}
+
+// Экран плана уходит — поле не должно остаться висеть поверх приложения
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
+function openUrl(url) {
+  if (!url) return;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  if (inTg && tg) {
+    /* внутри Telegram: t.me — только `openTelegramLink`, иначе iOS уведёт в браузер */
+    if (/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+    if (tg.openLink) { tg.openLink(url); return; }
+  }
+  /* Всё остальное — обычным способом. Всплывающее окно в чужом webview
+     часто блокируется МОЛЧА — тогда уходим текущей вкладкой */
+  let w = null;
+  try { w = window.open(url, '_blank'); } catch (e) {}
+  if (!w) { try { location.href = url; } catch (e) {} }
+}
+
+function openInsightsLevelLockNotice(){
+  const need = appSettings.insights_unlock_leve
+
+function planFieldGuard(name){
+  if (name !== 'plan') hidePlanField();
+}
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
+function openUrl(url) {
+  if (!url) return;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  if (inTg && tg) {
+    /* внутри Telegram: t.me — только `openTelegramLink`, иначе iOS уведёт в браузер */
+    if (/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+    if (tg.openLink) { tg.openLink(url); return; }
+  }
+  /* Всё остальное — обычным способом. Всплывающее окно в чужом webview
+     часто блокируется МОЛЧА — тогда уходим текущей вкладкой */
+  let w = null;
+  try { w = window.open(url, '_blank'); } catch (e) {}
+  if (!w) { try { location.href = url; } catch (e) {} }
+}
+
+function openInsightsLevelLockNotice(){
+  const need = appSettings.insights_unlock_level || 2;
+  document.getElementById('insights-lock-text').textContent =
+    `Выжимки с занятий откроются тебе на ${need} уровне.`;
+  document.getElementById('insights-lock-overlay'
+
+function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQuestion(); window.scrollTo(0, 0); }
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
+function openUrl(url) {
+  if (!url) return;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  if (inTg && tg) {
+    /* внутри Telegram: t.me — только `openTelegramLink`, иначе iOS уведёт в браузер */
+    if (/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+    if (tg.openLink) { tg.openLink(url); return; }
+  }
+  /* Всё остальное — обычным способом. Всплывающее окно в чужом webview
+     часто блокируется МОЛЧА — тогда уходим текущей вкладкой */
+  let w = null;
+  try { w = window.open(url, '_blank'); } catch (e) {}
+  if (!w) { try { location.href = url; } catch (e) {} }
+}
+
+function openInsightsLevelLockNotice(){
+  const need = appSettings.insights_unlock_level || 2;
+  document.getElementById('insights-lock-text').textContent =
+    `Выжимки с занятий откроются тебе на ${need} уровне.`;
+  document.getElementById('insights-lock-overlay').classList.add('open');
+}
+function closeInsightsLevelLockNotice(){
+  docu
+
+function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
+
+async function finishPlanQuiz(){
+  onbDone('plan');
+  const noteEl = document.getElementById('plan-note');
+  planDraft.note = noteEl ? noteEl.value.trim() : '';
+  planAnswers = {
+    problems: planDraft.problems.slice(), level: planDraft.level,
+    depth: planDraft.depth, note: planDraft.note,
+  };
+  renderPlanScreen();
+  window.scrollTo(0, 0);
+  renderPersonalPlanBody();
+  // Шаг уровня «Построить личный путь» до сих пор закрывался заглушкой —
+  // теперь его закрывает настоящее прохождение анкеты
+  if (!builtPath) placeholderBuildPathStep();
+  // Сохраняем после показа: план человек уже видит, а сеть подождёт
+  if (!telegramId) planGuestSave(planAnswers);
+  if (telegramId){
+    fetch(`${API_URL}/plan-answers`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: telegramId, problems: planAnswers.problems,
+        level: planAnswers.level, depth: planAnswers.depth, note: planAnswers.note,
+      })
+    }).catch(function(){});
+  }
+}
+
+function openPersonalPlan(){
+  switchView('library');
+  // Личный план всегда наверху библиотеки — просто прокручиваем к нему
+  document.getElementById('personal-plan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLibrary(items) {
+  renderedItems = items;
+  const listEl = document.getElementById('lib-list');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty">Ничего не нашлось</div>';
+    return;
+  }
+  listEl.innerHTML = items.map((l, i) => lecCardHtml(l, i)).join('');
+}
+
+function rememberLastLecture(l) {
+  try {
+    localStorage.setItem('club_app_last_lecture', JSON.stringify({
+      slug: l.slug, title: l.title, description: l.description,
+      link: l.link, link_vk: l.link_vk, ts: Date.now()
+    }));
+  } catch(e){}
+}
+
+/* ⚠⚠ НАЛИЧИЕ `Telegram.WebApp` БОЛЬШЕ НЕ ПРИЗНАК TELEGRAM (урок 134).
+   С 18.08 SDK лежит своей копией в `<head>` и подключается НА ВСЕХ площадках.
+   Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
+   пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
+   Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
+function openUrl(url) {
+  if (!url) return;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
+            || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  if (inTg && tg) {
+    /* внутри Telegram: t.me — только `openTelegramLink`, иначе iOS уведёт в браузер */
+    if (/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink) { tg.openTelegramLink(url); return; }
+    if (tg.openLink) { tg.openLink(url); return; }
+  }
+  /* Всё остальное — обычным способом. Всплывающее окно в чужом webview
+     часто блокируется МОЛЧА — тогда уходим текущей вкладкой */
+  let w = null;
+  try { w = window.open(url, '_blank'); } catch (e) {}
+  if (!w) { try { location.href = url; } catch (e) {} }
+}
+
+function openInsightsLevelLockNotice(){
+  const need = appSettings.insights_unlock_level || 2;
+  document.getElementById('insights-lock-text').textContent =
+    `Выжимки с занятий откроются тебе на ${need} уровне.`;
+  document.getElementById('insights-lock-overlay').classList.add('open');
+}
+function closeInsightsLevelLockNotice(){
+  document.getElementById('insights-lock-overlay').classList.remove('open');
+}
+
+function openInsightsModal(index, src){
