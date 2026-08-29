@@ -10414,7 +10414,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v335 · 29.08.2026 ошибки у людей уходят в админский чат';
+const APP_BUILD = 'v336 · 29.08.2026 заглушка вместо чёрного экрана плеера и замер его запуска';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17385,6 +17385,21 @@ function playBonusVideo(bonusKey, itemKey){
     + '<div id="bonus-video-hint" style="position:absolute;left:0;right:0;bottom:8px;'
     + 'text-align:center;font-size:11.5px;color:#bbb"></div>';
 
+  /* ⚠️ ЗАГЛУШКА, А НЕ ЧЁРНЫЙ ПРЯМОУГОЛЬНИК (29.08.2026). [stated] Denis:
+     «наблюдал чёрный экран вместо плеера целую минуту, потом кликнул и хотя бы
+     обложка появилась. Для ключевого этапа воронки непозволительное
+     поведение». У фильма воронки заглушка была, здесь её не было вовсе: слот
+     стоял пустым, пока чужой config.jsonp едет с серверов Boomstream, а
+     единственной обратной связью была мелкая серая строчка через 2,4 с.
+     Ставим ту же заглушку, что у фильма, и снимаем её, как только плеер
+     появился. */
+  const boot = document.createElement('div');
+  boot.className = 'film-boot';
+  boot.innerHTML = '<div class="film-boot-txt">' +
+    ((typeof t === 'function' && t('film.boot')) || 'Включаем видео…') + '</div>';
+  slot.appendChild(boot);
+
+  const плеерВставленВ = Date.now();
   const script = document.createElement('script');
   // метка времени заставляет браузер выполнить конфиг заново при повторном
   // открытии — из кэша он бы просто не запустился второй раз
@@ -17407,6 +17422,16 @@ function playBonusVideo(bonusKey, itemKey){
     if (!hint || !document.body.contains(slot)) { clearInterval(watch); return; }
     if (slot.querySelector('iframe, video')) {
       hint.textContent = '';
+      if (boot) { boot.classList.add('off'); setTimeout(function(){ try{ boot.remove(); }catch(e){} }, 400); }
+      /* ⚠️ ЗАМЕРЯЕМ, А НЕ ГАДАЕМ. Сколько на самом деле едет чужой конфиг, мы
+         никогда не мерили — и спорили о том, наша ли это вина. Теперь долгий
+         запуск сам расскажет о себе: пять секунд для ключевого экрана воронки
+         это уже много, и такое сообщение придёт с телефона живого человека. */
+      const ждали = Date.now() - плеерВставленВ;
+      if (ждали >= 5000 && typeof window.__reportError === 'function'){
+        window.__reportError('Плеер Boomstream запускался ' + Math.round(ждали / 1000) + ' с',
+                             'код ' + code, 'загрузка плеера');
+      }
       clearInterval(watch);
       return;
     }
@@ -17414,6 +17439,10 @@ function playBonusVideo(bonusKey, itemKey){
     if (waited >= 2400) hint.textContent = 'Загружаю плеер…';
     if (waited >= 15000) {
       hint.textContent = 'Плеер не запустился. Скажи Денису — код: ' + code;
+      if (boot) { boot.classList.add('off'); setTimeout(function(){ try{ boot.remove(); }catch(e){} }, 400); }
+      if (typeof window.__reportError === 'function'){
+        window.__reportError('Плеер Boomstream не запустился за 15 с', 'код ' + code, 'загрузка плеера');
+      }
       clearInterval(watch);
     }
   }, 600);
