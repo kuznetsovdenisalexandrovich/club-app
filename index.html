@@ -10364,7 +10364,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v329 · 29.08.2026 поле выбора тем + живая сверка доступа в ВК';
+const APP_BUILD = 'v330 · 29.08.2026 камера ведёт на весь распустившийся букет';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19263,6 +19263,42 @@ function pfRelax(list, roots, meta){
 
 }
 
+/* ══ КУДА СМОТРИТ КАМЕРА ПОСЛЕ ТАПА ═══════════════════════════════════════
+   [stated] Denis 29.08: «иногда они появляются близко к краю или даже слегка
+   за ним — приходится мотать экран». Камера подводила к центру САМУ нажатую
+   тему, а её букет распускается веером в одну сторону — и половина только что
+   появившегося оказывалась за краем.
+
+   Теперь целимся в середину коробки, в которую влезли нажатая тема И всё, что
+   из неё только что распустилось.
+
+   ⚠️ НО НАЖАТАЯ ТЕМА ОСТАЁТСЯ НА ЭКРАНЕ ЛЮБОЙ ЦЕНОЙ. Если букет больше экрана,
+   честная середина увела бы за край саму тему, ради которой всё и затевалось.
+   Поэтому сдвиг от неё ограничен тем, что реально видно: по бокам — половина
+   экрана, сверху — заголовок поля, снизу — пилюля с «Готово». */
+const PF_CAM_TOP = 190;   // высота заголовка «Осмотрись и собери своё»
+const PF_CAM_BOT = 150;   // пилюля выбора внизу
+function pfCamTarget(list, v){
+  const s = pfSizes[pfFocus] || {w:150,h:42};
+  const fx = pfPos[pfFocus].x + s.w/2, fy = pfPos[pfFocus].y + s.h/2;
+  let minX = fx - s.w/2, maxX = fx + s.w/2;
+  let minY = fy - s.h/2, maxY = fy + s.h/2;
+  list.forEach(function(k){
+    if (!pfPos[k] || !v.from || v.from[k] !== pfFocus) return;
+    const sk = pfSizes[k] || {w:150,h:42};
+    minX = Math.min(minX, pfPos[k].x);   maxX = Math.max(maxX, pfPos[k].x + sk.w);
+    minY = Math.min(minY, pfPos[k].y);   maxY = Math.max(maxY, pfPos[k].y + sk.h);
+  });
+  const vw = (typeof innerWidth === 'number' && innerWidth) ? innerWidth : 390;
+  const vh = (typeof innerHeight === 'number' && innerHeight) ? innerHeight : 844;
+  const shiftX = Math.max(0, vw / 2 - s.w / 2 - 24);
+  const shiftY = Math.max(0, Math.min(vh * 0.44 - PF_CAM_TOP, vh * 0.56 - PF_CAM_BOT) - s.h / 2);
+  let tx = (minX + maxX) / 2, ty = (minY + maxY) / 2;
+  tx = Math.max(fx - shiftX, Math.min(fx + shiftX, tx));
+  ty = Math.max(fy - shiftY, Math.min(fy + shiftY, ty));
+  return { x: tx, y: ty };
+}
+
 /* Фоновый блоб направления: живёт ВСЕГДА (один DOM-узел на направление,
    создан один раз — переиспользуется, не пересоздаётся), еле заметный (.09),
    и просто МЕНЯЕТ РАЗМЕР по числу видимых потомков этого направления — растёт,
@@ -19431,9 +19467,9 @@ function pfRenderTimed(){
     // Камера подводит нажатую тему к центру. Без этого она не «расталкивает
     // остальных», а просто улетает с экрана вместе со своим букетом
     if (pfFocus && pfPos[pfFocus]){
-      const s = pfSizes[pfFocus] || {w:150,h:42};
-      pfCamX = innerWidth/2 - (pfPos[pfFocus].x + s.w/2);
-      pfCamY = innerHeight*0.44 - (pfPos[pfFocus].y + s.h/2);
+      const aim = pfCamTarget(list, v);
+      pfCamX = innerWidth/2 - aim.x;
+      pfCamY = innerHeight*0.44 - aim.y;
       pfCamOn = true;
     }
     pfGlows(v);
