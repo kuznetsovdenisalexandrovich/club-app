@@ -10368,7 +10368,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v333 · 29.08.2026 пустые новости не рисуют ни рамку, ни пустую строку';
+const APP_BUILD = 'v334 · 29.08.2026 починена рекурсия в заслонке доступа бота';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -10958,7 +10958,17 @@ function botAccessTell(granted){
 
 /* Главный вход: обернуть любое действие, которое «включает» материал */
 function ensureBotAccess(next){
-  if (!botAccessNeeded()){ if (typeof next === 'function') next(); return true; }
+  /* ⚠️⚠️ 29.08.2026: ЗДЕСЬ НЕЛЬЗЯ ЗВАТЬ next(). Все семь вызовов написаны так:
+     `if (!ensureBotAccess(function(){ этаЖеФункция(...); })) return;` — то есть
+     колбэк это ПОВТОРНЫЙ ВХОД в ту же функцию. Когда доступ не нужен (а у
+     участника он не нужен ВСЕГДА: botAccessNeeded() отсекает по isMember),
+     вызов next() возвращал управление в ту же функцию, та снова звала заслонку,
+     и так до «Maximum call stack size exceeded». Рушились все семь дверей разом
+     — фильм, лекции, журнал, оплата, страница доступов, игры.
+     Правильно так: доступ не нужен — молча возвращаем true, и вызывающий
+     продолжает СВОЙ ЖЕ код дальше. Колбэк нужен только для отложенного
+     продолжения ПОСЛЕ разрешения (его зовёт botAccessNext). */
+  if (!botAccessNeeded()) return true;
   botAccessNext = (typeof next === 'function') ? next : null;
   const el = document.getElementById('botaccess-screen');
   const link = document.getElementById('botaccess-bot-link');
