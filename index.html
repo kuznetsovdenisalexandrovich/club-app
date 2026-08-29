@@ -74,6 +74,46 @@
       (document.body || document.documentElement).appendChild(box);
     } catch(e){}
   }
+  /* ══ ДОНОС В АДМИНСКИЙ ЧАТ (29.08.2026) ═══════════════════════════════════
+     [stated] Denis: «надо сразу слать эту ошибку в админский чат, чтобы я у
+     пользователей видел ошибки моментально». Повод — рекурсия в заслонке
+     доступа бота: она рушила семь дверей у КАЖДОГО участника и прожила в
+     проде сутки, потому что падало у людей, а не у нас.
+
+     ⚠️ АДРЕС ЗДЕСЬ СВОЙ, А НЕ API_URL. Этот блок стоит первым в файле, до
+     объявления API_URL: он обязан пережить падение всего, что грузится после.
+     ⚠️ ОТПРАВКА НИЧЕГО НЕ ЛОМАЕТ И НИЧЕГО НЕ ЖДЁТ: любая её собственная
+     ошибка глушится, иначе ловец ошибок сам стал бы источником ошибок. */
+  var ОТПРАВЛЕНО = {};
+  function донести(сообщение, стек, где){
+    try {
+      var ключ = String(сообщение || '').slice(0, 120);
+      if (ОТПРАВЛЕНО[ключ]) return;   // одно и то же за сессию — один раз
+      ОТПРАВЛЕНО[ключ] = 1;
+      var площадка = 'web';
+      try {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) площадка = 'telegram';
+        else if (window.vkBridge || /vk_app_id/.test(location.search)) площадка = 'vk';
+      } catch(e){}
+      var кто = null;
+      try { кто = window.Telegram.WebApp.initDataUnsafe.user.id; } catch(e){}
+      var сборка = '';
+      try { сборка = String(window.APP_BUILD || ''); } catch(e){}
+      fetch('https://api.youselllikeagod-magazine.ru/client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,   // запрос переживёт закрытие приложения
+        body: JSON.stringify({
+          message: String(сообщение || '').slice(0, 400),
+          stack: String(стек || '').slice(0, 1200),
+          where: String(где || '').slice(0, 80),
+          build: сборка, platform: площадка, telegram_id: кто
+        })
+      }).catch(function(){});
+    } catch(e){}
+  }
+  window.__reportError = донести;   // чтобы звать и из основного кода
+
   window.addEventListener('error', function(ev){
     // Ошибки загрузки картинок и прочих ресурсов не показываем: они не мешают
     // приложению работать, а экран заняли бы собой
@@ -87,13 +127,19 @@
     // нечего, поэтому просто не мешаем человеку.
     var msg = (ev && ev.message) || '';
     if (/^Script error\.?$/i.test(msg) && !(ev && ev.filename) && !(ev && ev.error)) return;
-    paint(msg || 'Ошибка',
-          ((ev && ev.filename) || '') + ':' + ((ev && ev.lineno) || '') +
-          '\n' + (ev && ev.error && ev.error.stack ? ev.error.stack : ''));
+    var стек = ((ev && ev.filename) || '') + ':' + ((ev && ev.lineno) || '') +
+               '\n' + (ev && ev.error && ev.error.stack ? ev.error.stack : '');
+    /* ⚠️ ДОНОСИМ ДАЖЕ О ТОМ, ЧТО НЕ ПОКАЗЫВАЕМ ЧЕЛОВЕКУ. Аварийный экран
+       рисуется только на ПЕРВОЙ ошибке, а знать хочется обо всех: вторая
+       бывает настоящей причиной первой. */
+    донести(msg || 'Ошибка', стек, 'window.onerror');
+    paint(msg || 'Ошибка', стек);
   }, true);
   window.addEventListener('unhandledrejection', function(ev){
     var r = ev && ev.reason;
-    paint('Необработанный сбой', (r && (r.stack || r.message)) || String(r));
+    var текст = (r && (r.stack || r.message)) || String(r);
+    донести('Необработанный сбой: ' + ((r && r.message) || String(r)), текст, 'unhandledrejection');
+    paint('Необработанный сбой', текст);
   });
 })();
 </script>
@@ -10368,7 +10414,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v334 · 29.08.2026 починена рекурсия в заслонке доступа бота';
+const APP_BUILD = 'v335 · 29.08.2026 ошибки у людей уходят в админский чат';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
