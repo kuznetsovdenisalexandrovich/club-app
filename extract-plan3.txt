@@ -1,0 +1,1558 @@
+const PF_W = 2200, PF_H = 2200, PF_CX = 1100, PF_CY = 1080;
+const PF_COLORS = ['#4f8fca','#c9a23a','#e2712f','#cd4a2e','#b0355e','#8b3fd1','#3f9c8b','#5b7fd4'];
+
+let pfPos = {}, pfSizes = {};        // ЦЕЛЕВЫЕ позиции (левый верхний угол) и размеры
+/* Отрисованная позиция живёт отдельно от целевой: pfPos — куда сказал встать
+   решатель, pfDraw — где капсула сейчас на самом деле. Между ними пружина, она
+   и даёт мягкий подъезд с упругим перелётом */
+let pfDraw = {}, pfVel = {}, pfStart = {}, pfEls = {}, pfSeeds = {};
+let pfDirBlobEls = {};   // один DOM-узел на направление — переиспользуется, не пересоздаётся
+let pfCamX = null, pfCamY = null, pfCamVX = 0, pfCamVY = 0, pfCamOn = false;
+let pfFieldOpen = false;   // renderLevelCard() уважает этот флаг — см. ниже
+let pfAnimRaf = null, pfFocus = null;
+let pfLayoutSalt = Math.random();   // меняется на «Начать сначала» и при новом открытии п
+
+const PF_COLORS = ['#4f8fca','#c9a23a','#e2712f','#cd4a2e','#b0355e','#8b3fd1','#3f9c8b','#5b7fd4'];
+
+let pfPos = {}, pfSizes = {};        // ЦЕЛЕВЫЕ позиции (левый верхний угол) и размеры
+/* Отрисованная позиция живёт отдельно от целевой: pfPos — куда сказал встать
+   решатель, pfDraw — где капсула сейчас на самом деле. Между ними пружина, она
+   и даёт мягкий подъезд с упругим перелётом */
+let pfDraw = {}, pfVel = {}, pfStart = {}, pfEls = {}, pfSeeds = {};
+let pfDirBlobEls = {};   // один DOM-узел на направление — переиспользуется, не пересоздаётся
+let pfCamX = null, pfCamY = null, pfCamVX = 0, pfCamVY = 0, pfCamOn = false;
+let pfFieldOpen = false;   // renderLevelCard() уважает этот флаг — см. ниже
+let pfAnimRaf = null, pfFocus = null;
+let pfLayoutSalt = Math.random();   // меняется на «Начать сначала» и при новом открытии поля
+
+// Псевдослучайное число от ключа И текущей соли — при 
+
+const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
+/* ⚠⚠ ГЛАВНАЯ ЦЕНА ЭКРАНА ПЛАНА — ЗДЕСЬ. `pfRelax` крутит 220 итераций
+   расталкивания СИНХРОННО, перебирая каждую пару капсул — это десятки тысяч
+   сравнений в одном блоке без единого кадра отрисовки. На слабом телефоне
+   это и есть «белый экран»: вкладка жива, но занята счётом.
+   В щадящем режиме берём вчетверо меньше проходов: раскладка выйдет
+   чуть менее вылизанной, зато экран откроется. */
+function pfIter(){ return (typeof liteOn === 'function' && liteOn()) ? 45 : PF_ITER; }
+function pfPure(){ return (typeof liteOn === 'function' && liteOn()) ? 8 : PF_PURE; }
+/* Когда ветка раскрыта, чужие капсулы должны отойти СИЛЬНЕЕ обычного: иначе
+   на экране одновременно висит десяток тем, не относящихся к выбранной, и
+   рябит. Совсем убирать их нельзя — пропадёт ощущение, что поле большое */
+const PF_GAP_FOCUS = 100;  
+
+const PF_GAP_FOCUS = 100;   // зазор между раскрытой веткой и всеми остальными
+const PF_PUSH_AWAY = 95;   // насколько чужие направления отъезжают от раскрытого
+/* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
+   воздух: без запаса оно при парении наползает на соседние темы */
+const PF_ROOT_PAD = 30;
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.0
+
+const PF_PUSH_AWAY = 95;   // насколько чужие направления отъезжают от раскрытого
+/* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
+   воздух: без запаса оно при парении наползает на соседние темы */
+const PF_ROOT_PAD = 30;
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   
+
+const PF_ROOT_PAD = 30;
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она вы
+
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster
+
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(func
+
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCode
+
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function
+
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; retur
+
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
+ 
+
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
+  return pfSeeds[key] = {
+    driftDur: (6 + rnd() * 5) * 1.35 * 1.33,   // ещё на треть медлен
+
+function pfSaltedRand(key, salt){
+  let h = Math.floor(pfLayoutSalt * 1e9) ^ (salt || 0);
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  h = (h * 1103515245 + 12345) >>> 0;
+  return (h % 1000) / 1000;
+}
+let pfOx = 0, pfOy = 0, pfVx = 0, pfVy = 0, pfRaf = null;
+let pfDragging = false, pfMoved = false, pfTrail = [];
+let pfWired = false;
+
+// Родительская тема (частный случай) — из справочника, а не из локальной копии
+function pfParentOf(key){
+  if (pfIsPhaseKey(key)) return null;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p && p.parent_key ? p.parent_key : null;
+}
+
+/* Ключи корней — направления, с префиксом 'phase:', чтобы не путать с ключами
+   проблем: у направления и проблемы могут случайно совпасть буквы */
+function pfIsPhaseKey(key){ return typeof key === 'string' && key.indexOf('phase:') === 0; }
+function pfPhaseKeyOf(key){ return key.slice(6); }
+
+function pfChildren(key){
+  const avail = planProblemsWithContent();
+  if (pfIsPhaseKey(key)){
+    // Второе поколение направления — темы верхнего уровня этой фазы.
+    // Темы с родителем сюда не попадают: они уже вложены под СВОИМ родителем,
+    // а не должны висеть на направлении отдельной веткой
+    const phaseKey = pfPhaseKeyOf(key);
+    return avail.filter(function(p){ return p.phase === phaseKey && !p.parent_key; }).map(function(p){ return p.key; });
+  }
+  return avail.filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+}
+function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
+function pfRoots(){
+  const avail =
+
+function pfParentOf(key){
+  if (pfIsPhaseKey(key)) return null;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p && p.parent_key ? p.parent_key : null;
+}
+
+/* Ключи корней — направления, с префиксом 'phase:', чтобы не путать с ключами
+   проблем: у направления и проблемы могут случайно совпасть буквы */
+function pfIsPhaseKey(key){ return typeof key === 'string' && key.indexOf('phase:') === 0; }
+function pfPhaseKeyOf(key){ return key.slice(6); }
+
+function pfChildren(key){
+  const avail = planProblemsWithContent();
+  if (pfIsPhaseKey(key)){
+    // Второе поколение направления — темы верхнего уровня этой фазы.
+    // Темы с родителем сюда не попадают: они уже вложены под СВОИМ родителем,
+    // а не должны висеть на направлении отдельной веткой
+    const phaseKey = pfPhaseKeyOf(key);
+    return avail.filter(function(p){ return p.phase === phaseKey && !p.parent_key; }).map(function(p){ return p.key; });
+  }
+  return avail.filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+}
+function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
+}
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  ret
+
+function pfIsPhaseKey(key){ return typeof key === 'string' && key.indexOf('phase:') === 0; }
+function pfPhaseKeyOf(key){ return key.slice(6); }
+
+function pfChildren(key){
+  const avail = planProblemsWithContent();
+  if (pfIsPhaseKey(key)){
+    // Второе поколение направления — темы верхнего уровня этой фазы.
+    // Темы с родителем сюда не попадают: они уже вложены под СВОИМ родителем,
+    // а не должны висеть на направлении отдельной веткой
+    const phaseKey = pfPhaseKeyOf(key);
+    return avail.filter(function(p){ return p.phase === phaseKey && !p.parent_key; }).map(function(p){ return p.key; });
+  }
+  return avail.filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+}
+function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
+}
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraf
+
+function pfPhaseKeyOf(key){ return key.slice(6); }
+
+function pfChildren(key){
+  const avail = planProblemsWithContent();
+  if (pfIsPhaseKey(key)){
+    // Второе поколение направления — темы верхнего уровня этой фазы.
+    // Темы с родителем сюда не попадают: они уже вложены под СВОИМ родителем,
+    // а не должны висеть на направлении отдельной веткой
+    const phaseKey = pfPhaseKeyOf(key);
+    return avail.filter(function(p){ return p.phase === phaseKey && !p.parent_key; }).map(function(p){ return p.key; });
+  }
+  return avail.filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+}
+function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
+}
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(fu
+
+function pfChildren(key){
+  const avail = planProblemsWithContent();
+  if (pfIsPhaseKey(key)){
+    // Второе поколение направления — темы верхнего уровня этой фазы.
+    // Темы с родителем сюда не попадают: они уже вложены под СВОИМ родителем,
+    // а не должны висеть на направлении отдельной веткой
+    const phaseKey = pfPhaseKeyOf(key);
+    return avail.filter(function(p){ return p.phase === phaseKey && !p.parent_key; }).map(function(p){ return p.key; });
+  }
+  return avail.filter(function(p){ return p.parent_key === key; }).map(function(p){ return p.key; });
+}
+function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
+}
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(function(k){
+      if (!color[k]) color[k] = color[key
+
+function pfRelated(key){
+  if (pfIsPhaseKey(key)) return [];   // соседство — свойство темы, не направления
+  const p = planProblems.find(function(x){ return x.key === key; });
+  const withContent = planProblemsWithContent().map(function(x){ return x.key; });
+  return (p && p.related ? p.related : []).filter(function(k){ return withContent.indexOf(k) !== -1; });
+}
+
+/* Корни поля — НАПРАВЛЕНИЯ (`phases`), не отдельные проблемы: они уже
+   упорядочены и уже видны Denis'у, а помечать «дверь» руками у каждой темы —
+   лишняя редакционная работа, которую направления и так закрывают.
+   Показываем только те направления, где есть хоть одна тема с контентом. */
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
+}
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(function(k){
+      if (!color[k]) color[k] = color[key];
+      /* ОБЛАЧКО НАСЛЕДУЕТСЯ ОТ ТОГО, КТО РАСКРЫЛ, а не берётся из собственного
+         направления темы. Соседние темы (`related`) СПЕЦИАЛЬНО пересекают
+         границу фазы — и раньше такая тема попадала в облачко СВОЕГО
+         направления: физика тянула её к чужому центру масс и разводила с
+         родителем по большому «межоблачному» зазору. Именно поэтому второе
+         поколение разлеталось по полю вместо того, чтобы собраться вокруг
+         нажатой темы */
+      if (!cluster[k]) cluster[k] = cluster[key] || key;
+      if (!from[k]) from[k] = key;  
+
+function pfRoots(){
+  const avail = planProblemsWithContent();
+  return PLAN_PHASES.filter(function(ph){
+    return avail.some(function(p){ return p.phase === ph.key && !p.parent_key; });
+  }).map(function(ph){ return 'phase:' + ph.key; });
+}
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(function(k){
+      if (!color[k]) color[k] = color[key];
+      /* ОБЛАЧКО НАСЛЕДУЕТСЯ ОТ ТОГО, КТО РАСКРЫЛ, а не берётся из собственного
+         направления темы. Соседние темы (`related`) СПЕЦИАЛЬНО пересекают
+         границу фазы — и раньше такая тема попадала в облачко СВОЕГО
+         направления: физика тянула её к чужому центру масс и разводила с
+         родителем по большому «межоблачному» зазору. Именно поэтому второе
+         поколение разлеталось по полю вместо того, чтобы собраться вокруг
+         нажатой темы */
+      if (!cluster[k]) cluster[k] = cluster[key] || key;
+      if (!from[k]) from[k] = key;   // кто раскрыл — он же родитель веера
+      walk(k);
+    });
+  };
+  roots.forEach(walk);
+  return { list: seen, color: color, cluster: cluster, from: from };
+}
+
+/* ══ Поле выбора: физика облачков ═════════════════════════════════════════
+   Расталкивание ЗНАЕТ О РОДСТВЕ: капсулы одной ветки жмутся на маленький
+   зазор, из разных веток — на большой. Отсюда ощущение «я сейчас в этом
+   облачке», и поэтому связи-линии больше не нужны — их убрали совсем.
+
+   Позиции здесь — ЛЕВЫЙ ВЕРХНИЙ УГОЛ капсулы (так исторически считает
+   расталкивание), а раскладка цветком оперирует центрами; переводим на
+   границе, не смешивая. */
+
+const PF_GAP_IN = 14, PF_GAP_OUT
+
+function pfLabel(key){
+  if (pfIsPhaseKey(key)){
+    const ph = PLAN_PHASES.find(function(x){ return x.key === pfPhaseKeyOf(key); });
+    return ph ? ph.name : key;
+  }
+  const p = planProblems.find(function(x){ return x.key === key; });
+  return p ? p.label : key;
+}
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(function(k){
+      if (!color[k]) color[k] = color[key];
+      /* ОБЛАЧКО НАСЛЕДУЕТСЯ ОТ ТОГО, КТО РАСКРЫЛ, а не берётся из собственного
+         направления темы. Соседние темы (`related`) СПЕЦИАЛЬНО пересекают
+         границу фазы — и раньше такая тема попадала в облачко СВОЕГО
+         направления: физика тянула её к чужому центру масс и разводила с
+         родителем по большому «межоблачному» зазору. Именно поэтому второе
+         поколение разлеталось по полю вместо того, чтобы собраться вокруг
+         нажатой темы */
+      if (!cluster[k]) cluster[k] = cluster[key] || key;
+      if (!from[k]) from[k] = key;   // кто раскрыл — он же родитель веера
+      walk(k);
+    });
+  };
+  roots.forEach(walk);
+  return { list: seen, color: color, cluster: cluster, from: from };
+}
+
+/* ══ Поле выбора: физика облачков ═════════════════════════════════════════
+   Расталкивание ЗНАЕТ О РОДСТВЕ: капсулы одной ветки жмутся на маленький
+   зазор, из разных веток — на большой. Отсюда ощущение «я сейчас в этом
+   облачке», и поэтому связи-линии больше не нужны — их убрали совсем.
+
+   Позиции здесь — ЛЕВЫЙ ВЕРХНИЙ УГОЛ капсулы (так исторически считает
+   расталкивание), а раскладка цветком оперирует центрами; переводим на
+   границе, не смешивая. */
+
+const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
+/* ⚠⚠ ГЛАВНАЯ ЦЕНА ЭКРАНА ПЛАНА — ЗДЕСЬ. `pfRelax` крутит 220 итераций
+   расталкивания СИНХРОННО, перебирая каждую пару капсул — это десятки тысяч
+   сравнений в одном блоке без единого кадра отрисовки. На с
+
+function pfVisible(){
+  const roots = pfRoots();
+  const seen = [], color = {}, cluster = {}, from = {};
+  roots.forEach(function(k, i){ color[k] = PF_COLORS[i % PF_COLORS.length]; cluster[k] = k; });
+  const walk = function(key){
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    if (planDraft.expanded.indexOf(key) === -1) return;
+    pfChildren(key).concat(pfRelated(key)).forEach(function(k){
+      if (!color[k]) color[k] = color[key];
+      /* ОБЛАЧКО НАСЛЕДУЕТСЯ ОТ ТОГО, КТО РАСКРЫЛ, а не берётся из собственного
+         направления темы. Соседние темы (`related`) СПЕЦИАЛЬНО пересекают
+         границу фазы — и раньше такая тема попадала в облачко СВОЕГО
+         направления: физика тянула её к чужому центру масс и разводила с
+         родителем по большому «межоблачному» зазору. Именно поэтому второе
+         поколение разлеталось по полю вместо того, чтобы собраться вокруг
+         нажатой темы */
+      if (!cluster[k]) cluster[k] = cluster[key] || key;
+      if (!from[k]) from[k] = key;   // кто раскрыл — он же родитель веера
+      walk(k);
+    });
+  };
+  roots.forEach(walk);
+  return { list: seen, color: color, cluster: cluster, from: from };
+}
+
+/* ══ Поле выбора: физика облачков ═════════════════════════════════════════
+   Расталкивание ЗНАЕТ О РОДСТВЕ: капсулы одной ветки жмутся на маленький
+   зазор, из разных веток — на большой. Отсюда ощущение «я сейчас в этом
+   облачке», и поэтому связи-линии больше не нужны — их убрали совсем.
+
+   Позиции здесь — ЛЕВЫЙ ВЕРХНИЙ УГОЛ капсулы (так исторически считает
+   расталкивание), а раскладка цветком оперирует центрами; переводим на
+   границе, не смешивая. */
+
+const PF_GAP_IN = 14, PF_GAP_OUT = 62, PF_ITER = 190, PF_PURE = 30;
+/* ⚠⚠ ГЛАВНАЯ ЦЕНА ЭКРАНА ПЛАНА — ЗДЕСЬ. `pfRelax` крутит 220 итераций
+   расталкивания СИНХРОННО, перебирая каждую пару капсул — это десятки тысяч
+   сравнений в одном блоке без единого кадра отрисовки. На слабом телефоне
+   это и есть «белый экран»: вкладка жива, но занята счётом.
+   В щадящем режиме берём вчетверо меньше проходов: раскладка выйдет
+   чуть менее вылизанной, зато экран откроется. */
+function pfIter(){ return (typeof liteOn === 'function' && liteOn()) ? 45
+
+function pfIter(){ return (typeof liteOn === 'function' && liteOn()) ? 45 : PF_ITER; }
+function pfPure(){ return (typeof liteOn === 'function' && liteOn()) ? 8 : PF_PURE; }
+/* Когда ветка раскрыта, чужие капсулы должны отойти СИЛЬНЕЕ обычного: иначе
+   на экране одновременно висит десяток тем, не относящихся к выбранной, и
+   рябит. Совсем убирать их нельзя — пропадёт ощущение, что поле большое */
+const PF_GAP_FOCUS = 100;   // зазор между раскрытой веткой и всеми остальными
+const PF_PUSH_AWAY = 95;   // насколько чужие направления отъезжают от раскрытого
+/* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
+   воздух: без запаса оно при парении наползает на соседние темы */
+const PF_ROOT_PAD = 30;
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 110351
+
+function pfPure(){ return (typeof liteOn === 'function' && liteOn()) ? 8 : PF_PURE; }
+/* Когда ветка раскрыта, чужие капсулы должны отойти СИЛЬНЕЕ обычного: иначе
+   на экране одновременно висит десяток тем, не относящихся к выбранной, и
+   рябит. Совсем убирать их нельзя — пропадёт ощущение, что поле большое */
+const PF_GAP_FOCUS = 100;   // зазор между раскрытой веткой и всеми остальными
+const PF_PUSH_AWAY = 95;   // насколько чужие направления отъезжают от раскрытого
+/* Направление — крупная капсула и смысловой якорь ветки, ему нужен свой
+   воздух: без запаса оно при парении наползает на соседние темы */
+const PF_ROOT_PAD = 30;
+const PF_KID_LEASH = 210;   // дальше этого новая тема от родителя не уезжает
+const PF_ROOT_R = 118, PF_ROOT_OPEN = 150;   // компактный старт, раскрытое отъезжает
+// Пружина отрисовки: заметный, но не карикатурный перелёт. Замедлена на 35%
+// относительно первой настройки по просьбе Denis'а
+// Ещё на треть медленнее относительно предыдущей настройки (перелёт держим
+// тем же — 21%/6%, растягиваем только время успокоения): капсула 60 кадров
+// вместо 45, камера 40 вместо 30. Подобрано сеткой значений, не на глаз
+const PF_K = 0.042, PF_DAMP = 0.84;
+const PF_CAM_K = 0.034, PF_CAM_DAMP = 0.792;
+const PF_STAGGER = 0.24;
+const PF_ROOT_MAX_R = 260;   // потолок разлёта раскрытого/оттеснённого направления от центра
+const PF_GAP_START = 20;     // зазор между направлениями, пока ничего не раскрыто — кольцо держится тесным
+
+// Облачко темы — направление, из которого она выросла
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
+  return pfSeeds[key] = {
+    driftDu
+
+function pfCluster(key){
+  if (pfIsPhaseKey(key)) return key;
+  const p = planProblems.find(function(x){ return x.key === key; });
+  if (!p) return 'phase:?';
+  if (p.parent_key) return pfCluster(p.parent_key);
+  return 'phase:' + p.phase;
+}
+
+/* Стабильная фаза парения и переливания на капсулу. Считается от ключа, а не
+   случайно: иначе при каждой перерисовке узел прыгал бы на новую фазу */
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
+  return pfSeeds[key] = {
+    driftDur: (6 + rnd() * 5) * 1.35 * 1.33,   // ещё на треть медленнее
+    driftPh:  rnd() * Math.PI * 2,
+    hueDur:   (9 + rnd() * 6) * 1.35 * 1.33,   // ещё на треть медленнее
+    huePh:    rnd() * Math.PI * 2,
+    dx: 2.5 + rnd() * 3.5,
+    dy: 2.5 + rnd() * 4,
+  };
+}
+
+function pfRelax(list, roots, meta){
+  // meta — результат pfVisible(): в нём облачко и «кто раскрыл» посчитаны по
+  // дереву раскрытия, а не по собственному направлению темы
+  if (!meta) meta = pfVisible();
+  const cl = {}, home = {};
+  list.forEach(function(k){ cl[k] = (meta.cluster && meta.cluster[k]) || pfCluster(k); });
+  const cx = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].x + s.w/2; };
+  const cy = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].y + s.h/2; };
+
+  /* Родитель веера — ТОТ, КТО РАСКРЫЛ капсулу (`meta.from`), а не первый
+     попавшийся раскрытый узел, который её упоминает. Соседство взаимно
+     (`push.related` содержит `remind`, и наоборот), поэтому перебор списка мог
+     назначить родителем не ту капсулу — и веер строился вокруг чужой темы.
+     Считаем ОДИН раз на прогон: перебор внутри итераций стоил ~170мс */
+  const ref = {};
+  list.forEach(function(k){
+    if (roots.indexOf(k) !== -1) return;
+    const par = meta.from && meta.from[k];
+    if (!par) return;
+    const kids = pfChildren(par), sides = pfRelated(par);
+    const all = kids.concat(sides);
+    const idx = all.indexOf(k);
+    if (idx !== -1) ref[k] = { par: par, i: idx, n: all.length, child: kids.indexOf(k) 
+
+function pfSeed(key){
+  if (pfSeeds[key]) return pfSeeds[key];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  const rnd = function(){ h = (h * 1103515245 + 12345) >>> 0; return (h % 1000) / 1000; };
+  return pfSeeds[key] = {
+    driftDur: (6 + rnd() * 5) * 1.35 * 1.33,   // ещё на треть медленнее
+    driftPh:  rnd() * Math.PI * 2,
+    hueDur:   (9 + rnd() * 6) * 1.35 * 1.33,   // ещё на треть медленнее
+    huePh:    rnd() * Math.PI * 2,
+    dx: 2.5 + rnd() * 3.5,
+    dy: 2.5 + rnd() * 4,
+  };
+}
+
+function pfRelax(list, roots, meta){
+  // meta — результат pfVisible(): в нём облачко и «кто раскрыл» посчитаны по
+  // дереву раскрытия, а не по собственному направлению темы
+  if (!meta) meta = pfVisible();
+  const cl = {}, home = {};
+  list.forEach(function(k){ cl[k] = (meta.cluster && meta.cluster[k]) || pfCluster(k); });
+  const cx = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].x + s.w/2; };
+  const cy = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].y + s.h/2; };
+
+  /* Родитель веера — ТОТ, КТО РАСКРЫЛ капсулу (`meta.from`), а не первый
+     попавшийся раскрытый узел, который её упоминает. Соседство взаимно
+     (`push.related` содержит `remind`, и наоборот), поэтому перебор списка мог
+     назначить родителем не ту капсулу — и веер строился вокруг чужой темы.
+     Считаем ОДИН раз на прогон: перебор внутри итераций стоил ~170мс */
+  const ref = {};
+  list.forEach(function(k){
+    if (roots.indexOf(k) !== -1) return;
+    const par = meta.from && meta.from[k];
+    if (!par) return;
+    const kids = pfChildren(par), sides = pfRelated(par);
+    const all = kids.concat(sides);
+    const idx = all.indexOf(k);
+    if (idx !== -1) ref[k] = { par: par, i: idx, n: all.length, child: kids.indexOf(k) !== -1 };
+  });
+
+  /* ⚠️⚠️ ДЛИНА ПОВОДКА — ГЕОМЕТРИЯ, А НЕ ЧИСЛО ИЗ ГОЛОВЫ. Прежняя формула
+     считала кольцо по ширине ОДНОЙ капсулы, помноженной на число братьев:
+     у направления с десятком длинных тем («Как перестать продавать по
+     скриптам» — под 380px) кольцо выходило заведомо теснее, чем братья
+     физически занимают, и поводок вдавливал их друг в друга — расталкивание
+     раз
+
+function pfRelax(list, roots, meta){
+  // meta — результат pfVisible(): в нём облачко и «кто раскрыл» посчитаны по
+  // дереву раскрытия, а не по собственному направлению темы
+  if (!meta) meta = pfVisible();
+  const cl = {}, home = {};
+  list.forEach(function(k){ cl[k] = (meta.cluster && meta.cluster[k]) || pfCluster(k); });
+  const cx = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].x + s.w/2; };
+  const cy = function(k){ const s = pfSizes[k] || {w:150,h:42}; return pfPos[k].y + s.h/2; };
+
+  /* Родитель веера — ТОТ, КТО РАСКРЫЛ капсулу (`meta.from`), а не первый
+     попавшийся раскрытый узел, который её упоминает. Соседство взаимно
+     (`push.related` содержит `remind`, и наоборот), поэтому перебор списка мог
+     назначить родителем не ту капсулу — и веер строился вокруг чужой темы.
+     Считаем ОДИН раз на прогон: перебор внутри итераций стоил ~170мс */
+  const ref = {};
+  list.forEach(function(k){
+    if (roots.indexOf(k) !== -1) return;
+    const par = meta.from && meta.from[k];
+    if (!par) return;
+    const kids = pfChildren(par), sides = pfRelated(par);
+    const all = kids.concat(sides);
+    const idx = all.indexOf(k);
+    if (idx !== -1) ref[k] = { par: par, i: idx, n: all.length, child: kids.indexOf(k) !== -1 };
+  });
+
+  /* ⚠️⚠️ ДЛИНА ПОВОДКА — ГЕОМЕТРИЯ, А НЕ ЧИСЛО ИЗ ГОЛОВЫ. Прежняя формула
+     считала кольцо по ширине ОДНОЙ капсулы, помноженной на число братьев:
+     у направления с десятком длинных тем («Как перестать продавать по
+     скриптам» — под 380px) кольцо выходило заведомо теснее, чем братья
+     физически занимают, и поводок вдавливал их друг в друга — расталкивание
+     разводило, а он тут же стягивал обратно. Считаем ОДИН раз на родителя и
+     по НАСТОЯЩИМ ширинам всех братьев: длина окружности = сумма ширин с
+     зазорами и амплитудой парения, плюс запас 8%. И отдельно — чтобы букет
+     не сел на самого родителя. */
+  /* ⚠️⚠️ ГЕОМЕТРИЯ БУКЕТА СЧИТАЕТСЯ ОДИН РАЗ НА РОДИТЕЛЯ — и ею пользуются
+     ОБА места: и раскладка веера, и поводок. Прежняя формула брала ширину
+     ОДНОЙ капсулы, множила на число братьев и делила на полную окружность —
+     хотя веер занимает не круг, а дугу в 200°, и подписи у тем раз
+
+function pfDirBlobs(v){
+  const layer = document.getElementById('plan-dir-blobs');
+  if (!layer) return;
+  pfRoots().forEach(function(r){
+    let el = pfDirBlobEls[r];
+    if (!el){
+      el = document.createElement('div');
+      el.className = 'pf-dir-blob';
+      layer.appendChild(el);
+      pfDirBlobEls[r] = el;
+    }
+    const members = v.list.filter(function(k){ return pfCluster(k) === r; });
+    if (!members.length){ el.style.opacity = '0'; return; }
+
+    let cx = 0, cy = 0, maxSpan = 0;
+    members.forEach(function(k){
+      const s = pfSizes[k] || {w:150,h:42};
+      cx += pfPos[k].x + s.w/2; cy += pfPos[k].y + s.h/2;
+    });
+    cx /= members.length; cy /= members.length;
+    members.forEach(function(k){
+      const s = pfSizes[k] || {w:150,h:42};
+      const px = pfPos[k].x + s.w/2, py = pfPos[k].y + s.h/2;
+      maxSpan = Math.max(maxSpan, Math.hypot(px - cx, py - cy));
+    });
+    // Базовый радиус даже у ОДНОЙ капсулы (свёрнутое направление) — метка
+    // территории видна и без раскрытия, просто маленькая
+    const rad = Math.max(150, maxSpan + 130);
+
+    el.style.setProperty('--c', v.color[r] || PF_COLORS[0]);
+    el.style.width = el.style.height = rad * 2 + 'px';
+    el.style.opacity = '.09';
+    el.style.transform = 'translate(' + (cx - rad) + 'px,' + (cy - rad) + 'px)';
+  });
+}
+
+/* Ореол облачка — очень слабое размытое пятно позади его капсул. Рисуется
+   только когда в ветке больше одной капсулы: одинокий корень размывать незачем */
+function pfGlows(v){
+  const layer = document.getElementById('plan-glow');
+  if (!layer) return;
+  layer.querySelectorAll('.pf-glow').forEach(function(e){ e.remove(); });
+  pfRoots().forEach(function(r){
+    if (planDraft.expanded.indexOf(r) === -1) return;
+    const members = v.list.filter(function(k){ return pfCluster(k) === r; });
+    if (members.length < 2) return;
+    let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
+    members.forEach(function(k){
+      const p = pfPos[k], s = pfSizes[k] || {w:150,h:42};
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x + s.w);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y + s.h);
+    });
+    const rad = Math.max(maxX-minX, maxY-minY)/2 + 70;
+    const el
+
+function pfGlows(v){
+  const layer = document.getElementById('plan-glow');
+  if (!layer) return;
+  layer.querySelectorAll('.pf-glow').forEach(function(e){ e.remove(); });
+  pfRoots().forEach(function(r){
+    if (planDraft.expanded.indexOf(r) === -1) return;
+    const members = v.list.filter(function(k){ return pfCluster(k) === r; });
+    if (members.length < 2) return;
+    let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
+    members.forEach(function(k){
+      const p = pfPos[k], s = pfSizes[k] || {w:150,h:42};
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x + s.w);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y + s.h);
+    });
+    const rad = Math.max(maxX-minX, maxY-minY)/2 + 70;
+    const el = document.createElement('div');
+    el.className = 'pf-glow';
+    el.style.setProperty('--c', v.color[r] || PF_COLORS[0]);
+    el.style.width = el.style.height = rad*2 + 'px';
+    el.style.transform = 'translate(' + ((minX+maxX)/2 - rad) + 'px,' + ((minY+maxY)/2 - rad) + 'px)';
+    layer.appendChild(el);
+  });
+}
+
+/* Обёртка: сама отрисовка не знает про замеры, а сторож получает число */
+function pfRender(){
+  const t0 = (typeof performance !== 'undefined') ? performance.now() : 0;
+  try {
+    return pfRenderTimed();
+  } finally {
+    if (t0 && typeof perfMark === 'function') perfMark('plan', performance.now() - t0);
+  }
+}
+
+function pfRenderTimed(){
+  const v = pfVisible(), list = v.list, roots = pfRoots();
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  // Ветка, с которой человек работает прямо сейчас. Всё остальное приглушаем
+  // и отодвигаем — но не убираем, иначе пропадает ощущение большого поля
+  /* Облачко берём ИЗ ДЕРЕВА РАСКРЫТИЯ (`v.cluster`), а не из справочника.
+     В pfRelax это уже было исправлено, а здесь оставалась старая версия — и
+     соседняя тема, подтянутая из другого направления, получала класс `.far`
+     и приглушалась до трети яркости. Нажать её было можно, но выглядела она
+     неактивной: физика уже считала её своей, а внешний вид — ещё чужой */
+  const clOf = function(k){ return (v.cluster && v.cluster[k]) || pfCluster(k); };
+  const focusCl = (pfFocus && planDraft.expanded.length) ? clOf(p
+
+function pfRender(){
+  const t0 = (typeof performance !== 'undefined') ? performance.now() : 0;
+  try {
+    return pfRenderTimed();
+  } finally {
+    if (t0 && typeof perfMark === 'function') perfMark('plan', performance.now() - t0);
+  }
+}
+
+function pfRenderTimed(){
+  const v = pfVisible(), list = v.list, roots = pfRoots();
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  // Ветка, с которой человек работает прямо сейчас. Всё остальное приглушаем
+  // и отодвигаем — но не убираем, иначе пропадает ощущение большого поля
+  /* Облачко берём ИЗ ДЕРЕВА РАСКРЫТИЯ (`v.cluster`), а не из справочника.
+     В pfRelax это уже было исправлено, а здесь оставалась старая версия — и
+     соседняя тема, подтянутая из другого направления, получала класс `.far`
+     и приглушалась до трети яркости. Нажать её было можно, но выглядела она
+     неактивной: физика уже считала её своей, а внешний вид — ещё чужой */
+  const clOf = function(k){ return (v.cluster && v.cluster[k]) || pfCluster(k); };
+  const focusCl = (pfFocus && planDraft.expanded.length) ? clOf(pfFocus) : null;
+
+  /* Стартовые позиции не должны совпадать: расталкивание нулевого вектора
+     не знает, в какую сторону разводить, и уводит всех в одну — одно
+     направление тогда уезжает к центру и остаётся там */
+  list.forEach(function(k){
+    if (pfPos[k]) return;
+    const ri = roots.indexOf(k);
+    if (ri !== -1){
+      const a2 = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
+      pfPos[k] = { x: PF_CX + Math.cos(a2)*PF_ROOT_R - 75, y: PF_CY + Math.sin(a2)*PF_ROOT_R - 21 };
+      return;
+    }
+    const par = Object.keys(pfPos).find(function(p){
+      return pfChildren(p).concat(pfRelated(p)).indexOf(k) !== -1; });
+    // Дети одного родителя тоже расходятся по кругу, а не ложатся друг на друга
+    const idx = par ? Math.max(0, pfChildren(par).concat(pfRelated(par)).indexOf(k)) : 0;
+    const a3 = idx * 1.9;
+    pfPos[k] = par
+      ? { x: pfPos[par].x + Math.cos(a3)*14, y: pfPos[par].y + Math.sin(a3)*14 }
+      : { x: PF_CX, y: PF_CY };
+  });
+  Object.keys(pfPos).forEach(function(k){ if (list.indexOf(k) === -1) delete pfPos[k]; });
+  Object.keys(pfDraw).forEach(function(k){
+    if (lis
+
+function pfRenderTimed(){
+  const v = pfVisible(), list = v.list, roots = pfRoots();
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  // Ветка, с которой человек работает прямо сейчас. Всё остальное приглушаем
+  // и отодвигаем — но не убираем, иначе пропадает ощущение большого поля
+  /* Облачко берём ИЗ ДЕРЕВА РАСКРЫТИЯ (`v.cluster`), а не из справочника.
+     В pfRelax это уже было исправлено, а здесь оставалась старая версия — и
+     соседняя тема, подтянутая из другого направления, получала класс `.far`
+     и приглушалась до трети яркости. Нажать её было можно, но выглядела она
+     неактивной: физика уже считала её своей, а внешний вид — ещё чужой */
+  const clOf = function(k){ return (v.cluster && v.cluster[k]) || pfCluster(k); };
+  const focusCl = (pfFocus && planDraft.expanded.length) ? clOf(pfFocus) : null;
+
+  /* Стартовые позиции не должны совпадать: расталкивание нулевого вектора
+     не знает, в какую сторону разводить, и уводит всех в одну — одно
+     направление тогда уезжает к центру и остаётся там */
+  list.forEach(function(k){
+    if (pfPos[k]) return;
+    const ri = roots.indexOf(k);
+    if (ri !== -1){
+      const a2 = (ri / roots.length) * Math.PI * 2 - Math.PI/2;
+      pfPos[k] = { x: PF_CX + Math.cos(a2)*PF_ROOT_R - 75, y: PF_CY + Math.sin(a2)*PF_ROOT_R - 21 };
+      return;
+    }
+    const par = Object.keys(pfPos).find(function(p){
+      return pfChildren(p).concat(pfRelated(p)).indexOf(k) !== -1; });
+    // Дети одного родителя тоже расходятся по кругу, а не ложатся друг на друга
+    const idx = par ? Math.max(0, pfChildren(par).concat(pfRelated(par)).indexOf(k)) : 0;
+    const a3 = idx * 1.9;
+    pfPos[k] = par
+      ? { x: pfPos[par].x + Math.cos(a3)*14, y: pfPos[par].y + Math.sin(a3)*14 }
+      : { x: PF_CX, y: PF_CY };
+  });
+  Object.keys(pfPos).forEach(function(k){ if (list.indexOf(k) === -1) delete pfPos[k]; });
+  Object.keys(pfDraw).forEach(function(k){
+    if (list.indexOf(k) === -1){ delete pfDraw[k]; delete pfVel[k]; }
+  });
+
+  world.querySelectorAll('.pf-node').forEach(function(e){ e.remove(); });
+  const els = {};
+  list.forEach(function(k){
+    const el = document.createElement('div');
+    const
+
+function pfCalm(){
+  if (typeof liteOn === 'function' && liteOn()) return true;
+  return typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function pfAnimFrame(){
+  const now = performance.now() / 1000;
+  const calm = pfCalm();
+  Object.keys(pfEls).forEach(function(k){
+    const tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k], el = pfEls[k];
+    if (!tgt || !r || !vel || !el) return;
+    if (now >= (pfStart[k] || 0)){
+      vel.x += (tgt.x - r.x) * PF_K;
+      vel.y += (tgt.y - r.y) * PF_K;
+      vel.x *= PF_DAMP; vel.y *= PF_DAMP;
+      r.x += vel.x; r.y += vel.y;
+    }
+    if (calm){
+      el.style.transform = 'translate(' + r.x.toFixed(1) + 'px,' + r.y.toFixed(1) + 'px)';
+    } else {
+      // Переливание отдано CSS-анимации (см. .pf-node): filter и transform —
+      // разные свойства, драться им не за что, зато JS больше не пишет стиль
+      // фильтра каждому узлу каждый кадр. Это и был главный источник нагрузки:
+      // hue-rotate заставляет перерисовывать капсулу целиком
+      const sd = pfSeed(k);
+      const fx = Math.sin(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dx;
+      const fy = Math.cos(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dy;
+      el.style.transform = 'translate(' + (r.x + fx).toFixed(1) + 'px,' + (r.y + fy).toFixed(1) + 'px)';
+    }
+  });
+
+  if (pfCamOn && !pfDragging && pfCamX !== null){
+    pfCamVX += (pfCamX - pfOx) * PF_CAM_K;
+    pfCamVY += (pfCamY - pfOy) * PF_CAM_K;
+    pfCamVX *= PF_CAM_DAMP; pfCamVY *= PF_CAM_DAMP;
+    pfOx += pfCamVX; pfOy += pfCamVY;
+    pfApply();
+    if (Math.abs(pfCamX - pfOx) < 0.4 && Math.abs(pfCamVX) < 0.4 &&
+        Math.abs(pfCamY - pfOy) < 0.4 && Math.abs(pfCamVY) < 0.4) pfCamOn = false;
+  }
+
+  /* ⚠️ В ЩАДЯЩЕМ ЦИКЛ ОСТАНАВЛИВАЕТСЯ, КОГДА ВСЁ ДОЕХАЛО. В обычном
+     режиме он крутится вечно ради парения — шестьдесят кадров в секунду,
+     пока экран открыт, даже если человек просто читает */
+  if (calm && !pfCamOn && pfSettled()){ pfAnimRaf = null; return; }
+  pfAnimRaf = requestAnimationFrame(pfAnimFrame);
+}
+
+/* Все капсулы доехали до своих мест и практически не движутся */
+function pfSettled(){
+  const keys = Object.keys(pfEls);
+  for (
+
+function pfAnimFrame(){
+  const now = performance.now() / 1000;
+  const calm = pfCalm();
+  Object.keys(pfEls).forEach(function(k){
+    const tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k], el = pfEls[k];
+    if (!tgt || !r || !vel || !el) return;
+    if (now >= (pfStart[k] || 0)){
+      vel.x += (tgt.x - r.x) * PF_K;
+      vel.y += (tgt.y - r.y) * PF_K;
+      vel.x *= PF_DAMP; vel.y *= PF_DAMP;
+      r.x += vel.x; r.y += vel.y;
+    }
+    if (calm){
+      el.style.transform = 'translate(' + r.x.toFixed(1) + 'px,' + r.y.toFixed(1) + 'px)';
+    } else {
+      // Переливание отдано CSS-анимации (см. .pf-node): filter и transform —
+      // разные свойства, драться им не за что, зато JS больше не пишет стиль
+      // фильтра каждому узлу каждый кадр. Это и был главный источник нагрузки:
+      // hue-rotate заставляет перерисовывать капсулу целиком
+      const sd = pfSeed(k);
+      const fx = Math.sin(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dx;
+      const fy = Math.cos(now / sd.driftDur * Math.PI * 2 + sd.driftPh) * sd.dy;
+      el.style.transform = 'translate(' + (r.x + fx).toFixed(1) + 'px,' + (r.y + fy).toFixed(1) + 'px)';
+    }
+  });
+
+  if (pfCamOn && !pfDragging && pfCamX !== null){
+    pfCamVX += (pfCamX - pfOx) * PF_CAM_K;
+    pfCamVY += (pfCamY - pfOy) * PF_CAM_K;
+    pfCamVX *= PF_CAM_DAMP; pfCamVY *= PF_CAM_DAMP;
+    pfOx += pfCamVX; pfOy += pfCamVY;
+    pfApply();
+    if (Math.abs(pfCamX - pfOx) < 0.4 && Math.abs(pfCamVX) < 0.4 &&
+        Math.abs(pfCamY - pfOy) < 0.4 && Math.abs(pfCamVY) < 0.4) pfCamOn = false;
+  }
+
+  /* ⚠️ В ЩАДЯЩЕМ ЦИКЛ ОСТАНАВЛИВАЕТСЯ, КОГДА ВСЁ ДОЕХАЛО. В обычном
+     режиме он крутится вечно ради парения — шестьдесят кадров в секунду,
+     пока экран открыт, даже если человек просто читает */
+  if (calm && !pfCamOn && pfSettled()){ pfAnimRaf = null; return; }
+  pfAnimRaf = requestAnimationFrame(pfAnimFrame);
+}
+
+/* Все капсулы доехали до своих мест и практически не движутся */
+function pfSettled(){
+  const keys = Object.keys(pfEls);
+  for (let i = 0; i < keys.length; i++){
+    const k = keys[i], tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k];
+    if (!tgt || !r || !vel) continue;
+    if (Math.abs(tgt.x - r.x) > 0.5 || Math.ab
+
+function pfSettled(){
+  const keys = Object.keys(pfEls);
+  for (let i = 0; i < keys.length; i++){
+    const k = keys[i], tgt = pfPos[k], r = pfDraw[k], vel = pfVel[k];
+    if (!tgt || !r || !vel) continue;
+    if (Math.abs(tgt.x - r.x) > 0.5 || Math.abs(tgt.y - r.y) > 0.5) return false;
+    if (Math.abs(vel.x) > 0.5 || Math.abs(vel.y) > 0.5) return false;
+  }
+  return true;
+}
+
+function pfStartAnim(){ if (!pfAnimRaf) pfAnimFrame(); }
+function pfStopAnim(){ if (pfAnimRaf){ cancelAnimationFrame(pfAnimRaf); pfAnimRaf = null; } }
+
+function pfTap(key){
+  pfFocus = key;          // за этой темой поедет камера
+  if (pfIsPhaseKey(key)){
+    // Направление — просто дверь: раскрывает второе поколение, само
+    // не становится ответом (лекций у направления нет, выбирать нечего)
+    const e = planDraft.expanded.indexOf(key);
+    if (e !== -1) planDraft.expanded.splice(e, 1);
+    else planDraft.expanded.push(key);
+    pfRender();
+    return;
+  }
+  const i = planDraft.problems.indexOf(key);
+  const kids = pfChildren(key).concat(pfRelated(key));
+  if (i !== -1){
+    planDraft.problems.splice(i, 1);
+    // Свернуть можно только если внутри ничего не выбрано — иначе выбор
+    // исчез бы с экрана вместе с ветками
+    const inside = kids.some(function(k){ return planDraft.problems.indexOf(k) !== -1; });
+    if (!inside){
+      const e = planDraft.expanded.indexOf(key);
+      if (e !== -1) planDraft.expanded.splice(e, 1);
+    }
+  } else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' тем');
+      return;
+    }
+    planDraft.problems.push(key);
+    if (kids.length && planDraft.expanded.indexOf(key) === -1) planDraft.expanded.push(key);
+  }
+  pfRender();
+}
+
+/* Перемещение по полю. Скорость меряем по окну последних 90 мс, а не по
+   последнему кадру: кадр перед отрывом пальца почти всегда медленный, и
+   из-за него бросок не чувствовался вовсе */
+function pfApply(){
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
+  pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
+  const t = 'translate(' + pfOx + 'px,' + pfOy +
+
+function pfStartAnim(){ if (!pfAnimRaf) pfAnimFrame(); }
+function pfStopAnim(){ if (pfAnimRaf){ cancelAnimationFrame(pfAnimRaf); pfAnimRaf = null; } }
+
+function pfTap(key){
+  pfFocus = key;          // за этой темой поедет камера
+  if (pfIsPhaseKey(key)){
+    // Направление — просто дверь: раскрывает второе поколение, само
+    // не становится ответом (лекций у направления нет, выбирать нечего)
+    const e = planDraft.expanded.indexOf(key);
+    if (e !== -1) planDraft.expanded.splice(e, 1);
+    else planDraft.expanded.push(key);
+    pfRender();
+    return;
+  }
+  const i = planDraft.problems.indexOf(key);
+  const kids = pfChildren(key).concat(pfRelated(key));
+  if (i !== -1){
+    planDraft.problems.splice(i, 1);
+    // Свернуть можно только если внутри ничего не выбрано — иначе выбор
+    // исчез бы с экрана вместе с ветками
+    const inside = kids.some(function(k){ return planDraft.problems.indexOf(k) !== -1; });
+    if (!inside){
+      const e = planDraft.expanded.indexOf(key);
+      if (e !== -1) planDraft.expanded.splice(e, 1);
+    }
+  } else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' тем');
+      return;
+    }
+    planDraft.problems.push(key);
+    if (kids.length && planDraft.expanded.indexOf(key) === -1) planDraft.expanded.push(key);
+  }
+  pfRender();
+}
+
+/* Перемещение по полю. Скорость меряем по окну последних 90 мс, а не по
+   последнему кадру: кадр перед отрывом пальца почти всегда медленный, и
+   из-за него бросок не чувствовался вовсе */
+function pfApply(){
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
+  pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
+  const t = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+  world.style.transform = t;
+  /* Слои свечения ОБЯЗАНЫ ехать вместе с миром: их пятна позиционируются в
+     координатах поля (около 1100px), а не экрана. Пока их не двигали, они
+     висели далеко за краем экрана — поэтому «свечения не видно». Касается и
+     ореолов облачков (pfGlows), и фоновых блобов направлений (pfDirBlobs) */
+  const glow = document.getElementByI
+
+function pfStopAnim(){ if (pfAnimRaf){ cancelAnimationFrame(pfAnimRaf); pfAnimRaf = null; } }
+
+function pfTap(key){
+  pfFocus = key;          // за этой темой поедет камера
+  if (pfIsPhaseKey(key)){
+    // Направление — просто дверь: раскрывает второе поколение, само
+    // не становится ответом (лекций у направления нет, выбирать нечего)
+    const e = planDraft.expanded.indexOf(key);
+    if (e !== -1) planDraft.expanded.splice(e, 1);
+    else planDraft.expanded.push(key);
+    pfRender();
+    return;
+  }
+  const i = planDraft.problems.indexOf(key);
+  const kids = pfChildren(key).concat(pfRelated(key));
+  if (i !== -1){
+    planDraft.problems.splice(i, 1);
+    // Свернуть можно только если внутри ничего не выбрано — иначе выбор
+    // исчез бы с экрана вместе с ветками
+    const inside = kids.some(function(k){ return planDraft.problems.indexOf(k) !== -1; });
+    if (!inside){
+      const e = planDraft.expanded.indexOf(key);
+      if (e !== -1) planDraft.expanded.splice(e, 1);
+    }
+  } else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' тем');
+      return;
+    }
+    planDraft.problems.push(key);
+    if (kids.length && planDraft.expanded.indexOf(key) === -1) planDraft.expanded.push(key);
+  }
+  pfRender();
+}
+
+/* Перемещение по полю. Скорость меряем по окну последних 90 мс, а не по
+   последнему кадру: кадр перед отрывом пальца почти всегда медленный, и
+   из-за него бросок не чувствовался вовсе */
+function pfApply(){
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
+  pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
+  const t = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+  world.style.transform = t;
+  /* Слои свечения ОБЯЗАНЫ ехать вместе с миром: их пятна позиционируются в
+     координатах поля (около 1100px), а не экрана. Пока их не двигали, они
+     висели далеко за краем экрана — поэтому «свечения не видно». Касается и
+     ореолов облачков (pfGlows), и фоновых блобов направлений (pfDirBlobs) */
+  const glow = document.getElementById('plan-glow');
+  if (glow) glow.style.transform = t;
+  c
+
+function pfTap(key){
+  pfFocus = key;          // за этой темой поедет камера
+  if (pfIsPhaseKey(key)){
+    // Направление — просто дверь: раскрывает второе поколение, само
+    // не становится ответом (лекций у направления нет, выбирать нечего)
+    const e = planDraft.expanded.indexOf(key);
+    if (e !== -1) planDraft.expanded.splice(e, 1);
+    else planDraft.expanded.push(key);
+    pfRender();
+    return;
+  }
+  const i = planDraft.problems.indexOf(key);
+  const kids = pfChildren(key).concat(pfRelated(key));
+  if (i !== -1){
+    planDraft.problems.splice(i, 1);
+    // Свернуть можно только если внутри ничего не выбрано — иначе выбор
+    // исчез бы с экрана вместе с ветками
+    const inside = kids.some(function(k){ return planDraft.problems.indexOf(k) !== -1; });
+    if (!inside){
+      const e = planDraft.expanded.indexOf(key);
+      if (e !== -1) planDraft.expanded.splice(e, 1);
+    }
+  } else {
+    if (planDraft.problems.length >= PLAN_MAX_PROBLEMS){
+      showToast('Можно выбрать до ' + PLAN_MAX_PROBLEMS + ' тем');
+      return;
+    }
+    planDraft.problems.push(key);
+    if (kids.length && planDraft.expanded.indexOf(key) === -1) planDraft.expanded.push(key);
+  }
+  pfRender();
+}
+
+/* Перемещение по полю. Скорость меряем по окну последних 90 мс, а не по
+   последнему кадру: кадр перед отрывом пальца почти всегда медленный, и
+   из-за него бросок не чувствовался вовсе */
+function pfApply(){
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
+  pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
+  const t = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+  world.style.transform = t;
+  /* Слои свечения ОБЯЗАНЫ ехать вместе с миром: их пятна позиционируются в
+     координатах поля (около 1100px), а не экрана. Пока их не двигали, они
+     висели далеко за краем экрана — поэтому «свечения не видно». Касается и
+     ореолов облачков (pfGlows), и фоновых блобов направлений (pfDirBlobs) */
+  const glow = document.getElementById('plan-glow');
+  if (glow) glow.style.transform = t;
+  const dirBlobs = document.getElementById('plan-dir-blobs');
+  if (dirBlobs) dirBlobs.style.trans
+
+function pfApply(){
+  const world = document.getElementById('plan-world');
+  if (!world) return;
+  pfOx = Math.min(60, Math.max(innerWidth - PF_W - 60, pfOx));
+  pfOy = Math.min(60, Math.max(innerHeight - PF_H - 60, pfOy));
+  const t = 'translate(' + pfOx + 'px,' + pfOy + 'px)';
+  world.style.transform = t;
+  /* Слои свечения ОБЯЗАНЫ ехать вместе с миром: их пятна позиционируются в
+     координатах поля (около 1100px), а не экрана. Пока их не двигали, они
+     висели далеко за краем экрана — поэтому «свечения не видно». Касается и
+     ореолов облачков (pfGlows), и фоновых блобов направлений (pfDirBlobs) */
+  const glow = document.getElementById('plan-glow');
+  if (glow) glow.style.transform = t;
+  const dirBlobs = document.getElementById('plan-dir-blobs');
+  if (dirBlobs) dirBlobs.style.transform = t;
+}
+function pfMomentum(){
+  pfVx *= .955; pfVy *= .955;
+  if (Math.abs(pfVx) < .4 && Math.abs(pfVy) < .4) return;
+  pfOx += pfVx; pfOy += pfVy; pfApply();
+  pfRaf = requestAnimationFrame(pfMomentum);
+}
+function pfWire(){
+  if (pfWired) return;
+  pfWired = true;
+  const f = document.getElementById('plan-field');
+  const start = function(x, y){
+    cancelAnimationFrame(pfRaf);
+    pfCamOn = false; pfCamVX = 0; pfCamVY = 0;   // палец главнее наводки камеры
+    pfDragging = true; pfMoved = false;
+    pfTrail = [{ t: performance.now(), x: x, y: y }];
+  };
+  const move = function(x, y){
+    if (!pfDragging) return;
+    const last = pfTrail[pfTrail.length-1];
+    pfOx += x - last.x; pfOy += y - last.y;
+    if (Math.abs(x - pfTrail[0].x) + Math.abs(y - pfTrail[0].y) > 7) pfMoved = true;
+    pfTrail.push({ t: performance.now(), x: x, y: y });
+    while (pfTrail.length > 2 && performance.now() - pfTrail[0].t > 90) pfTrail.shift();
+    pfApply();
+  };
+  const end = function(){
+    if (!pfDragging) return;
+    pfDragging = false;
+    if (pfMoved && pfTrail.length >= 2){
+      const a = pfTrail[0], b = pfTrail[pfTrail.length-1];
+      const dt = Math.max(1, b.t - a.t);
+      pfVx = (b.x - a.x) / dt * 16;
+      pfVy = (b.y - a.y) / dt * 16;
+      pfMomentum();
+    }
+    setTimeout(function(){ pfMoved = false; }, 50);
+  };
+  f.addEventListener('touchstart', function(e){ start(e.
+
+function pfMomentum(){
+  pfVx *= .955; pfVy *= .955;
+  if (Math.abs(pfVx) < .4 && Math.abs(pfVy) < .4) return;
+  pfOx += pfVx; pfOy += pfVy; pfApply();
+  pfRaf = requestAnimationFrame(pfMomentum);
+}
+function pfWire(){
+  if (pfWired) return;
+  pfWired = true;
+  const f = document.getElementById('plan-field');
+  const start = function(x, y){
+    cancelAnimationFrame(pfRaf);
+    pfCamOn = false; pfCamVX = 0; pfCamVY = 0;   // палец главнее наводки камеры
+    pfDragging = true; pfMoved = false;
+    pfTrail = [{ t: performance.now(), x: x, y: y }];
+  };
+  const move = function(x, y){
+    if (!pfDragging) return;
+    const last = pfTrail[pfTrail.length-1];
+    pfOx += x - last.x; pfOy += y - last.y;
+    if (Math.abs(x - pfTrail[0].x) + Math.abs(y - pfTrail[0].y) > 7) pfMoved = true;
+    pfTrail.push({ t: performance.now(), x: x, y: y });
+    while (pfTrail.length > 2 && performance.now() - pfTrail[0].t > 90) pfTrail.shift();
+    pfApply();
+  };
+  const end = function(){
+    if (!pfDragging) return;
+    pfDragging = false;
+    if (pfMoved && pfTrail.length >= 2){
+      const a = pfTrail[0], b = pfTrail[pfTrail.length-1];
+      const dt = Math.max(1, b.t - a.t);
+      pfVx = (b.x - a.x) / dt * 16;
+      pfVy = (b.y - a.y) / dt * 16;
+      pfMomentum();
+    }
+    setTimeout(function(){ pfMoved = false; }, 50);
+  };
+  f.addEventListener('touchstart', function(e){ start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  f.addEventListener('touchmove',  function(e){ move(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  f.addEventListener('touchend', end, {passive:true});
+  f.addEventListener('mousedown', function(e){ start(e.clientX, e.clientY); });
+  f.addEventListener('mousemove', function(e){ move(e.clientX, e.clientY); });
+  f.addEventListener('mouseup', end);
+}
+
+async function openPlanField(){
+  await loadPlanProblems();
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // новая раскладка при каждом открытии поля
+  const world = document.getElementById('plan-world');
+  wo
+
+function pfWire(){
+  if (pfWired) return;
+  pfWired = true;
+  const f = document.getElementById('plan-field');
+  const start = function(x, y){
+    cancelAnimationFrame(pfRaf);
+    pfCamOn = false; pfCamVX = 0; pfCamVY = 0;   // палец главнее наводки камеры
+    pfDragging = true; pfMoved = false;
+    pfTrail = [{ t: performance.now(), x: x, y: y }];
+  };
+  const move = function(x, y){
+    if (!pfDragging) return;
+    const last = pfTrail[pfTrail.length-1];
+    pfOx += x - last.x; pfOy += y - last.y;
+    if (Math.abs(x - pfTrail[0].x) + Math.abs(y - pfTrail[0].y) > 7) pfMoved = true;
+    pfTrail.push({ t: performance.now(), x: x, y: y });
+    while (pfTrail.length > 2 && performance.now() - pfTrail[0].t > 90) pfTrail.shift();
+    pfApply();
+  };
+  const end = function(){
+    if (!pfDragging) return;
+    pfDragging = false;
+    if (pfMoved && pfTrail.length >= 2){
+      const a = pfTrail[0], b = pfTrail[pfTrail.length-1];
+      const dt = Math.max(1, b.t - a.t);
+      pfVx = (b.x - a.x) / dt * 16;
+      pfVy = (b.y - a.y) / dt * 16;
+      pfMomentum();
+    }
+    setTimeout(function(){ pfMoved = false; }, 50);
+  };
+  f.addEventListener('touchstart', function(e){ start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  f.addEventListener('touchmove',  function(e){ move(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+  f.addEventListener('touchend', end, {passive:true});
+  f.addEventListener('mousedown', function(e){ start(e.clientX, e.clientY); });
+  f.addEventListener('mousemove', function(e){ move(e.clientX, e.clientY); });
+  f.addEventListener('mouseup', end);
+}
+
+async function openPlanField(){
+  await loadPlanProblems();
+  const f = document.getElementById('plan-field');
+  if (!f) return;
+  pfPos = {}; pfSizes = {}; pfDraw = {}; pfVel = {};
+  pfFocus = null; pfCamOn = false; pfCamVX = 0; pfCamVY = 0;
+  pfLayoutSalt = Math.random();   // новая раскладка при каждом открытии поля
+  const world = document.getElementById('plan-world');
+  world.style.width = PF_W + 'px';
+  world.style.height = PF_H + 'px';
+  const glow = document.getElementById('plan-glow');
+  if (glow){ glow.style.width = PF_W + 'px'; glow.style.height = PF_H + 'px'; g
