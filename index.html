@@ -10368,7 +10368,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v332 · 29.08.2026 пустая срочная новость больше не рисует красную рамку';
+const APP_BUILD = 'v333 · 29.08.2026 пустые новости не рисуют ни рамку, ни пустую строку';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11319,9 +11319,13 @@ async function loadNews() {
       : [];
     const hasReplies = Array.isArray(supportReplies) && supportReplies.length > 0;
 
-    const hasCommon = news.common_text && news.common_text.trim();
+    /* ⚠️ ТА ЖЕ ПРОВЕРКА, ЧТО И У СРОЧНОЙ. 29.08.2026: срочную починили, а
+       обычную пропустили — и запись из одного «<br>» осталась висеть пустой
+       строкой в «Обновлениях клуба». Один класс ошибки живёт в нескольких
+       местах: правим все разом. */
+    const hasCommon = hasVisibleText(news.common_text);
     const hasUrgent = urgent && hasVisibleText(urgent.text);
-    const hasTargeted = isMember && (news.targeted || []).length > 0;
+    const hasTargeted = isMember && (news.targeted || []).some(t => hasVisibleText(t.text));
 
     if (!hasCommon && !hasUrgent && !hasTargeted && !hasReplies && !liteRemindDue()) {
       el.style.display = 'none';
@@ -11391,7 +11395,7 @@ async function loadNews() {
       const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
       const key = cfg ? cfg.key : null;
       const isListMember = key && listMembership && listMembership[key] === 'True';
-      if (isListMember) {
+      if (isListMember && hasVisibleText(t.text)) {
         targetedHtml += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
       }
     });
