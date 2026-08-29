@@ -10368,7 +10368,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v331 · 29.08.2026 масштаб поля под букет, перспектива на карте плана';
+const APP_BUILD = 'v332 · 29.08.2026 пустая срочная новость больше не рисует красную рамку';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11320,7 +11320,7 @@ async function loadNews() {
     const hasReplies = Array.isArray(supportReplies) && supportReplies.length > 0;
 
     const hasCommon = news.common_text && news.common_text.trim();
-    const hasUrgent = urgent && urgent.text && urgent.text.trim();
+    const hasUrgent = urgent && hasVisibleText(urgent.text);
     const hasTargeted = isMember && (news.targeted || []).length > 0;
 
     if (!hasCommon && !hasUrgent && !hasTargeted && !hasReplies && !liteRemindDue()) {
@@ -23069,7 +23069,7 @@ function loadUrgentNewsForWebEntry(){
   fetch(`${API_URL}/news/urgent`)
     .then(r => r.json())
     .then(data => {
-      if (data && data.text && data.text.trim()) {
+      if (data && hasVisibleText(data.text)) {
         var el = document.getElementById('web-urgent-news-banner');
         el.textContent = data.text;
         // Показываем только если login-screen уже открыт
@@ -24042,7 +24042,7 @@ async function proceedToWebLogin(){
   var wrbShow = document.getElementById('web-requisites-bar');
   if (wrbShow) wrbShow.style.display = '';
   var ubn = document.getElementById('web-urgent-news-banner');
-  if (ubn && ubn.textContent) ubn.style.display = 'block';
+  if (ubn && hasVisibleText(ubn.textContent)) ubn.style.display = 'block';
   renderLoginStage();
 }
 
@@ -25051,6 +25051,18 @@ let godMap = {};
 
 /* Текст описаний Denis пишет руками в дашборде, и туда легко попадёт символ,
    который иначе уедет в разметку. Экранируем и в текст, и в атрибуты */
+/* ⚠️ 29.08.2026: ПУСТОТА БЫВАЕТ НЕ ТОЛЬКО ПРОБЕЛАМИ. В базе лежала срочная
+   новость из одного «<br>»: проверка trim() её пропускала, текст уходил в
+   innerHTML — и на главной висела голая красная рамка без единого слова.
+   Судим по тому, что человек УВИДИТ: снимаем теги и служебные пробелы. */
+function hasVisibleText(s){
+  if (s == null) return false;
+  var t = String(s).replace(/<[^>]*>/g, ' ');
+  t = t.replace(/&nbsp;/gi, ' ').replace(/&#160;/g, ' ').replace(/\u00a0/g, ' ');
+  t = t.replace(/&[a-zA-Z#0-9]{2,8};/g, '');
+  return t.trim().length > 0;
+}
+
 function escapeHtml(s){
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
