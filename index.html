@@ -10364,7 +10364,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v328 · 28.08.2026 реестр ссылок с параметром';
+const APP_BUILD = 'v329 · 29.08.2026 поле выбора тем + живая сверка доступа в ВК';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16275,11 +16275,33 @@ function runOnbNote(key){
   const n = ONB_NOTES.find(function(x){ return x.key === key; });
   if (n) n.go();
 }
+/* ⚠️⚠️ СТРОКА ПРО ВК СНАЧАЛА СВЕРЯЕТСЯ С САМИМ ВК. Отметка `vk_access_granted`
+   в карточке ставится ТОЛЬКО когда доступ выдало приложение нашим механизмом с
+   токеном. Все, кто попал в группу старой ботовой схемой Salebot — а это почти
+   все, кто покупал до появления аппа, — числятся «без доступа», и строка честно
+   гнала их получать то, что у них давно есть. У ворот на видео живая сверка
+   была, у строки — нет: один и тот же вопрос решался в двух местах по-разному.
+   Спрашиваем ОДИН раз за сессию и только у тех, у кого отметки нет. */
+let vkNoteChecked = false;
+async function vkNoteVerify(){
+  if (vkNoteChecked || !telegramId || !isMember || vkAccessGranted) return;
+  vkNoteChecked = true;
+  try {
+    const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}&fresh=1`);
+    const d = await r.json();
+    if (d && d.found && d.in_group){
+      vkAccessGranted = true;
+      renderOnbNotes();
+    }
+  } catch (e) {}
+}
+
 function renderOnbNotes(){
   const box = document.getElementById('onb-notes');
   if (!box) return;
   // Пока идёт знакомство — молчим: у человека уже есть окно, которое им руководит
   if (!isMember || onbActive || !tourDone){ box.innerHTML = ''; return; }
+  vkNoteVerify();   // сверка идёт в фоне: строка исчезнет сама, если доступ есть
   const rows = ONB_NOTES.filter(function(n){
     try { return !onbNoteHidden(n.key) && n.when(); } catch (e) { return false; }
   });
@@ -18946,6 +18968,51 @@ function pfRelax(list, roots, meta){
     if (idx !== -1) ref[k] = { par: par, i: idx, n: all.length, child: kids.indexOf(k) !== -1 };
   });
 
+  /* ⚠️⚠️ ДЛИНА ПОВОДКА — ГЕОМЕТРИЯ, А НЕ ЧИСЛО ИЗ ГОЛОВЫ. Прежняя формула
+     считала кольцо по ширине ОДНОЙ капсулы, помноженной на число братьев:
+     у направления с десятком длинных тем («Как перестать продавать по
+     скриптам» — под 380px) кольцо выходило заведомо теснее, чем братья
+     физически занимают, и поводок вдавливал их друг в друга — расталкивание
+     разводило, а он тут же стягивал обратно. Считаем ОДИН раз на родителя и
+     по НАСТОЯЩИМ ширинам всех братьев: длина окружности = сумма ширин с
+     зазорами и амплитудой парения, плюс запас 8%. И отдельно — чтобы букет
+     не сел на самого родителя. */
+  /* ⚠️⚠️ ГЕОМЕТРИЯ БУКЕТА СЧИТАЕТСЯ ОДИН РАЗ НА РОДИТЕЛЯ — и ею пользуются
+     ОБА места: и раскладка веера, и поводок. Прежняя формула брала ширину
+     ОДНОЙ капсулы, множила на число братьев и делила на полную окружность —
+     хотя веер занимает не круг, а дугу в 200°, и подписи у тем разной длины
+     («Как перестать продавать по скриптам» — под 380px). Кольцо выходило
+     вдвое теснее нужного, и капсулы физически не могли не наехать. */
+  const bouquet = {};
+  list.forEach(function(k){
+    const r = ref[k];
+    if (!r || bouquet[r.par]) return;
+    const sibs = pfChildren(r.par).concat(pfRelated(r.par)).filter(function(x){
+      return list.indexOf(x) !== -1;
+    });
+    let need = 0, widest = 0;
+    const span = {};
+    sibs.forEach(function(x){
+      const sx = pfSizes[x] || {w:150,h:42};
+      const sd = pfSeed(x);
+      // место капсулы на дуге: своя ширина + зазор + ход парения обеих сторон
+      const w = sx.w + PF_GAP_IN + Math.max(sd.dx, sd.dy) * 2;
+      span[x] = { at: need + w / 2, w: w };
+      need += w;
+      if (sx.w > widest) widest = sx.w;
+    });
+    // Размах веера: узкий букет раскрывается лепестком, широкий — почти кругом
+    const spread = Math.min(320, 46 * Math.max(1, sibs.length)) * Math.PI / 180;
+    const ps = pfSizes[r.par] || {w:150,h:42};
+    // Букет не должен садиться на самого родителя
+    const near = (ps.w + widest) / 2 + PF_GAP_IN + (pfIsPhaseKey(r.par) ? PF_ROOT_PAD : 0);
+    // Радиус кольца: нужная длина дуги, поделённая на её угол, плюс запас 8%
+    const R = Math.max(128, near, need / spread * 1.08);
+    bouquet[r.par] = { R: R, spread: spread, need: need, span: span };
+  });
+  const leashOf = {};
+  Object.keys(bouquet).forEach(function(p){ leashOf[p] = bouquet[p].R * 1.2; });
+
   // Какая ветка сейчас в работе: та, к которой относится последняя нажатая тема
   const focusCl = pfFocus ? (cl[pfFocus] || pfCluster(pfFocus)) : null;
   const anyOpen = roots.some(function(k){ return planDraft.expanded.indexOf(k) !== -1; });
@@ -18970,7 +19037,7 @@ function pfRelax(list, roots, meta){
   roots.forEach(function(k, i){
     const a = (i / roots.length) * Math.PI * 2 - Math.PI/2 + ringSpin;
     const open = planDraft.expanded.indexOf(k) !== -1;
-    let r = open ? PF_ROOT_R + PF_ROOT_OPEN : PF_ROOT_R;
+    let r = open ? PF_ROOT_R + PF_ROOT_OPEN + (bouquet[k] ? bouquet[k].R * 0.45 : 0) : PF_ROOT_R;
     if (anyOpen && !open && focusCl) r += PF_PUSH_AWAY;
     r += (pfSaltedRand(k, 1) - 0.5) * 40;   // ±20px
     /* Потолок радиуса ДЕЙСТВУЕТ ТОЛЬКО НА СТАРТЕ. Как только ветка раскрыта,
@@ -18995,13 +19062,24 @@ function pfRelax(list, roots, meta){
     const ph = home[r.par] || pfPos[r.par];
     const pcx = ph.x + ps.w/2, pcy = ph.y + ps.h/2;
     const outward = Math.atan2(pcy - PF_CY, pcx - PF_CX) || 0;
-    const spread = Math.min(200, 46 * r.n) * Math.PI / 180;
-    const t = r.n <= 1 ? 0 : (r.i / (r.n - 1)) - 0.5;
+    const bq = bouquet[r.par];
+    const spread = bq ? bq.spread : Math.min(200, 46 * r.n) * Math.PI / 180;
+    /* ⚠️ МЕСТО НА ДУГЕ — ПО ШИРИНЕ, А НЕ ПО НОМЕРУ. Равные углы дают равные
+       хорды, а капсулы разной длины: длинной не хватало места, короткой
+       оставалось лишнее — и наезжали ровно длинные пары */
+    const t = (bq && bq.span[k] && bq.need > 0)
+      ? (bq.span[k].at / bq.need) - 0.5
+      : (r.n <= 1 ? 0 : (r.i / (r.n - 1)) - 0.5);
     // Джиттер угла держим узким (±12°) и НЕ трогаем порядок (t остаётся тем же
     // самым) — иначе букет иногда раскрывался бы в уже занятое место
     const jitter = (pfSaltedRand(k, 2) - 0.5) * (12 * Math.PI / 180);
     const ang = outward + t * spread + jitter;
-    const dist = 128 + (r.child ? 0 : 16) + (pfSaltedRand(k, 3) - 0.5) * 20;
+    /* Радиус веера — тот же, что посчитан для букета: ставим капсулы сразу на
+       кольцо, где они помещаются. Раньше здесь стояло 128px на все случаи, и
+       пружина весь прогон тянула десяток тем в одну кучу — расталкивание
+       разгребало, а к концу проходов куча оставалась */
+    const ringR = bq ? bq.R : (128 + (r.child ? 0 : 16));
+    const dist = ringR + (pfSaltedRand(k, 3) - 0.5) * 20;
     home[k] = { x: pcx + Math.cos(ang)*dist - s.w/2, y: pcy + Math.sin(ang)*dist - s.h/2 };
   });
 
@@ -19065,6 +19143,29 @@ function pfRelax(list, roots, meta){
     });
     }
 
+    /* ⚠️⚠️ ПОВОДОК ИДЁТ ДО РАСТАЛКИВАНИЯ И МОЛЧИТ В ЧИСТОВЫХ ПРОХОДАХ.
+       Он держит букет у родителя ([stated] Denis 20.08: «элементы всё ещё
+       улетают… у нас ещё есть соседние»), но это ЖЁСТКИЙ зажим: стоя ПОСЛЕ
+       расталкивания, он отменял его работу — капсулы разводились и тут же
+       стягивались обратно на одну окружность, друг на друга. Та же ошибка,
+       что была со сплочением: последним в проходе должно идти разведение,
+       иначе зазор не выживает. Теперь поводок работает только пока
+       `it < ITER`, а последние проходы чистые — за них капсула отходит от
+       родителя ровно настолько, насколько нужно, чтобы не наехать. */
+    if (it < ITER) list.forEach(function(k){
+      const r = ref[k];
+      if (!r || !pfPos[r.par]) return;
+      const s = pfSizes[k] || {w:150,h:42};
+      const leash = leashOf[r.par] || PF_KID_LEASH;
+      const dx = cx(k) - cx(r.par), dy = cy(k) - cy(r.par);
+      const d = Math.hypot(dx, dy);
+      if (d > leash && d > 0.5){
+        const f = leash / d;
+        pfPos[k].x = cx(r.par) + dx * f - s.w/2;
+        pfPos[k].y = cy(r.par) + dy * f - s.h/2;
+      }
+    });
+
     for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
       const a = list[i], b = list[j];
       const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
@@ -19124,36 +19225,40 @@ function pfRelax(list, roots, meta){
       }
     }
 
-    /* ⚠️⚠️ ПОВОДОК ДЕРЖИТ ВЕСЬ БУКЕТ, А НЕ ТОЛЬКО НОВОРОЖДЁННЫХ. Первая версия
-       ограничивала только свежие капсулы — а [stated] Denis 20.08: «элементы
-       всё ещё улетают, возможно ты редактировал только дочерние темы, а у нас
-       ещё есть соседние». Расталкивание — цепочка: капсулу, появившуюся ходом
-       раньше, уносит от её темы точно так же. Держим у родителя ЛЮБОГО, у кого
-       родитель известен, — и детей, и соседей.
-       ⚠️ ДЛИНА ПОВОДКА СЧИТАЕТСЯ ОТ ЧИСЛА БРАТЬЕВ: шесть капсул по 230px
-       физически не помещаются на окружность радиусом 210 — жёсткий поводок
-       начал бы вдавливать их друг в друга. Берём максимум из заданного и
-       того, что нужно геометрически */
-    list.forEach(function(k){
-      const r = ref[k];
-      if (!r || !pfPos[r.par]) return;
-      const s = pfSizes[k] || {w:150,h:42};
-      const need = (r.n || 1) * ((s.w + PF_GAP_IN) / (2 * Math.PI));
-      const leash = Math.max(PF_KID_LEASH, need);
-      const dx = cx(k) - cx(r.par), dy = cy(k) - cy(r.par);
-      const d = Math.hypot(dx, dy);
-      if (d > leash && d > 0.5){
-        const f = leash / d;
-        pfPos[k].x = cx(r.par) + dx * f - s.w/2;
-        pfPos[k].y = cy(r.par) + dy * f - s.h/2;
-      }
-    });
-
     list.forEach(function(k){
       const s = pfSizes[k] || {w:150,h:42};
       pfPos[k].x = Math.max(30, Math.min(PF_W - s.w - 30, pfPos[k].x));
       pfPos[k].y = Math.max(140, Math.min(PF_H - s.h - 40, pfPos[k].y));
     });
+  }
+
+  /* ⚠️ ПОСЛЕДНЯЯ СЕТКА БЕЗОПАСНОСТИ: красивый зазор — вопрос вкуса, а НАЕЗД —
+     всегда брак. В плотной ветке решатель изредка оставляет одну пару друг на
+     друге: развести её на полный «облачный» зазор мешают соседи, а вот на
+     несколько пикселей — места хватает всегда. Эти проходы работают ТОЛЬКО по
+     настоящим пересечениям и двигают обе капсулы на минимум. */
+  for (let pass = 0; pass < 40; pass++){
+    let fixed = 0;
+    for (let i = 0; i < list.length; i++) for (let j = i+1; j < list.length; j++){
+      const a = list[i], b = list[j];
+      const sa = pfSizes[a] || {w:150,h:42}, sb = pfSizes[b] || {w:150,h:42};
+      const sda = pfSeed(a), sdb = pfSeed(b);
+      const pad = 8 + Math.max(sda.dx, sda.dy) + Math.max(sdb.dx, sdb.dy);
+      let dx = cx(b) - cx(a), dy = cy(b) - cy(a);
+      const ox = (sa.w + sb.w)/2 + pad - Math.abs(dx);
+      const oy = (sa.h + sb.h)/2 + pad - Math.abs(dy);
+      if (ox <= 0 || oy <= 0) continue;
+      fixed++;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5){ dx = 1; dy = 0; }
+      if (ox < oy){
+        const st = (dx >= 0 ? 1 : -1) * ox / 2;
+        pfPos[a].x -= st; pfPos[b].x += st;
+      } else {
+        const st = (dy >= 0 ? 1 : -1) * oy / 2;
+        pfPos[a].y -= st; pfPos[b].y += st;
+      }
+    }
+    if (!fixed) break;
   }
 
 }
@@ -20630,7 +20735,7 @@ function startLiveWatch(){
 async function vkAccessFresh(){
   if (!telegramId) return vkAccessGranted;
   try {
-    const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}`);
+    const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}&fresh=1`);
     const d = await r.json();
     if (d && d.found) vkAccessGranted = !!d.in_group;
   } catch (e) {}
