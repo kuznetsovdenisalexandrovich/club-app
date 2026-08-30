@@ -474,6 +474,9 @@ html.onb-swap .view.active{opacity:0}
 .cal-month-label{font-family:var(--disp);font-weight:700;font-size:14.5px}
 .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10.5px;font-weight:700;color:var(--text-faint);margin-bottom:8px;letter-spacing:.02em}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+/* Точка дня с записью — тёплая, как кнопки занятий: «тут есть что посмотреть»
+   читается тем же цветом, что и в библиотеке */
+.cal-day-dot.rec{background:var(--warm)}
 .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;font-size:12.5px;font-weight:600;color:var(--text-faint);position:relative}
 .cal-day.in-month{color:var(--text-dim);cursor:default}
 .cal-day.has-events{background:var(--card2);color:var(--text);cursor:pointer}
@@ -6186,12 +6189,17 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     <div class="card" id="schedule-calendar-card" style="padding:16px">
       <div class="cal-header">
-        <button class="icon-btn" onclick="calShiftMonth(-1)">‹</button>
+        <button class="icon-btn" id="cal-prev-btn" onclick="calShiftMonth(-1)">‹</button>
         <div class="cal-month-label" id="cal-month-label">—</div>
         <button class="icon-btn" onclick="calShiftMonth(1)">›</button>
       </div>
       <div class="cal-weekdays"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
       <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="section-label" id="recent-rec-label" style="display:none">Последние записи</div>
+    <div class="card" id="recent-rec-card" style="display:none;padding:6px 12px">
+      <div id="recent-rec-list"></div>
     </div>
 
     <div class="section-label" id="notif-section">Уведомления</div>
@@ -6980,6 +6988,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <button class="icon-btn" onclick="closeSchedPopup()">✕</button>
     </div>
     <div id="sched-popup-events"></div>
+      <div id="sched-popup-recs"></div>
   </div>
 </div>
 
@@ -10414,7 +10423,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v336 · 29.08.2026 заглушка вместо чёрного экрана плеера и замер его запуска';
+const APP_BUILD = 'v337 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -21223,6 +21232,79 @@ const TODAY_MONTH = today.getMonth() + 1; // виджет на портале в
 let calDaysData = {};         // "YYYY-MM-DD" -> [events], для полного навигируемого вида
 let widgetDaysData = {};      // "YYYY-MM-DD" -> [events], всегда текущий месяц, для виджета на портале
 let popupDayEvents = [];
+
+/* ═══ ФОНОТЕКА: ПРОШЛОЕ РАСПИСАНИЯ КАК ВХОД В БИБЛИОТЕКУ ═══════════════════
+   [stated] Denis 30.08: «календарь можно использовать как дополнительный вход
+   в библиотеку, связывать прошлые даты с записями занятий».
+
+   ⚠️ ПОКАЗЫВАЕМ ТОЛЬКО ДНИ С ПРИВЯЗАННОЙ ЗАПИСЬЮ — так решено сознательно.
+   В расписании за год накопились тесты, отменённые эфиры и разовые кампании;
+   чистить их вручную не надо, фильтром служит сам факт привязки. Сервер
+   отдаёт уже отфильтрованное, здесь мы это только рисуем.
+
+   ⚠️ КАРТОЧКУ ОТКРЫВАЕТ ТА ЖЕ ДВЕРЬ, что и библиотека: `showSingleLecture`
+   рисует обычную карточку со всеми родными кнопками, а ворота доступа висят
+   на них. Своей ссылки на занятие фонотека не отдаёт — иначе появилась бы
+   шестая точка выдачи мимо ворот, а мы эту беду уже ловили.                */
+let archiveDays = {};      // "YYYY-MM-DD" -> [записи]
+let archiveRecent = [];    // последние записи по убыванию даты — для плейлиста
+let archiveLoaded = false;
+
+/* ⚠️ ПРЕДЕЛ ЛИСТАНИЯ НАЗАД. [stated] Denis: «крутящимся назад на месяца три».
+   В анализаторе предела нет намеренно — там Denis привязывает старые записи,
+   и потолок мешал бы. Здесь потолок к месту: дальше человеку незачем. */
+const CAL_BACK_MONTHS = 3;
+
+async function loadScheduleArchive(){
+  if (archiveLoaded) return;
+  try {
+    const r = await fetch(`${API_URL}/schedule/archive?months=${CAL_BACK_MONTHS}`);
+    const data = await r.json();
+    archiveDays = data.days || {};
+    archiveRecent = data.recent || [];
+    archiveLoaded = true;
+    renderRecentRecordings();
+    /* Сетка уже могла отрисоваться до ответа — перерисуем, чтобы дни с
+       записями получили свою метку. Без этого метка появлялась бы только
+       после листания месяца */
+    if (document.getElementById('cal-grid').dataset.loadedOnce){
+      renderCalendarGrid('cal-grid', calYear, calMonth, calDaysData, activeCategories);
+    loadScheduleArchive();
+    }
+  } catch(e){ /* фонотека — украшение, без неё расписание работает как прежде */ }
+}
+
+function renderRecentRecordings(){
+  const card = document.getElementById('recent-rec-card');
+  const listEl = document.getElementById('recent-rec-list');
+  const label = document.getElementById('recent-rec-label');
+  if (!card || !listEl) return;
+  if (!archiveRecent.length){ card.style.display = 'none'; if (label) label.style.display = 'none'; return; }
+  card.style.display = '';
+  if (label) label.style.display = '';
+  listEl.innerHTML = archiveRecent.map(r => {
+    const [y,m,d] = r.date.split('-').map(Number);
+    return `<div class="list-item" style="cursor:pointer" onclick="openArchiveLecture('${safeContentKey(r.slug)}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;line-height:1.35">${r.title}</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:3px">
+          ${d} ${MONTHS_GEN[m-1]}${r.duration_minutes ? ' · ' + r.duration_minutes + ' мин' : ''}${r.has_audio ? ' · есть аудио' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Открыть занятие из фонотеки. Библиотека могла ещё не грузиться — по вкладке
+   расписания человек мог зайти сразу, минуя «Что посмотреть» */
+async function openArchiveLecture(key){
+  if (!isMember) { openPaywall(); return; }
+  if (typeof ensureLibrary === 'function') await ensureLibrary();
+  const lec = lectureBySafeKey(key);
+  if (!lec) return;
+  closeSchedPopup();
+  showSingleLecture(lec);
+}
 let activeCategories = null; // Set — какие категории сейчас показываются в полном виде расписания (null = ещё не инициализировано)
 let knownCategories = new Set(); // все когда-либо увиденные категории, чтобы новые сразу были включены в фильтр
 
@@ -21230,10 +21312,27 @@ function pad2(n){ return n < 10 ? '0'+n : ''+n; }
 function todayStr(){ return `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`; }
 
 function calShiftMonth(delta){
-  calMonth += delta;
-  if (calMonth < 1) { calMonth = 12; calYear--; }
-  if (calMonth > 12) { calMonth = 1; calYear++; }
+  let y = calYear, m = calMonth + delta;
+  if (m < 1) { m = 12; y--; }
+  if (m > 12) { m = 1; y++; }
+  /* ⚠️ ГЛУБЖЕ ТРЁХ МЕСЯЦЕВ НЕ ПУСКАЕМ. Считаем в месяцах от текущего, а не
+     вычитанием дат: разница дат на границе месяцев даёт то 89, то 92 дня, и
+     потолок гулял бы туда-сюда в зависимости от того, какой сейчас месяц */
+  const назад = (TODAY_YEAR * 12 + TODAY_MONTH) - (y * 12 + m);
+  if (назад > CAL_BACK_MONTHS) return;
+  calYear = y; calMonth = m;
   loadCalendarMonth();
+  updateCalNavState();
+}
+
+/* Стрелка назад гаснет на пределе — упереться молча хуже, чем видеть край */
+function updateCalNavState(){
+  const btn = document.getElementById('cal-prev-btn');
+  if (!btn) return;
+  let y = calYear, m = calMonth - 1;
+  if (m < 1) { m = 12; y--; }
+  const назад = (TODAY_YEAR * 12 + TODAY_MONTH) - (y * 12 + m);
+  btn.style.opacity = назад > CAL_BACK_MONTHS ? '.3' : '';
 }
 
 /* Скелет календаря — число ячеек ИЗВЕСТНО заранее (дни месяца плюс отступ
@@ -21338,12 +21437,19 @@ function renderCalendarGrid(targetId, year, month, daysData, filterSet){
     const dateStr = `${year}-${pad2(month)}-${pad2(d)}`;
     const dayEvents = daysData[dateStr] || [];
     const visible = filterSet ? dayEvents.filter(e => !e.category || filterSet.has(e.category)) : dayEvents;
+    /* ⚠️ ЗАПИСИ НЕ ПОДЧИНЯЮТСЯ ФИЛЬТРУ КАТЕГОРИЙ. Фильтр — про то, какие ВСТРЕЧИ
+       человек хочет видеть в планах; отфильтровав категорию, он не просил
+       прятать фонотеку. Иначе запись стала бы недостижимой из-за галочки,
+       поставленной совсем по другому поводу */
+    const recs = archiveDays[dateStr] || [];
     const hasEvents = visible.length > 0;
+    const hasRecs = recs.length > 0;
     const isToday = dateStr === tStr;
-    const cls = ['cal-day', 'in-month', hasEvents ? 'has-events' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
+    const cls = ['cal-day', 'in-month', (hasEvents || hasRecs) ? 'has-events' : '', hasRecs ? 'has-rec' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
     const cats = [...new Set(visible.map(e => e.category || ''))].slice(0, 3);
-    const dots = cats.map(c => `<span class="cal-day-dot" style="background:${categoryColor(c)}"></span>`).join('');
-    html += `<div class="${cls}" ${hasEvents ? `onclick="openDayPopup('${dateStr}')"` : ''}>${d}<span class="cal-day-dots">${dots}</span></div>`;
+    let dots = cats.map(c => `<span class="cal-day-dot" style="background:${categoryColor(c)}"></span>`).join('');
+    if (hasRecs && cats.length < 3) dots += '<span class="cal-day-dot rec"></span>';
+    html += `<div class="${cls}" ${(hasEvents || hasRecs) ? `onclick="openDayPopup('${dateStr}')"` : ''}>${d}<span class="cal-day-dots">${dots}</span></div>`;
   }
   gridEl.innerHTML = html;
 }
@@ -21374,6 +21480,20 @@ function openDayPopup(dateStr){
       ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn${isMember?'':' locked'}" onclick="isMember ? openUrl(popupDayEvents[${i}].link) : openPaywall()">${isMember?'':'🔒 '}Перейти</button></div>` : ''}
       ${!isMember ? `<div style="margin-top:8px;text-align:center"><span style="font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline" onclick="openPaywall()">Попасть на занятие</span></div>` : ''}
     </div>`).join('');
+  /* Записи с этого дня — отдельным блоком под встречами. Их может не быть
+     вовсе (будущий день), могут быть без встречи в списке (категория
+     отфильтрована), и обе ситуации нормальны */
+  const recs = archiveDays[dateStr] || [];
+  const recEl = document.getElementById('sched-popup-recs');
+  if (recEl){
+    recEl.innerHTML = !recs.length ? '' : (
+      `<div class="section-label" style="margin:14px 0 8px">${recs.length === 1 ? 'Запись занятия' : 'Записи занятия'}</div>` +
+      recs.map(r => `<div class="sched-event-item" style="border-left:3px solid var(--warm);cursor:pointer" onclick="openArchiveLecture('${safeContentKey(r.slug)}')">
+        <div class="sched-event-title">${r.title}</div>
+        <div class="sched-event-desc">${[r.duration_minutes ? r.duration_minutes + ' мин' : '', r.has_audio ? 'есть аудио' : '', r.has_insights ? 'есть главные идеи' : ''].filter(Boolean).join(' · ') || 'открыть карточку'}</div>
+      </div>`).join('')
+    );
+  }
   document.getElementById('sched-popup-overlay').classList.add('open');
 }
 
