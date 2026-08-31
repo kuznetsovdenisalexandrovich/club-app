@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v337 -->
+<!-- FILE_VERSION: index-v338 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5622,6 +5622,14 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 
     </div><!-- /coll -->
 
+    <div class="hblock" data-block="digest" style="display:none">
+    <div class="section-label">Дайджест</div>
+    <div class="card" id="digest-card" data-slug="" onclick="openDigestFromHome()" style="cursor:pointer">
+      <div style="font-weight:700;font-size:15px" id="digest-card-title">—</div>
+      <div style="font-size:12.5px;color:var(--text-dim);margin-top:4px" id="digest-card-sub"></div>
+    </div>
+    </div><!-- /digest -->
+
     <div class="hblock" data-block="schedule">
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
       <span>Расписание</span>
@@ -9554,6 +9562,135 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
    он уводит человека из знакомства целиком, а не на один экран */
 .tile.onb-locked{opacity:.45}
 
+
+/* ══ ДАЙДЖЕСТ ═══════════════════════════════════════════════════════════
+   Полосы выпуска на весь экран, вертикальное листание с прилипанием.
+
+   ⚠️ СВОЙ ЯЗЫК, ИЗОЛИРОВАННЫЙ ОТ ПРИЛОЖЕНИЯ. Палитра взята у буклета выжимки
+   (бумага, чернила, охра) и объявлена ЛОКАЛЬНО на слое: приложение живёт в
+   своей теме, а выпуск читается как журнал в обеих. Все правила начинаются с
+   `.dgs`, теговых селекторов здесь нет — чужая разметка внутри приложения уже
+   один раз слиплась на глобальном правиле для `header`.
+
+   ⚠️ ВЫСОТА ПОЛОСЫ РЕЗИНОВАЯ, А НЕ 810×1080. В файле лист жёсткий, потому что
+   его снимают кадром; на экране жёсткие пиксели дали бы поля по краям на одних
+   телефонах и обрезку на других. Формат держит только ПОРЯДОК и состав. */
+
+.dgs-overlay{
+  position:fixed;inset:0;z-index:872;display:none;
+  overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  scroll-snap-type:y mandatory;
+  --dgs-paper:#EDE7DA; --dgs-ink:#14110D; --dgs-ochre:#A8431E; --dgs-ochre-d:#E2762F;
+  background:var(--dgs-paper);color:var(--dgs-ink);
+  font-family:inherit;
+}
+.dgs-overlay.open{display:block}
+
+.dgs-page{
+  position:relative;isolation:isolate;
+  min-height:100dvh;scroll-snap-align:start;
+  display:flex;flex-direction:column;
+  padding:calc(var(--safe-top, 0px) + 44px) 22px calc(env(safe-area-inset-bottom, 0px) + 34px);
+  background:var(--dgs-paper);color:var(--dgs-ink);
+}
+.dgs-page.dark{background:var(--dgs-ink);color:var(--dgs-paper)}
+
+.dgs-close{
+  position:fixed;top:calc(var(--safe-top, 0px) + 12px);right:14px;
+  width:34px;height:34px;border-radius:50%;
+  border:1px solid rgba(20,17,13,.25);background:rgba(237,231,218,.9);color:#14110D;
+  font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  z-index:3;
+}
+/* Счётчик полос вместо полосы прокрутки: у прилипающего листания её всё равно
+   не видно, а понимать, сколько ещё осталось, человеку нужно */
+.dgs-count{
+  position:fixed;top:calc(var(--safe-top, 0px) + 20px);left:16px;z-index:3;
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
+  font-variant-numeric:tabular-nums;pointer-events:none;
+}
+
+.dgs-top{
+  display:flex;justify-content:space-between;gap:14px;
+  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  padding-bottom:12px;border-bottom:2px solid var(--dgs-ink);
+}
+.dgs-page.dark .dgs-top{border-bottom-color:var(--dgs-paper)}
+.dgs-top .dgs-accent{color:var(--dgs-ochre);white-space:nowrap}
+.dgs-page.dark .dgs-top .dgs-accent{color:var(--dgs-ochre-d)}
+
+.dgs-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.dgs-body.dgs-center{justify-content:center}
+.dgs-foot{
+  margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;gap:14px;
+  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.45;
+}
+.dgs-rule{margin-top:20px;width:74px;height:6px;background:var(--dgs-ochre)}
+.dgs-page.dark .dgs-rule{background:var(--dgs-ochre-d)}
+
+.dgs-h1{margin:20px 0 0;font-weight:800;font-size:38px;line-height:1.02;letter-spacing:-.03em;text-wrap:pretty}
+.dgs-h2{margin:0;font-size:22px;font-weight:700;line-height:1.2;letter-spacing:-.02em}
+.dgs-month{margin-top:14px;font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dgs-ochre-d)}
+.dgs-counts{margin-top:auto;display:flex;gap:30px}
+.dgs-counts b{display:block;font-weight:800;font-size:40px;line-height:.9;letter-spacing:-.04em}
+.dgs-counts span{display:block;margin-top:6px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.55}
+
+.dgs-serif{font-family:Georgia,'Times New Roman',serif}
+.dgs-column{margin-top:22px;font-size:17px;line-height:1.55}
+.dgs-column p{margin:0 0 14px}
+
+.dgs-toc{margin-top:20px}
+.dgs-toc .dgs-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  padding:11px 0;border-bottom:1px solid rgba(20,17,13,.16);font-size:15px;cursor:pointer}
+.dgs-toc .dgs-row b{font-weight:700;font-variant-numeric:tabular-nums}
+
+.dgs-rows{margin-top:22px;display:flex;flex-direction:column;gap:20px}
+.dgs-when{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dgs-ochre)}
+.dgs-page.dark .dgs-when{color:var(--dgs-ochre-d)}
+.dgs-text{margin-top:7px;font-size:14px;line-height:1.5;opacity:.72}
+.dgs-line{margin-top:9px;padding-left:14px;border-left:3px solid var(--dgs-ochre);
+  font-size:15px;line-height:1.42}
+/* Ссылка текстом с подчёркиванием; настоящие кнопки — только на настоящие
+   действия, иначе полоса превращается в панель управления */
+.dgs-link{display:inline-block;margin-top:9px;margin-right:16px;font-size:14px;font-weight:600;
+  color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+.dgs-thought{margin:0;font-size:26px;line-height:1.36;letter-spacing:-.01em;text-wrap:pretty}
+.dgs-note{margin-top:18px;padding-left:14px;border-left:3px solid var(--dgs-ochre);
+  font-size:13px;line-height:1.45;opacity:.62}
+.dgs-page.dark .dgs-note{border-left-color:var(--dgs-ochre-d)}
+.dgs-bignum{position:absolute;z-index:-1;right:-10px;bottom:64px;
+  font-weight:800;font-size:170px;line-height:.75;letter-spacing:-.06em;
+  color:transparent;-webkit-text-stroke:1px rgba(20,17,13,.16)}
+.dgs-page.dark .dgs-bignum{-webkit-text-stroke-color:rgba(237,231,218,.18)}
+
+.dgs-ins{margin-top:20px;display:flex;flex-direction:column;gap:16px}
+.dgs-ins .dgs-i{display:flex;gap:14px;align-items:baseline}
+.dgs-ins .dgs-n{font-weight:800;font-size:24px;line-height:.9;color:var(--dgs-ochre);min-width:30px}
+.dgs-ins .dgs-t{font-size:16px;line-height:1.42}
+.dgs-tc{margin-left:8px;font-size:11px;letter-spacing:.08em;opacity:.5;white-space:nowrap}
+.dgs-more{margin-top:16px;font-size:13px;opacity:.55}
+
+.dgs-q{font-size:19px;line-height:1.36;margin-bottom:10px}
+.dgs-a{font-size:15px;line-height:1.5;padding-left:14px;border-left:3px solid var(--dgs-ochre)}
+.dgs-page.dark .dgs-a{border-left-color:var(--dgs-ochre-d)}
+
+.dgs-quote{margin:0;font-size:32px;line-height:1.16;letter-spacing:-.02em;font-weight:400}
+.dgs-qmark{font-size:70px;line-height:.5;color:var(--dgs-ochre-d);margin-bottom:22px}
+
+/* Врезка ничего о себе не сообщает: это воздух между полосами, а не рубрика */
+.dgs-vrezka{margin-top:24px;padding:16px 18px;border:1px solid rgba(20,17,13,.18);border-radius:14px;
+  font-size:15px;line-height:1.45}
+.dgs-page.dark .dgs-vrezka{border-color:rgba(237,231,218,.22)}
+
+/* Полка выпусков и пустой ответ живут на том же слое, но обычным экраном:
+   листать нечего, пока номер не выбран */
+.dgs-shelf{padding:calc(var(--safe-top, 0px) + 54px) 22px calc(env(safe-area-inset-bottom, 0px) + 30px);
+  min-height:100dvh}
+.dgs-shelf-item{display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+  padding:15px 0;border-bottom:1px solid rgba(20,17,13,.16);cursor:pointer}
+.dgs-shelf-item .dgs-sub{font-size:11.5px;opacity:.55;margin-top:3px}
+
 </style>
 
 <!-- ⚠️ ВРЕМЕННОЕ: полоса отката на старый сервер, удаляется вместе с переключателем -->
@@ -9748,6 +9885,13 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 <div class="quiz-overlay" id="quiz-overlay">
   <button class="quiz-close" onclick="closeQuiz()">✕</button>
   <div class="quiz-inner" id="quiz-inner"></div>
+</div>
+
+<!-- ═══ ДАЙДЖЕСТ ═══ полосы выпуска, состав целиком приходит с сервера ═══ -->
+<div class="dgs-overlay" id="dgs">
+  <button class="dgs-close" onclick="closeDigest()" aria-label="Закрыть">✕</button>
+  <div class="dgs-count" id="dgs-count"></div>
+  <div id="dgs-pages"></div>
 </div>
 
 <!-- ═══ PR-HTML-START ═══ метка для стенда pack-lab.html, НЕ УДАЛЯТЬ ═══ -->
@@ -10424,7 +10568,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v337 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v338 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -10672,7 +10816,7 @@ async function refreshApp() {
   btn.classList.add('spinning');
   listMembership = null;
   try {
-    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadWidgetMonth(), loadSavedSlugs()]);
+    await Promise.all([loadProfile(), loadNews(), loadContinueWidget(), loadWidgetMonth(), loadSavedSlugs(), loadDigestBlock()]);
     if (document.getElementById('view-schedule').classList.contains('active')) {
       await loadCalendarMonth();
       await loadNotifications();
@@ -12326,12 +12470,13 @@ const HOME_BLOCKS = [
   { key:'news',     name:'Обновления клуба' },
   { key:'continue', name:'Продолжить' },
   { key:'coll',     name:'Коллекция' },
+  { key:'digest',   name:'Дайджест' },
   { key:'schedule', name:'Расписание' },
   { key:'menu',     name:'Меню', noHide:true },
   { key:'plan',     name:'Твой личный план', from:'library', fromName:'Что посмотреть' },
   { key:'streams',  name:'Потоки',           from:'library', fromName:'Что посмотреть' },
 ];
-const HOME_DEFAULT = ['news','continue','coll','schedule','menu'];
+const HOME_DEFAULT = ['news','digest','continue','coll','schedule','menu'];
 const LIB_DEFAULT  = ['plan','streams'];
 const HOME_PREFS_KEY = 'club_home_layout';
 const HOME_PREFS_V = 1;
@@ -13322,7 +13467,23 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    i — важный (идёт в раздел, а не в общий список), t — сам текст.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const APP_TEXTS = {  'games.howto_h': { c:'Игры', l:'Заголовок «как устроено»', w:'Попап', i:false, t:'Как устроены игры' },
+const APP_TEXTS = {
+  'digest.title':        { c:'Дайджест', l:'Название выпуска по умолчанию', w:'Экран выпуска', i:true,  t:'Дайджест клуба' },
+  'digest.card_sub':     { c:'Дайджест', l:'Подпись карточки на главной', w:'Главная', i:true,  t:'Весь месяц клуба за пару минут · {n} полос' },
+  'digest.shelf_h':      { c:'Дайджест', l:'Заголовок полки выпусков', w:'Полка', i:false, t:'Выпуски' },
+  'digest.toc':          { c:'Дайджест', l:'Заголовок содержания', w:'Экран выпуска', i:false, t:'Что внутри' },
+  'digest.column':       { c:'Дайджест', l:'Заголовок колонки ведущего', w:'Экран выпуска', i:false, t:'От ведущего' },
+  'digest.to_lecture':   { c:'Дайджест', l:'Ссылка на занятие', w:'Экран выпуска', i:false, t:'Открыть занятие' },
+  'digest.listen':       { c:'Дайджест', l:'Ссылка на ответ в записи', w:'Экран выпуска', i:false, t:'Послушать ответ' },
+  'digest.more':         { c:'Дайджест', l:'Сколько мыслей осталось в выжимке', w:'Экран выпуска', i:false, t:'Ещё {n} — в полной выжимке занятия' },
+  'digest.lesson_foot':  { c:'Дайджест', l:'Колонтитул полосы выжимки', w:'Экран выпуска', i:false, t:'Выжимка' },
+  'digest.final':        { c:'Дайджест', l:'Текст финальной полосы', w:'Экран выпуска', i:false, t:'Это был месяц клуба' },
+  'digest.back':         { c:'Дайджест', l:'Ссылка возврата с финала', w:'Экран выпуска', i:false, t:'Вернуться в клуб' },
+  'digest.loading':      { c:'Дайджест', l:'Пока выпуск грузится', w:'Экран выпуска', i:false, t:'Собираю выпуск…' },
+  'digest.loading_missed':{c:'Дайджест', l:'Пока грузится «что я пропустил»', w:'Экран выпуска', i:false, t:'Смотрю, что ты пропустил…' },
+  'digest.empty':        { c:'Дайджест', l:'Когда выпусков ещё нет', w:'Экран выпуска', i:true,  t:'Первый выпуск ещё готовится' },
+  'digest.fail':         { c:'Дайджест', l:'Когда выпуск не загрузился', w:'Экран выпуска', i:false, t:'Выпуск не загрузился. Попробуй ещё раз чуть позже' },
+  'games.howto_h': { c:'Игры', l:'Заголовок «как устроено»', w:'Попап', i:false, t:'Как устроены игры' },
   'games.howto_p': { c:'Игры', l:'Текст «как устроено»', w:'Попап', i:false, t:'Ты переписываешься с клиентом, которого играет модель. Арбитр наверху следит за разговором и двигает шкалу после каждого твоего хода. Выиграть можно раньше пяти ходов — если сформулируешь удачно с первого раза.' },
   'games.too_long': { c:'Игры', l:'Предупреждение о длине ответа', w:'Экран партии', i:false, t:'Лучше отвечай коротко' },
   'games.note_open': { c:'Игры', l:'Кнопка «показать разбор хода»', w:'Экран партии', i:false, t:'Разбор хода' },
@@ -16895,6 +17056,9 @@ const DEEPLINKS = {
   'about':       { go: () => switchView('club-info'),     guests: true  },
   'library':     { go: () => switchView('library'),       guests: true  },
   'watch':       { go: () => switchView('library'),       guests: true  },
+  /* Выпуск открыт всем: это способ ввести человека в курс дела, а не награда */
+  'digest':      { go: () => openDigestShelf(),           guests: true  },
+  'missed':      { go: () => openDigestMissed(),          guests: true  },
   'magazine':    { go: () => openMagazine(),              guests: true  },
   'bonuses':     { go: () => switchView('portal'),        guests: true  },
   /* Страница «Пригласить друга» — [stated] Denis 18.08: ссылку на неё он ставит
@@ -23240,7 +23404,7 @@ function startApp(){
   const SPLASH_CAP = 1600;
   const boot = Promise.allSettled([
     loadAppSettings(), loadProfile(), loadContinueWidget(), loadNews(),
-    loadWidgetMonth(), loadSavedSlugs(), loadCards(), loadRaffle(),
+    loadWidgetMonth(), loadSavedSlugs(), loadCards(), loadRaffle(), loadDigestBlock(),
   ]);
   // Эфир СОЗНАТЕЛЬНО вне boot: заставка не должна ждать ответа про трансляцию.
   // Блок появится сам, когда придёт ответ — на 99% запусков эфира нет
@@ -30424,6 +30588,322 @@ function ggKeyboardFollow(){
 /* Знак бога ставим и при обычном запуске — отдельно от init(), потому что тот
    ветвится (просмотр глазами / MAX / ВК / Telegram / веб) и половина веток
    возвращается раньше. Профиль потом вызовет applyGodSign ещё раз. */
+
+/* ═══ ДАЙДЖЕСТ ═══════════════════════════════════════════════════════════
+   Выпуск клуба полосами. Состав целиком приходит с сервера
+   (`/digest/issue/<ключ>` или `/digest/missed`) — здесь только вёрстка.
+   Одна и та же сборка питает этот экран и файл, поэтому разойтись по
+   содержанию они не могут.
+
+   ⚠️ БЕСПЛАТНО И ОТКРЫТО СРАЗУ, проверок доступа тут нет намеренно: выпуск —
+   способ растопить человека и ввести в курс дела, а не награда за уровень.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+let dgsPages = [];
+let dgsMode  = '';
+
+function dgsOpenLayer(){
+  const ov = document.getElementById('dgs');
+  if (!ov) return null;
+  hideSplash();            // человек мог прийти по ссылке, минуя оболочку
+  ov.classList.add('open');
+  ov.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+  return ov;
+}
+function closeDigest(){
+  const ov = document.getElementById('dgs');
+  if (ov) ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function dgsLoading(текст){
+  const ov = dgsOpenLayer();
+  if (!ov) return;
+  document.getElementById('dgs-count').textContent = '';
+  document.getElementById('dgs-pages').innerHTML =
+    '<div class="dgs-page"><div class="dgs-body dgs-center" style="text-align:center;opacity:.6">'
+    + escapeHtml(текст) + '</div></div>';
+}
+
+/* Полка выпусков. Архив открыт целиком: у старых участников есть привычка
+   оставаться, а свежему человеку прошлый номер работает витриной клуба. */
+async function openDigestShelf(){
+  dgsMode = 'shelf';
+  dgsLoading(t('digest.loading'));
+  try {
+    const rows = await apiRequest(API_URL + '/digest/issues');
+    if (!rows || !rows.length){ dgsEmpty(t('digest.empty')); return; }
+    if (rows.length === 1){ openDigest(rows[0].slug); return; }
+    document.getElementById('dgs-count').textContent = '';
+    document.getElementById('dgs-pages').innerHTML =
+        '<div class="dgs-shelf">'
+      + '<div class="dgs-h1" style="font-size:30px;margin-top:0">' + escapeHtml(t('digest.shelf_h')) + '</div>'
+      + '<div class="dgs-rule"></div>'
+      + '<div style="margin-top:20px">'
+      + rows.map(function(r){
+          return '<div class="dgs-shelf-item" onclick="openDigest(' + jsArg(r.slug) + ')">'
+            + '<div><div class="dgs-h2">' + escapeHtml(r.title || r.slug) + '</div>'
+            + '<div class="dgs-sub">' + escapeHtml(dgsMonth(r.month)) + '</div></div>'
+            + '<b style="font-variant-numeric:tabular-nums;opacity:.5">' + (r.pages || '') + '</b>'
+            + '</div>';
+        }).join('')
+      + '</div></div>';
+  } catch(e){ dgsEmpty(t('digest.fail')); }
+}
+
+async function openDigest(slug){
+  dgsMode = 'issue';
+  dgsLoading(t('digest.loading'));
+  try {
+    const d = await apiRequest(API_URL + '/digest/issue/' + encodeURIComponent(slug));
+    dgsRender(d);
+    track('digest_open', String(slug).slice(0, 120));
+  } catch(e){ dgsEmpty(t('digest.fail')); }
+}
+
+/* «Что я пропустил» — тот же состав, границы личные. Их считает сервер по
+   последнему следу человека, а не по одному заходу в приложение: он мог всё
+   это время сидеть в ВК или смотреть записи. */
+async function openDigestMissed(){
+  dgsMode = 'missed';
+  dgsLoading(t('digest.loading_missed'));
+  try {
+    const url = API_URL + '/digest/missed' + (telegramId ? '?telegram_id=' + telegramId : '');
+    const d = await apiRequest(url);
+    dgsRender(d);
+    track('digest_missed', String((d && d.missed_days) || ''));
+  } catch(e){ dgsEmpty(t('digest.fail')); }
+}
+
+function dgsEmpty(текст){
+  dgsOpenLayer();
+  document.getElementById('dgs-count').textContent = '';
+  document.getElementById('dgs-pages').innerHTML =
+      '<div class="dgs-page"><div class="dgs-body dgs-center" style="text-align:center">'
+    + '<div class="dgs-h2" style="opacity:.75">' + escapeHtml(текст) + '</div>'
+    + '</div></div>';
+}
+
+function dgsMonth(iso){
+  const М = ['январь','февраль','март','апрель','май','июнь','июль',
+             'август','сентябрь','октябрь','ноябрь','декабрь'];
+  const p = String(iso || '').split('-');
+  if (p.length < 2) return '';
+  const n = parseInt(p[1], 10);
+  return (М[n - 1] || '') + ' ' + p[0];
+}
+function dgsDate(iso){
+  const М = ['января','февраля','марта','апреля','мая','июня','июля',
+             'августа','сентября','октября','ноября','декабря'];
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.getDate() + ' ' + М[d.getMonth()];
+}
+
+function dgsRender(d){
+  const ov = dgsOpenLayer();
+  if (!ov) return;
+  dgsPages = (d && d.pages) || [];
+  if (!dgsPages.length){ dgsEmpty(t('digest.empty')); return; }
+  let месяц = '';
+  for (let i = 0; i < dgsPages.length; i++){
+    if (dgsPages[i].month){ месяц = dgsMonth(dgsPages[i].month); break; }
+  }
+  if (!месяц && d.period) месяц = dgsDate(d.period.to);
+
+  document.getElementById('dgs-pages').innerHTML =
+    dgsPages.map(function(p){ return dgsPage(p, месяц); }).join('');
+  ov.scrollTop = 0;
+  dgsCount(1);
+  /* ⚠️ СЧЁТЧИК СЧИТАЕМ ОТ ПРОКРУТКИ СЛОЯ, А НЕ ОТ ПРИЛИПАНИЯ. У браузера нет
+     события «полоса прилипла», а IntersectionObserver на полноэкранных блоках
+     срабатывает дважды на границе. Деление высоты — ровно то же число и без
+     наблюдателей. */
+  ov.onscroll = function(){
+    const шаг = ov.clientHeight || 1;
+    dgsCount(Math.min(dgsPages.length, Math.floor(ov.scrollTop / шаг + 0.5) + 1));
+  };
+}
+function dgsCount(n){
+  const el = document.getElementById('dgs-count');
+  if (el) el.textContent = String(n).padStart(2, '0') + ' / ' + String(dgsPages.length).padStart(2, '0');
+}
+function dgsGoto(num){
+  const ov = document.getElementById('dgs');
+  if (ov) ov.scrollTo({ top: (num - 1) * ov.clientHeight, behavior: 'smooth' });
+}
+
+function dgsTop(рубрика, месяц){
+  return '<div class="dgs-top"><span>' + escapeHtml(рубрика || t('digest.title'))
+       + '</span><span class="dgs-accent">' + escapeHtml(месяц) + '</span></div>';
+}
+function dgsFoot(слева, num){
+  return '<div class="dgs-foot"><span>' + escapeHtml(слева || '')
+       + '</span><span>' + String(num).padStart(2, '0') + '</span></div>';
+}
+function dgsVrezka(p){
+  if (!p.vrezka) return '';
+  const текст = p.vrezka.text || p.vrezka.title || '';
+  if (!текст) return '';
+  return '<div class="dgs-vrezka">' + escapeHtml(текст) + '</div>';
+}
+
+/* Занятие открывается ШТАТНОЙ дверью приложения, а не ссылкой из состава:
+   у карточки лекции свои ворота доступа в канал, и обходить их из выпуска
+   значило бы раздавать закрытый контент по дайджесту. */
+function dgsOpenLecture(slug){
+  closeDigest();
+  if (typeof showSingleLecture === 'function') showSingleLecture(slug);
+  else switchView('library');
+}
+
+function dgsPage(p, месяц){
+  const тёмная = p.dark ? ' dark' : '';
+  const num = p.num || 0;
+  let тело = '';
+
+  if (p.layout === 'cover'){
+    const c = p.counts || {};
+    const пары = [['занятия', c['занятий']], ['идеи', c['идей']], ['записи', c['записей']]];
+    тело = '<div class="dgs-body">'
+      + '<div class="dgs-h1">' + escapeHtml(p.title || t('digest.title')) + '</div>'
+      + '<div class="dgs-rule"></div>'
+      + '<div class="dgs-month">' + escapeHtml(месяц) + '</div>'
+      + '<div class="dgs-counts">'
+      + пары.filter(function(x){ return Number(x[1]) > 0; }).map(function(x){
+          return '<div><b>' + Number(x[1]) + '</b><span>' + escapeHtml(x[0]) + '</span></div>';
+        }).join('')
+      + '</div></div>';
+
+  } else if (p.layout === 'column'){
+    тело = '<div class="dgs-body">'
+      + '<div class="dgs-h1" style="font-size:30px">' + escapeHtml(p.title || t('digest.column')) + '</div>'
+      + '<div class="dgs-rule"></div>'
+      + '<div class="dgs-column dgs-serif">'
+      + String(p.text || '').split(/\n\s*\n/).filter(Boolean)
+          .map(function(k){ return '<p>' + escapeHtml(k) + '</p>'; }).join('')
+      + '</div></div>' + dgsFoot(p.rubric, num);
+
+  } else if (p.layout === 'toc'){
+    тело = '<div class="dgs-body">'
+      + '<div class="dgs-h1" style="font-size:30px">' + escapeHtml(t('digest.toc')) + '</div>'
+      + '<div class="dgs-rule"></div><div class="dgs-toc">'
+      + (p.items || []).map(function(r){
+          return '<div class="dgs-row" onclick="dgsGoto(' + Number(r.num) + ')"><span>'
+            + escapeHtml(r.rubric || '') + '</span><b>' + String(r.num).padStart(2, '0') + '</b></div>';
+        }).join('')
+      + '</div></div>' + dgsFoot('', num);
+
+  } else if (p.layout === 'idea'){
+    const подпись = [p.lecture, p.timecode].filter(Boolean).join(' · ');
+    тело = '<div class="dgs-bignum">' + String(num).padStart(2, '0') + '</div>'
+      + '<div class="dgs-body dgs-center">'
+      + '<div class="dgs-thought dgs-serif">' + escapeHtml(p.text || p.title || '') + '</div>'
+      + (подпись ? '<div class="dgs-note">' + escapeHtml(подпись) + '</div>' : '')
+      + (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
+                  + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+      + '</div>' + dgsFoot(p.rubric, num);
+
+  } else if (p.layout === 'lesson'){
+    тело = '<div class="dgs-body">'
+      + '<div class="dgs-h1" style="font-size:26px">' + escapeHtml(p.title || '') + '</div>'
+      + '<div class="dgs-rule"></div><div class="dgs-ins">'
+      + (p.items || []).map(function(ins, i){
+          return '<div class="dgs-i"><div class="dgs-n">' + String(i + 1).padStart(2, '0') + '</div>'
+            + '<div class="dgs-t dgs-serif">' + escapeHtml(ins.text || '')
+            + (ins.timecode ? '<span class="dgs-tc">' + escapeHtml(ins.timecode) + '</span>' : '')
+            + '</div></div>';
+        }).join('')
+      + '</div>'
+      + (p.more ? '<div class="dgs-more">' + escapeHtml(tf('digest.more', { n: p.more })) + '</div>' : '')
+      + (p.phrase ? '<div class="dgs-note dgs-serif">' + escapeHtml(p.phrase) + '</div>' : '')
+      + (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
+                  + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+      + '</div>' + dgsFoot(t('digest.lesson_foot'), num);
+
+  } else if (p.layout === 'qa'){
+    тело = '<div class="dgs-body">'
+      + '<div class="dgs-h1" style="font-size:28px">' + escapeHtml(p.rubric || '') + '</div>'
+      + '<div class="dgs-rule"></div><div style="margin-top:20px;display:flex;flex-direction:column;gap:24px">'
+      + (p.items || []).map(function(it){
+          const m = it.meta || {};
+          const ссылки = (it.links || []).filter(function(l){ return l.url; });
+          return '<div><div class="dgs-q dgs-serif">' + escapeHtml(m.question || it.title || '') + '</div>'
+            + (it.text ? '<div class="dgs-a">' + escapeHtml(it.text) + '</div>' : '')
+            + ссылки.map(function(l){
+                return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
+                  + escapeHtml(l.label || t('digest.listen')) + '</a>';
+              }).join('')
+            + '</div>';
+        }).join('')
+      + '</div></div>' + dgsVrezka(p) + dgsFoot(p.rubric, num);
+
+  } else if (p.layout === 'final'){
+    const текст = p.text || p.title || t('digest.final');
+    тело = '<div class="dgs-body dgs-center">'
+      + '<div class="dgs-qmark dgs-serif">«</div>'
+      + '<div class="dgs-quote dgs-serif">' + escapeHtml(текст) + '</div>'
+      + '<div class="dgs-rule"></div>'
+      + '<div class="dgs-link" onclick="closeDigest()">' + escapeHtml(t('digest.back')) + '</div>'
+      + '</div>';
+
+  } else {
+    /* Перечни: афиша, новости, библиотека, расписание — одна вёрстка.
+       ⚠️ Незнакомая вёрстка попадает СЮДА, а не пропадает: роды заводятся в
+       дашборде и появятся в составе раньше, чем здесь. */
+    тело = '<div class="dgs-body">'
+      + '<div class="dgs-h1" style="font-size:28px">' + escapeHtml(p.rubric || '') + '</div>'
+      + '<div class="dgs-rule"></div><div class="dgs-rows">'
+      + (p.items || []).map(function(it){
+          const m = it.meta || {};
+          let когда = dgsDate(it.date);
+          if (p.layout === 'schedule' && m.time) когда = (когда + ', ' + m.time).replace(/^, /, '');
+          else if (m.duration) когда = (когда + ' · ' + m.duration + ' мин').replace(/^ · /, '');
+          const строка = it.insight || {};
+          const внешние = (it.links || []).filter(function(l){ return l.url; });
+          return '<div>'
+            + (когда ? '<div class="dgs-when">' + escapeHtml(когда) + '</div>' : '')
+            + '<div class="dgs-h2" style="margin-top:6px">' + escapeHtml(it.title || '') + '</div>'
+            + (it.text ? '<div class="dgs-text">' + escapeHtml(it.text) + '</div>' : '')
+            + (строка.text ? '<div class="dgs-line dgs-serif">' + escapeHtml(строка.text) + '</div>' : '')
+            + (m.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(m.slug) + ')">'
+                        + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+            + внешние.map(function(l){
+                return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
+                  + escapeHtml(l.label || '') + '</a>';
+              }).join('')
+            + '</div>';
+        }).join('')
+      + '</div></div>' + dgsVrezka(p) + dgsFoot(p.rubric, num);
+  }
+
+  return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric, месяц) + тело + '</div>';
+}
+
+/* Блок на главной. ⚠️ Показываем ТОЛЬКО когда есть что открыть: пустая
+   карточка «дайджеста пока нет» занимает первый экран и ничего не сообщает. */
+async function loadDigestBlock(){
+  const карточка = document.getElementById('digest-card');
+  const блок = document.querySelector('.hblock[data-block="digest"]');
+  if (!карточка || !блок) return;
+  try {
+    const rows = await apiRequest(API_URL + '/digest/issues');
+    if (!rows || !rows.length){ блок.style.display = 'none'; return; }
+    const свежий = rows[0];
+    блок.style.display = '';
+    карточка.setAttribute('data-slug', свежий.slug);
+    document.getElementById('digest-card-title').textContent = свежий.title || t('digest.title');
+    document.getElementById('digest-card-sub').textContent = tf('digest.card_sub', { n: свежий.pages || 0 });
+  } catch(e){ блок.style.display = 'none'; }
+}
+function openDigestFromHome(){
+  const карточка = document.getElementById('digest-card');
+  const slug = карточка ? карточка.getAttribute('data-slug') : '';
+  if (slug) openDigest(slug); else openDigestShelf();
+}
+
 (function(){
   function go(){ try { applyGodSign(); } catch(e){} }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
