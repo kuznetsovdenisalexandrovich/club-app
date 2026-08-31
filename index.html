@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v338 -->
+<!-- FILE_VERSION: index-v339 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10568,7 +10568,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v338 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v339 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -30628,11 +30628,15 @@ function dgsLoading(текст){
 
 /* Полка выпусков. Архив открыт целиком: у старых участников есть привычка
    оставаться, а свежему человеку прошлый номер работает витриной клуба. */
+/* Пока выпуск закрыт от публики, сервер по этому айди узнаёт тестировщика.
+   Открытому дайджесту хвост безразличен — он просто не читается. */
+function dgsWho(){ return telegramId ? '?telegram_id=' + telegramId : ''; }
+
 async function openDigestShelf(){
   dgsMode = 'shelf';
   dgsLoading(t('digest.loading'));
   try {
-    const rows = await apiRequest(API_URL + '/digest/issues');
+    const rows = await apiRequest(API_URL + '/digest/issues' + dgsWho());
     if (!rows || !rows.length){ dgsEmpty(t('digest.empty')); return; }
     if (rows.length === 1){ openDigest(rows[0].slug); return; }
     document.getElementById('dgs-count').textContent = '';
@@ -30656,7 +30660,7 @@ async function openDigest(slug){
   dgsMode = 'issue';
   dgsLoading(t('digest.loading'));
   try {
-    const d = await apiRequest(API_URL + '/digest/issue/' + encodeURIComponent(slug));
+    const d = await apiRequest(API_URL + '/digest/issue/' + encodeURIComponent(slug) + dgsWho());
     dgsRender(d);
     track('digest_open', String(slug).slice(0, 120));
   } catch(e){ dgsEmpty(t('digest.fail')); }
@@ -30889,7 +30893,7 @@ async function loadDigestBlock(){
   const блок = document.querySelector('.hblock[data-block="digest"]');
   if (!карточка || !блок) return;
   try {
-    const rows = await apiRequest(API_URL + '/digest/issues');
+    const rows = await apiRequest(API_URL + '/digest/issues' + dgsWho());
     if (!rows || !rows.length){ блок.style.display = 'none'; return; }
     const свежий = rows[0];
     блок.style.display = '';
