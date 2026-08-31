@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v339 -->
+<!-- FILE_VERSION: index-v340 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5594,7 +5594,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div class="hblock" data-block="news">
     <div class="news-header" id="news-header" style="display:none">
       <div class="section-label" style="margin:0">Обновления клуба</div>
-      <button class="notif-btn-small" onclick="openNotificationsSection()">Уведомления</button>
+      <span style="display:flex;gap:8px;align-items:center">
+        <button class="notif-btn-small" onclick="openFeed()">Все обновления</button>
+        <button class="notif-btn-small" onclick="openNotificationsSection()">Уведомления</button>
+      </span>
     </div>
     <div class="card" id="news-card" style="display:none"></div>
     </div><!-- /news -->
@@ -10568,7 +10571,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v339 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v340 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11579,7 +11582,10 @@ async function loadNews() {
       const sameText = hasUrgent && hasCommon
         && urgent.text.trim() === news.common_text.trim();
       if (hasCommon && !sameText) {
-        html += `<div class="news-block">${news.common_text}</div>`;
+        /* ⚠️ КЛИКАБЕЛЬНА ТОЛЬКО ОБЩАЯ НОВОСТЬ. Ответы поддержки и срочная
+           плашка живут в той же карточке и имеют свои кнопки — повесив
+           обработчик на карточку целиком, мы перехватывали бы их нажатия. */
+        html += `<div class="news-block" style="cursor:pointer" onclick="openFeed()">${news.common_text}</div>`;
       }
       return html;
     }
@@ -13482,6 +13488,9 @@ const APP_TEXTS = {
   'digest.loading':      { c:'Дайджест', l:'Пока выпуск грузится', w:'Экран выпуска', i:false, t:'Собираю выпуск…' },
   'digest.loading_missed':{c:'Дайджест', l:'Пока грузится «что я пропустил»', w:'Экран выпуска', i:false, t:'Смотрю, что ты пропустил…' },
   'digest.empty':        { c:'Дайджест', l:'Когда выпусков ещё нет', w:'Экран выпуска', i:true,  t:'Первый выпуск ещё готовится' },
+  'feed.title':          { c:'Дайджест', l:'Заголовок ленты обновлений', w:'Лента', i:true,  t:'Обновления клуба' },
+  'feed.empty':          { c:'Дайджест', l:'Когда в ленте пусто', w:'Лента', i:false, t:'Пока обновлений нет' },
+  'feed.open':           { c:'Дайджест', l:'Кнопка перехода из записи ленты', w:'Лента', i:false, t:'Открыть' },
   'digest.fail':         { c:'Дайджест', l:'Когда выпуск не загрузился', w:'Экран выпуска', i:false, t:'Выпуск не загрузился. Попробуй ещё раз чуть позже' },
   'games.howto_h': { c:'Игры', l:'Заголовок «как устроено»', w:'Попап', i:false, t:'Как устроены игры' },
   'games.howto_p': { c:'Игры', l:'Текст «как устроено»', w:'Попап', i:false, t:'Ты переписываешься с клиентом, которого играет модель. Арбитр наверху следит за разговором и двигает шкалу после каждого твоего хода. Выиграть можно раньше пяти ходов — если сформулируешь удачно с первого раза.' },
@@ -30884,6 +30893,57 @@ function dgsPage(p, месяц){
   }
 
   return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric, месяц) + тело + '</div>';
+}
+
+/* ЛЕНТА ОБНОВЛЕНИЙ — то же хранилище, что у выпуска, другой отбор и другая
+   вёрстка. Полос и выжимок тут нет: это журнал клуба, а не номер.
+
+   ⚠️ ЧТО ПОКАЗЫВАТЬ, РЕШАЕТ СЕРВЕР ПО РОДУ ЗАПИСИ. Приложение не фильтрует
+   ничего само — иначе правило «что видят люди» жило бы в двух местах и
+   разошлось бы при первой же новой рубрике. */
+async function openFeed(){
+  dgsMode = 'feed';
+  dgsLoading(t('digest.loading'));
+  try {
+    const d = await apiRequest(API_URL + '/digest/feed' + (dgsWho() || '?') + '&days=180');
+    const items = (d && d.items) || [];
+    if (!items.length){ dgsEmpty(t('feed.empty')); return; }
+    document.getElementById('dgs-count').textContent = '';
+    document.getElementById('dgs-pages').innerHTML =
+        '<div class="dgs-shelf">'
+      + '<div class="dgs-h1" style="font-size:30px;margin-top:0">' + escapeHtml(t('feed.title')) + '</div>'
+      + '<div class="dgs-rule"></div>'
+      + '<div class="dgs-rows" style="margin-top:24px">'
+      + items.map(function(it){
+          const внешние = (it.links || []).filter(function(l){ return l.url; });
+          return '<div>'
+            + '<div class="dgs-when">' + escapeHtml(dgsDate(it.date) + ' · ' + (it.rubric || '')) + '</div>'
+            + '<div class="dgs-h2" style="margin-top:6px">' + escapeHtml(it.title || '') + '</div>'
+            + (it.text ? '<div class="dgs-text">' + escapeHtml(it.text) + '</div>' : '')
+            + (it.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(it.slug) + ')">'
+                         + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+            + (it.route ? '<div class="dgs-link" onclick="feedGo(' + jsArg(it.route) + ')">'
+                         + escapeHtml(t('feed.open')) + '</div>' : '')
+            + внешние.map(function(l){
+                return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
+                  + escapeHtml(l.label || t('feed.open')) + '</a>';
+              }).join('')
+            + '</div>';
+        }).join('')
+      + '</div></div>';
+    track('feed_open', String(items.length));
+  } catch(e){ dgsEmpty(t('digest.fail')); }
+}
+
+/* Переход внутрь приложения по ключу маршрута из записи. ⚠️ ИДЁМ ЧЕРЕЗ ОБЩУЮ
+   ТАБЛИЦУ `DEEPLINKS`, а не своим списком: маршруты уже описаны там один раз,
+   вместе с тем, кому они открыты. Незнакомый ключ просто ничего не делает —
+   это лучше, чем увести человека на пустой экран. */
+function feedGo(route){
+  const цель = DEEPLINKS[route];
+  if (!цель) return;
+  closeDigest();
+  setTimeout(function(){ try { цель.go(); } catch(e){} }, 60);
 }
 
 /* Блок на главной. ⚠️ Показываем ТОЛЬКО когда есть что открыть: пустая
