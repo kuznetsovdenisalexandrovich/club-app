@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v342 -->
+<!-- FILE_VERSION: index-v343 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10633,7 +10633,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v342 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v343 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17984,7 +17984,7 @@ function lecCardHtml(l, i, src){
     : `playLecture(${i},${jsArg(src)})`;
   return `
     <div class="lec-card fade-rise">
-      <img class="lec-thumb" src="images/lectures/${l.slug}.jpg" alt="" loading="lazy" onerror="this.remove()">
+      <img class="lec-thumb" src="${(l.image_url||'').trim() || ('images/lectures/' + l.slug + '.jpg')}" alt="" loading="lazy" onerror="this.remove()">
       <div class="lec-card-top">
         <div class="lec-title">${l.title}</div>
         <button class="save-btn${isSaved ? ' saved' : ''}" data-slug="${l.slug}" onclick="event.stopPropagation();toggleSaved('${l.slug}')" aria-label="Смотреть позже">${SAVE_ICON}</button>
@@ -30847,10 +30847,18 @@ const DGS_ART = ['', 'b', 'c'];
 /* ⚠️ ОРНАМЕНТ ВЫБИРАЕТСЯ ПО НОМЕРУ ПОЛОСЫ, А НЕ ПО СОДЕРЖАНИЮ: рисунок
    абстрактный, подбирать его «по смыслу» текста значило бы обещать связь,
    которой нет. Чередование даёт разнообразие и ничего не выдумывает. */
-function dgsArt(i, кл, подпись){
+function dgsArt(i, кл, подпись, картинка){
+  /* ⚠️ ПРАВИЛО ОДНО НА ВЕСЬ ВЫПУСК: есть картинка — рисуем её, нет — орнамент.
+     Пустых рамок и заглушек «фото скоро» не бывает: полоса выглядит законченной
+     независимо от того, дошли ли руки до иллюстраций. */
+  const tag = подпись ? '<div class="dgs-tag">' + escapeHtml(подпись) + '</div>' : '';
+  if (картинка){
+    return '<div class="dgs-art ' + кл + '" style="background:#2f3027">'
+      + '<img src="' + escapeHtml(картинка) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+      + tag + '</div>';
+  }
   const вид = DGS_ART[i % DGS_ART.length];
-  return '<div class="dgs-art ' + вид + ' ' + кл + '">'
-    + (подпись ? '<div class="dgs-tag">' + escapeHtml(подпись) + '</div>' : '') + '</div>';
+  return '<div class="dgs-art ' + вид + ' ' + кл + '">' + tag + '</div>';
 }
 function dgsTop(рубрика, месяц){
   return '<div class="dgs-top"><span>' + escapeHtml(рубрика || t('digest.title'))
@@ -30908,7 +30916,7 @@ function dgsPage(p, месяц){
     if (c['идей'])    куски.push(c['идей'] + ' ' + dgsPlural(c['идей'], 'мысль', 'мысли', 'мыслей'));
     const подводка = куски.length ? ('Месяц клуба: ' + куски.join(', ') + '.') : 'Месяц клуба.';
     return '<div class="dgs-page dgs-cover dark">'
-      + dgsArt(num, 'dgs-full', '')
+      + dgsArt(num, 'dgs-full', '', p.image_url || '')
       + '<div class="dgs-veil"></div>'
       + '<div class="dgs-brand"><span>' + escapeHtml(t('digest.title')) + '</span><span>' + escapeHtml(месяц) + '</span></div>'
       + '<div class="dgs-cover-layer">'
@@ -30943,7 +30951,7 @@ function dgsPage(p, месяц){
     const подпись = [p.lecture, p.timecode].filter(Boolean).join(' · ');
     return '<div class="dgs-page ' + (p.dark ? 'dark' : 'dgs-tint') + '">'
       + dgsTop(p.rubric || '', месяц)
-      + dgsArt(num, 'dgs-band', t('digest.idea_tag'))
+      + dgsArt(num, 'dgs-band', t('digest.idea_tag'), p.image_url || '')
       + '<div class="dgs-body">'
       +   '<div class="dgs-rule"></div>'
       +   '<div class="dgs-kicker">' + escapeHtml(p.rubric || '') + '</div>'
@@ -31004,8 +31012,13 @@ function dgsPage(p, месяц){
     if (p.layout === 'schedule' && m.time) подпись = (m.time + ' · ' + подпись).replace(/ · $/, '');
     else if (m.duration) подпись = (m.duration + ' мин · ' + подпись).replace(/ · $/, '');
     const строка = it.insight || {};
+    const мини = it.image_url
+      ? '<div class="dgs-art" style="flex:0 0 64px;height:48px;border-radius:12px 3px 12px 3px">'
+        + '<img src="' + escapeHtml(it.image_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>'
+      : '';
     return '<div class="dgs-row">'
       + '<div class="dgs-date">' + escapeHtml(дм[0]) + '<span>' + escapeHtml(дм[1]) + '</span></div>'
+      + мини
       + '<div style="flex:1;min-width:0">'
       +   '<div class="dgs-t">' + escapeHtml(it.title || '') + '</div>'
       +   (подпись ? '<div class="dgs-s">' + escapeHtml(подпись) + '</div>' : '')
