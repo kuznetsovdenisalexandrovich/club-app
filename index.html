@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v340 -->
+<!-- FILE_VERSION: index-v341 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10571,7 +10571,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v340 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v341 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17848,8 +17848,9 @@ async function loadStreams() {
     await Promise.all([
       magazineData ? Promise.resolve() : loadMagazine(),
       bonusesData.length ? Promise.resolve() : loadBonuses(),
+      ensureDigestLatest(),
     ]);
-    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml();
+    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml() + digestTileHtml();
 
     const streams = await streamsPromise;
     el.insertAdjacentHTML('beforeend', streams.map(s => `
@@ -17861,7 +17862,7 @@ async function loadStreams() {
     `).join(''));
     el.dataset.loadedOnce = '1';
   } catch (e) {
-    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml();
+    el.innerHTML = watchLaterTile + bonusTilesHtml() + magazineTileHtml() + digestTileHtml();
     el.dataset.loadedOnce = '1';
   }
 }
@@ -24819,6 +24820,33 @@ function magazineTileHtml(){
     </div>`;
 }
 
+/* Плитка дайджеста в «Что посмотреть» — рядом с журналом, открывает тот же
+   полноэкранный стенд, что и карточка на главной.
+
+   ⚠️ ПЛИТКИ НЕТ, ПОКА НЕТ ВЫПУСКА. Пустая плитка «дайджест скоро» занимает то
+   же место, что живой поток, и обещает то, чего нельзя открыть.
+
+   ⚠️ ОБЛОЖКА НЕОБЯЗАТЕЛЬНА: у номера её может не быть, а картинка-пустышка в
+   сетке из настоящих обложек читается как поломка. Без обложки рисуем плитку в
+   манере «Смотреть позже» — знаком и подписью. */
+function digestTileHtml(){
+  if (!digestLatest) return '';
+  const cover = digestLatest.cover_url || '';
+  if (cover){
+    return `
+    <div class="stream-tile" onclick="openDigestFromHome()">
+      <img class="stream-tile-img" src="${escapeHtml(cover)}" alt=""
+           onerror="this.style.visibility='hidden'">
+      <div class="stream-tile-title">Дайджест</div>
+    </div>`;
+  }
+  return `
+    <div class="stream-tile watch-later-tile" onclick="openDigestFromHome()">
+      <svg class="watch-later-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"></path><path d="M8 9h8"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>
+      <div class="stream-tile-title">Дайджест</div>
+    </div>`;
+}
+
 function openMagazine(){
   if (!ensureBotAccess(openMagazine)) return;
   switchView('magazine');
@@ -30609,6 +30637,7 @@ function ggKeyboardFollow(){
    ═══════════════════════════════════════════════════════════════════════ */
 
 let dgsPages = [];
+let digestLatest = null;   // свежий выпуск: нужен и блоку главной, и плитке в «Что посмотреть»
 let dgsMode  = '';
 
 function dgsOpenLayer(){
@@ -30956,15 +30985,32 @@ async function loadDigestBlock(){
     const rows = await apiRequest(API_URL + '/digest/issues' + dgsWho());
     if (!rows || !rows.length){ блок.style.display = 'none'; return; }
     const свежий = rows[0];
+    // ⚠️ ЗАПОМИНАЕМ ЗДЕСЬ, а не спрашиваем второй раз при отрисовке потоков:
+    // полка уже загружена на старте, и второй запрос за тем же ответом добавил
+    // бы плитке задержку ровно там, где сетка обязана появляться целиком
+    digestLatest = свежий;
     блок.style.display = '';
     карточка.setAttribute('data-slug', свежий.slug);
     document.getElementById('digest-card-title').textContent = свежий.title || t('digest.title');
     document.getElementById('digest-card-sub').textContent = tf('digest.card_sub', { n: свежий.pages || 0 });
   } catch(e){ блок.style.display = 'none'; }
 }
+
+/* Плитка в «Что посмотреть» рисуется из того же `digestLatest`. Если человек
+   попал на вкладку раньше, чем ответила полка (или блок главной у него скрыт),
+   спрашиваем полку сами — один раз. */
+async function ensureDigestLatest(){
+  if (digestLatest) return;
+  try {
+    const rows = await apiRequest(API_URL + '/digest/issues' + dgsWho());
+    if (rows && rows.length) digestLatest = rows[0];
+  } catch(e){}
+}
+
 function openDigestFromHome(){
   const карточка = document.getElementById('digest-card');
-  const slug = карточка ? карточка.getAttribute('data-slug') : '';
+  const slug = (карточка && карточка.getAttribute('data-slug'))
+            || (digestLatest && digestLatest.slug) || '';
   if (slug) openDigest(slug); else openDigestShelf();
 }
 
