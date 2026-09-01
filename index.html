@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v341 -->
+<!-- FILE_VERSION: index-v342 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -9569,130 +9569,192 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 /* ══ ДАЙДЖЕСТ ═══════════════════════════════════════════════════════════
    Полосы выпуска на весь экран, вертикальное листание с прилипанием.
 
-   ⚠️ СВОЙ ЯЗЫК, ИЗОЛИРОВАННЫЙ ОТ ПРИЛОЖЕНИЯ. Палитра взята у буклета выжимки
-   (бумага, чернила, охра) и объявлена ЛОКАЛЬНО на слое: приложение живёт в
-   своей теме, а выпуск читается как журнал в обеих. Все правила начинаются с
-   `.dgs`, теговых селекторов здесь нет — чужая разметка внутри приложения уже
-   один раз слиплась на глобальном правиле для `header`.
+   ⚠️ АРТ-НУВО, ОДИН ЯЗЫК С ФАЙЛОМ (01.09.2026). Палитра, орнаменты и
+   типографика те же, что в `digest_tpl.html`: человек, открывший номер на
+   экране и скачавший его же файлом, должен видеть одно издание.
 
-   ⚠️ ВЫСОТА ПОЛОСЫ РЕЗИНОВАЯ, А НЕ 810×1080. В файле лист жёсткий, потому что
-   его снимают кадром; на экране жёсткие пиксели дали бы поля по краям на одних
-   телефонах и обрезку на других. Формат держит только ПОРЯДОК и состав. */
+   ⚠️ ОРНАМЕНТЫ — ВЕКТОР В СТИЛЯХ, А НЕ КАРТИНКИ. Пул иллюстраций не нужен,
+   ничего не грузится по сети, и рисунок не врёт про текст рядом.
+
+   ⚠️ СВОЙ ЯЗЫК, ИЗОЛИРОВАННЫЙ ОТ ПРИЛОЖЕНИЯ: палитра объявлена ЛОКАЛЬНО на
+   слое, все правила начинаются с `.dgs`, теговых селекторов нет — чужая
+   разметка внутри приложения уже один раз слиплась на глобальном `header`.
+
+   ⚠️ ВЫСОТА ПОЛОСЫ РЕЗИНОВАЯ, А НЕ 810×1080: в файле лист жёсткий, потому что
+   его снимают кадром; на экране жёсткие пиксели дали бы поля на одних
+   телефонах и обрезку на других. Формат держит порядок и состав, не размер. */
 
 .dgs-overlay{
   position:fixed;inset:0;z-index:872;display:none;
   overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   scroll-snap-type:y mandatory;
-  --dgs-paper:#EDE7DA; --dgs-ink:#14110D; --dgs-ochre:#A8431E; --dgs-ochre-d:#E2762F;
-  background:var(--dgs-paper);color:var(--dgs-ink);
-  font-family:inherit;
+  --dgs-paper:#f3eadb; --dgs-paper2:#e8decd; --dgs-ink:#211c18;
+  --dgs-soft:#5d5348; --dgs-mute:#8c8173; --dgs-night:#1d1d18;
+  --dgs-brass:#9a7d4d; --dgs-accent:#b75f4d; --dgs-olive:#596149;
+  --dgs-hair:rgba(33,28,24,.15);
+  background:var(--dgs-paper);color:var(--dgs-ink);font-family:inherit;
 }
 .dgs-overlay.open{display:block}
 
 .dgs-page{
-  position:relative;isolation:isolate;
-  min-height:100dvh;scroll-snap-align:start;
-  display:flex;flex-direction:column;
-  padding:calc(var(--safe-top, 0px) + 44px) 22px calc(env(safe-area-inset-bottom, 0px) + 34px);
-  background:var(--dgs-paper);color:var(--dgs-ink);
+  position:relative;isolation:isolate;overflow:hidden;
+  min-height:100dvh;scroll-snap-align:start;display:flex;flex-direction:column;
+  padding:calc(var(--safe-top, 0px) + 62px) 26px calc(env(safe-area-inset-bottom, 0px) + 54px);
+  background:
+    radial-gradient(120% 90% at 18% 0%,rgba(255,255,255,.30),transparent 44%),
+    var(--dgs-paper);
+  color:var(--dgs-ink);
 }
-.dgs-page.dark{background:var(--dgs-ink);color:var(--dgs-paper)}
+.dgs-page.dgs-tint{background:radial-gradient(120% 90% at 20% 0%,rgba(255,255,255,.22),transparent 46%),var(--dgs-paper2)}
+.dgs-page.dark{
+  color:var(--dgs-paper);
+  background:
+    radial-gradient(70% 52% at 86% 4%,rgba(154,125,77,.12),transparent 58%),
+    linear-gradient(155deg,#26261f,var(--dgs-night) 58%,#171713 100%);
+}
+.dgs-page>*{position:relative;z-index:2}
 
 .dgs-close{
   position:fixed;top:calc(var(--safe-top, 0px) + 12px);right:14px;
-  width:34px;height:34px;border-radius:50%;
-  border:1px solid rgba(20,17,13,.25);background:rgba(237,231,218,.9);color:#14110D;
+  width:34px;height:34px;border-radius:50%;z-index:3;
+  border:1px solid rgba(154,125,77,.45);background:rgba(243,234,219,.92);color:#211c18;
   font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  z-index:3;
 }
-/* Счётчик полос вместо полосы прокрутки: у прилипающего листания её всё равно
-   не видно, а понимать, сколько ещё осталось, человеку нужно */
+/* Счётчик полос вместо полосы прокрутки: у прилипающего листания её не видно,
+   а понимать, сколько осталось, человеку нужно */
 .dgs-count{
-  position:fixed;top:calc(var(--safe-top, 0px) + 20px);left:16px;z-index:3;
-  font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
+  position:fixed;top:calc(var(--safe-top, 0px) + 20px);left:20px;z-index:3;
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dgs-mute);
   font-variant-numeric:tabular-nums;pointer-events:none;
 }
 
-.dgs-top{
-  display:flex;justify-content:space-between;gap:14px;
-  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-  padding-bottom:12px;border-bottom:2px solid var(--dgs-ink);
+.dgs-top,.dgs-foot{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dgs-mute);
 }
-.dgs-page.dark .dgs-top{border-bottom-color:var(--dgs-paper)}
-.dgs-top .dgs-accent{color:var(--dgs-ochre);white-space:nowrap}
-.dgs-page.dark .dgs-top .dgs-accent{color:var(--dgs-ochre-d)}
-
+.dgs-top{font-weight:700;padding-bottom:12px;border-bottom:1px solid var(--dgs-hair)}
+.dgs-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--dgs-hair)}
+.dgs-page.dark .dgs-top,.dgs-page.dark .dgs-foot{color:rgba(243,234,219,.46);border-color:rgba(243,234,219,.16)}
+.dgs-top .dgs-accent{color:var(--dgs-accent)}
+.dgs-page.dark .dgs-top .dgs-accent{color:#d87863}
+.dgs-foot b{font-weight:700;font-variant-numeric:tabular-nums}
 .dgs-body{flex:1;min-height:0;display:flex;flex-direction:column}
-.dgs-body.dgs-center{justify-content:center}
-.dgs-foot{
-  margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;gap:14px;
-  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.45;
-}
-.dgs-rule{margin-top:20px;width:74px;height:6px;background:var(--dgs-ochre)}
-.dgs-page.dark .dgs-rule{background:var(--dgs-ochre-d)}
 
-.dgs-h1{margin:20px 0 0;font-weight:800;font-size:38px;line-height:1.02;letter-spacing:-.03em;text-wrap:pretty}
-.dgs-h2{margin:0;font-size:22px;font-weight:700;line-height:1.2;letter-spacing:-.02em}
-.dgs-month{margin-top:14px;font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dgs-ochre-d)}
-.dgs-counts{margin-top:auto;display:flex;gap:30px}
-.dgs-counts b{display:block;font-weight:800;font-size:40px;line-height:.9;letter-spacing:-.04em}
-.dgs-counts span{display:block;margin-top:6px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.55}
+/* линейка с кольцом — подпись макета, рисуется псевдоэлементами */
+.dgs-rule{width:76px;height:12px;margin:22px 0 14px;position:relative}
+.dgs-rule::before{content:'';position:absolute;left:0;right:0;top:5px;height:1px;background:var(--dgs-brass)}
+.dgs-rule::after{content:'';position:absolute;width:9px;height:9px;left:32px;top:1px;
+  border:1px solid var(--dgs-brass);border-radius:50%;background:var(--dgs-paper)}
+.dgs-tint .dgs-rule::after{background:var(--dgs-paper2)}
+.dgs-page.dark .dgs-rule::after{background:var(--dgs-night)}
 
+.dgs-kicker{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--dgs-accent)}
+.dgs-page.dark .dgs-kicker{color:#d87863}
+.dgs-h1{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:34px;
+  line-height:1.07;letter-spacing:-.035em;margin:10px 0 0;text-wrap:balance}
+.dgs-h1::after{content:'';display:block;width:46px;height:10px;margin-top:16px;opacity:.82;
+  background:no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24'><path d='M3 12h42c8 0 10-7 15-7s7 7 15 7h42' fill='none' stroke='%239a7d4d' stroke-width='2'/><circle cx='60' cy='5' r='2.8' fill='%23b75f4d'/></svg>")}
+.dgs-dek{font-size:14px;line-height:1.58;color:var(--dgs-soft);margin-top:14px}
+.dgs-page.dark .dgs-dek{color:rgba(243,234,219,.68)}
 .dgs-serif{font-family:Georgia,'Times New Roman',serif}
-.dgs-column{margin-top:22px;font-size:17px;line-height:1.55}
-.dgs-column p{margin:0 0 14px}
 
-.dgs-toc{margin-top:20px}
-.dgs-toc .dgs-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
-  padding:11px 0;border-bottom:1px solid rgba(20,17,13,.16);font-size:15px;cursor:pointer}
-.dgs-toc .dgs-row b{font-weight:700;font-variant-numeric:tabular-nums}
+/* орнамент: тихий декоративный слой, вектором */
+.dgs-art{position:relative;overflow:hidden;background:#2f3027;border:1px solid rgba(154,125,77,.28)}
+.dgs-art::before{content:'';position:absolute;inset:0;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><g fill='none' stroke='%23c2a879' stroke-width='3' opacity='.60'><circle cx='400' cy='258' r='168'/><circle cx='400' cy='258' r='126' opacity='.45'/><path d='M45 424C130 366 139 269 230 231c38-16 73-14 104-5M755 424C670 366 661 269 570 231c-38-16-73-14-104-5'/></g></svg>") center/cover no-repeat,
+    radial-gradient(110% 92% at 23% 18%,rgba(183,95,77,.62),transparent 56%),
+    radial-gradient(90% 82% at 78% 78%,rgba(89,97,73,.82),transparent 60%),
+    linear-gradient(160deg,#41382f,#23261f 72%)}
+.dgs-art.b::before{
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><g fill='none' stroke='%23d2b77f' stroke-width='3' opacity='.55'><path d='M-20 410C108 360 135 240 250 209c53-14 94-3 132 25M820 410C692 360 665 240 550 209c-53-14-94-3-132 25'/><circle cx='400' cy='214' r='115'/></g></svg>") center/cover no-repeat,
+    radial-gradient(100% 90% at 20% 80%,rgba(62,81,64,.96),transparent 62%),
+    linear-gradient(200deg,#3b4335,#171812 72%)}
+.dgs-art.c::before{
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><g fill='none' stroke='%238a6e45' stroke-width='3' opacity='.55'><ellipse cx='400' cy='250' rx='170' ry='170'/><path d='M230 250c-86 5-142 58-166 135M570 250c86 5 142 58 166 135'/></g></svg>") center/cover no-repeat,
+    radial-gradient(90% 95% at 82% 88%,rgba(152,82,61,.55),transparent 63%),
+    linear-gradient(150deg,#75634d,#312b23 76%)}
+.dgs-band{height:210px;margin:0 -26px 22px;border-radius:54% 54% 6px 6px/24% 24% 6px 6px}
+.dgs-strip{height:120px;margin:auto -26px 0;border-radius:6px 6px 52% 52%/6px 6px 22% 22%}
+.dgs-full{position:absolute;inset:0;border:0}
+.dgs-tag{position:absolute;left:16px;bottom:12px;z-index:3;font-size:9px;font-weight:700;
+  letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.68)}
 
-.dgs-rows{margin-top:22px;display:flex;flex-direction:column;gap:20px}
-.dgs-when{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dgs-ochre)}
-.dgs-page.dark .dgs-when{color:var(--dgs-ochre-d)}
-.dgs-text{margin-top:7px;font-size:14px;line-height:1.5;opacity:.72}
-.dgs-line{margin-top:9px;padding-left:14px;border-left:3px solid var(--dgs-ochre);
-  font-size:15px;line-height:1.42}
-/* Ссылка текстом с подчёркиванием; настоящие кнопки — только на настоящие
-   действия, иначе полоса превращается в панель управления */
-.dgs-link{display:inline-block;margin-top:9px;margin-right:16px;font-size:14px;font-weight:600;
-  color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* обложка */
+.dgs-page.dgs-cover{padding:0;justify-content:flex-end;background:var(--dgs-night)}
+.dgs-veil{position:absolute;inset:0;z-index:2;
+  background:linear-gradient(to top,rgba(14,15,11,.95) 4%,rgba(14,15,11,.65) 33%,rgba(14,15,11,.18) 64%,transparent 82%)}
+.dgs-brand{position:absolute;top:calc(var(--safe-top, 0px) + 46px);left:26px;right:26px;z-index:4;
+  display:flex;justify-content:space-between;color:rgba(243,234,219,.68);
+  font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase}
+.dgs-cover-layer{position:relative;z-index:4;padding:0 26px calc(env(safe-area-inset-bottom, 0px) + 64px);color:#f3eadb}
+.dgs-no{font-family:Georgia,serif;font-weight:400;font-size:108px;line-height:.82;
+  letter-spacing:-.05em;margin:0 0 6px;color:#eadfc9}
+.dgs-cover-month{font-family:Georgia,serif;font-size:22px;color:#e7dcc8}
+.dgs-cover-dek{margin-top:16px;font-family:Georgia,serif;font-size:17px;line-height:1.48;color:rgba(243,234,219,.84)}
+.dgs-hint{margin-top:22px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(243,234,219,.48)}
 
-.dgs-thought{margin:0;font-size:26px;line-height:1.36;letter-spacing:-.01em;text-wrap:pretty}
-.dgs-note{margin-top:18px;padding-left:14px;border-left:3px solid var(--dgs-ochre);
-  font-size:13px;line-height:1.45;opacity:.62}
-.dgs-page.dark .dgs-note{border-left-color:var(--dgs-ochre-d)}
-.dgs-bignum{position:absolute;z-index:-1;right:-10px;bottom:64px;
-  font-weight:800;font-size:170px;line-height:.75;letter-spacing:-.06em;
-  color:transparent;-webkit-text-stroke:1px rgba(20,17,13,.16)}
-.dgs-page.dark .dgs-bignum{-webkit-text-stroke-color:rgba(237,231,218,.18)}
+/* содержание и перечни */
+.dgs-toc-row{display:flex;align-items:baseline;gap:14px;padding:14px 0;
+  border-bottom:1px solid var(--dgs-hair);cursor:pointer}
+.dgs-toc-n{font-family:Georgia,serif;font-size:24px;color:var(--dgs-brass);flex:0 0 38px}
+.dgs-toc-t{font-size:16px;font-weight:600;flex:1;line-height:1.25}
+.dgs-row{display:flex;gap:14px;padding:15px 0;border-top:1px solid var(--dgs-hair);align-items:baseline}
+.dgs-page.dark .dgs-row,.dgs-page.dark .dgs-toc-row{border-color:rgba(243,234,219,.16)}
+.dgs-date{flex:0 0 42px;font-family:Georgia,serif;font-size:15px;color:var(--dgs-brass);
+  line-height:1.1;font-variant-numeric:tabular-nums}
+.dgs-date span{display:block;font-family:inherit;font-size:9px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--dgs-mute);margin-top:3px}
+.dgs-t{font-size:16px;font-weight:600;line-height:1.25;letter-spacing:-.01em}
+.dgs-s{font-size:13px;color:var(--dgs-mute);margin-top:4px;line-height:1.45}
+.dgs-page.dark .dgs-s{color:rgba(243,234,219,.50)}
+.dgs-idea-line{font-family:Georgia,serif;font-style:italic;font-size:15px;line-height:1.42;
+  color:var(--dgs-soft);margin-top:8px;padding-left:13px;border-left:1px solid var(--dgs-accent)}
+.dgs-page.dark .dgs-idea-line{color:rgba(243,234,219,.72)}
+.dgs-link{display:inline-block;margin-top:9px;margin-right:16px;font-size:13px;font-weight:650;
+  color:var(--dgs-accent);border-bottom:1px solid rgba(183,95,77,.36);padding-bottom:2px;
+  text-decoration:none;cursor:pointer}
+.dgs-link.quiet{color:var(--dgs-olive);border-bottom-color:rgba(89,97,73,.30)}
+.dgs-page.dark .dgs-link{color:#d9826f;border-bottom-color:rgba(217,130,111,.35)}
 
-.dgs-ins{margin-top:20px;display:flex;flex-direction:column;gap:16px}
-.dgs-ins .dgs-i{display:flex;gap:14px;align-items:baseline}
-.dgs-ins .dgs-n{font-weight:800;font-size:24px;line-height:.9;color:var(--dgs-ochre);min-width:30px}
-.dgs-ins .dgs-t{font-size:16px;line-height:1.42}
-.dgs-tc{margin-left:8px;font-size:11px;letter-spacing:.08em;opacity:.5;white-space:nowrap}
-.dgs-more{margin-top:16px;font-size:13px;opacity:.55}
+/* полоса одной мысли */
+.dgs-idea{font-family:Georgia,serif;font-size:30px;line-height:1.2;letter-spacing:-.028em;
+  margin:18px 0 0;text-wrap:pretty}
+.dgs-idea.long{font-size:24px;line-height:1.27}
+.dgs-page.dark .dgs-idea{color:#efe5d3}
+.dgs-phrase{margin-top:22px;padding-left:16px;border-left:1px solid var(--dgs-accent);
+  font-family:Georgia,serif;font-style:italic;font-size:16px;line-height:1.46;color:var(--dgs-soft)}
+.dgs-page.dark .dgs-phrase{color:rgba(243,234,219,.78)}
+.dgs-from{font-size:12px;color:var(--dgs-mute);margin-top:20px}
+.dgs-page.dark .dgs-from{color:rgba(243,234,219,.48)}
 
-.dgs-q{font-size:19px;line-height:1.36;margin-bottom:10px}
-.dgs-a{font-size:15px;line-height:1.5;padding-left:14px;border-left:3px solid var(--dgs-ochre)}
-.dgs-page.dark .dgs-a{border-left-color:var(--dgs-ochre-d)}
+/* выжимка занятия */
+.dgs-brief{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--dgs-hair)}
+.dgs-brief-n{flex:0 0 28px;font-family:Georgia,serif;font-size:18px;color:var(--dgs-brass)}
+.dgs-brief-t{font-family:Georgia,serif;font-size:17px;line-height:1.34}
+.dgs-tc{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dgs-mute);margin-top:7px}
+.dgs-more{margin-top:16px;font-size:13px;color:var(--dgs-mute)}
 
-.dgs-quote{margin:0;font-size:32px;line-height:1.16;letter-spacing:-.02em;font-weight:400}
-.dgs-qmark{font-size:70px;line-height:.5;color:var(--dgs-ochre-d);margin-bottom:22px}
+/* вопросы */
+.dgs-qa{padding:16px 0;border-top:1px solid var(--dgs-hair)}
+.dgs-q{font-family:Georgia,serif;font-size:19px;line-height:1.32}
+.dgs-a{font-size:14px;line-height:1.56;color:var(--dgs-soft);margin-top:9px}
+.dgs-page.dark .dgs-a{color:rgba(243,234,219,.72)}
 
-/* Врезка ничего о себе не сообщает: это воздух между полосами, а не рубрика */
-.dgs-vrezka{margin-top:24px;padding:16px 18px;border:1px solid rgba(20,17,13,.18);border-radius:14px;
-  font-size:15px;line-height:1.45}
-.dgs-page.dark .dgs-vrezka{border-color:rgba(237,231,218,.22)}
+/* врезка — воздух между полосами, о себе ничего не сообщает */
+.dgs-vrezka{margin-top:22px;padding:18px 20px;border:1px solid rgba(154,125,77,.38);
+  border-radius:28px 8px 28px 8px;background:rgba(255,255,255,.23);
+  font-family:Georgia,serif;font-size:15px;line-height:1.45}
+.dgs-page.dark .dgs-vrezka{background:rgba(255,255,255,.05);border-color:rgba(210,183,127,.30)}
 
-/* Полка выпусков и пустой ответ живут на том же слое, но обычным экраном:
-   листать нечего, пока номер не выбран */
-.dgs-shelf{padding:calc(var(--safe-top, 0px) + 54px) 22px calc(env(safe-area-inset-bottom, 0px) + 30px);
+/* полка выпусков и лента живут на том же слое обычным экраном */
+.dgs-shelf{padding:calc(var(--safe-top, 0px) + 62px) 26px calc(env(safe-area-inset-bottom, 0px) + 30px);
   min-height:100dvh}
 .dgs-shelf-item{display:flex;justify-content:space-between;align-items:baseline;gap:14px;
-  padding:15px 0;border-bottom:1px solid rgba(20,17,13,.16);cursor:pointer}
-.dgs-shelf-item .dgs-sub{font-size:11.5px;opacity:.55;margin-top:3px}
+  padding:15px 0;border-bottom:1px solid var(--dgs-hair);cursor:pointer}
+.dgs-shelf-item .dgs-sub{font-size:11.5px;color:var(--dgs-mute);margin-top:3px}
 
 </style>
 
@@ -10571,7 +10633,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v341 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v342 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13491,6 +13553,10 @@ const APP_TEXTS = {
   'feed.title':          { c:'Дайджест', l:'Заголовок ленты обновлений', w:'Лента', i:true,  t:'Обновления клуба' },
   'feed.empty':          { c:'Дайджест', l:'Когда в ленте пусто', w:'Лента', i:false, t:'Пока обновлений нет' },
   'feed.open':           { c:'Дайджест', l:'Кнопка перехода из записи ленты', w:'Лента', i:false, t:'Открыть' },
+  'digest.swipe':        { c:'Дайджест', l:'Подсказка на обложке', w:'Экран выпуска', i:false, t:'листайте вниз' },
+  'digest.idea_tag':     { c:'Дайджест', l:'Подпись на орнаменте полосы идеи', w:'Экран выпуска', i:false, t:'мысль месяца' },
+  'digest.qa_head':      { c:'Дайджест', l:'Заголовок полосы вопросов', w:'Экран выпуска', i:false, t:'Вы спрашивали' },
+  'digest.listen_at':    { c:'Дайджест', l:'Ссылка на ответ с минуты', w:'Экран выпуска', i:false, t:'послушать с {tc}' },
   'digest.fail':         { c:'Дайджест', l:'Когда выпуск не загрузился', w:'Экран выпуска', i:false, t:'Выпуск не загрузился. Попробуй ещё раз чуть позже' },
   'games.howto_h': { c:'Игры', l:'Заголовок «как устроено»', w:'Попап', i:false, t:'Как устроены игры' },
   'games.howto_p': { c:'Игры', l:'Текст «как устроено»', w:'Попап', i:false, t:'Ты переписываешься с клиентом, которого играет модель. Арбитр наверху следит за разговором и двигает шкалу после каждого твоего хода. Выиграть можно раньше пяти ходов — если сформулируешь удачно с первого раза.' },
@@ -30777,19 +30843,49 @@ function dgsGoto(num){
   if (ov) ov.scrollTo({ top: (num - 1) * ov.clientHeight, behavior: 'smooth' });
 }
 
+const DGS_ART = ['', 'b', 'c'];
+/* ⚠️ ОРНАМЕНТ ВЫБИРАЕТСЯ ПО НОМЕРУ ПОЛОСЫ, А НЕ ПО СОДЕРЖАНИЮ: рисунок
+   абстрактный, подбирать его «по смыслу» текста значило бы обещать связь,
+   которой нет. Чередование даёт разнообразие и ничего не выдумывает. */
+function dgsArt(i, кл, подпись){
+  const вид = DGS_ART[i % DGS_ART.length];
+  return '<div class="dgs-art ' + вид + ' ' + кл + '">'
+    + (подпись ? '<div class="dgs-tag">' + escapeHtml(подпись) + '</div>' : '') + '</div>';
+}
 function dgsTop(рубрика, месяц){
   return '<div class="dgs-top"><span>' + escapeHtml(рубрика || t('digest.title'))
        + '</span><span class="dgs-accent">' + escapeHtml(месяц) + '</span></div>';
 }
 function dgsFoot(слева, num){
-  return '<div class="dgs-foot"><span>' + escapeHtml(слева || '')
-       + '</span><span>' + String(num).padStart(2, '0') + '</span></div>';
+  return '<div class="dgs-foot"><span>' + escapeHtml(слева || t('digest.title'))
+       + '</span><b>' + String(num).padStart(2, '0') + '</b></div>';
+}
+/* ⚠️ КИКЕР НЕ ПОВТОРЯЕТ ЗАГОЛОВОК: у большинства полос рубрика и есть заголовок,
+   и надпись «ЧТО БЫЛО» над словами «Что было» читается как сбой вёрстки. */
+function dgsHead(рубрика, заголовок, подводка){
+  const к = (String(рубрика||'').trim().toLowerCase() === String(заголовок||'').trim().toLowerCase()) ? '' : рубрика;
+  return '<div class="dgs-rule"></div>'
+    + (к ? '<div class="dgs-kicker">' + escapeHtml(к) + '</div>' : '')
+    + '<div class="dgs-h1">' + escapeHtml(заголовок || '') + '</div>'
+    + (подводка ? '<div class="dgs-dek">' + escapeHtml(подводка) + '</div>' : '');
 }
 function dgsVrezka(p){
   if (!p.vrezka) return '';
   const текст = p.vrezka.text || p.vrezka.title || '';
-  if (!текст) return '';
-  return '<div class="dgs-vrezka">' + escapeHtml(текст) + '</div>';
+  return текст ? '<div class="dgs-vrezka">' + escapeHtml(текст) + '</div>' : '';
+}
+function dgsLinks(it){
+  return (it.links || []).filter(function(l){ return l.url; }).map(function(l){
+    return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
+      + escapeHtml(l.label || t('feed.open')) + '</a>';
+  }).join('');
+}
+/* Календарная колонка перечней: «14 / авг» */
+function dgsDayMon(iso){
+  const М = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const d = new Date(iso);
+  if (!iso || isNaN(d)) return ['', ''];
+  return [String(d.getDate()), М[d.getMonth()]];
 }
 
 /* Занятие открывается ШТАТНОЙ дверью приложения, а не ссылкой из состава:
@@ -30802,127 +30898,135 @@ function dgsOpenLecture(slug){
 }
 
 function dgsPage(p, месяц){
-  const тёмная = p.dark ? ' dark' : '';
   const num = p.num || 0;
-  let тело = '';
+  const тёмная = p.dark ? ' dark' : '';
 
   if (p.layout === 'cover'){
     const c = p.counts || {};
-    const пары = [['занятия', c['занятий']], ['идеи', c['идей']], ['записи', c['записей']]];
-    тело = '<div class="dgs-body">'
-      + '<div class="dgs-h1">' + escapeHtml(p.title || t('digest.title')) + '</div>'
-      + '<div class="dgs-rule"></div>'
-      + '<div class="dgs-month">' + escapeHtml(месяц) + '</div>'
-      + '<div class="dgs-counts">'
-      + пары.filter(function(x){ return Number(x[1]) > 0; }).map(function(x){
-          return '<div><b>' + Number(x[1]) + '</b><span>' + escapeHtml(x[0]) + '</span></div>';
-        }).join('')
+    const куски = [];
+    if (c['занятий']) куски.push(c['занятий'] + ' ' + dgsPlural(c['занятий'], 'встреча', 'встречи', 'встреч'));
+    if (c['идей'])    куски.push(c['идей'] + ' ' + dgsPlural(c['идей'], 'мысль', 'мысли', 'мыслей'));
+    const подводка = куски.length ? ('Месяц клуба: ' + куски.join(', ') + '.') : 'Месяц клуба.';
+    return '<div class="dgs-page dgs-cover dark">'
+      + dgsArt(num, 'dgs-full', '')
+      + '<div class="dgs-veil"></div>'
+      + '<div class="dgs-brand"><span>' + escapeHtml(t('digest.title')) + '</span><span>' + escapeHtml(месяц) + '</span></div>'
+      + '<div class="dgs-cover-layer">'
+      +   '<div class="dgs-no">' + escapeHtml(String(p.month || '').split('-').pop() || '01') + '</div>'
+      +   '<div class="dgs-cover-month">' + escapeHtml(месяц) + '</div>'
+      +   '<div class="dgs-cover-dek">' + escapeHtml(подводка) + '</div>'
+      +   '<div class="dgs-hint">' + escapeHtml(t('digest.swipe')) + '</div>'
       + '</div></div>';
-
-  } else if (p.layout === 'column'){
-    тело = '<div class="dgs-body">'
-      + '<div class="dgs-h1" style="font-size:30px">' + escapeHtml(p.title || t('digest.column')) + '</div>'
-      + '<div class="dgs-rule"></div>'
-      + '<div class="dgs-column dgs-serif">'
-      + String(p.text || '').split(/\n\s*\n/).filter(Boolean)
-          .map(function(k){ return '<p>' + escapeHtml(k) + '</p>'; }).join('')
-      + '</div></div>' + dgsFoot(p.rubric, num);
-
-  } else if (p.layout === 'toc'){
-    тело = '<div class="dgs-body">'
-      + '<div class="dgs-h1" style="font-size:30px">' + escapeHtml(t('digest.toc')) + '</div>'
-      + '<div class="dgs-rule"></div><div class="dgs-toc">'
-      + (p.items || []).map(function(r){
-          return '<div class="dgs-row" onclick="dgsGoto(' + Number(r.num) + ')"><span>'
-            + escapeHtml(r.rubric || '') + '</span><b>' + String(r.num).padStart(2, '0') + '</b></div>';
-        }).join('')
-      + '</div></div>' + dgsFoot('', num);
-
-  } else if (p.layout === 'idea'){
-    const подпись = [p.lecture, p.timecode].filter(Boolean).join(' · ');
-    тело = '<div class="dgs-bignum">' + String(num).padStart(2, '0') + '</div>'
-      + '<div class="dgs-body dgs-center">'
-      + '<div class="dgs-thought dgs-serif">' + escapeHtml(p.text || p.title || '') + '</div>'
-      + (подпись ? '<div class="dgs-note">' + escapeHtml(подпись) + '</div>' : '')
-      + (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
-                  + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
-      + '</div>' + dgsFoot(p.rubric, num);
-
-  } else if (p.layout === 'lesson'){
-    тело = '<div class="dgs-body">'
-      + '<div class="dgs-h1" style="font-size:26px">' + escapeHtml(p.title || '') + '</div>'
-      + '<div class="dgs-rule"></div><div class="dgs-ins">'
-      + (p.items || []).map(function(ins, i){
-          return '<div class="dgs-i"><div class="dgs-n">' + String(i + 1).padStart(2, '0') + '</div>'
-            + '<div class="dgs-t dgs-serif">' + escapeHtml(ins.text || '')
-            + (ins.timecode ? '<span class="dgs-tc">' + escapeHtml(ins.timecode) + '</span>' : '')
-            + '</div></div>';
-        }).join('')
-      + '</div>'
-      + (p.more ? '<div class="dgs-more">' + escapeHtml(tf('digest.more', { n: p.more })) + '</div>' : '')
-      + (p.phrase ? '<div class="dgs-note dgs-serif">' + escapeHtml(p.phrase) + '</div>' : '')
-      + (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
-                  + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
-      + '</div>' + dgsFoot(t('digest.lesson_foot'), num);
-
-  } else if (p.layout === 'qa'){
-    тело = '<div class="dgs-body">'
-      + '<div class="dgs-h1" style="font-size:28px">' + escapeHtml(p.rubric || '') + '</div>'
-      + '<div class="dgs-rule"></div><div style="margin-top:20px;display:flex;flex-direction:column;gap:24px">'
-      + (p.items || []).map(function(it){
-          const m = it.meta || {};
-          const ссылки = (it.links || []).filter(function(l){ return l.url; });
-          return '<div><div class="dgs-q dgs-serif">' + escapeHtml(m.question || it.title || '') + '</div>'
-            + (it.text ? '<div class="dgs-a">' + escapeHtml(it.text) + '</div>' : '')
-            + ссылки.map(function(l){
-                return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
-                  + escapeHtml(l.label || t('digest.listen')) + '</a>';
-              }).join('')
-            + '</div>';
-        }).join('')
-      + '</div></div>' + dgsVrezka(p) + dgsFoot(p.rubric, num);
-
-  } else if (p.layout === 'final'){
-    const текст = p.text || p.title || t('digest.final');
-    тело = '<div class="dgs-body dgs-center">'
-      + '<div class="dgs-qmark dgs-serif">«</div>'
-      + '<div class="dgs-quote dgs-serif">' + escapeHtml(текст) + '</div>'
-      + '<div class="dgs-rule"></div>'
-      + '<div class="dgs-link" onclick="closeDigest()">' + escapeHtml(t('digest.back')) + '</div>'
-      + '</div>';
-
-  } else {
-    /* Перечни: афиша, новости, библиотека, расписание — одна вёрстка.
-       ⚠️ Незнакомая вёрстка попадает СЮДА, а не пропадает: роды заводятся в
-       дашборде и появятся в составе раньше, чем здесь. */
-    тело = '<div class="dgs-body">'
-      + '<div class="dgs-h1" style="font-size:28px">' + escapeHtml(p.rubric || '') + '</div>'
-      + '<div class="dgs-rule"></div><div class="dgs-rows">'
-      + (p.items || []).map(function(it){
-          const m = it.meta || {};
-          let когда = dgsDate(it.date);
-          if (p.layout === 'schedule' && m.time) когда = (когда + ', ' + m.time).replace(/^, /, '');
-          else if (m.duration) когда = (когда + ' · ' + m.duration + ' мин').replace(/^ · /, '');
-          const строка = it.insight || {};
-          const внешние = (it.links || []).filter(function(l){ return l.url; });
-          return '<div>'
-            + (когда ? '<div class="dgs-when">' + escapeHtml(когда) + '</div>' : '')
-            + '<div class="dgs-h2" style="margin-top:6px">' + escapeHtml(it.title || '') + '</div>'
-            + (it.text ? '<div class="dgs-text">' + escapeHtml(it.text) + '</div>' : '')
-            + (строка.text ? '<div class="dgs-line dgs-serif">' + escapeHtml(строка.text) + '</div>' : '')
-            + (m.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(m.slug) + ')">'
-                        + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
-            + внешние.map(function(l){
-                return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
-                  + escapeHtml(l.label || '') + '</a>';
-              }).join('')
-            + '</div>';
-        }).join('')
-      + '</div></div>' + dgsVrezka(p) + dgsFoot(p.rubric, num);
   }
 
-  return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric, месяц) + тело + '</div>';
+  if (p.layout === 'column'){
+    const абзацы = String(p.text || '').split(/\n\s*\n/).filter(Boolean)
+      .map(function(k){ return '<div class="dgs-dek">' + escapeHtml(k) + '</div>'; }).join('');
+    return '<div class="dgs-page dgs-tint">' + dgsTop(t('digest.column'), месяц)
+      + '<div class="dgs-body">' + dgsHead('', p.title || t('digest.column')) + абзацы + '</div>'
+      + dgsArt(num, 'dgs-strip', '') + dgsFoot(t('digest.column'), num) + '</div>';
+  }
+
+  if (p.layout === 'toc'){
+    const строки = (p.items || []).map(function(r){
+      return '<div class="dgs-toc-row" onclick="dgsGoto(' + Number(r.num) + ')">'
+        + '<div class="dgs-toc-n">' + String(r.num).padStart(2, '0') + '</div>'
+        + '<div class="dgs-toc-t">' + escapeHtml(r.rubric || '') + '</div></div>';
+    }).join('');
+    return '<div class="dgs-page">' + dgsTop(t('digest.toc'), месяц)
+      + '<div class="dgs-body">' + dgsHead('', t('digest.toc')) + строки + '</div>'
+      + dgsFoot(t('digest.toc'), num) + '</div>';
+  }
+
+  if (p.layout === 'idea'){
+    const текст = p.text || p.title || '';
+    const подпись = [p.lecture, p.timecode].filter(Boolean).join(' · ');
+    return '<div class="dgs-page ' + (p.dark ? 'dark' : 'dgs-tint') + '">'
+      + dgsTop(p.rubric || '', месяц)
+      + dgsArt(num, 'dgs-band', t('digest.idea_tag'))
+      + '<div class="dgs-body">'
+      +   '<div class="dgs-rule"></div>'
+      +   '<div class="dgs-kicker">' + escapeHtml(p.rubric || '') + '</div>'
+      +   '<div class="dgs-idea' + (текст.length > 150 ? ' long' : '') + ' dgs-serif">' + escapeHtml(текст) + '</div>'
+      +   (p.phrase ? '<div class="dgs-phrase">' + escapeHtml(p.phrase) + '</div>' : '')
+      +   (подпись ? '<div class="dgs-from">' + escapeHtml(подпись) + '</div>' : '')
+      +   (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
+                    + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+      + '</div>' + dgsFoot(p.rubric || '', num) + '</div>';
+  }
+
+  if (p.layout === 'lesson'){
+    const строки = (p.items || []).map(function(ins, k){
+      return '<div class="dgs-brief"><div class="dgs-brief-n">' + String(k + 1).padStart(2, '0') + '</div>'
+        + '<div style="flex:1"><div class="dgs-brief-t">' + escapeHtml(ins.text || '') + '</div>'
+        + (ins.timecode ? '<div class="dgs-tc">' + escapeHtml(ins.timecode) + '</div>' : '')
+        + '</div></div>';
+    }).join('');
+    return '<div class="dgs-page' + тёмная + '">' + dgsTop(t('digest.lesson_foot'), месяц)
+      + '<div class="dgs-body">' + dgsHead(t('digest.lesson_foot'), p.title || '') + строки
+      +   (p.more ? '<div class="dgs-more">' + escapeHtml(tf('digest.more', { n: p.more })) + '</div>' : '')
+      +   (p.phrase ? '<div class="dgs-phrase">' + escapeHtml(p.phrase) + '</div>' : '')
+      +   (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
+                    + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+      + '</div>' + dgsFoot(t('digest.lesson_foot'), num) + '</div>';
+  }
+
+  if (p.layout === 'qa'){
+    const куски = (p.items || []).map(function(it){
+      const m = it.meta || {};
+      return '<div class="dgs-qa"><div class="dgs-q">' + escapeHtml(m.question || it.title || '') + '</div>'
+        + (it.text ? '<div class="dgs-a">' + escapeHtml(it.text) + '</div>' : '')
+        + (m.timecode ? '<span class="dgs-link quiet">' + escapeHtml(tf('digest.listen_at', { tc: m.timecode })) + '</span>' : '')
+        + dgsLinks(it) + '</div>';
+    }).join('');
+    return '<div class="dgs-page dgs-tint">' + dgsTop(p.rubric || '', месяц)
+      + '<div class="dgs-body">' + dgsHead(p.rubric || '', t('digest.qa_head')) + куски + '</div>'
+      + dgsVrezka(p) + dgsFoot(p.rubric || '', num) + '</div>';
+  }
+
+  if (p.layout === 'final'){
+    return '<div class="dgs-page dark">' + dgsTop('', месяц)
+      + dgsArt(num, 'dgs-band', '')
+      + '<div class="dgs-body">'
+      +   '<div class="dgs-rule"></div>'
+      +   '<div class="dgs-idea dgs-serif">' + escapeHtml(p.text || p.title || t('digest.final')) + '</div>'
+      +   '<div class="dgs-link" onclick="closeDigest()">' + escapeHtml(t('digest.back')) + '</div>'
+      + '</div>' + dgsFoot(t('digest.title'), num) + '</div>';
+  }
+
+  /* Перечни: афиша, новости, библиотека, расписание — одна вёрстка.
+     ⚠️ Незнакомая вёрстка попадает СЮДА, а не пропадает: роды заводятся в
+     дашборде и появятся в составе раньше, чем здесь. */
+  const строки = (p.items || []).map(function(it){
+    const m = it.meta || {};
+    const дм = dgsDayMon(it.date);
+    let подпись = it.text || '';
+    if (p.layout === 'schedule' && m.time) подпись = (m.time + ' · ' + подпись).replace(/ · $/, '');
+    else if (m.duration) подпись = (m.duration + ' мин · ' + подпись).replace(/ · $/, '');
+    const строка = it.insight || {};
+    return '<div class="dgs-row">'
+      + '<div class="dgs-date">' + escapeHtml(дм[0]) + '<span>' + escapeHtml(дм[1]) + '</span></div>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div class="dgs-t">' + escapeHtml(it.title || '') + '</div>'
+      +   (подпись ? '<div class="dgs-s">' + escapeHtml(подпись) + '</div>' : '')
+      +   (строка.text ? '<div class="dgs-idea-line">' + escapeHtml(строка.text) + '</div>' : '')
+      +   (m.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(m.slug) + ')">'
+                    + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+      +   dgsLinks(it)
+      + '</div></div>';
+  }).join('');
+  return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric || '', месяц)
+    + '<div class="dgs-body">' + dgsHead(p.rubric || '', p.rubric || '') + строки + '</div>'
+    + dgsVrezka(p) + dgsFoot(p.rubric || '', num) + '</div>';
 }
+
+function dgsPlural(n, одна, две, много){
+  n = Math.abs(Number(n) || 0);
+  if (n % 10 === 1 && n % 100 !== 11) return одна;
+  if (n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14)) return две;
+  return много;
+}
+
 
 /* ЛЕНТА ОБНОВЛЕНИЙ — то же хранилище, что у выпуска, другой отбор и другая
    вёрстка. Полос и выжимок тут нет: это журнал клуба, а не номер.
@@ -30940,24 +31044,23 @@ async function openFeed(){
     document.getElementById('dgs-count').textContent = '';
     document.getElementById('dgs-pages').innerHTML =
         '<div class="dgs-shelf">'
-      + '<div class="dgs-h1" style="font-size:30px;margin-top:0">' + escapeHtml(t('feed.title')) + '</div>'
       + '<div class="dgs-rule"></div>'
-      + '<div class="dgs-rows" style="margin-top:24px">'
+      + '<div class="dgs-h1">' + escapeHtml(t('feed.title')) + '</div>'
+      + '<div style="margin-top:22px">'
       + items.map(function(it){
-          const внешние = (it.links || []).filter(function(l){ return l.url; });
-          return '<div>'
-            + '<div class="dgs-when">' + escapeHtml(dgsDate(it.date) + ' · ' + (it.rubric || '')) + '</div>'
-            + '<div class="dgs-h2" style="margin-top:6px">' + escapeHtml(it.title || '') + '</div>'
-            + (it.text ? '<div class="dgs-text">' + escapeHtml(it.text) + '</div>' : '')
-            + (it.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(it.slug) + ')">'
-                         + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
-            + (it.route ? '<div class="dgs-link" onclick="feedGo(' + jsArg(it.route) + ')">'
-                         + escapeHtml(t('feed.open')) + '</div>' : '')
-            + внешние.map(function(l){
-                return '<a class="dgs-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">'
-                  + escapeHtml(l.label || t('feed.open')) + '</a>';
-              }).join('')
-            + '</div>';
+          const дм = dgsDayMon(it.date);
+          return '<div class="dgs-row">'
+            + '<div class="dgs-date">' + escapeHtml(дм[0]) + '<span>' + escapeHtml(дм[1]) + '</span></div>'
+            + '<div style="flex:1;min-width:0">'
+            +   '<div class="dgs-kicker">' + escapeHtml(it.rubric || '') + '</div>'
+            +   '<div class="dgs-t" style="margin-top:5px">' + escapeHtml(it.title || '') + '</div>'
+            +   (it.text ? '<div class="dgs-s">' + escapeHtml(it.text) + '</div>' : '')
+            +   (it.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(it.slug) + ')">'
+                           + escapeHtml(t('digest.to_lecture')) + '</div>' : '')
+            +   (it.route ? '<div class="dgs-link" onclick="feedGo(' + jsArg(it.route) + ')">'
+                           + escapeHtml(t('feed.open')) + '</div>' : '')
+            +   dgsLinks(it)
+            + '</div></div>';
         }).join('')
       + '</div></div>';
     track('feed_open', String(items.length));
