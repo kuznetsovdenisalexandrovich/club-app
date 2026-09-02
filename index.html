@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v344 -->
+<!-- FILE_VERSION: index-v345 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -504,6 +504,11 @@ html.onb-swap .view.active{opacity:0}
 .ai-question-input:focus{outline:none;border-color:var(--warm)}
 .ai-answer-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text-dim);white-space:pre-wrap}
 .ai-answer-intro{font-size:12.5px;color:var(--text-dim);margin-bottom:10px}
+/* Красный баннер «не получилось списать» — тот же баннер, другой цвет (02.09.2026) */
+.demo-banner.charge-fail{border-color:#d9483b;background:linear-gradient(135deg,rgba(217,72,59,.22),rgba(217,72,59,.06))}
+.demo-banner.charge-fail .demo-banner-title{color:#d9483b}
+.chargefail-btn{display:block;width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;text-align:left}
+.chargefail-btn:active{transform:scale(0.98)}
 .demo-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(232,97,74,0.16),rgba(232,97,74,0.05));border:1px solid var(--warm);border-radius:16px;padding:18px 18px;margin:6px 0 24px;cursor:pointer}
 .demo-banner-icon{font-size:22px}
 .demo-banner-title{font-weight:700;font-size:13.5px}
@@ -5551,6 +5556,16 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          крестиком НАВСЕГДА — это предложение, а не задача -->
     <div id="onb-notes"></div>
 
+    <!-- Неудачное списание (02.09.2026). Бот уже пишет человеку о каждой попытке;
+         апп только показывает, что чинится здесь. Виден, пока вебхук держит
+         failed_attempt_num > 0 у ЖИВОГО участника; успешное списание снимает сам -->
+    <div class="demo-banner charge-fail" id="charge-fail-banner" style="display:none" onclick="openChargeFail()">
+      <div>
+        <div class="demo-banner-title" data-text="chargefail.banner_title">Не получилось списать оплату</div>
+        <div class="demo-banner-sub" data-text="chargefail.banner_sub">Доступ пока работает — посмотри, что можно сделать →</div>
+      </div>
+    </div>
+
     <div class="demo-banner" id="demo-banner" style="display:none" onclick="openClubInfoPage()">
       <div class="demo-banner-icon">👀</div>
       <div>
@@ -10223,6 +10238,16 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="chargefail-overlay" onclick="if(event.target===this) closeChargeFail()">
+  <div class="center-modal" style="max-width:420px;max-height:82vh;overflow-y:auto">
+    <div class="center-modal-header">
+      <div class="center-modal-title" data-text="chargefail.title">Не получилось списать оплату</div>
+      <button class="icon-btn" onclick="closeChargeFail()">✕</button>
+    </div>
+    <div id="chargefail-body"></div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="winback-overlay" onclick="if(event.target===this) closeWinbackFunnel()">
   <div class="center-modal" id="winback-modal" style="max-width:420px;max-height:82vh;overflow-y:auto">
     <div class="center-modal-header">
@@ -10646,7 +10671,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v344 · 02.09.2026 экран оплаты: своя ошибка и повтор; заслонка бота — окно поверх экрана и перепроверка при возврате; игры переживают обрыв связи; послеоплатные экраны без эмодзи';
+const APP_BUILD = 'v345 · 02.09.2026 красный баннер о неудачном списании с экраном-развилкой; ссылки на оплату ждём до 40 с. До неё v344 — экран оплаты, заслонка бота окном, игры при обрыве связи';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12117,12 +12142,68 @@ async function loadProfile() {
       document.getElementById('sub-note').textContent = 'Подписка сейчас не активна.';
     }
     renderDemoBanner();
+    renderChargeFailBanner(u);
     if (u.is_first_member_open) {
       setTimeout(openStepsPopup, 500);
     }
   } catch (e) {
     document.getElementById('sub-name').textContent = 'Ошибка загрузки';
   }
+}
+
+/* ══ НЕУДАЧНОЕ СПИСАНИЕ (02.09.2026) ═══════════════════════════════════════
+   [stated] Denis: бот уже шлёт человеку сообщения о каждой неудачной попытке,
+   после седьмой предлагает скидки и сдвиг. Апп ничего не дублирует: красный
+   баннер на главной и одно окно, откуда три дороги на УЖЕ существующие
+   экраны — сдвиг платежа и баллы живут в управлении подпиской, «попросить
+   скидку» — это причина «временный напряг с деньгами» в воронке удержания.
+   Признак приходит в профиле (`failed_attempt_num`, только у живого участника),
+   успешное списание сбрасывает его на сервере — баннер уходит сам */
+function renderChargeFailBanner(u){
+  const el = document.getElementById('charge-fail-banner');
+  if (!el) return;
+  const n = u ? parseInt(u.failed_attempt_num || 0, 10) : 0;
+  el.style.display = (isMember && n > 0) ? 'flex' : 'none';
+}
+
+function openChargeFail(){
+  const body = document.getElementById('chargefail-body');
+  if (body){
+    body.innerHTML =
+      `<div class="sm-hint" style="font-size:13.5px;line-height:1.55;margin-bottom:6px">${escapeHtml(t('chargefail.text'))}</div>` +
+      `<button class="chargefail-btn" onclick="chargeFailGo('shift')">${escapeHtml(t('chargefail.btn_shift'))}</button>` +
+      `<button class="chargefail-btn" onclick="chargeFailGo('points')">${escapeHtml(t('chargefail.btn_points'))}</button>` +
+      `<button class="chargefail-btn" onclick="chargeFailGo('discount')">${escapeHtml(t('chargefail.btn_discount'))}</button>`;
+  }
+  document.getElementById('chargefail-overlay').classList.add('open');
+  track('charge_fail_open', 'banner');
+}
+function closeChargeFail(){
+  document.getElementById('chargefail-overlay').classList.remove('open');
+}
+function chargeFailGo(where){
+  closeChargeFail();
+  track('charge_fail_open', where);
+  if (where === 'discount'){
+    openWinbackMenu();
+    renderWinbackReason('temp_money');
+    return;
+  }
+  openSubManageAt(where === 'shift' ? 'sm-shift-date' : 'sm-points-slider');
+}
+/* Управление подпиской грузит своё содержимое с сервера; нужный раздел
+   докручиваем, когда он появился (до 4 секунд ожидания) */
+function openSubManageAt(id){
+  openSubManage();
+  let left = 12;
+  (function wait(){
+    const el = document.getElementById(id);
+    if (el){
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){ el.scrollIntoView(); }
+      return;
+    }
+    if (--left > 0) setTimeout(wait, 330);
+  })();
 }
 
 function renderDemoBanner(){
@@ -14017,6 +14098,27 @@ const APP_TEXTS = {
   'access.links_retry': {
     c:'Оплата', l:'Кнопка повторного запроса ссылок', w:'Экран «Получить доступ», после задержки', i:false,
     t:'Запросить ещё раз' },
+  'chargefail.banner_title': {
+    c:'Подписка', l:'Заголовок красного баннера о неудачном списании', w:'Главная, пока идут попытки списания', i:false,
+    t:'Не получилось списать оплату' },
+  'chargefail.banner_sub': {
+    c:'Подписка', l:'Подпись под красным баннером', w:'Главная, пока идут попытки списания', i:false,
+    t:'Доступ пока работает — посмотри, что можно сделать →' },
+  'chargefail.title': {
+    c:'Подписка', l:'Заголовок экрана после красного баннера', w:'Окно «не получилось списать»', i:false,
+    t:'Не получилось списать оплату' },
+  'chargefail.text': {
+    c:'Подписка', l:'Основной текст окна', w:'Окно «не получилось списать»', i:false,
+    t:'Ничего страшного: такое бывает, когда на карте не хватило денег или банк не пропустил платёж. Пополни карту — бот спишет оплату сам, нажимать ничего не нужно. А если сейчас неудобно, вот что ещё можно сделать.' },
+  'chargefail.btn_shift': {
+    c:'Подписка', l:'Кнопка «сдвинуть платёж»', w:'Окно «не получилось списать»', i:false,
+    t:'Сдвинуть платёж' },
+  'chargefail.btn_points': {
+    c:'Подписка', l:'Кнопка «оплатить месяц баллами»', w:'Окно «не получилось списать»', i:false,
+    t:'Оплатить месяц баллами' },
+  'chargefail.btn_discount': {
+    c:'Подписка', l:'Кнопка «попросить скидку»', w:'Окно «не получилось списать»', i:false,
+    t:'Попросить скидку' },
   'access.links_bot': {
     c:'Оплата', l:'Запасной выход — оплатить в боте', w:'Экран «Получить доступ», после задержки', i:false,
     t:'Открыть бота и оплатить там' },
@@ -15638,6 +15740,7 @@ async function refreshOnboardStatus(){
       points = u.points || 0;
       hasPushSubscription = !!u.has_push_subscription;
       if (typeof renderOnbNotes === 'function') renderOnbNotes();
+      renderChargeFailBanner(u);
     notifyChannel = u.notify_channel || 'both';
     notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
@@ -22987,8 +23090,12 @@ async function openAccessPage(){
     return;
   }
 
-  for (let i = 0; i < 12; i++) {
+  /* ⚠️ ЖДЁМ ДО 40 СЕКУНД, А НЕ 18 (02.09.2026). Ссылку собирает Salebot, и его
+     задержка в час рекламы бывает в полминуты. Посередине меняем подпись,
+     чтобы ожидание не выглядело зависанием */
+  for (let i = 0; i < 26; i++) {
     await new Promise(r => setTimeout(r, 1500));
+    if (i === 6) el.innerHTML = '<div class="loading">Бот собирает ссылки под тебя, ещё чуть-чуть…</div>';
     try {
       const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=get_payment_links`);
       const data = await r.json();
