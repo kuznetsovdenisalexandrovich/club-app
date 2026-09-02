@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v345 -->
+<!-- FILE_VERSION: index-v346 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10238,6 +10238,16 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   </div>
 </div>
 
+<div class="center-modal-overlay" id="freediscount-overlay" onclick="if(event.target===this) closeFreeDiscount()">
+  <div class="center-modal" style="max-width:420px;max-height:82vh;overflow-y:auto">
+    <div class="center-modal-header">
+      <div class="center-modal-title" data-text="freediscount.title">Скидка на следующий месяц</div>
+      <button class="icon-btn" onclick="closeFreeDiscount()">✕</button>
+    </div>
+    <div id="freediscount-body"></div>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="chargefail-overlay" onclick="if(event.target===this) closeChargeFail()">
   <div class="center-modal" style="max-width:420px;max-height:82vh;overflow-y:auto">
     <div class="center-modal-header">
@@ -10671,7 +10681,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v345 · 02.09.2026 красный баннер о неудачном списании с экраном-развилкой; ссылки на оплату ждём до 40 с. До неё v344 — экран оплаты, заслонка бота окном, игры при обрыве связи';
+const APP_BUILD = 'v346 · 02.09.2026 свой экран скидки без баллов (три штуки, ползунок до месяца за рубль). До неё v345 — баннер о неудачном списании, v344 — экран оплаты, заслонка бота, игры';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12184,12 +12194,103 @@ function closeChargeFail(){
 function chargeFailGo(where){
   closeChargeFail();
   track('charge_fail_open', where);
-  if (where === 'discount'){
-    openWinbackMenu();
-    renderWinbackReason('temp_money');
+  /* ⚠️ У СКИДКИ СВОЙ ЭКРАН, А НЕ ВОРОНКА ОТМЕНЫ (02.09.2026). Сперва кнопка вела
+     в причину «временный напряг по деньгам» — но это экран УГОВОРА остаться, с
+     бонусом за честность и надписью «нет, ухожу навсегда». Человеку, у которого
+     просто не прошла карта, предлагать уйти незачем */
+  if (where === 'discount'){ openFreeDiscount(); return; }
+  openSubManageAt(where === 'shift' ? 'sm-shift-date' : 'sm-points-slider');
+}
+
+/* ══ СКИДКА БЕЗ БАЛЛОВ ═══════════════════════════════════════════════════════
+   [stated] Denis 02.09.2026: «даже если баллов нет, ты можешь три раза
+   использовать скидку и получить следующий месяц за рубль». Ползунок как у
+   баллов, но баланс не при чём — расходуется одна из трёх попыток, и попытку
+   тратит скидка любого размера. Счётчик обнуляется из дашборда */
+function openFreeDiscount(){
+  document.getElementById('freediscount-overlay').classList.add('open');
+  document.getElementById('freediscount-body').innerHTML =
+    '<div class="sm-hint" style="padding:24px 0;text-align:center">Загружаю…</div>';
+  loadFreeDiscount();
+}
+function closeFreeDiscount(){
+  document.getElementById('freediscount-overlay').classList.remove('open');
+  freeDiscountArmed = false;
+}
+async function loadFreeDiscount(){
+  try {
+    subStatus = await apiRequest(`${API_URL}/subscription/status?telegram_id=${telegramId}`, {}, 10000);
+    renderFreeDiscount();
+  } catch (e) {
+    document.getElementById('freediscount-body').innerHTML =
+      `<div class="sm-hint" style="padding:18px 0">Не получилось узнать состояние подписки: ${escapeHtml(e.message || 'нет связи')}</div>`
+      + `<div class="sm-row"><button class="sm-btn" onclick="loadFreeDiscount()">Ещё раз</button></div>`;
+  }
+}
+function renderFreeDiscount(){
+  const s = subStatus, body = document.getElementById('freediscount-body');
+  if (!s || !body) return;
+  const left = s.free_discount_left || 0;
+  const max  = s.free_discount_max  || 0;
+  const min  = s.free_discount_min  || 50;
+
+  if (s.discount_pending){
+    body.innerHTML = `<div class="sm-hint">${escapeHtml(t('freediscount.pending'))}</div>`;
     return;
   }
-  openSubManageAt(where === 'shift' ? 'sm-shift-date' : 'sm-points-slider');
+  if (!left){
+    body.innerHTML = `<div class="sm-hint">${escapeHtml(t('freediscount.none_left'))}</div>`;
+    return;
+  }
+  /* Начальное положение — половина платежа: середина ползунка как предложение,
+     а не крайность. Шаг 10 ₽, как у баллов */
+  const start = Math.min(max, Math.max(min, Math.round((s.cost || 990) / 2 / 10) * 10));
+  body.innerHTML =
+    `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('freediscount.text'))}</div>`
+    + `<div class="sm-hint" style="margin-top:8px">${escapeHtml(t('freediscount.left_label'))} ${plural(left, 'скидка', 'скидки', 'скидок')}.</div>`
+    + `<div class="sm-slider-value" id="fd-preview"></div>`
+    + `<div class="sm-slider-row">`
+    +   `<input type="range" class="sm-slider" id="fd-slider" min="${min}" max="${max}" step="10" value="${start}" oninput="updateFreeDiscountPreview()">`
+    + `</div>`
+    + `<div class="sm-row"><button class="sm-btn" onclick="applyFreeDiscount(this)">${escapeHtml(t('freediscount.apply'))}</button></div>`;
+  updateFreeDiscountPreview();
+}
+function updateFreeDiscountPreview(){
+  const slider = document.getElementById('fd-slider');
+  const preview = document.getElementById('fd-preview');
+  if (!slider || !preview || !subStatus) return;
+  smSliderFill(slider);
+  const amount = parseInt(slider.value, 10);
+  const left = Math.max((subStatus.cost || 0) - amount, 0);
+  preview.innerHTML = `скидка <b>${amount} ₽</b> → заплатишь <b>${left} ₽</b> вместо ${subStatus.cost} ₽`;
+}
+let freeDiscountArmed = false;
+async function applyFreeDiscount(btn){
+  const slider = document.getElementById('fd-slider');
+  const amount = slider ? parseInt(slider.value, 10) : 0;
+  /* Двойное нажатие, как у баллов: попытка тратится безвозвратно */
+  if (!freeDiscountArmed){
+    freeDiscountArmed = true;
+    btn.textContent = 'Точно? Нажми ещё раз';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Применяю…';
+  try {
+    const d = await apiRequest(`${API_URL}/subscription/free-discount`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId, amount })
+    }, 20000);
+    showToast(`Готово — следующий платёж ${d.new_price} ₽`);
+    freeDiscountArmed = false;
+    await loadFreeDiscount();
+  } catch (e) {
+    showToast(e.message || 'Не получилось');
+    freeDiscountArmed = false;
+    btn.disabled = false;
+    btn.textContent = 'Попробовать ещё раз';
+  }
 }
 /* Управление подпиской грузит своё содержимое с сервера; нужный раздел
    докручиваем, когда он появился (до 4 секунд ожидания) */
@@ -14116,6 +14217,24 @@ const APP_TEXTS = {
   'chargefail.btn_points': {
     c:'Подписка', l:'Кнопка «оплатить месяц баллами»', w:'Окно «не получилось списать»', i:false,
     t:'Оплатить месяц баллами' },
+  'freediscount.title': {
+    c:'Подписка', l:'Заголовок окна скидки без баллов', w:'Окно «Скидка на следующий месяц»', i:false,
+    t:'Скидка на следующий месяц' },
+  'freediscount.text': {
+    c:'Подписка', l:'Основной текст окна скидки', w:'Окно «Скидка на следующий месяц»', i:false,
+    t:'Бывает всякое, и я не хочу, чтобы деньги стали причиной уйти. Выбери, сколько скинуть с ближайшего платежа — хоть до рубля. Баллы при этом не тратятся.' },
+  'freediscount.left_label': {
+    c:'Подписка', l:'Строка «осталось скидок»', w:'Окно «Скидка на следующий месяц»', i:false,
+    t:'Осталось' },
+  'freediscount.apply': {
+    c:'Подписка', l:'Кнопка применения скидки', w:'Окно «Скидка на следующий месяц»', i:false,
+    t:'Применить скидку' },
+  'freediscount.pending': {
+    c:'Подписка', l:'Скидка на ближайший платёж уже стоит', w:'Окно «Скидка на следующий месяц»', i:false,
+    t:'Скидка на ближайший платёж уже стоит — вторую сверху поставить нельзя. После списания можно будет снова.' },
+  'freediscount.none_left': {
+    c:'Подписка', l:'Скидки кончились', w:'Окно «Скидка на следующий месяц»', i:false,
+    t:'Все три скидки уже использованы. Напиши мне в личку, если сейчас совсем туго, — что-нибудь придумаем.' },
   'chargefail.btn_discount': {
     c:'Подписка', l:'Кнопка «попросить скидку»', w:'Окно «не получилось списать»', i:false,
     t:'Попросить скидку' },
