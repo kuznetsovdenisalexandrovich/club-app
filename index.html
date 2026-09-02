@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v343 -->
+<!-- FILE_VERSION: index-v344 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10633,7 +10633,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v343 · 30.08.2026 фонотека: прошлое расписания как вход в библиотеку, последние записи, предел листания три месяца';
+const APP_BUILD = 'v344 · 02.09.2026 экран оплаты: своя ошибка и повтор; заслонка бота перепроверяется при возврате; игры переживают обрыв связи; послеоплатные экраны без эмодзи';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11276,7 +11276,40 @@ function botAccessAsk(){
 function botAccessShowFallback(){
   const link = document.getElementById('botaccess-bot-link');
   if (link) link.style.display = '';
+  botAccessWatch(6);
 }
+
+/* ⚠️ ЗАСЛОНКА ОБЯЗАНА САМА ЗАМЕТИТЬ, ЧТО ПРАВО ПОЯВИЛОСЬ (02.09.2026).
+   Раньше `botCanWrite` читался один раз при запуске. Человек шёл по ссылке
+   в бота, нажимал «Начать», возвращался — и упирался в тот же экран, потому
+   что никто не перепроверял. Два пути наружу: возврат в приложение
+   (visibilitychange) и несколько тихих проверок после показа ссылки на бота.
+   Обе дороги сходятся в botAccessRecheck(): право есть — экран закрывается и
+   человек продолжает то, ради чего пришёл */
+let botAccessWatchLeft = 0;
+async function botAccessRecheck(){
+  const el = document.getElementById('botaccess-screen');
+  if (!el || el.style.display === 'none') return false;
+  await loadBotAccess();
+  if (botCanWrite !== true) return false;
+  botAccessClose();
+  const next = botAccessNext; botAccessNext = null;
+  if (typeof next === 'function') next();
+  return true;
+}
+function botAccessWatch(times){
+  botAccessWatchLeft = Math.max(botAccessWatchLeft, times || 0);
+  (async function loop(){
+    while (botAccessWatchLeft > 0){
+      botAccessWatchLeft -= 1;
+      await new Promise(r => setTimeout(r, 5000));
+      if (await botAccessRecheck()) { botAccessWatchLeft = 0; return; }
+    }
+  })();
+}
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible') botAccessRecheck();
+});
 
 /* ── КОНТАКТ ИЗ САМОГО TELEGRAM ─────────────────────────────────────────────
    ⚠️ ЛУЧШИЙ ИСТОЧНИК НИКА — ЗДЕСЬ, А НЕ В SALEBOT. Telegram отдаёт ник и имя
@@ -13958,6 +13991,15 @@ const APP_TEXTS = {
   'access.stuck_no': {
     c:'Оплата', l:'Отказ от помощи', w:'Окошко застрявшего', i:false,
     t:'Нет, всё в порядке' },
+  'access.links_late': {
+    c:'Оплата', l:'Ссылки на оплату не пришли вовремя', w:'Экран «Получить доступ», если бот не ответил за 18 секунд', i:false,
+    t:'Ссылки на оплату задержались — бот собирает их под тебя, иногда это занимает минуту.' },
+  'access.links_retry': {
+    c:'Оплата', l:'Кнопка повторного запроса ссылок', w:'Экран «Получить доступ», после задержки', i:false,
+    t:'Запросить ещё раз' },
+  'access.links_bot': {
+    c:'Оплата', l:'Запасной выход — оплатить в боте', w:'Экран «Получить доступ», после задержки', i:false,
+    t:'Открыть бота и оплатить там' },
   'access.trouble_text': {
     c:'Оплата', l:'Текст, который подставляется в переписку с Денисом', w:'Личка Telegram', i:false,
     t:'Не получается оплатить доступ' },
@@ -22836,7 +22878,6 @@ function stopPaymentWatch(){
 
 function renderPostPayWaiting(){
   document.getElementById('postpay-body').innerHTML = `
-    <div style="font-size:34px;margin:6px 0 10px">⏳</div>
     <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Ждём подтверждение оплаты</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Обычно это занимает несколько секунд. Приложение поймает платёж само — можно просто вернуться сюда после оплаты.</div>
     <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePostPay()">Закрыть</button>`;
@@ -22844,7 +22885,6 @@ function renderPostPayWaiting(){
 
 function renderPostPaySuccess(){
   document.getElementById('postpay-body').innerHTML = `
-    <div style="font-size:34px;margin:6px 0 10px">🎉</div>
     <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Оплата прошла, добро пожаловать!</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Осталось вступить в канал и чат — это пара нажатий, покажу прямо сейчас.</div>
     <button class="lec-link-btn access-btn" onclick="closePostPay();openStepsPopup()">Продолжить</button>`;
@@ -22852,7 +22892,6 @@ function renderPostPaySuccess(){
 
 function renderPostPayTimeout(){
   document.getElementById('postpay-body').innerHTML = `
-    <div style="font-size:34px;margin:6px 0 10px">🤔</div>
     <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Платёж пока не дошёл</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Иногда банк думает чуть дольше. Проверь ещё раз или напиши — разберёмся руками.</div>
     <button class="lec-link-btn access-btn" onclick="startPaymentWatch()">Проверить ещё раз</button>
@@ -22924,7 +22963,7 @@ async function openAccessPage(){
       body: JSON.stringify({ ...actionIdent(), action: 'get_payment_links', params: {} })
     });
   } catch (e) {
-    el.innerHTML = roundTripErrorHtml();
+    el.innerHTML = accessLinksErrorHtml();
     return;
   }
 
@@ -22939,7 +22978,22 @@ async function openAccessPage(){
       }
     } catch (e) {}
   }
-  el.innerHTML = roundTripErrorHtml();
+  el.innerHTML = accessLinksErrorHtml();
+}
+
+/* ⚠️ СВОЯ ОШИБКА ЭКРАНА ОПЛАТЫ (02.09.2026). Здесь стоял roundTripErrorHtml()
+   — сообщение экрана УВЕДОМЛЕНИЙ: «Не получилось загрузить настройки», а его
+   «Повторить» перерисовывало список уведомлений, экран оплаты не трогая.
+   Покупатель, у которого бот не успел за 18 секунд, видел текст про настройки
+   и кнопку, которая ничего не делает. Теперь: честно про ссылки, «Запросить
+   ещё раз» зовёт этот же экран заново, запасной выход — оплатить в боте.
+   Задержку отмечаем событием, чтобы в ленте было видно, сколько людей
+   упирается именно здесь */
+function accessLinksErrorHtml(){
+  track('access_open', 'links_late');
+  return `<div class="empty" style="line-height:1.5">${escapeHtml(t('access.links_late'))}</div>`
+    + `<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openAccessPage()">${escapeHtml(t('access.links_retry'))}</button>`
+    + `<div class="payment-help-link" onclick="openUrl(botLinkForAccess())">${escapeHtml(t('access.links_bot'))}</div>`;
 }
 
 function renderAccessButtons(result){
@@ -22951,7 +23005,7 @@ function renderAccessButtons(result){
   ].filter(b => b.link);
 
   if (!buttons.length) {
-    el.innerHTML = roundTripErrorHtml();
+    el.innerHTML = accessLinksErrorHtml();
     return;
   }
 
@@ -30332,13 +30386,19 @@ async function ggSend(){
   ggScrollDown();
 
   try {
-    const r = await fetch(API_URL + '/games/session/turn', {
+    /* ⚠️ ОЖИДАНИЕ ОГРАНИЧЕНО. Сервер ждёт модель до 45 с (GAMES_LLM_TIMEOUT);
+       без своего предела «думаю» висело бы, пока не оборвёт браузер */
+    const r = await ggFetch(API_URL + '/games/session/turn', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: ggS.session_id, text: text })
-    });
+    }, 60000);
     const d = await r.json().catch(function(){ return {}; });
     ggTyping(false);
     if (!r.ok){
+      /* 404 «партия не найдена» посреди игры почти всегда значит, что она
+         УЖЕ закончилась (прошлый ход дошёл, ответ — нет). Спрашиваем сервер,
+         а не показываем поломку */
+      if (r.status === 404 && await ggRecoverTurn(text)) return;
       const p = document.getElementById('gg-fail-p');
       if (p && d.detail) p.textContent = d.detail;
       ggPop('gg-m-fail');
@@ -30379,12 +30439,61 @@ async function ggSend(){
     }
   } catch(e){
     ggTyping(false);
-    ggPop('gg-m-fail');
+    /* ⚠️ ОБРЫВ СВЯЗИ ≠ ПОЛОМКА (02.09.2026). Ход мог дойти до сервера, а ответ
+       — нет. Раньше здесь сразу показывался попап неудачи; человек жал ещё
+       раз, сервер отвечал «партия не найдена», и это выглядело как «ходы
+       кончились, финала нет». Теперь сперва спрашиваем, что сервер знает о
+       партии, и достаём оттуда ответ на этот самый ход */
+    if (!(await ggRecoverTurn(text))) ggPop('gg-m-fail');
   } finally {
     ggBusy = false;
     const s = document.getElementById('gg-send');
     if (s) s.disabled = false;
   }
+}
+
+/* ⚠️ НЕ fetchWithTimeout: та возвращает обёртку {ok, response}, а не сам
+   ответ, и .json() у неё нет. Здесь нужен настоящий Response с пределом
+   ожидания — при обрыве бросает исключение, как обычный fetch */
+async function ggFetch(url, options, timeoutMs){
+  const controller = new AbortController();
+  const timer = setTimeout(function(){ controller.abort(); }, timeoutMs);
+  try {
+    return await fetch(url, Object.assign({}, options || {}, { signal: controller.signal }));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* После сбоя: спрашиваем сервер о партии. Партия закрыта — показываем финал.
+   Наш ход там есть — дорисовываем ответ клиента, как будто сбоя не было.
+   Ничего из этого — возвращаем false, и вызывающий покажет обычную неудачу */
+async function ggRecoverTurn(sentText){
+  if (!ggS || !ggS.session_id) return false;
+  try {
+    const r = await ggFetch(API_URL + '/games/session/' + encodeURIComponent(ggS.session_id), {}, 15000);
+    if (!r.ok) return false;
+    const d = await r.json().catch(function(){ return {}; });
+    if (!d) return false;
+    if (d.final){
+      ggTyping(false);
+      setTimeout(function(){ ggFinal(d.final); }, 1200);
+      return true;
+    }
+    const turns = Array.isArray(d.turns) ? d.turns : [];
+    const last = turns.length ? turns[turns.length - 1] : null;
+    if (last && String(last.player || '').trim() === String(sentText || '').trim()){
+      if (last.client) ggMsg(last.client, false);
+      if (typeof d.score === 'number'){ ggS.score = d.score; ggScale(d.score); }
+      ggS.turn_no = d.turn_no || ggS.turn_no;
+      ggTurnLabel();
+      ggScrollDown();
+      return true;
+    }
+  } catch(e){
+    console.warn('[игры] не смог восстановить ход:', e && e.message || e);
+  }
+  return false;
 }
 
 /* Спрашиваем сервер, чем кончилась партия, и показываем финал. Если сервер
