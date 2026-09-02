@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v346 -->
+<!-- FILE_VERSION: index-v347 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10191,6 +10191,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px" data-text="tg.gate_body">Занятия лежат в закрытом канале клуба — сначала откроем тебе туда вход. Это часть регистрации, кнопка ниже всё сделает сама.</div>
     <button class="lec-link-btn access-btn" onclick="grantTgAccessAndJoin()">Открыть доступ к каналу</button>
     <div class="payment-help-link" style="margin-top:10px" onclick="alreadyHaveTgAccess()">Я уже в канале</div>
+    <!-- Появляется, только если сервер не смог сделать персональную ссылку -->
+    <div class="payment-help-link" id="tg-access-fallback" style="margin-top:6px;display:none" data-text="tg.gate_fallback">Не сработало? Войти в канал по общей ссылке</div>
   </div>
 </div>
 
@@ -10681,7 +10683,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v346 · 02.09.2026 свой экран скидки без баллов (три штуки, ползунок до месяца за рубль). До неё v345 — баннер о неудачном списании, v344 — экран оплаты, заслонка бота, игры';
+const APP_BUILD = 'v347 · 03.09.2026 ворота Telegram переживают молчание шлюза: проверка и выдача ссылки с пределом ожидания, выход в бота. До неё v346 — скидка без баллов, v345 — баннер о списании, v344 — экран оплаты и заслонка бота';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13935,6 +13937,10 @@ const APP_TEXTS = {
     t:'Канал и чат — для участников клуба' },
   'tg.access_fail': { c:'Доступы', l:'Ссылка не выдалась', w:'Канал и чат', i:false,
     t:'Не получилось открыть доступ. Напиши в поддержку — разберёмся.' },
+  'tg.access_via_bot': { c:'Доступы', l:'Ссылку не сделали — уводим в бота', w:'Канал и чат', i:false,
+    t:'Открываю бота — он выдаст доступ' },
+  'tg.gate_fallback': { c:'Доступы', l:'Запасной вход по общей ссылке', w:'Ворота Telegram', i:false,
+    t:'Не сработало? Войти в канал по общей ссылке' },
   'gt.step_of': { c:'Тур для гостя', l:'Номер шага (подставляются {n} и {m})', w:'Окно шага', i:false,
     t:'Шаг {n} из {m}' },
   'gt.next': { c:'Тур для гостя', l:'Кнопка «дальше»', w:'Окно шага', i:false, t:'Дальше' },
@@ -15998,25 +16004,43 @@ async function loadNextEventIntoSteps(){
    ⚠️ СТАРЫЕ ОБЩИЕ ССЫЛКИ ОСТАВЛЕНЫ ЗАПАСНЫМ ПУТЁМ: если бот ещё не назначен
    администратором канала, Telegram откажет, и без запасного варианта человек
    остался бы вовсе без входа. Уберём, когда персональные обкатаются. */
+/* ⚠️ ЗАПАСНОЙ ВЫХОД В БОТА (03.09.2026). Персональную ссылку делает сервер, а
+   он ходит в Telegram через шлюз на Railway. Шлюз молчит — новый участник видел
+   «Готовлю ссылку…» и больше ничего: без отметки о канале ворота не отдают ни
+   одной лекции, то есть в первые часы ему нечего смотреть и непонятно почему.
+   Теперь ждём 15 секунд и отправляем в бота — он выдаёт доступы своей дорогой,
+   мимо нашего сервера, и работает, даже когда у нас всё лежит. Общая ссылка на
+   канал остаётся вторым запасом: у чата стоит одобрение заявок, но у канала
+   она открывает вход сразу */
 async function openTgAccess(what){
   const fallback = what === 'chat' ? CHAT_JOIN_LINK : CHANNEL_JOIN_LINK;
   if (!telegramId){ openUrl(fallback); return; }
   showToast(t('tg.access_wait'));
   try {
-    const r = await fetch(`${API_URL}/access/tg/links`, {
+    const r = await tgFetch(`${API_URL}/access/tg/links`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: Number(telegramId) })
-    });
+    }, 15000);
     if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
     const d = await r.json();
     const link = (d && d[what]) || '';
     if (link){ openUrl(link); return; }
-    showToast(t('tg.access_fail'));
-    openUrl(fallback);
+    tgAccessViaBot(fallback);
   } catch (e){
-    // Сеть моргнула — человек всё равно должен попасть в канал
-    openUrl(fallback);
+    tgAccessViaBot(fallback);
   }
+}
+
+/* Сервер ссылку не дал — уводим в бота, а общий вход оставляем на виду:
+   человек не должен остаться на экране, с которого некуда идти */
+function tgAccessViaBot(fallback){
+  showToast(t('tg.access_via_bot'));
+  const el = document.getElementById('tg-access-fallback');
+  if (el){
+    el.style.display = '';
+    el.onclick = function(){ openUrl(fallback); };
+  }
+  openUrl(BOT_LINK + '?start=' + BOT_START_ACCESS);
 }
 
 function openChannelJoinLink(){ openTgAccess('channel'); pendingJoinKey = 'channel'; renderStepsPopup(); }
@@ -21590,14 +21614,31 @@ let pendingTgIndex = null, pendingTgSrc = 'lib', pendingTgUrl = null;
 /* Спрашиваем сервер в момент показа ворот. `channelJoined` — слепок с момента
    запуска: человек уходит вступать, возвращается, а слепок всё ещё говорит
    «не вступил». `fresh=true` заставляет сервер спросить сам Telegram */
+/* ⚠️ ПРОВЕРКА ЧЛЕНСТВА НЕ ИМЕЕТ ПРАВА ВИСЕТЬ (03.09.2026). С `fresh=true` сервер
+   спрашивает сам Telegram, а ходит он туда через шлюз на Railway. Молчащий шлюз
+   держал запрос до предела браузера — а `openTgAccessGate` его ЖДЁТ, поэтому со
+   стороны человека нажатие на лекцию просто ничего не делало минуту. Свой предел
+   в 7 секунд: не ответили — идём дальше с тем, что знаем (отметка о канале уже
+   лежит у большинства), и ворота показываются штатно */
 async function tgChannelFresh(){
   if (!telegramId) return channelJoined;
   try {
-    const r = await fetch(`${API_URL}/access/tg/state?telegram_id=${telegramId}&fresh=true`);
+    const r = await tgFetch(`${API_URL}/access/tg/state?telegram_id=${telegramId}&fresh=true`, {}, 7000);
     const d = await r.json();
     if (d && d.found) channelJoined = !!d.in_channel;
   } catch (e) {}
   return channelJoined;
+}
+
+/* fetch с пределом ожидания: при обрыве бросает исключение, как обычный fetch */
+async function tgFetch(url, options, timeoutMs){
+  const controller = new AbortController();
+  const timer = setTimeout(function(){ controller.abort(); }, timeoutMs);
+  try {
+    return await fetch(url, Object.assign({}, options || {}, { signal: controller.signal }));
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function openTgAccessGate(index, src){
