@@ -3174,7 +3174,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    `translate` сделал бы окно содержащим блоком для потомков с `position:fixed`
    — ровно те грабли, из-за которых уехали реквизиты (вуаль `::before` тоже
    fixed и должна крыть весь экран, а не окно). */
-#funnel-screen,#funnel-after{
+/* ⚠️ ЗАСЛОНКА БОТА — ТАКОЕ ЖЕ ОКНО, КАК ВОРОНКА (02.09.2026). У неё был только
+   класс `.center-msg.funnel-screen` без позиционирования: показанная, она
+   вставала ОБЫЧНЫМ блоком в самом низу документа, под оболочкой приложения.
+   [stated] Denis: «никакие кнопки не нажимаются, где-то внизу висит „разреши
+   боту писать тебе“, до него нужно мотать». Двери запирались (ensureBotAccess
+   возвращал false), а причина была за экраном. Теперь — окно поверх, со
+   своей вуалью; тап по вуали закрывает окно, действие не выполняется. */
+#funnel-screen,#funnel-after,#botaccess-screen{
   position:fixed;inset:0;margin:auto;z-index:855;
   width:min(92vw,391px);height:fit-content;max-height:88vh;min-height:0;max-width:none;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -3213,10 +3220,11 @@ body.onboarding-bar-visible header{margin-bottom:106px}
    своя карточка, и вторая рисовалась внутри неё.
    Гасим псевдоэлемент у обоих экранов воронки в ЛЮБОЙ теме — оформление окна
    задаётся правилами выше. Заодно уходит лишнее размытие внутри окна. */
-#funnel-screen::before,#funnel-after::before{content:none!important}
+#funnel-screen::before,#funnel-after::before,#botaccess-screen::before{content:none!important}
 /* Вертикальное центрование у длинного экрана срезало бы верх (флекс-ловушка
    justify-content:center + overflow) — воронка идёт сверху вниз */
 #funnel-screen,#funnel-after{justify-content:flex-start;padding:20px 16px 16px;gap:8px}
+#botaccess-screen{padding:28px 20px 24px;gap:12px}
 /* ⚠️ ВНУТРЕННОСТИ ОКНА СЖАТЫ ОТДЕЛЬНО (23.08.2026, третий заход по скриншотам).
    Уменьшить окно рамкой мало: его высоту задаёт СОДЕРЖИМОЕ, а оно набрано в
    размерах полноэкранной страницы — знак, заголовок, описание, плеер, две
@@ -3256,9 +3264,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Светлая тема: бумажную карточку .center-msg::before не рисуем — она бы
    закрыла собой приложение за плечом; вуаль светлая, чтобы тёмный текст
    темы оставался читаемым */
-[data-theme="light"] #funnel-screen,[data-theme="light"] #funnel-after{
+[data-theme="light"] #funnel-screen,[data-theme="light"] #funnel-after,[data-theme="light"] #botaccess-screen{
   background:rgba(250,247,242,.97);border-color:rgba(0,0,0,.08);
 }
+#botaccess-veil{position:fixed;inset:0;z-index:879;display:none;background:rgba(6,8,14,.5);
+  backdrop-filter:blur(3.5px);-webkit-backdrop-filter:blur(3.5px)}
+#botaccess-veil.on{display:block}
+[data-theme="light"] #botaccess-veil{background:rgba(232,226,216,.55)}
 
 /* ⚠️ КНОПКА «СВЕРНУТЬ» НЕ ДОЛЖНА ЛЕЖАТЬ НА ЗАГОЛОВКЕ (25.08.2026). Была
    тёмным кругом 36px поверх текста: на светлой теме — серое пятно, а длинный
@@ -6467,6 +6479,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      не разрешил сразу — не даём ему ничего включить внутри приложения, пока не
      разрешит»). Живёт поверх всего: её задача — остановить действие, а не
      заменить экран. ⚠️ Только Telegram: в ВК и MAX такого метода нет вовсе -->
+<div id="botaccess-veil" onclick="botAccessClose()"></div>
 <div class="center-msg funnel-screen" id="botaccess-screen" style="display:none;z-index:880">
   <div class="mark">БП</div>
   <h2 data-text="botaccess.title">Разреши боту писать тебе</h2>
@@ -10633,7 +10646,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v344 · 02.09.2026 экран оплаты: своя ошибка и повтор; заслонка бота перепроверяется при возврате; игры переживают обрыв связи; послеоплатные экраны без эмодзи';
+const APP_BUILD = 'v344 · 02.09.2026 экран оплаты: своя ошибка и повтор; заслонка бота — окно поверх экрана и перепроверка при возврате; игры переживают обрыв связи; послеоплатные экраны без эмодзи';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11191,6 +11204,7 @@ async function fetchWithTimeout(url, options, timeoutMs){
    ТРИ СОСТОЯНИЯ, а не два: null — «ещё не знаем» (спрашиваем Telegram),
    true — пускаем, false — заслонка. Новый гость это не «отказавшийся». */
 let botCanWrite = null;      // null | true | false
+let botAccessWatchLeft = 0;  // сколько тихих перепроверок заслонки ещё сделать
 let botAccessNext = null;    // что сделать, когда разрешит
 
 function botAccessNeeded(){
@@ -11242,12 +11256,18 @@ function ensureBotAccess(next){
     if (typeof BOT_LINK !== 'undefined') link.href = BOT_LINK + '?start=writeaccess';
   }
   if (el) el.style.display = '';
+  const veil = document.getElementById('botaccess-veil');
+  if (veil) veil.classList.add('on');
   return false;
 }
 
 function botAccessClose(){
   const el = document.getElementById('botaccess-screen');
   if (el) el.style.display = 'none';
+  const veil = document.getElementById('botaccess-veil');
+  if (veil) veil.classList.remove('on');
+  botAccessNext = null;
+  botAccessWatchLeft = 0;
 }
 
 function botAccessAsk(){
@@ -11262,8 +11282,9 @@ function botAccessAsk(){
     tg.requestWriteAccess(function(granted){
       if (granted){
         botAccessTell(true);
-        botAccessClose();
+        /* продолжение снимаем ДО закрытия: botAccessClose() его обнуляет */
         const next = botAccessNext; botAccessNext = null;
+        botAccessClose();
         if (typeof next === 'function') next();
       } else {
         botAccessTell(false);
@@ -11286,14 +11307,13 @@ function botAccessShowFallback(){
    (visibilitychange) и несколько тихих проверок после показа ссылки на бота.
    Обе дороги сходятся в botAccessRecheck(): право есть — экран закрывается и
    человек продолжает то, ради чего пришёл */
-let botAccessWatchLeft = 0;
 async function botAccessRecheck(){
   const el = document.getElementById('botaccess-screen');
   if (!el || el.style.display === 'none') return false;
   await loadBotAccess();
   if (botCanWrite !== true) return false;
-  botAccessClose();
   const next = botAccessNext; botAccessNext = null;
+  botAccessClose();
   if (typeof next === 'function') next();
   return true;
 }
