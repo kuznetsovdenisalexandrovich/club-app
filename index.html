@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v347 -->
+<!-- FILE_VERSION: index-v348 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10683,7 +10683,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v347 · 03.09.2026 ворота Telegram переживают молчание шлюза: проверка и выдача ссылки с пределом ожидания, выход в бота. До неё v346 — скидка без баллов, v345 — баннер о списании, v344 — экран оплаты и заслонка бота';
+const APP_BUILD = 'v348 · 04.09.2026 участник без Telegram: заменитель −vk_id как номер для аппа (hasRealTg), вход по номеру дописывает площадку. До неё v347 — ворота TG, v346 — скидка без баллов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16014,7 +16014,7 @@ async function loadNextEventIntoSteps(){
    она открывает вход сразу */
 async function openTgAccess(what){
   const fallback = what === 'chat' ? CHAT_JOIN_LINK : CHANNEL_JOIN_LINK;
-  if (!telegramId){ openUrl(fallback); return; }
+  if (!hasRealTg()){ openUrl(fallback); return; }
   showToast(t('tg.access_wait'));
   try {
     const r = await tgFetch(`${API_URL}/access/tg/links`, {
@@ -21664,7 +21664,7 @@ function openTgVideo(url){
   // ⚠️ БЕЗ TELEGRAM_ID ВОРОТА БЕССМЫСЛЕННЫ: сервер не сможет ни проверить
   // членство, ни выдать ссылку. Это человек из ВК или веб-версии — пускаем,
   // как пускали раньше. Настоящий путь для него — рукопожатие ВК→ТГ
-  if (!telegramId || channelJoined){ openUrl(url); return; }
+  if (!hasRealTg() || channelJoined){ openUrl(url); return; }
   openTgGateForUrl(url);
 }
 
@@ -21717,7 +21717,7 @@ async function linkTelegramFromVk(){
   try {
     const r = await fetch(`${API_URL}/access/tg/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vk_id: vk || null, telegram_id: telegramId || null })
+      body: JSON.stringify({ vk_id: vk || null, telegram_id: hasRealTg() ? telegramId : null })
     });
     if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
     const d = await r.json();
@@ -21735,7 +21735,7 @@ async function linkTelegramFromVk(){
    же именем молча переопределила бы первую */
 function renderAccessRows(){
   const inVk = (typeof isInsideVk === 'function') && isInsideVk();
-  const linked = !!telegramId;
+  const linked = hasRealTg();
   const show = (id, on) => {
     const el = document.getElementById(id);
     if (el) el.style.display = on ? '' : 'none';
@@ -21750,7 +21750,7 @@ function renderAccessRows(){
 function openLectureLink(index, platform, src) {
   if (!isMember) { openPaywall(); return; }
   if (platform === 'vk' && !vkAccessGranted) { openVkAccessGate(index, src); return; }
-  if (platform !== 'vk' && telegramId && !channelJoined) { openTgAccessGate(index, src); return; }
+  if (platform !== 'vk' && hasRealTg() && !channelJoined) { openTgAccessGate(index, src); return; }
   const l = cardList(src)[index];
   if (!l) return;
   rememberLastLecture(l);
@@ -24433,6 +24433,22 @@ function currentPlatformId(){
    сказать, кого мы знаем: есть телеграм — колбек уйдёт в ТГ-бота, иначе в
    ВК-бота. Человек, пришедший из ВК и не имеющий телеграма, раньше просто не
    мог ни оплатить из аппа, ни спросить ИИ-помощника — ответа было неоткуда взять. */
+/* ⚠️ НАСТОЯЩИЙ TELEGRAM — ТОЛЬКО ПОЛОЖИТЕЛЬНЫЙ НОМЕР (04.09.2026). Участнику без
+   Telegram сервер выдаёт заменитель −vk_id, чтобы апп работал как есть. Но всё,
+   что относится именно к Telegram (ворота канала, шаги регистрации, рукопожатие),
+   должно смотреть на этот признак, а не на «telegramId непустой» */
+function hasRealTg(){ return Number(telegramId) > 0; }
+
+/* Данные запуска площадки, где открыт апп, — к входу по номеру. Сервер проверит
+   подпись и допишет к карточке telegram_id или vk_id (задача d02). Пустые поля
+   безвредны: сервер их просто не читает */
+function launchIdentity(){
+  const out = {};
+  try { const t = (typeof tgLaunchData === 'function') ? tgLaunchData() : ''; if (t) out.tg_launch = t; } catch(e){}
+  try { const v = (typeof vkLaunchQuery === 'function') ? vkLaunchQuery() : ''; if (v) out.vk_launch = v; } catch(e){}
+  return out;
+}
+
 function actionIdent(){
   if (telegramId) return { telegram_id: telegramId };
   if (typeof isInsideVk === 'function' && isInsideVk()) return { vk_id: Number(vkUserId()) || 0 };
@@ -24675,7 +24691,7 @@ async function verifyLoginCode(){
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: loginPhone, code })
+      body: JSON.stringify({ phone: loginPhone, code, ...launchIdentity() })
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
@@ -24700,7 +24716,7 @@ async function quickPhoneLogin(phone){
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: value })
+      body: JSON.stringify({ phone: value, ...launchIdentity() })
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'Не получилось войти');
