@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v351 -->
+<!-- FILE_VERSION: index-v352 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10698,7 +10698,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v351 · 04.09.2026 порог зрелости фильма 90%: предложение и окно бонусов показываются на первом же выходе, а не на последней секунде; список бонусов открывается сам, полоса называет добычу. До неё v350 — переход по приглашению из дашборда';
+const APP_BUILD = 'v352 · 04.09.2026 сервер узнаёт, окно открыто по порогу 90% или по настоящему досмотру. До неё v351 — порог зрелости фильма: предложение на первом же выходе';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22393,14 +22393,17 @@ function bwSyncLastMin(){
 
 /* Досмотрел фильм — заводим окно. Опознанному ставим отметку на сервере,
    веб-гостю хватит своей */
-async function bwOnFilmDone(){
+/* ⚠️ `byRipe` — окно открыто ПОРОГОМ (90%), а не титрами. Сервер разводит эти
+   два случая разными отметками: иначе графа «досмотрел» в лестнице воронки
+   начнёт считать тех, кто до конца не дошёл */
+async function bwOnFilmDone(byRipe){
   if (!bwWindowMin()) return;      // окно выключено настройкой
   let left = bwWindowMin() * 60;
   if (telegramId){
     try {
       const d = await apiRequest(`${API_URL}/funnel/film-done`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ telegram_id: telegramId })
+        body: JSON.stringify({ telegram_id: telegramId, ripe: !!byRipe })
       }, 8000);
       if (d && d.known && typeof d.seconds_left === 'number') left = d.seconds_left;
     } catch(e){ /* сеть молчит — считаем по своей отметке, окно важнее точности */ }
@@ -22907,8 +22910,10 @@ function showFunnelAfter(){
     // отсюда, для узнанных она уедет и на сервер
     localStorage.setItem('club_app_film_done_at', String(Date.now()));
   } catch(e){}
-  track('funnel_film_done');
-  if (typeof bwOnFilmDone === 'function') bwOnFilmDone();
+  /* Порог и настоящий досмотр отмечаем РАЗНЫМИ событиями — иначе статистика
+     досмотров перестанет быть правдой */
+  if (!filmRipeOffered) track('funnel_film_done');
+  if (typeof bwOnFilmDone === 'function') bwOnFilmDone(filmRipeOffered);
   /* ⚠️ ДВА ФИНАЛА (23.08.2026). Досмотрел в развёрнутом окне — экран «ну что,
      всё понятно?» как раньше. Досмотрел, пока фильм жил в PiP и человек лазил
      по приложению, — НЕ выдёргиваем его полноэкранным итогом: мини-плеер тихо
