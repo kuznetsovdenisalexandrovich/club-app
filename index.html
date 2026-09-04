@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v348 -->
+<!-- FILE_VERSION: index-v349 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10683,7 +10683,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v348 · 04.09.2026 участник без Telegram: заменитель −vk_id как номер для аппа (hasRealTg), вход по номеру дописывает площадку. До неё v347 — ворота TG, v346 — скидка без баллов';
+const APP_BUILD = 'v349 · 04.09.2026 регистрация зеркальна площадке: пришедшему из ВК — сперва группа ВК, Telegram последним через рукопожатие. До неё v348 — заменитель −vk_id, v347 — ворота TG';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15286,16 +15286,45 @@ let progressFraction = 0;
 let pendingJoinKey = null;       // 'channel' | 'chat' | null — ждём подтверждения с сервера после клика
 let showRegistrationWarning = false; // true только если это НЕ первый заход и регистрация (уровень 1) не завершена
 
+/* ⚠️⚠️ РЕГИСТРАЦИЯ ЗЕРКАЛЬНА ПЛОЩАДКЕ (04.09.2026). Список был написан для
+   пришедшего из Telegram: канал → чат → обучение. Купивший в ВК упирался во
+   второй шаг — ссылка вела прямо в закрытый канал Telegram, будто он там уже
+   свой, без рукопожатия; заявка уходила в никуда. [stated] Denis: «для вк надо
+   в регистрацию сначала засунуть доступ к вк, а уже в конце к тг, зеркально
+   тому, как выдавали доступы в тг».
+
+   Наборов теперь два, выбирает `regStepsForPlatform()`: у пришедшего из ВК
+   первой идёт своя группа, а Telegram — ПОСЛЕДНИМ и через рукопожатие
+   (`linkTelegramFromVk` → бот узнаёт человека и сам выдаёт вход в канал и чат).
+   У пришедшего из Telegram всё как было. */
+const REG_STEPS_TG = [
+  { key: 'paid',    label: 'Оплатить доступ' },  // всегда true для участника
+  { key: 'channel', label: 'Попасть в закрытый канал', action: 'openChannelJoinLink' },
+  { key: 'chat',    label: 'Попасть в закрытый чат', action: 'openChatJoinLink' },
+  { key: 'tour',    label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
+  { key: 'say_hi',  label: 'Написать "привет" в чатике', action: 'placeholderSayHiStep' },
+];
+const REG_STEPS_VK = [
+  { key: 'paid',     label: 'Оплатить доступ' },
+  { key: 'vk_group', label: 'Вступить в закрытую группу ВК', action: 'openVkGroupFromSteps' },
+  { key: 'tour',     label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
+  /* Последним — и мягким: занятия идут в Telegram, но заставлять человека,
+     который живёт в ВК, заводить там аккаунт мы не будем. Засчитывается, как
+     только рукопожатие состоялось — у карточки появился настоящий tg */
+  { key: 'tg_link',  label: 'Подключить Telegram (по желанию)', action: 'linkTelegramFromSteps' },
+];
+/* ВК-набор — тому, кто открыл клуб В ВК, и тому, у кого Telegram ещё не
+   привязан (заменитель −vk_id): иначе человек упирается в шаг, который ему
+   пройти нечем */
+function regStepsForPlatform(){
+  const inVk = (typeof isInsideVk === 'function') && isInsideVk();
+  return (inVk || !hasRealTg()) ? REG_STEPS_VK : REG_STEPS_TG;
+}
+
 const LEVELS = {
   1: {
     title: 'Регистрация',
-    steps: [
-      { key: 'paid',    label: 'Оплатить доступ' },  // всегда true для участника
-      { key: 'channel', label: 'Попасть в закрытый канал', action: 'openChannelJoinLink' },
-      { key: 'chat',    label: 'Попасть в закрытый чат', action: 'openChatJoinLink' },
-      { key: 'tour',    label: 'Пройти обучение по клубу', action: 'startTourFromSteps' },
-      { key: 'say_hi',  label: 'Написать "привет" в чатике', action: 'placeholderSayHiStep' },   // TODO: нужен сигнал из чата
-    ],
+    get steps(){ return regStepsForPlatform(); },
   },
   2: {
     title: 'Уровень 2',
@@ -15328,6 +15357,8 @@ function currentLevelDef(){
 
 function onboardStepDone(key){
   if (key === 'paid') return isMember;
+  if (key === 'vk_group') return vkAccessGranted;   // живая сверка с ВК, см. vkAccessFresh
+  if (key === 'tg_link') return hasRealTg();        // рукопожатие состоялось — на карточке настоящий tg
   if (key === 'channel') return channelJoined;   // реальный статус с сервера, не localStorage
   if (key === 'chat') return chatJoined;          // реальный статус с сервера, не localStorage
   if (key === 'add_home_screen') return homeScreenAdded; // реальный статус с сервера — фронтенд сам шлёт сигнал, когда веб-версия открыта в standalone
@@ -16044,6 +16075,10 @@ function tgAccessViaBot(fallback){
 }
 
 function openChannelJoinLink(){ openTgAccess('channel'); pendingJoinKey = 'channel'; renderStepsPopup(); }
+/* Шаги ВК-набора. Окно шагов закрываем — обе дороги уводят из приложения, и
+   висящее поверх окно мешает вернуться */
+function openVkGroupFromSteps(){ closeStepsPopup(); openVkAccessFlow(); }
+function linkTelegramFromSteps(){ closeStepsPopup(); linkTelegramFromVk(); }
 function openChatJoinLink(){ openTgAccess('chat'); pendingJoinKey = 'chat'; renderStepsPopup(); }
 // Плейсхолдеры — реального сигнала пока нет, кнопка просто отмечает шаг
 // выполненным для тестирования интерфейса
