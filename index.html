@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v349 -->
+<!-- FILE_VERSION: index-v350 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10240,6 +10240,21 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   </div>
 </div>
 
+<!-- Сверка контактов после перехода по приглашению из дашборда -->
+<div class="center-modal-overlay" id="contactcheck-overlay" onclick="if(event.target===this) closeContactCheck()">
+  <div class="center-modal" style="max-width:420px">
+    <div class="center-modal-header">
+      <div class="center-modal-title" data-text="contactcheck.title">Проверь свои данные</div>
+      <button class="icon-btn" onclick="closeContactCheck()">✕</button>
+    </div>
+    <div class="sm-hint" style="line-height:1.55;margin-bottom:10px" data-text="contactcheck.text">Твоя карточка заведена вручную, поэтому телефон мог записаться с ошибкой. По нему ты входишь в клуб из браузера — проверь, что всё верно.</div>
+    <input class="login-input" type="tel" id="contactcheck-phone" placeholder="+7 900 000-00-00" style="margin-bottom:8px">
+    <input class="login-input" type="email" id="contactcheck-email" placeholder="Почта (необязательно)" style="margin-bottom:8px">
+    <div class="sm-hint" id="contactcheck-error" style="display:none;color:var(--warm);margin-bottom:8px"></div>
+    <button class="lec-link-btn access-btn" id="contactcheck-save" style="width:100%" onclick="saveContactCheck()" data-text="contactcheck.save">Всё верно</button>
+  </div>
+</div>
+
 <div class="center-modal-overlay" id="freediscount-overlay" onclick="if(event.target===this) closeFreeDiscount()">
   <div class="center-modal" style="max-width:420px;max-height:82vh;overflow-y:auto">
     <div class="center-modal-header">
@@ -10683,7 +10698,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v349 · 04.09.2026 регистрация зеркальна площадке: пришедшему из ВК — сперва группа ВК, Telegram последним через рукопожатие. До неё v348 — заменитель −vk_id, v347 — ворота TG';
+const APP_BUILD = 'v350 · 04.09.2026 переход по приглашению из дашборда: узнаём человека и даём сверить телефон. До неё v349 — регистрация зеркальна площадке, v348 — заменитель −vk_id';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -14223,6 +14238,15 @@ const APP_TEXTS = {
   'chargefail.btn_points': {
     c:'Подписка', l:'Кнопка «оплатить месяц баллами»', w:'Окно «не получилось списать»', i:false,
     t:'Оплатить месяц баллами' },
+  'contactcheck.title': {
+    c:'Вход', l:'Заголовок сверки контактов', w:'После перехода по приглашению из дашборда', i:false,
+    t:'Проверь свои данные' },
+  'contactcheck.text': {
+    c:'Вход', l:'Пояснение к сверке контактов', w:'После перехода по приглашению из дашборда', i:false,
+    t:'Твоя карточка заведена вручную, поэтому телефон мог записаться с ошибкой. По нему ты входишь в клуб из браузера — проверь, что всё верно.' },
+  'contactcheck.save': {
+    c:'Вход', l:'Кнопка подтверждения контактов', w:'Окно «Проверь свои данные»', i:false,
+    t:'Всё верно' },
   'freediscount.title': {
     c:'Подписка', l:'Заголовок окна скидки без баллов', w:'Окно «Скидка на следующий месяц»', i:false,
     t:'Скидка на следующий месяц' },
@@ -24407,6 +24431,69 @@ function paidClaimRetryIfPending(){
   claimManualAccess(token);
 }
 
+/* Имя и ник с той площадки, где открыт клуб. Пусто — ничего страшного, сервер
+   просто не заполнит эти поля */
+function platformDisplayName(){
+  try {
+    const u = window.Telegram && window.Telegram.WebApp
+           && window.Telegram.WebApp.initDataUnsafe
+           && window.Telegram.WebApp.initDataUnsafe.user;
+    if (u) return [u.first_name, u.last_name].filter(Boolean).join(' ');
+  } catch(e){}
+  return '';
+}
+function platformUserName(){
+  try {
+    const u = window.Telegram && window.Telegram.WebApp
+           && window.Telegram.WebApp.initDataUnsafe
+           && window.Telegram.WebApp.initDataUnsafe.user;
+    if (u && u.username) return '@' + u.username;
+  } catch(e){}
+  return '';
+}
+
+/* ══ СВЕРКА КОНТАКТОВ ПОСЛЕ ПРИГЛАШЕНИЯ ═══════════════════════════════════ */
+function openContactCheck(phone, email){
+  const box = document.getElementById('contactcheck-overlay');
+  if (!box) return;
+  const p = document.getElementById('contactcheck-phone');
+  const e = document.getElementById('contactcheck-email');
+  if (p) p.value = phone || '';
+  if (e) e.value = email || '';
+  setContactCheckError('');
+  box.classList.add('open');
+}
+function closeContactCheck(){
+  const box = document.getElementById('contactcheck-overlay');
+  if (box) box.classList.remove('open');
+}
+function setContactCheckError(text){
+  const el = document.getElementById('contactcheck-error');
+  if (el){ el.textContent = text || ''; el.style.display = text ? '' : 'none'; }
+}
+async function saveContactCheck(){
+  const phone = (document.getElementById('contactcheck-phone').value || '').trim();
+  const email = (document.getElementById('contactcheck-email').value || '').trim();
+  if (!phone && !email){ closeContactCheck(); return; }
+  const btn = document.getElementById('contactcheck-save');
+  if (btn){ btn.disabled = true; btn.textContent = 'Сохраняю…'; }
+  try {
+    const r = await fetch(`${API_URL}/users/self/contact`, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, sessionHeaders()),
+      body: JSON.stringify({ telegram_id: telegramId, phone, email })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || 'Не получилось сохранить');
+    closeContactCheck();
+    showToast('Данные сохранены');
+  } catch (e){
+    setContactCheckError(e.message);
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = 'Всё верно'; }
+  }
+}
+
 async function claimLinkToken(token){
   try {
     const r = await fetch(`${API_URL}/link/claim`, {
@@ -24414,12 +24501,21 @@ async function claimLinkToken(token){
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, platform: currentPlatform(),
-                             external_id: currentPlatformId() })
+                             external_id: currentPlatformId(),
+                             /* Имя и ник — заполнить пустые поля карточки,
+                                заведённой руками. Поверх введённого Denis'ом
+                                сервер не пишет */
+                             name: platformDisplayName(), username: platformUserName() })
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'Ссылка не сработала');
     if (data.session_token) rememberSessionToken(data.session_token);
     if (data.telegram_id) telegramId = Number(data.telegram_id) || data.telegram_id;
+    /* ⚠️ ПРИГЛАШЕНИЕ ИЗ ДАШБОРДА — СВЕРЯЕМ КОНТАКТЫ (04.09.2026). Карточку
+       заводили руками, телефон могли записать с ошибкой или в другом виде — а
+       это ключ входа в веб-версию. Показываем, что о человеке знаем, и даём
+       поправить; он единственный, кто знает наверняка */
+    if (data.ask_contact) setTimeout(function(){ openContactCheck(data.phone, data.email); }, 600);
     // Дальше приложение запускается обычным путём — узнавать человека повторно
     // не нужно, мы только что это сделали
   } catch (e) {
