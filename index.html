@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v350 -->
+<!-- FILE_VERSION: index-v351 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10698,7 +10698,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v350 · 04.09.2026 переход по приглашению из дашборда: узнаём человека и даём сверить телефон. До неё v349 — регистрация зеркальна площадке, v348 — заменитель −vk_id';
+const APP_BUILD = 'v351 · 04.09.2026 порог зрелости фильма 90%: предложение и окно бонусов показываются на первом же выходе, а не на последней секунде; список бонусов открывается сам, полоса называет добычу. До неё v350 — переход по приглашению из дашборда';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22208,6 +22208,14 @@ let funnelPlayerReady = false;   // плеер вставлен на экран
    остаток и снимается на паузе. Основные рубежи прежние: событие `stop` и
    позиция `time >= duration - 3`. */
 let filmDone = false;            // фильм досмотрен в этой сессии
+/* ⚠️ ПОРОГ ЗРЕЛОСТИ (04.09.2026). Раньше предложение показывалось ТОЛЬКО на
+   последней секунде (`time >= duration - 3`), и человек, ушедший на 84-94%,
+   не видел ни окна бонусов, ни оффера вообще: по живым данным именно там
+   уходят самые прогретые. Теперь «созрел» = отдал фильму 90%, и предложение
+   ждёт его на ПЕРВОМ ЖЕ выходе — свернул, закрыл, досмотрел, всё равно. */
+const FILM_RIPE_PCT = 0.9;
+let filmRipe = false;            // прошёл порог зрелости
+let filmRipeOffered = false;     // предложение по зрелости уже показывали
 let filmLastPos = 0;             // последняя позиция из события `time`, сек
 let filmDuration = 0;            // длительность из события `time`, сек
 let filmPosSavedAt = 0;          // когда позиция писалась в хранилище
@@ -22398,6 +22406,12 @@ async function bwOnFilmDone(){
     } catch(e){ /* сеть молчит — считаем по своей отметке, окно важнее точности */ }
   }
   bwStart(left);
+  /* ⚠️ СПИСОК ПОКАЗЫВАЕМ САМИ, ОДИН РАЗ (04.09.2026). Прежде содержимое окна
+     видел только тот, кто сам ткнул в полосу, — то есть ценность была спрятана
+     ровно от того, кого надо было убедить. Открываем именно здесь, на выходе
+     с фильма (самая тёплая точка), и только тут: на `bwResume` человек уже
+     видел список в прошлой сессии, второй раз это назойливость. */
+  if (left > 0 && !isMember) bwOpen();
 }
 
 /* Запуск аппа: окно могло начаться в прошлой сессии — поднимаем бар обратно */
@@ -22451,6 +22465,25 @@ function bwSetPhase(next, secondsLeft){
   if (next === 'over') track('bonus_window_over');
 }
 
+/* ⚠️ ПОЛОСА НАЗЫВАЕТ ДОБЫЧУ (04.09.2026). Прежде она торопила забрать
+   НЕПОНЯТНО ЧТО: голый таймер и слово «бонусы». Срочность без предмета
+   читается как назойливость — сперва человек должен захотеть, и только потом
+   ему нужен дефицит. Список и так тянется с сервера для окна, здесь берём из
+   него первое название. Молчим, если бонусов нет: пустое обещание хуже
+   отсутствующего. */
+async function bwNameLoot(){
+  const el = document.getElementById('bb-txt');
+  if (!el) return;
+  let rows = [];
+  try { rows = await bwLoadList(); } catch(e){ return; }
+  if (!rows || !rows.length) return;
+  const first = (rows[0].title || rows[0].key || '').trim();
+  if (!first) return;
+  el.textContent = rows.length > 1
+    ? ('Забери «' + first + '» и ещё ' + (rows.length - 1))
+    : ('Забери «' + first + '»');
+}
+
 function bwStart(seconds){
   if (!(seconds > 0) || isMember) return;
   bwSyncLastMin();
@@ -22460,6 +22493,7 @@ function bwStart(seconds){
   clearInterval(bwTimer);
   bwTick();
   bwTimer = setInterval(bwTick, 1000);
+  bwNameLoot();
   track('bonus_window_open');
 }
 
@@ -22839,9 +22873,26 @@ window.addEventListener('message', function(ev){
        неё — поймано стендом 23.08 */
     filmMaybeResume(d);
     filmSavePos();
+    /* Порог зрелости отмечаем один раз и с настоящей позицией: по нему потом
+       решается, показывать ли предложение при уходе */
+    if (!filmRipe && d.time >= d.duration * FILM_RIPE_PCT){
+      filmRipe = true;
+      track('funnel_film_ripe', '', Math.floor(d.time));
+    }
     if (d.time >= d.duration - 3) showFunnelAfter();
   }
 });
+
+/* ⚠️ ВЫХОД С ФИЛЬМА ПОСЛЕ ПОРОГА ЗРЕЛОСТИ (04.09.2026). Свернул в PiP или
+   закрыл окно, отдав фильму 90%, — это не «передумал», это готовое решение,
+   которому просто не показали дверь. Возвращает true, если предложение
+   показано: вызывающему тогда не надо доделывать своё сворачивание. */
+function filmRipeOffer(){
+  if (filmDone || filmRipeOffered || !filmRipe) return false;
+  filmRipeOffered = true;
+  showFunnelAfter();
+  return true;
+}
 
 function showFunnelAfter(){
   if (!funnelFilmStarted || filmDone) return;  // не запускали или уже подытожили
@@ -22862,13 +22913,16 @@ function showFunnelAfter(){
      всё понятно?» как раньше. Досмотрел, пока фильм жил в PiP и человек лазил
      по приложению, — НЕ выдёргиваем его полноэкранным итогом: мини-плеер тихо
      прощается подписью и уходит сам */
+  /* ⚠️ ПЕРЕСМОТРЕНО 04.09.2026. Прежде свёрнутый фильм на финале прощался
+     подписью и уходил молча — чтобы не выдёргивать человека, который лазит по
+     приложению. По следам живых гостей это оказалось дырой: досмотревший в
+     PiP не получал ни окна бонусов, ни оффера. Теперь плеер выгружаем, но
+     предложение показываем — момент слишком дорогой, чтобы промолчать. */
   const cur = document.getElementById('funnel-screen');
   if (cur && cur.classList.contains('pip-mode')){
-    funnelVeil(false);
+    cur.classList.remove('pip-mode');
     const done = document.getElementById('film-dock-done');
-    if (done) done.classList.add('on');
-    setTimeout(filmHardStop, 4000);
-    return;
+    if (done) done.classList.remove('on');
   }
   const slot = document.getElementById('funnel-film-slot');
   if (slot) slot.innerHTML = '';        // выгружаем плеер, иначе звук играет под экраном
@@ -22939,6 +22993,9 @@ function funnelLeave(keepFilm){
      на фоне звук издаёт, а вот окошка нигде не видно».
      `funnelPlayerReady` — наш собственный факт: плеер вставлен нами. Если он
      в DOM, значит и звук из него, и сворачивать есть что. */
+  /* Созревший уходит не в PiP, а в предложение: он уже посмотрел столько,
+     что следующий разумный шаг — не «фильм в углу», а дверь в клуб */
+  if (keepFilm && filmRipeOffer()) return;
   if (keepFilm && (funnelPlayerReady || funnelFilmStarted) && !filmDone){
     const scr = document.getElementById('funnel-screen');
     if (scr){ scr.classList.add('pip-mode'); scr.style.display = 'flex'; }
