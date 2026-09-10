@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v353 -->
+<!-- FILE_VERSION: index-v354 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10698,7 +10698,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v353 · 05.09.2026 починены два необъявленных флага (built_path и ask_denis) — сбой на финале анкеты личного плана. До неё v352 — порог зрелости фильма';
+const APP_BUILD = 'v354 · 10.09.2026 картинка результата теста — постер из пака бога, когда он собран (тип берём из ответа сервера); события bonus_open и magazine_read. До неё v353 — необъявленные флаги на финале анкеты плана';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17266,6 +17266,8 @@ function openBonusPopup(key){
   const b = findBonus(key);
   if (!b) return;
   bonusOpenKey = key;
+  // «Смотрел бонус» — сервер ждал это событие с 26.08, апп его не слал (10.09.2026)
+  track('bonus_open', key);
   document.getElementById('bonus-popup-title').textContent = b.title || 'Бонус';
   document.getElementById('bonus-popup-sub').textContent =
     b.available ? (b.subtitle || '')
@@ -25970,6 +25972,9 @@ async function readMagazineIssue(key, variant){
   if (!telegramId){ showToast('Открыть выпуск можно после входа'); return; }
 
   closeMagazineIssue();
+  // «Читал журнал» — не открыл полку, а пошёл в сам выпуск (10.09.2026);
+  // `magazine_open` пишется раньше, при открытии карточки выпуска
+  track('magazine_read', key);
   if (variant === 'mobile') rememberMagazineRead(it);
 
   // ОТКУДА ОТКРЫВАЕМ — сообщаем серверу. Сама страница выпуска этого знать не
@@ -29398,9 +29403,12 @@ function quizWantPlan(){
 }
 
 /* ── Картинка-карточка результата ────────────────────────────────────────────
-   Рисует сервер (app/share_card.py) — один и тот же PNG для обоих путей:
-   апп скачивает его и отдаёт в системное меню «Поделиться», а бот присылает
-   ту же картинку в чат. Клиенту свой рисовальщик не нужен */
+   Рисует сервер — одна и та же картинка для обоих путей: апп скачивает её и
+   отдаёт в системное меню «Поделиться», а бот присылает ту же в чат. Клиенту
+   свой рисовальщик не нужен.
+   ⚠️ С 10.09.2026 (index-v354, main-v277) сервер САМ решает, что отдать:
+   постер из пака бога (JPEG), если пак собран, иначе карточку (PNG). Поэтому
+   тип и расширение файла берём из ответа, а не зашиваем «png» */
 
 function quizCardUrl(){
   if (!quizResult) return '';
@@ -29424,7 +29432,9 @@ async function shareQuizImage(){
     const resp = await fetch(quizCardUrl());
     if (!resp.ok) throw new Error('сервер ответил ' + resp.status);
     const blob = await resp.blob();
-    const file = new File([blob], 'bozhenka-' + quizResult.code + '.png', { type: 'image/png' });
+    const type = (blob.type && blob.type.indexOf('image/') === 0) ? blob.type : 'image/png';
+    const ext = (type === 'image/jpeg') ? 'jpg' : 'png';
+    const file = new File([blob], 'bozhenka-' + quizResult.code + '.' + ext, { type: type });
     const text = 'Я — ' + me.god + ', ' + me.role.toLowerCase() + '. А ты кто из боженек продаж?';
 
     // Системное меню с ФАЙЛОМ — то, что нужно для сторис. Поддержка есть не
