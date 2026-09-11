@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v355 -->
+<!-- FILE_VERSION: index-v356 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10704,7 +10704,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v355 · 11.09.2026 разрешение боту писать спрашивается при первом открытии, фильм за заслонкой, отказ не тупик. До неё v354 — постер результата теста и события bonus_open/magazine_read';
+const APP_BUILD = 'v356 · 11.09.2026 архив не зажигает огонёк «новое», кнопка «Поделиться» у занятия (10 минут аудио по ссылке), тур: тёмная фаза не залипает, закрытое окно возвращает шаг. До неё v355 — право писать на старте';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11711,7 +11711,7 @@ function runAppRoute(payload){
       if (typeof ggOpenTo === 'function'){ ggOpenTo(key, p.indexOf('gs_') === 0 ? 'play' : 'rules'); return; }
     }
     if (p.indexOf('l_') === 0 && typeof openLectureByKey === 'function'){
-      openLectureByKey(p.slice(2), ''); return;
+      openLectureByKey(contentKeyWithoutTail(p.slice(2)), ''); return;
     }
     const route = DEEPLINKS[p];
     if (route){ route.go(); return; }
@@ -13947,6 +13947,14 @@ const APP_TEXTS = {
   'games.note_cta': { c:'Игры', l:'Кнопка в попапе разбора', w:'Попап внутри партии', i:false, t:'Что в клубе' },
   'login.welcome_back': { c:'Вход', l:'Подтверждение после входа с экрана оплаты', w:'Тост', i:false, t:'Готово — ты в клубе' },
   'share.film': { c:'Поделиться', l:'Кнопка под фильмом', w:'Попап фильма', i:false, t:'Поделиться фильмом' },
+  'share.lecture_btn': { c:'Поделиться', l:'Кнопка «Поделиться» в карточке занятия', w:'Карточка занятия', i:false,
+    t:'Поделиться' },
+  'share.lecture_audio': { c:'Поделиться', l:'Текст при отправке занятия с аудио ({название})', w:'Шторка шеринга', i:false,
+    t:'Послушай первые минуты занятия «{название}» — открыто всем, дальше только в клубе.' },
+  'share.lecture_ideas': { c:'Поделиться', l:'Текст при отправке занятия без аудио, но с идеями ({название})', w:'Шторка шеринга', i:false,
+    t:'Главные мысли занятия «{название}» — коротко и по делу.' },
+  'share.lecture_plain': { c:'Поделиться', l:'Текст при отправке занятия без аудио и идей ({название})', w:'Шторка шеринга', i:false,
+    t:'Занятие «{название}» из клуба — глянь.' },
   'share.film_text': { c:'Поделиться', l:'Текст при отправке фильма', w:'Шторка шеринга', i:false, t:'Глянь короткометражку «Я Подумаю» — про то самое возражение, с которым все борются.' },
   /* Кнопки стали значками в углу — эти два ключа остаются для подсказки
      скринридера и на случай возврата подписей */
@@ -16762,8 +16770,15 @@ function onbSwapView(name){
   const root = document.documentElement;
   clearTimeout(onbSwapTimer);
   root.classList.add('onb-swap');
+  /* ⚠️ ТЁМНАЯ ФАЗА НЕ ИМЕЕТ ПРАВА ЗАЛИПНУТЬ (11.09.2026). Упал switchView,
+     экран не собрался, человек закрыл окно шага в эти 220 мс — класс оставался,
+     и всё приложение было прозрачным до перезапуска ([stated] Denis: «какой-то
+     экран тупит, всё чёрное»). Снимаем в finally и страхуемся таймером */
+  clearTimeout(window._onbSwapSafety);
+  window._onbSwapSafety = setTimeout(function(){ root.classList.remove('onb-swap'); }, 1200);
   onbSwapTimer = setTimeout(function(){
-    switchView(name);
+    try { switchView(name); }
+    catch(e){ root.classList.remove('onb-swap'); return; }
     // Проявляем следующим кадром: снять класс в том же кадре, что и смену
     // экрана, — значит не дать браузеру нарисовать тёмную фазу вовсе
     requestAnimationFrame(function(){
@@ -16898,6 +16913,8 @@ function onbNext(how){
 function onbPause(){
   const st = ONB_STEPS[onbIdx];
   onbCloseFloaters();
+  clearTimeout(onbSwapTimer);
+  document.documentElement.classList.remove('onb-swap');
   onbHideCard();
   onbTrying = null;
   if (st) markTourOnServer({ step: st.key, action:'paused', index: onbIdx });
@@ -16952,11 +16969,32 @@ function onbModalOpen(){
    пришлось бы в двух десятках мест. Смотрим за классами сами — и ТОЛЬКО
    пока идёт знакомство, чтобы не держать наблюдателя всю жизнь аппа */
 let onbModalObs = null;
+let onbModalWasOpen = false;
+/* ⚠️ ЗАКРЫТОЕ ОКНО ВОЗВРАЩАЕТ ШАГ, А НЕ ЛОМАЕТ ТУР (11.09.2026). Человек нажал
+   «попробовать», окно открылось, он его закрыл (крестиком, свайпом, случайно)
+   — и оставался с пустым экраном и мелкой полоской внизу. Теперь переход
+   «окно было открыто → закрылось» во время пробы через секунду возвращает
+   карточку того же шага: «Попробовать» и «Дальше» снова на месте.
+   Идущая партия окном не считается — её закрытие тоже ловится здесь */
+function onbModalTick(){
+  const open = onbModalOpen();
+  if (onbModalWasOpen && !open && onbActive && onbTrying){
+    clearTimeout(window._onbReturnTimer);
+    window._onbReturnTimer = setTimeout(function(){
+      if (!onbActive || !onbTrying || onbModalOpen()) return;
+      if (document.getElementById('onb-wrap').classList.contains('open')) return;
+      onbShow();
+    }, 900);
+  }
+  onbModalWasOpen = open;
+}
 function onbWatchModals(on){
   if (on && !onbModalObs){
+    onbModalWasOpen = onbModalOpen();
     onbModalObs = new MutationObserver(function(){
       clearTimeout(window._onbTrailTimer);
       window._onbTrailTimer = setTimeout(onbDrawTrail, 80);
+      onbModalTick();
     });
     onbModalObs.observe(document.body, { attributes:true, subtree:true, attributeFilter:['class'] });
   } else if (!on && onbModalObs){
@@ -17163,7 +17201,10 @@ function onbSaveSeen(tab, ids){
   try { localStorage.setItem('club_app_seen_' + tab, JSON.stringify(ids.slice(0, 400))); } catch (e) {}
 }
 function onbTabIds(tab){
-  if (tab === 'library') return (allLectures || []).map(function(l){ return l.slug; }).filter(Boolean);
+  /* ⚠️ АРХИВ НЕ ЗАЖИГАЕТ «НОВОЕ» (11.09.2026): старое занятие, залитое сегодня,
+     на полке появилось, но новым не стало — см. флаг is_archive в анализаторе */
+  if (tab === 'library') return (allLectures || []).filter(function(l){ return !l.is_archive; })
+                                                  .map(function(l){ return l.slug; }).filter(Boolean);
   if (tab === 'games')   return (((typeof ggList !== 'undefined' && ggList) || {}).games || [])
                                   .map(function(g){ return g.key; }).filter(Boolean);
   return [];
@@ -17743,6 +17784,15 @@ async function openLectureByKey(key, mode){
   }
 }
 
+/* Хвост ссылки на контент: целиком цифры (старый телеграмный айди) или
+   `u`+8 знаков (код). Без приметы слаг с подчёркиванием был бы неотличим */
+function contentKeyWithoutTail(key){
+  const parts = String(key || '').split('_');
+  const tail = parts[parts.length - 1];
+  if (parts.length >= 2 && (/^\d+$/.test(tail) || /^u[0-9a-z]{8}$/.test(tail))) return parts.slice(0, -1).join('_');
+  return String(key || '');
+}
+
 /* Разбор точки входа на контент. Возвращает true, если ссылка наша */
 function contentFromUrl(){
   const param = appStartParam();
@@ -17750,7 +17800,8 @@ function contentFromUrl(){
   for (let i = 0; i < pairs.length; i++){
     const pref = pairs[i][0];
     if (param.indexOf(pref) === 0){
-      const key = param.slice(pref.length);
+      /* Реферальный хвост `_код` / `_айди` — отрезаем по примете, как у игр */
+      const key = contentKeyWithoutTail(param.slice(pref.length));
       if (!key) return false;
       const shell = document.getElementById('app-shell');
       const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
@@ -18435,8 +18486,28 @@ function lecCardHtml(l, i, src){
         ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${insightsLockCls}" onclick="event.stopPropagation();${insightsClick}">${insightsLockIcon}Главные идеи</button>` : ''}
         ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
+        <button class="lec-link-btn" onclick="event.stopPropagation();shareLecture('${l.slug}')">${escapeHtml(t('share.lecture_btn'))}</button>
       </div>
     </div>`;
+}
+
+/* ⚠️ ПОДЕЛИТЬСЯ ЗАНЯТИЕМ — НАРУЖУ, С РЕФЕРАЛЬНЫМ ХВОСТОМ (11.09.2026).
+   Ссылки `la_` / `li_` / `l_` апп разбирал давно, а кнопки не было. Гость по
+   ссылке получает то, что ему открыто: первые N минут аудио (режет сервер) —
+   если аудио есть; иначе главные идеи; иначе карточку с бесплатной версией
+   или оплатой. Купит — покупка засчитается тому, кто поделился (хвост `_код`,
+   тот же, что у теста и игр) */
+function shareLecture(slug){
+  const lec = (allLectures || []).find(function(x){ return x.slug === slug; });
+  if (!lec) return;
+  const key = safeContentKey(slug);
+  const hasAudio = !!(lec.audio_url || '').trim();
+  const hasIdeas = (lec.key_insights || []).length > 0;
+  const pref = hasAudio ? 'la_' : (hasIdeas ? 'li_' : 'l_');
+  const textKey = hasAudio ? 'share.lecture_audio' : (hasIdeas ? 'share.lecture_ideas' : 'share.lecture_plain');
+  const text = (t(textKey) || '').replace('{название}', lec.title || '');
+  track('lecture_share', slug);
+  shareWithChoice(text, pref + key + shareTail());
 }
 
 async function loadSavedSlugs(){
@@ -29168,7 +29239,8 @@ async function attachReferralFromStart(){
     const parts = p.split('_');            // c_<карта>_<айди или код>
     if (parts.length >= 3) ref = parts[parts.length - 1];
   }
-  else if (p.startsWith('quiz_') || p.startsWith('g_') || p.startsWith('gs_')) {
+  else if (p.startsWith('quiz_') || p.startsWith('g_') || p.startsWith('gs_')
+           || p.startsWith('l_') || p.startsWith('la_') || p.startsWith('li_')) {
     /* quiz_КОД_айди, g_<игра>_<айди>, gs_<игра>_<айди>.
        ⚠️ Хвост берём, только если он ЦЕЛИКОМ из цифр — иначе пострадают
        ключи с подчёркиванием (тот же приём, что у карточек) */
