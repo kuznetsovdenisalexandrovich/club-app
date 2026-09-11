@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v354 -->
+<!-- FILE_VERSION: index-v355 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -6499,6 +6499,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="mark">БП</div>
   <h2 data-text="botaccess.title">Разреши боту писать тебе</h2>
   <p data-text="botaccess.sub">Без этого я не смогу прислать ссылку на оплату, доступы и материалы — они приходят сообщением от бота.</p>
+  <!-- ⚠️ ОТКАЗ — НЕ ТУПИК (11.09.2026). Telegram показывает своё окно один раз:
+       отказавшему метод возвращает отказ мгновенно, без окна. Тогда кнопка
+       «Разрешить» выглядит сломанной. Для таких — своя строка и путь через
+       бота, где право даётся нажатием «Начать» -->
+  <p id="botaccess-denied-note" style="display:none;margin-top:-4px;opacity:.75;font-size:13.5px"
+     data-text="botaccess.denied">Telegram спрашивает об этом только один раз. Открой бота и нажми «Начать» — право появится само, и я сразу пущу дальше.</p>
   <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px;margin-top:10px">
     <button class="lec-link-btn access-btn" onclick="botAccessAsk()" data-text="botaccess.cta">Разрешить</button>
     <a class="lec-link-btn funnel-secondary" id="botaccess-bot-link" href="#" target="_blank" rel="noopener"
@@ -10698,7 +10704,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v354 · 10.09.2026 картинка результата теста — постер из пака бога, когда он собран (тип берём из ответа сервера); события bonus_open и magazine_read. До неё v353 — необъявленные флаги на финале анкеты плана';
+const APP_BUILD = 'v355 · 11.09.2026 разрешение боту писать спрашивается при первом открытии, фильм за заслонкой, отказ не тупик. До неё v354 — постер результата теста и события bonus_open/magazine_read';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11269,11 +11275,19 @@ function botAccessNeeded(){
 }
 
 async function loadBotAccess(){
+  /* ⚠️ НЕВНЯТНЫЙ ОТВЕТ НЕ СТИРАЕТ ИЗВЕСТНОЕ (11.09.2026). Стояло присваивание
+     `botCanWrite = ... : null` — то есть ответ без `can_write` возвращал нас в
+     «ещё не знаем». Ловушка вылезла на стенде: человек разрешает, мы запоминаем
+     true, а следом доезжает ответ параллельного запроса — и разрешивший всё
+     равно упирается в заслонку. Тот же класс, что добивочный вебхук Продамуса,
+     затиравший дату платежа пустотой: ЗАПОЛНЕННОЕ ПОБЕЖДАЕТ ПУСТОЕ.
+     Право, данное человеком прямо сейчас, надёжнее ответа сервера — он мог не
+     успеть записать наш POST. */
   try {
     if (!telegramId) return;
     const r = await fetch(API_URL + '/bot/write-access?telegram_id=' + telegramId);
     const d = await r.json();
-    botCanWrite = (d && typeof d.can_write === 'boolean') ? d.can_write : null;
+    if (d && typeof d.can_write === 'boolean') botCanWrite = d.can_write;
   } catch(e){}
 }
 
@@ -11284,6 +11298,42 @@ function botAccessTell(granted){
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ telegram_id: telegramId || 0, granted: !!granted })
     }).catch(function(){});
+  } catch(e){}
+}
+
+/* ⚠️ СПРАШИВАЕМ ПРИ ПЕРВОМ ОТКРЫТИИ, А НЕ ПЕРЕД ОПЛАТОЙ (11.09.2026).
+   [stated] Denis: «Telegram по-идее предлагает поднять прямо во время первого
+   открытия приложения. Но если разрешения нет — я бы даже фильм не показывал».
+   Раньше право просилось у первой запертой двери, то есть у оплаты, — а к тому
+   моменту половина уже ушла, и дожать её было нечем: без права бот молчит.
+
+   Тихо, без нашего экрана: окно рисует сам Telegram. Разрешил — дальше всё
+   как обычно; отказал — упрётся в заслонку на фильме и увидит объяснение.
+   ⚠️ ОДИН РАЗ ЗА СЕССИЮ И ТОЛЬКО У НЕУЗНАННОГО: повторный вызов Telegram всё
+   равно не покажет, а `botAccessAskedOnStart` бережёт от гонки, если старт
+   приложения случится дважды (возврат из бота, перезапуск оболочки). */
+let botAccessAskedOnStart = false;
+
+async function botAccessAskOnStart(){
+  if (botAccessAskedOnStart) return;
+  botAccessAskedOnStart = true;
+  try {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg || typeof tg.requestWriteAccess !== 'function') return;
+    if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) return;
+    if (typeof isMember !== 'undefined' && isMember) return;   // участнику не мешаем
+    if (typeof isInsideVk === 'function' && isInsideVk()) return;
+    /* Состояние с сервера уже могло прийти — тогда у разрешившего не мигнёт
+       лишнее окно. Не пришло (сеть) — спрашиваем: это безопаснее молчания */
+    if (botCanWrite === null) { try { await loadBotAccess(); } catch(e){} }
+    if (botCanWrite === true) return;
+    tg.requestWriteAccess(function(granted){
+      botAccessTell(!!granted);
+      track(granted ? 'write_access_granted' : 'write_access_denied');
+      /* Разрешил, пока висит заслонка (например, её открыл фильм) — снимаем
+         её и продолжаем то, ради чего человек пришёл */
+      if (granted) botAccessRecheck();
+    });
   } catch(e){}
 }
 
@@ -11307,6 +11357,12 @@ function ensureBotAccess(next){
     link.style.display = 'none';
     if (typeof BOT_LINK !== 'undefined') link.href = BOT_LINK + '?start=writeaccess';
   }
+  /* Отказавшему сразу показываем и объяснение, и путь через бота: ждать, пока
+     он нажмёт «Разрешить» и ничего не увидит, — потерянная минута */
+  const note = document.getElementById('botaccess-denied-note');
+  if (note) note.style.display = (botCanWrite === false) ? '' : 'none';
+  if (botCanWrite === false && link) link.style.display = '';
+  if (botCanWrite === false) botAccessWatch(6);
   if (el) el.style.display = '';
   const veil = document.getElementById('botaccess-veil');
   if (veil) veil.classList.add('on');
@@ -11316,6 +11372,8 @@ function ensureBotAccess(next){
 function botAccessClose(){
   const el = document.getElementById('botaccess-screen');
   if (el) el.style.display = 'none';
+  const note = document.getElementById('botaccess-denied-note');
+  if (note) note.style.display = 'none';
   const veil = document.getElementById('botaccess-veil');
   if (veil) veil.classList.remove('on');
   botAccessNext = null;
@@ -11349,6 +11407,8 @@ function botAccessAsk(){
 function botAccessShowFallback(){
   const link = document.getElementById('botaccess-bot-link');
   if (link) link.style.display = '';
+  const note = document.getElementById('botaccess-denied-note');
+  if (note) note.style.display = '';
   botAccessWatch(6);
 }
 
@@ -22674,6 +22734,11 @@ function filmHardStop(){
 
 function showFunnelScreen(){
   hideSplash();
+  /* ⚠️ ФИЛЬМ ТОЖЕ ЗА ЗАСЛОНКОЙ (11.09.2026). [stated] Denis: «если разрешения
+     нет — я бы даже фильм не показывал». Заставку гасим ДО проверки, иначе
+     заслонка окажется под ней и человек увидит вечную загрузку.
+     Колбэк — повторный вход в эту же функцию, как у остальных шести дверей */
+  if (!ensureBotAccess(showFunnelScreen)) return;
   vkTrack('film');
   /* ⚠️ ДЕМО-ПОДЛОЖКА (23.08.2026). [stated] Denis: «сделать экран фильма для
      неучастника не на отдельном синем фоне, а на фоне самого аппа — чтобы было
@@ -23923,8 +23988,15 @@ function applyTelegramSafeAreaSoon(){
 function startApp(){
   track('app_open');
   // Состояние разрешения нужно ДО первого действия, иначе заслонка мигнёт у
-  // того, кто давно всё разрешил
-  if (typeof loadBotAccess === 'function') loadBotAccess();
+  // того, кто давно всё разрешил. Следом — сам вопрос о праве писать: Telegram
+  // рисует своё окно на первом же экране, до фильма (см. botAccessAskOnStart)
+  if (typeof loadBotAccess === 'function'){
+    loadBotAccess().then(function(){
+      if (typeof botAccessAskOnStart === 'function') botAccessAskOnStart();
+    }).catch(function(){
+      if (typeof botAccessAskOnStart === 'function') botAccessAskOnStart();
+    });
+  }
   /* Ссылка «оплатил переводом», открытая до опознания, ждёт в хранилище */
   try { if (typeof paidClaimRetryIfPending === 'function') paidClaimRetryIfPending(); } catch(e){}
   document.getElementById('app-shell').style.display = 'block';
