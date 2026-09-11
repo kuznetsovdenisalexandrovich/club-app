@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v356 -->
+<!-- FILE_VERSION: index-v357 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -558,6 +558,44 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 @keyframes step-spin{to{transform:rotate(360deg)}}
 
 .admin-reset-btn{font-size:11px;color:var(--text-faint);text-decoration:underline;cursor:pointer;text-align:center;margin-top:14px}
+/* ══ СТОРИЗ — кружки на главной и просмотрщик (index-v357, 12.09.2026) ══
+   Добровольная лента коротких вертикальных видео: фичи, анонсы, куски занятий.
+   Ничего не требует, ничего не стопорит: рельса над блоками, кольцо у
+   непросмотренного, просмотр во весь экран с тапами как везде.
+   Просмотренное помнит сервер (/stories/{id}/view), у гостя без площадки —
+   браузер. */
+.stories-rail{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.stories-rail::-webkit-scrollbar{display:none}
+.story-bubble{flex:0 0 66px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.story-ring{width:62px;height:62px;border-radius:50%;padding:3px;background:var(--line);transition:transform .15s}
+.story-bubble.unseen .story-ring{background:linear-gradient(135deg,var(--lav),var(--warm))}
+.story-bubble:active .story-ring{transform:scale(.94)}
+.story-cover{width:100%;height:100%;border-radius:50%;background:var(--card2) center/cover no-repeat;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-dim)}
+.story-name{font-size:10.5px;line-height:1.2;color:var(--text-dim);text-align:center;max-width:66px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.story-bubble.unseen .story-name{color:var(--text)}
+
+.story-viewer{position:fixed;inset:0;z-index:1150;background:#000;display:none;flex-direction:column;
+              padding-top:var(--safe-top,0);touch-action:none;user-select:none;-webkit-user-select:none}
+.story-viewer.open{display:flex}
+.story-viewer video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+.story-shade{position:absolute;left:0;right:0;top:0;height:120px;background:linear-gradient(rgba(0,0,0,.55),transparent);pointer-events:none}
+.story-shade.bottom{top:auto;bottom:0;height:200px;background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.story-bars{position:absolute;left:10px;right:10px;top:calc(var(--safe-top,0px) + 10px);display:flex;gap:4px;z-index:2}
+.story-bars i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;display:block}
+.story-bars i b{display:block;height:100%;width:0;background:#fff}
+.story-head{position:absolute;left:14px;right:14px;top:calc(var(--safe-top,0px) + 22px);display:flex;align-items:center;gap:10px;z-index:2;color:#fff}
+.story-head .kind{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.story-head .ttl{font-size:14px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story-head button{background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0}
+.story-tap{position:absolute;top:80px;bottom:110px;width:38%;z-index:1}
+.story-tap.left{left:0} .story-tap.right{right:0}
+.story-tap.mid{left:38%;width:24%}
+.story-foot{position:absolute;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:2;display:flex;flex-direction:column;gap:10px}
+.story-cta{width:100%;padding:14px;border-radius:14px;border:none;background:#fff;color:#111;font-family:var(--body);font-weight:700;font-size:15px;cursor:pointer}
+.story-muted{position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);z-index:2;background:rgba(0,0,0,.45);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:8px 12px;font-size:12px;cursor:pointer}
+.story-paused{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:1;pointer-events:none}
+.story-viewer.paused .story-paused{display:flex}
+.story-paused span{width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px}
 .video-banner{position:relative;width:100%;aspect-ratio:16/8;border-radius:16px;overflow:hidden;cursor:pointer;margin:6px 0 16px;background-size:cover;background-position:center}
 .video-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.68),rgba(0,0,0,0.05) 60%)}
 .video-banner-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,0.45);color:white;font-size:19px;display:flex;align-items:center;justify-content:center;padding-left:3px;z-index:1}
@@ -5609,6 +5647,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="video-banner-title">Как пользоваться клубом</div>
     </div>
 
+<!-- ══ СТОРИЗ: рельса над блоками главной (index-v357) ══ -->
+<div class="stories-rail" id="stories-rail" style="display:none"></div>
+
     <!-- ══ НАСТРАИВАЕМАЯ ОБЛАСТЬ ГЛАВНОЙ ══════════════════════════════════
          Каждый блок обёрнут в .hblock[data-block] — это единица, которую
          человек может скрыть и переставить. Всё, что ВЫШЕ этого контейнера
@@ -6495,6 +6536,21 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      разрешит»). Живёт поверх всего: её задача — остановить действие, а не
      заменить экран. ⚠️ Только Telegram: в ВК и MAX такого метода нет вовсе -->
 <div id="botaccess-veil" onclick="botAccessClose()"></div>
+<!-- ══ СТОРИЗ: просмотрщик во весь экран (index-v357) ══ -->
+<div class="story-viewer" id="story-viewer">
+  <video id="story-video" playsinline webkit-playsinline preload="auto" muted></video>
+  <div class="story-shade"></div><div class="story-shade bottom"></div>
+  <div class="story-bars" id="story-bars"></div>
+  <div class="story-head">
+    <div style="flex:1;min-width:0"><div class="kind" id="story-kind"></div><div class="ttl" id="story-title"></div></div>
+    <button onclick="storyClose()" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="story-paused"><span>❚❚</span></div>
+  <div class="story-tap left"></div><div class="story-tap mid"></div><div class="story-tap right"></div>
+  <button class="story-muted" id="story-mute" onclick="storyToggleSound()">Звук: выкл</button>
+  <div class="story-foot"><button class="story-cta" id="story-cta" style="display:none" onclick="storyCta()"></button></div>
+</div>
+
 <div class="center-msg funnel-screen" id="botaccess-screen" style="display:none;z-index:880">
   <div class="mark">БП</div>
   <h2 data-text="botaccess.title">Разреши боту писать тебе</h2>
@@ -10704,7 +10760,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v356 · 11.09.2026 архив не зажигает огонёк «новое», кнопка «Поделиться» у занятия (10 минут аудио по ссылке), тур: тёмная фаза не залипает, закрытое окно возвращает шаг. До неё v355 — право писать на старте';
+const APP_BUILD = 'v357 · 12.09.2026 сториз: кружки над блоками главной и просмотрщик коротких видео (фичи, анонсы, куски занятий). До неё v356 — архив без огонька, «Поделиться» у занятия, починки тура';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11459,6 +11515,186 @@ function tgContactFields(){
              tg_first_name: String(u.first_name || ''),
              tg_last_name:  String(u.last_name  || '') };
   } catch(e){ return {}; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   СТОРИЗ (index-v357, 12.09.2026)
+
+   [stated] Denis: не онбординг, а «просто интересный контент, который висит для
+   добровольного ознакомления» — фичи приложения, анонсы, куски занятий.
+   Редакция в дашборде, лента с сервера (/stories), просмотр отмечается на
+   сервере. Ничего не требует: кружки над блоками, кольцо у непросмотренного.
+
+   ⚠️ ЗВУК: на iPhone автозапуск только немой — стартуем muted, кнопка звука
+   снимает. Нажал звук один раз — дальше все сториз в этом заходе со звуком.
+   ⚠️ ТАПЫ: левая треть — назад, правая — дальше, середина — пауза/пуск;
+   удержание в любом месте — пауза; свайп вниз — закрыть. Тап по кнопке
+   действия — уходим на экран фичи и закрываем просмотрщик.
+   ═══════════════════════════════════════════════════════════════════════ */
+let storiesFeed = [], storyIdx = -1, storySound = false, storyRaf = 0, storyHold = null, storyTouchY = null;
+const STORY_KIND_NAMES = { feature:'Про приложение', announce:'Анонс', clip:'Из занятия' };
+
+function storySeenLocal(id){ try { return (JSON.parse(localStorage.getItem('club_app_story_seen') || '[]')).indexOf(id) >= 0; } catch(e){ return false; } }
+function storyMarkLocal(id){
+  try {
+    const a = JSON.parse(localStorage.getItem('club_app_story_seen') || '[]');
+    if (a.indexOf(id) < 0){ a.push(id); localStorage.setItem('club_app_story_seen', JSON.stringify(a.slice(-200))); }
+  } catch(e){}
+}
+
+async function loadStories(){
+  const rail = document.getElementById('stories-rail');
+  if (!rail) return;
+  try {
+    const q = telegramId ? '?telegram_id=' + telegramId : '';
+    const r = await fetch(API_URL + '/stories' + q);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    storiesFeed = await r.json();
+  } catch(e){ storiesFeed = []; }
+  renderStoriesRail();
+}
+function storyIsSeen(s){ return s.seen === true || (s.seen == null && storySeenLocal(s.id)); }
+function renderStoriesRail(){
+  const rail = document.getElementById('stories-rail');
+  if (!rail) return;
+  if (!storiesFeed.length){ rail.style.display = 'none'; rail.innerHTML = ''; return; }
+  /* Непросмотренные вперёд, внутри — порядок дашборда */
+  const ordered = storiesFeed.slice().sort(function(a, b){ return (storyIsSeen(a) ? 1 : 0) - (storyIsSeen(b) ? 1 : 0); });
+  rail.innerHTML = ordered.map(function(s){
+    const seen = storyIsSeen(s);
+    const icon = s.kind === 'clip' ? '▶' : (s.kind === 'announce' ? '!' : '?');
+    return '<div class="story-bubble' + (seen ? '' : ' unseen') + '" onclick="storyOpen(' + s.id + ')">'
+      + '<div class="story-ring"><div class="story-cover"' + (s.cover_url ? ' style="background-image:url(\'' + escapeHtml(s.cover_url) + '\')"' : '') + '>' + (s.cover_url ? '' : icon) + '</div></div>'
+      + '<div class="story-name">' + escapeHtml(s.title || '') + '</div></div>';
+  }).join('');
+  rail.style.display = 'flex';
+}
+
+function storyOpen(id){
+  const ordered = storiesFeed.slice().sort(function(a, b){ return (storyIsSeen(a) ? 1 : 0) - (storyIsSeen(b) ? 1 : 0); });
+  storiesFeed = ordered;
+  storyIdx = ordered.findIndex(function(s){ return s.id === id; });
+  if (storyIdx < 0) return;
+  const v = document.getElementById('story-viewer');
+  v.classList.add('open');
+  storyBindGestures();
+  storyShow();
+}
+function storyClose(){
+  const v = document.getElementById('story-viewer');
+  const vid = document.getElementById('story-video');
+  cancelAnimationFrame(storyRaf);
+  try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch(e){}
+  v.classList.remove('open', 'paused');
+  storyIdx = -1;
+  renderStoriesRail();
+}
+function storyCurrent(){ return storiesFeed[storyIdx] || null; }
+
+function storyShow(){
+  const s = storyCurrent();
+  if (!s){ storyClose(); return; }
+  const v = document.getElementById('story-viewer');
+  const vid = document.getElementById('story-video');
+  v.classList.remove('paused');
+  document.getElementById('story-kind').textContent = STORY_KIND_NAMES[s.kind] || '';
+  document.getElementById('story-title').textContent = s.title || '';
+  const cta = document.getElementById('story-cta');
+  if (s.cta_label && s.cta_target){ cta.textContent = s.cta_label; cta.style.display = ''; }
+  else cta.style.display = 'none';
+  document.getElementById('story-bars').innerHTML = storiesFeed.map(function(x, i){
+    return '<i><b style="width:' + (i < storyIdx ? 100 : 0) + '%"></b></i>';
+  }).join('');
+  document.getElementById('story-mute').textContent = storySound ? 'Звук: вкл' : 'Звук: выкл';
+  vid.muted = !storySound;
+  vid.src = s.video_url;
+  vid.currentTime = 0;
+  vid.onended = function(){ storyDone(s); storyNext(); };
+  vid.onerror = function(){ storyNext(); };
+  const p = vid.play();
+  if (p && p.catch) p.catch(function(){});
+  storyMark(s, false);
+  cancelAnimationFrame(storyRaf);
+  const tick = function(){
+    const bar = document.querySelectorAll('#story-bars i b')[storyIdx];
+    if (bar && vid.duration) bar.style.width = Math.min(100, vid.currentTime / vid.duration * 100) + '%';
+    storyRaf = requestAnimationFrame(tick);
+  };
+  storyRaf = requestAnimationFrame(tick);
+}
+function storyNext(){ if (storyIdx + 1 < storiesFeed.length){ storyIdx++; storyShow(); } else storyClose(); }
+function storyPrev(){
+  const vid = document.getElementById('story-video');
+  if (vid.currentTime > 3 || storyIdx === 0){ vid.currentTime = 0; return; }
+  storyIdx--; storyShow();
+}
+function storyTogglePause(){
+  const v = document.getElementById('story-viewer'), vid = document.getElementById('story-video');
+  if (vid.paused){ vid.play().catch(function(){}); v.classList.remove('paused'); }
+  else { vid.pause(); v.classList.add('paused'); }
+}
+function storyToggleSound(){
+  storySound = !storySound;
+  const vid = document.getElementById('story-video');
+  vid.muted = !storySound;
+  document.getElementById('story-mute').textContent = storySound ? 'Звук: вкл' : 'Звук: выкл';
+}
+function storyMark(s, done){
+  if (!s) return;
+  if (!done && s.seen === true) return;
+  if (done && s._done) return;
+  if (done) s._done = true; else s.seen = true;
+  storyMarkLocal(s.id);
+  try {
+    fetch(API_URL + '/stories/' + s.id + '/view', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ telegram_id: telegramId || null, done: !!done }) }).catch(function(){});
+  } catch(e){}
+  track(done ? 'story_done' : 'story_view', String(s.id));
+}
+function storyDone(s){ storyMark(s, true); }
+/* Кнопка действия: ключ диплинка аппа или `lecture:<slug>`. Неизвестное — просто закрываем */
+function storyCta(){
+  const s = storyCurrent();
+  if (!s || !s.cta_target) return;
+  const target = s.cta_target;
+  storyDone(s);
+  storyClose();
+  track('story_cta', String(s.id));
+  try {
+    if (target.indexOf('lecture:') === 0 && typeof openLectureByKey === 'function'){ openLectureByKey(target.slice(8), ''); return; }
+    const route = (typeof DEEPLINKS !== 'undefined') ? DEEPLINKS[target] : null;
+    if (route && typeof route.go === 'function'){
+      if (!route.guests && !isMember && typeof openPaywall === 'function'){ openPaywall(); return; }
+      route.go();
+    }
+  } catch(e){}
+}
+let storyGesturesBound = false;
+function storyBindGestures(){
+  if (storyGesturesBound) return;
+  storyGesturesBound = true;
+  const v = document.getElementById('story-viewer');
+  const zones = { left: storyPrev, right: storyNext, mid: storyTogglePause };
+  ['left','mid','right'].forEach(function(z){
+    const el = v.querySelector('.story-tap.' + z);
+    let held = false;
+    const down = function(e){
+      held = false; storyTouchY = (e.touches ? e.touches[0].clientY : e.clientY);
+      clearTimeout(storyHold);
+      storyHold = setTimeout(function(){ held = true; document.getElementById('story-video').pause(); v.classList.add('paused'); }, 260);
+    };
+    const up = function(e){
+      clearTimeout(storyHold);
+      const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
+      if (storyTouchY != null && y - storyTouchY > 90){ storyClose(); return; }   // свайп вниз
+      if (held){ document.getElementById('story-video').play().catch(function(){}); v.classList.remove('paused'); return; }
+      zones[z]();
+    };
+    el.addEventListener('touchstart', down, {passive:true});
+    el.addEventListener('touchend', up);
+    el.addEventListener('mousedown', down);
+    el.addEventListener('mouseup', up);
+  });
 }
 
 function track(event, ref, value){
@@ -24098,6 +24334,7 @@ function startApp(){
   const boot = Promise.allSettled([
     loadAppSettings(), loadProfile(), loadContinueWidget(), loadNews(),
     loadWidgetMonth(), loadSavedSlugs(), loadCards(), loadRaffle(), loadDigestBlock(),
+    loadStories(),
   ]);
   // Эфир СОЗНАТЕЛЬНО вне boot: заставка не должна ждать ответа про трансляцию.
   // Блок появится сам, когда придёт ответ — на 99% запусков эфира нет
