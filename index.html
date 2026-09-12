@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v357 -->
+<!-- FILE_VERSION: index-v358 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10760,7 +10760,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v357 · 12.09.2026 сториз: кружки над блоками главной и просмотрщик коротких видео (фичи, анонсы, куски занятий). До неё v356 — архив без огонька, «Поделиться» у занятия, починки тура';
+const APP_BUILD = 'v358 · 12.09.2026 неудачное списание: разные слова под причину отказа, смена карты одной кнопкой, диплинк startapp=card. До неё v357 — сториз на главной';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12482,24 +12482,114 @@ async function loadProfile() {
    скидку» — это причина «временный напряг с деньгами» в воронке удержания.
    Признак приходит в профиле (`failed_attempt_num`, только у живого участника),
    успешное списание сбрасывает его на сервере — баннер уходит сам */
+/* ⚠️ РАЗНЫЕ ОТКАЗЫ — РАЗНЫЕ СЛОВА (12.09.2026). Раньше окно всегда предлагало
+   сдвиг, баллы и скидку — но при истёкшей карте это вредный совет: Продамус по
+   такой связке не спишет НИКОГДА, сколько ни жди. Группу считает сервер
+   (`failed_attempt_group`), см. PAYMENT_ERROR_GROUPS в main.py:
+     money       — пополнить и подождать: сдвиг, баллы, скидка
+     bank        — банк отказал: другая карта или звонок в банк
+     resubscribe — автосписание не заработает: только новая подписка
+     system      — сбой; [stated] Denis: «скорее всего карта заблокирована,
+                   так что сильно не жалей» — говорим как про отказ банка */
+let chargeFailInfo = { group:'', num:0, max:10, last:false, reason:'' };
+
 function renderChargeFailBanner(u){
   const el = document.getElementById('charge-fail-banner');
   if (!el) return;
   const n = u ? parseInt(u.failed_attempt_num || 0, 10) : 0;
+  chargeFailInfo = {
+    group:  (u && u.failed_attempt_group) || '',
+    num:    n,
+    max:    (u && parseInt(u.failed_attempt_max || 10, 10)) || 10,
+    last:   !!(u && u.failed_attempt_last),
+    reason: (u && u.failed_attempt_reason) || '',
+    changing: !!(u && u.card_change_until),
+  };
   el.style.display = (isMember && n > 0) ? 'flex' : 'none';
+  if (!(isMember && n > 0)) return;
+  const ttl = el.querySelector('.demo-banner-title');
+  const sub = el.querySelector('.demo-banner-sub');
+  if (chargeFailInfo.changing){
+    if (ttl) ttl.textContent = t('chargefail.changing_title');
+    if (sub) sub.textContent = t('chargefail.changing_sub');
+    return;
+  }
+  if (ttl) ttl.textContent = t('chargefail.title_' + (chargeFailInfo.group || 'bank')) || t('chargefail.banner_title');
+  if (sub) sub.textContent = chargeFailInfo.last
+    ? t('chargefail.sub_last')
+    : (t('chargefail.banner_sub') + '  ·  попытка ' + n + ' из ' + chargeFailInfo.max);
 }
 
 function openChargeFail(){
+  const g = chargeFailInfo.group || 'bank';
   const body = document.getElementById('chargefail-body');
   if (body){
-    body.innerHTML =
-      `<div class="sm-hint" style="font-size:13.5px;line-height:1.55;margin-bottom:6px">${escapeHtml(t('chargefail.text'))}</div>` +
-      `<button class="chargefail-btn" onclick="chargeFailGo('shift')">${escapeHtml(t('chargefail.btn_shift'))}</button>` +
-      `<button class="chargefail-btn" onclick="chargeFailGo('points')">${escapeHtml(t('chargefail.btn_points'))}</button>` +
-      `<button class="chargefail-btn" onclick="chargeFailGo('discount')">${escapeHtml(t('chargefail.btn_discount'))}</button>`;
+    let html = '';
+    if (chargeFailInfo.changing){
+      html = `<div class="sm-hint" style="font-size:13.5px;line-height:1.55">${escapeHtml(t('chargefail.changing_text'))}</div>`;
+    } else {
+      const head = chargeFailInfo.last ? t('chargefail.text_last') : t('chargefail.text_' + g);
+      html = `<div class="sm-hint" style="font-size:13.5px;line-height:1.55;margin-bottom:6px">${escapeHtml(head)}</div>`;
+      if (chargeFailInfo.reason)
+        html += `<div class="sm-hint" style="font-size:12px;opacity:.65;margin-bottom:8px">Банк ответил: ${escapeHtml(chargeFailInfo.reason)} · попытка ${chargeFailInfo.num} из ${chargeFailInfo.max}</div>`;
+      if (g === 'money'){
+        html += `<button class="chargefail-btn" onclick="chargeFailGo('shift')">${escapeHtml(t('chargefail.btn_shift'))}</button>`
+              + `<button class="chargefail-btn" onclick="chargeFailGo('points')">${escapeHtml(t('chargefail.btn_points'))}</button>`
+              + `<button class="chargefail-btn" onclick="chargeFailGo('discount')">${escapeHtml(t('chargefail.btn_discount'))}</button>`;
+      } else {
+        /* Банк отказал или связка мертва — сдвиг и скидка тут не помогут */
+        html += `<button class="chargefail-btn" onclick="startCardChange()">${escapeHtml(t('chargefail.btn_card'))}</button>`
+              + `<button class="chargefail-btn" onclick="chargeFailGo('shift')">${escapeHtml(t('chargefail.btn_shift'))}</button>`;
+      }
+    }
+    body.innerHTML = html;
   }
   document.getElementById('chargefail-overlay').classList.add('open');
-  track('charge_fail_open', 'banner');
+  track('charge_fail_open', chargeFailInfo.group || 'banner');
+}
+
+/* Вход по диплинку `startapp=card` — то же окно, но открывается само */
+function openCardChange(){
+  if (!isMember) return;
+  if (!chargeFailInfo.group && !chargeFailInfo.changing) chargeFailInfo.group = 'bank';
+  openChargeFail();
+  track('card_change_open', 'deeplink');
+}
+
+/* ⚠️ КНОПКА ДЕЛАЕТ ТРИ ШАГА НА СЕРВЕРЕ (12.09.2026): гасит старую подписку в
+   Продамусе, открывает суточное окно (в нём конец подписки не отбирает
+   доступы) и просит бота переставить списки и выдать ссылку на оплату.
+   Без этого «оформи заново» — тупик: вторую подписку на те же телефон и почту
+   Продамус не создаст, пока жива первая */
+let cardChangeBusy = false;
+async function startCardChange(){
+  if (cardChangeBusy) return;
+  if (!confirm(t('chargefail.card_confirm'))) return;
+  cardChangeBusy = true;
+  const body = document.getElementById('chargefail-body');
+  if (body) body.innerHTML = `<div class="sm-hint" style="padding:18px 0;text-align:center">${escapeHtml(t('chargefail.card_wait'))}</div>`;
+  try{
+    /* ⚠️ apiRequest отдаёт УЖЕ РАЗОБРАННЫЙ ответ и сам бросает на ошибке —
+       проверять r.ok здесь не надо (на этом стенд и поймал: успех показывался
+       как неудача) */
+    await apiRequest(`${API_URL}/subscription/card-change`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ telegram_id: telegramId, reason: chargeFailInfo.group || '' })
+    }, 30000);
+    chargeFailInfo.changing = true;
+    if (body) body.innerHTML = `<div class="sm-hint" style="font-size:13.5px;line-height:1.55">${escapeHtml(t('chargefail.card_done'))}</div>`
+      + `<button class="chargefail-btn" onclick="openTgBot()">${escapeHtml(t('chargefail.btn_to_bot'))}</button>`;
+    track('card_change_started', chargeFailInfo.group || '');
+    if (typeof loadProfile === 'function') loadProfile();
+  }catch(e){
+    if (body) body.innerHTML = `<div class="sm-hint" style="font-size:13.5px;line-height:1.55;color:var(--red)">${escapeHtml(t('chargefail.card_error'))}</div>`
+      + `<div class="sm-hint" style="font-size:12px;opacity:.6;margin-top:6px">${escapeHtml(String(e.message || e))}</div>`
+      + `<button class="chargefail-btn" onclick="openTgBot()">${escapeHtml(t('chargefail.btn_to_bot'))}</button>`;
+  }finally{ cardChangeBusy = false; }
+}
+function openTgBot(){
+  closeChargeFail();
+  try { if (typeof BOT_LINK !== 'undefined') openUrl(BOT_LINK); } catch(e){}
 }
 function closeChargeFail(){
   document.getElementById('chargefail-overlay').classList.remove('open');
@@ -14542,6 +14632,63 @@ const APP_TEXTS = {
   'chargefail.btn_points': {
     c:'Подписка', l:'Кнопка «оплатить месяц баллами»', w:'Окно «не получилось списать»', i:false,
     t:'Оплатить месяц баллами' },
+  'chargefail.title_money': {
+    c:'Подписка', l:'Заголовок баннера: не хватило денег', w:'Главная', i:false,
+    t:'На карте не хватило средств' },
+  'chargefail.title_bank': {
+    c:'Подписка', l:'Заголовок баннера: банк отказал', w:'Главная', i:false,
+    t:'Банк не пропустил оплату' },
+  'chargefail.title_resubscribe': {
+    c:'Подписка', l:'Заголовок баннера: нужна новая подписка', w:'Главная', i:false,
+    t:'Автосписание больше не сработает' },
+  'chargefail.title_system': {
+    c:'Подписка', l:'Заголовок баннера: сбой оплаты', w:'Главная', i:false,
+    t:'Оплата не прошла' },
+  'chargefail.sub_last': {
+    c:'Подписка', l:'Подпись баннера на последней попытке', w:'Главная', i:false,
+    t:'Это была последняя попытка — дальше доступ закроется →' },
+  'chargefail.text_money': {
+    c:'Подписка', l:'Текст окна: не хватило денег', w:'Окно «не получилось списать»', i:false,
+    t:'Пополни карту — бот спишет сам, нажимать ничего не нужно: следующая попытка примерно через 12 часов. А если сейчас неудобно, вот что ещё можно сделать.' },
+  'chargefail.text_bank': {
+    c:'Подписка', l:'Текст окна: банк отказал', w:'Окно «не получилось списать»', i:false,
+    t:'Банк отклонил списание. Так бывает при лимите на автоплатежи, блокировке карты или отказе без объяснений. Быстрее всего решается другой картой — можно поменять её прямо здесь, доступ при этом не прервётся.' },
+  'chargefail.text_resubscribe': {
+    c:'Подписка', l:'Текст окна: связка мертва, нужна новая подписка', w:'Окно «не получилось списать»', i:false,
+    t:'По этой карте автосписание больше не пройдёт — так бывает, когда карта перевыпущена или подписка оформлялась через Apple Pay. Ждать бесполезно: нужна новая карта. Нажми кнопку — остановим старую подписку и сразу дадим ссылку на новую, доступ не прервётся.' },
+  'chargefail.text_system': {
+    c:'Подписка', l:'Текст окна: сбой оплаты', w:'Окно «не получилось списать»', i:false,
+    t:'Списание не прошло — чаще всего так отвечает банк по заблокированной карте. Попробуй другую карту: поменяем прямо здесь, доступ не прервётся.' },
+  'chargefail.text_last': {
+    c:'Подписка', l:'Текст окна на последней попытке', w:'Окно «не получилось списать»', i:false,
+    t:'Это была последняя попытка списания — дальше доступ закроется. Поменяй карту прямо сейчас, это займёт минуту, и ничего не потеряется.' },
+  'chargefail.btn_card': {
+    c:'Подписка', l:'Кнопка «поменять карту»', w:'Окно «не получилось списать»', i:false,
+    t:'Поменять карту' },
+  'chargefail.card_confirm': {
+    c:'Подписка', l:'Подтверждение перед сменой карты', w:'Окно «не получилось списать»', i:false,
+    t:'Остановим старую подписку и дадим ссылку на новую. Доступ сохранится. Продолжить?' },
+  'chargefail.card_wait': {
+    c:'Подписка', l:'Ожидание во время смены карты', w:'Окно «не получилось списать»', i:false,
+    t:'Останавливаю старую подписку…' },
+  'chargefail.card_done': {
+    c:'Подписка', l:'Успех смены карты', w:'Окно «не получилось списать»', i:false,
+    t:'Готово. Старая подписка остановлена, доступ остаётся при тебе. Ссылку на оплату новой картой бот прислал в чат — открой его и оплати, дальше всё пойдёт как раньше.' },
+  'chargefail.card_error': {
+    c:'Подписка', l:'Ошибка смены карты', w:'Окно «не получилось списать»', i:false,
+    t:'Не получилось остановить старую подписку. Напиши нам в бота — поможем за пару минут.' },
+  'chargefail.btn_to_bot': {
+    c:'Подписка', l:'Кнопка перехода в бота', w:'Окно «не получилось списать»', i:false,
+    t:'Открыть бота' },
+  'chargefail.changing_title': {
+    c:'Подписка', l:'Заголовок баннера во время смены карты', w:'Главная', i:false,
+    t:'Ждём оплату новой картой' },
+  'chargefail.changing_sub': {
+    c:'Подписка', l:'Подпись баннера во время смены карты', w:'Главная', i:false,
+    t:'Доступ сохранён — ссылка в чате с ботом →' },
+  'chargefail.changing_text': {
+    c:'Подписка', l:'Текст окна во время смены карты', w:'Окно «не получилось списать»', i:false,
+    t:'Старая подписка уже остановлена, доступ при тебе. Осталось оплатить новой картой по ссылке, которую бот прислал в чат.' },
   'contactcheck.title': {
     c:'Вход', l:'Заголовок сверки контактов', w:'После перехода по приглашению из дашборда', i:false,
     t:'Проверь свои данные' },
@@ -17875,6 +18022,12 @@ const DEEPLINKS = {
   'buy':         { go: () => openBuyRoute(),              guests: true  },
   'oplata':      { go: () => openBuyRoute(),              guests: true  },
   'guide':       { go: () => openHelpDocs(),              guests: true  },
+  /* [stated] Denis 12.09: «сделай сразу диплинк, я его прям в бота засуну,
+     чтобы пользователи через приложение ходили карту менять». Ведёт прямо в
+     окно смены карты: у участника — с кнопкой запуска, у остальных — на главную.
+     guests:false осознанно: гостю менять нечего */
+  'card':        { go: () => openCardChange(),            guests: false },
+  'karta':       { go: () => openCardChange(),            guests: false },
   /* [stated] Denis 28.08: «где игры, где игра про богов?» Ссылка на КОНКРЕТНУЮ
      игру (`g_`/`gs_`) была с самого начала, а входа на саму вкладку не было —
      то есть в рекламу нечего было дать, кроме ссылки на одну партию */
@@ -18156,6 +18309,7 @@ const PARAM_LINKS = {
   'gs':      { param: 'ключ игры',   label: 'Игра — сразу партия',             guests: true  },
   'g':       { param: 'ключ игры',   label: 'Игра — правила',                  guests: true  },
   'pay':     { param: 'метка источника', label: 'Оплата с меткой',             guests: true  },
+  'card':    { param: '',            label: 'Смена карты (для бота)',           guests: false },
   'u':       { param: 'код единицы', label: 'Мягкая метка источника',          guests: true  },
   'r':       { param: 'айди игрока', label: 'Приглашение друга',               guests: true  },
   'c':       { param: 'ключ карточки', label: 'Расшаренная карточка',          guests: true  }
