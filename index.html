@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v360 -->
+<!-- FILE_VERSION: index-v361 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10804,7 +10804,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v360 · 14.09.2026 экран таймера поверх бара уровня, гость до него доходит без пейвола. До неё v359 — часовой пояс и экран «когда напомнить»';
+const APP_BUILD = 'v361 · 14.09.2026 время в таймере всегда 24-часовое (свои списки вместо системного поля). До неё v360 — таймер поверх бара уровня';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11817,6 +11817,9 @@ async function saveTz(){
 
 /* ── экран «когда напомнить» ── */
 let laterPick = null;
+/* Выбор «своего времени» держим в переменных, а не в разметке: экран
+   перерисовывается при каждом нажатии, и значения из полей иначе слетали */
+let laterHour = '19', laterMinute = '00', laterDay = '0';
 function laterOptions(){
   const now = personNow(), h = now.getHours();
   const out = [{ key:'hour', label: t('later.opt_hour'), minutes: 60 }];
@@ -11879,10 +11882,26 @@ function renderLaterTimer(){
   html += '<button class="tmr-opt' + (laterPick && laterPick.key === 'custom' ? ' sel' : '') + '" onclick="laterSelect(\'custom\')">'
         + escapeHtml(t('later.opt_custom')) + '<span class="when">' + escapeHtml(t('later.opt_custom_hint')) + '</span></button>';
   if (laterPick && laterPick.key === 'custom'){
+    /* ⚠️ СВОИ СПИСКИ ВМЕСТО `input type="time"` (14.09.2026). Системное поле
+       берёт формат из локали устройства: на английской раскладке показывает
+       07:00 PM, и человек в России видит непривычное AM/PM, а мы не можем на
+       это повлиять ни CSS, ни атрибутом. Часы 0–23 и минуты по 15 — всегда
+       24-часовые и попадать пальцем проще, чем в системный ввод */
+    let часы = '';
+    for (let h = 0; h < 24; h++){
+      const v = String(h).padStart(2, '0');
+      часы += '<option value="' + v + '"' + (v === laterHour ? ' selected' : '') + '>' + v + '</option>';
+    }
+    let минуты = '';
+    ['00','15','30','45'].forEach(function(mm){
+      минуты += '<option value="' + mm + '"' + (mm === laterMinute ? ' selected' : '') + '>' + mm + '</option>';
+    });
     html += '<div class="tmr-custom"><select id="later-day">'
-          + '<option value="0">' + escapeHtml(t('later.today')) + '</option>'
-          + '<option value="1">' + escapeHtml(t('later.tomorrow')) + '</option></select>'
-          + '<input type="time" id="later-time" value="19:00"></div>';
+          + '<option value="0"' + (laterDay === '0' ? ' selected' : '') + '>' + escapeHtml(t('later.today')) + '</option>'
+          + '<option value="1"' + (laterDay === '1' ? ' selected' : '') + '>' + escapeHtml(t('later.tomorrow')) + '</option></select>'
+          + '<select id="later-hour" onchange="laterHour=this.value">' + часы + '</select>'
+          + '<span style="align-self:center;color:var(--text-faint);font-weight:700">:</span>'
+          + '<select id="later-min" onchange="laterMinute=this.value">' + минуты + '</select></div>';
   }
   html += '<button class="tmr-go" onclick="laterConfirm()">' + escapeHtml(t('later.confirm')) + '</button>'
         + '<div class="tmr-tz" onclick="openTzSheet()">' + escapeHtml(laterTzLine()) + '</div>';
@@ -11904,8 +11923,10 @@ async function laterConfirm(){
   if (laterPick.key === 'hour'){
     body.minutes = 60;
   } else if (laterPick.key === 'custom'){
-    const d = parseInt((document.getElementById('later-day') || {}).value || '0', 10);
-    const tm = (document.getElementById('later-time') || {}).value || '19:00';
+    const daySel = document.getElementById('later-day');
+    if (daySel) laterDay = daySel.value;
+    const d = parseInt(laterDay || '0', 10);
+    const tm = laterHour + ':' + laterMinute;
     const base = personNow();
     base.setDate(base.getDate() + d);
     body.at_local = base.getFullYear() + '-' + String(base.getMonth()+1).padStart(2,'0') + '-'
