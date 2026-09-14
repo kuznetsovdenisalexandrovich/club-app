@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v359 -->
+<!-- FILE_VERSION: index-v360 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -614,10 +614,13 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .tmr-go{width:100%;padding:13px;border-radius:13px;border:none;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:var(--body)}
 [data-theme="dark"] .tmr-go{background:linear-gradient(135deg,var(--lav),var(--lav-deep))}
 .tmr-tz{margin-top:10px;text-align:center;font-size:12px;color:var(--text-faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-.tz-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1160;background:var(--card);border-radius:20px 20px 0 0;
+/* ⚠️ ВЫШЕ КАРТОЧКИ УРОВНЯ (14.09.2026). Она приклеена к верху экрана со слоем
+   500, а обычные шторки аппа живут на 200 — и бар накрывал заголовок «Когда
+   напомнить?». Таймер и поправка пояса поднимаются выше неё */
+.tz-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1210;background:var(--card);border-radius:20px 20px 0 0;
           padding:18px 16px calc(env(safe-area-inset-bottom,0px) + 22px);box-shadow:0 -10px 30px rgba(0,0,0,.25);display:none}
 .tz-sheet.open{display:block}
-.tz-veil{position:fixed;inset:0;z-index:1159;background:rgba(0,0,0,.35);display:none}
+.tz-veil{position:fixed;inset:0;z-index:1205;background:rgba(0,0,0,.35);display:none}
 .tz-veil.open{display:block}
 .tz-sheet h4{margin:0 0 4px;font-size:16px;color:var(--text);font-family:var(--disp);font-weight:700}
 .tz-sheet .sub{margin:0 0 14px;font-size:12.5px;color:var(--text-dim);line-height:1.45}
@@ -10801,7 +10804,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v359 · 13.09.2026 часовой пояс человека (авто + ползунок) и экран «когда напомнить» для фильма, диплинк startapp=later. До неё v358 — смена карты и причины отказа';
+const APP_BUILD = 'v360 · 14.09.2026 экран таймера поверх бара уровня, гость до него доходит без пейвола. До неё v359 — часовой пояс и экран «когда напомнить»';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11796,6 +11799,7 @@ function openTzSheet(){
 function closeTzSheet(){
   document.getElementById('tz-veil').classList.remove('open');
   document.getElementById('tz-sheet').classList.remove('open');
+  if (typeof renderLevelCard === 'function') renderLevelCard();
 }
 function tzSlide(v){
   tzSlidePos = parseInt(v, 10) || 0;
@@ -11832,6 +11836,12 @@ function laterWhen(o){
   return '';
 }
 function openLaterTimer(){
+  if (typeof renderLevelCard === 'function') setTimeout(renderLevelCard, 0);  // спрятать бар
+  /* ⚠️ ГОСТЮ ТОЖЕ ОТКРЫВАЕМ (14.09.2026). Экран таймера — про фильм, а фильм
+     смотрят именно гости: пейвол, вход по номеру или возврат на первый экран
+     здесь означали бы, что человек нажал «напомнить позже» и упёрся в стену.
+     Ничего платного тут нет, участие не проверяем */
+  if (typeof hideSplash === 'function') hideSplash();
   if (!document.getElementById('later-overlay')) buildLaterOverlay();
   document.getElementById('later-overlay').classList.add('open');
   laterPick = null;
@@ -11841,6 +11851,7 @@ function openLaterTimer(){
 function closeLaterTimer(){
   const el = document.getElementById('later-overlay');
   if (el) el.classList.remove('open');
+  if (typeof renderLevelCard === 'function') renderLevelCard();   // вернуть бар
 }
 /* ⚠️ КЛАССЫ ШТОРКИ — `sched-popup`, А НЕ `popup` (13.09.2026). `popup-overlay`
    живёт в ДАШБОРДЕ, в аппе таких стилей нет: собранный на них оверлей висел
@@ -11849,6 +11860,7 @@ function buildLaterOverlay(){
   const div = document.createElement('div');
   div.className = 'sched-popup-overlay';
   div.id = 'later-overlay';
+  div.style.zIndex = '1200';        // см. комментарий у .tz-sheet
   div.onclick = function(e){ if (e.target === div) closeLaterTimer(); };
   div.innerHTML = '<div class="sched-popup" id="later-popup">'
     + '<div class="sched-popup-handle"></div>'
@@ -16463,6 +16475,14 @@ function liteOfferNo(){
 
 function levelBarMustHide(){
   if (pfFieldOpen) return true;    // поле выбора тем
+  /* ⚠️ ЭКРАН ТАЙМЕРА И ПОПРАВКА ПОЯСА (14.09.2026). Бар приклеен к верху со
+     слоем 500 и накрывал заголовок «Когда напомнить?» ([stated] Denis поймал
+     на скриншоте). Прячем его здесь, в общем месте, а не поднимаем слой шторке:
+     иначе следующий экран опять забудут */
+  var lt = document.getElementById('later-overlay');
+  if (lt && lt.classList.contains('open')) return true;
+  var tzs = document.getElementById('tz-sheet');
+  if (tzs && tzs.classList.contains('open')) return true;
   if (liveFullOpen) return true;   // полный экран эфира
   var fp = document.getElementById('fp-overlay');
   if (fp && fp.classList.contains('open')) return true;   // полный плеер
