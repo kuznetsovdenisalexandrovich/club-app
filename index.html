@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v358 -->
+<!-- FILE_VERSION: index-v359 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -596,6 +596,36 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .story-paused{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:1;pointer-events:none}
 .story-viewer.paused .story-paused{display:flex}
 .story-paused span{width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px}
+/* ══ ТАЙМЕР «КОГДА НАПОМНИТЬ» и ПОПРАВКА ПОЯСА (index-v359, 13.09.2026) ══
+   Человек бросил фильм в первые минуты — дожим приносит извинение («предложили
+   тридцать минут посреди ночи») и кнопку «Давай», а она ведёт СЮДА: выбрать
+   время. Всё считается в его поясе — иначе «через час» и «вечером» врут всем,
+   кто не в Москве. */
+.tmr-card{background:var(--card);border-radius:20px;padding:16px;box-shadow:var(--sh-r);border:1px solid var(--border)}
+.tmr-card h3{font-family:var(--disp);font-size:16.5px;margin:0 0 4px;color:var(--text);font-weight:700;letter-spacing:-.01em}
+.tmr-card p{margin:0 0 12px;font-size:13.5px;color:var(--text-dim);line-height:1.45}
+.tmr-opt{width:100%;padding:13px 14px;border-radius:13px;border:1px solid var(--line);background:var(--card2);color:var(--text);
+         font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;font-family:var(--body);
+         display:flex;justify-content:space-between;gap:10px;align-items:center}
+.tmr-opt .when{font-size:12px;font-weight:500;color:var(--text-faint);white-space:nowrap}
+.tmr-opt.sel{border-color:var(--lav-deep);box-shadow:inset 0 0 0 2px var(--lav-deep)}
+.tmr-custom{display:flex;gap:8px;margin:2px 0 10px}
+.tmr-custom select,.tmr-custom input{flex:1;padding:10px;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:13px;font-family:var(--body)}
+.tmr-go{width:100%;padding:13px;border-radius:13px;border:none;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:var(--body)}
+[data-theme="dark"] .tmr-go{background:linear-gradient(135deg,var(--lav),var(--lav-deep))}
+.tmr-tz{margin-top:10px;text-align:center;font-size:12px;color:var(--text-faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.tz-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1160;background:var(--card);border-radius:20px 20px 0 0;
+          padding:18px 16px calc(env(safe-area-inset-bottom,0px) + 22px);box-shadow:0 -10px 30px rgba(0,0,0,.25);display:none}
+.tz-sheet.open{display:block}
+.tz-veil{position:fixed;inset:0;z-index:1159;background:rgba(0,0,0,.35);display:none}
+.tz-veil.open{display:block}
+.tz-sheet h4{margin:0 0 4px;font-size:16px;color:var(--text);font-family:var(--disp);font-weight:700}
+.tz-sheet .sub{margin:0 0 14px;font-size:12.5px;color:var(--text-dim);line-height:1.45}
+.tz-sheet .val{text-align:center;font-size:26px;font-weight:700;color:var(--text)}
+.tz-sheet .zone{text-align:center;font-size:12.5px;color:var(--text-faint);margin-bottom:12px}
+.tz-sheet input[type=range]{width:100%;accent-color:var(--lav-deep)}
+.tz-sheet .ok{width:100%;margin-top:16px;padding:13px;border-radius:13px;border:none;background:var(--lav-deep);color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:var(--body)}
+
 .video-banner{position:relative;width:100%;aspect-ratio:16/8;border-radius:16px;overflow:hidden;cursor:pointer;margin:6px 0 16px;background-size:cover;background-position:center}
 .video-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.68),rgba(0,0,0,0.05) 60%)}
 .video-banner-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,0.45);color:white;font-size:19px;display:flex;align-items:center;justify-content:center;padding-left:3px;z-index:1}
@@ -6536,6 +6566,17 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
      разрешит»). Живёт поверх всего: её задача — остановить действие, а не
      заменить экран. ⚠️ Только Telegram: в ВК и MAX такого метода нет вовсе -->
 <div id="botaccess-veil" onclick="botAccessClose()"></div>
+<!-- ══ ПОПРАВКА ЧАСОВОГО ПОЯСА (index-v359) ══ -->
+<div class="tz-veil" id="tz-veil" onclick="closeTzSheet()"></div>
+<div class="tz-sheet" id="tz-sheet">
+  <h4 data-text="tz.title">Твоё время</h4>
+  <p class="sub" data-text="tz.sub">Двигай, пока часы не совпадут с твоими. Будем считать напоминания по нему.</p>
+  <div class="val" id="tz-val">—</div>
+  <div class="zone" id="tz-zone">—</div>
+  <input type="range" id="tz-range" min="-12" max="12" step="1" value="0" oninput="tzSlide(this.value)">
+  <button class="ok" onclick="saveTz()" data-text="tz.ok">Так и есть</button>
+</div>
+
 <!-- ══ СТОРИЗ: просмотрщик во весь экран (index-v357) ══ -->
 <div class="story-viewer" id="story-viewer">
   <video id="story-video" playsinline webkit-playsinline preload="auto" muted></video>
@@ -10760,7 +10801,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v358 · 12.09.2026 неудачное списание: разные слова под причину отказа, смена карты одной кнопкой, диплинк startapp=card. До неё v357 — сториз на главной';
+const APP_BUILD = 'v359 · 13.09.2026 часовой пояс человека (авто + ползунок) и экран «когда напомнить» для фильма, диплинк startapp=later. До неё v358 — смена карты и причины отказа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11695,6 +11736,187 @@ function storyBindGestures(){
     el.addEventListener('mousedown', down);
     el.addEventListener('mouseup', up);
   });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ЧАСОВОЙ ПОЯС И ТАЙМЕР «КОГДА НАПОМНИТЬ» (13.09.2026)
+
+   ⚠️ ДО ЭТОГО ВСЕ ДОЖИМЫ СЧИТАЛИСЬ ПО МОСКВЕ. Для человека из Владивостока
+   «сегодня вечером» приходило глубокой ночью, а извинение «мы предложили тебе
+   фильм посреди ночи» могло прилететь в девять утра — и извинение становилось
+   нелепостью. Браузер знает пояс точно, поэтому отдаём его серверу при первом
+   открытии; ручную поправку ползунком автоопределение не перетирает.
+   ═══════════════════════════════════════════════════════════════════════ */
+let tzOffsetMin = null;          // смещение от UTC в минутах, как у сервера
+let tzSlidePos = 0;              // положение ползунка: часы к Москве
+const TZ_NAMES = {
+  '-1':'Калининград', '0':'Москва', '1':'Самара', '2':'Екатеринбург', '3':'Омск',
+  '4':'Красноярск', '5':'Иркутск', '6':'Якутск', '7':'Владивосток', '8':'Магадан', '9':'Камчатка',
+};
+function tzNameFor(hoursToMoscow){
+  const k = String(hoursToMoscow);
+  if (TZ_NAMES[k]) return TZ_NAMES[k];
+  const utc = 3 + hoursToMoscow;
+  return 'UTC' + (utc >= 0 ? '+' : '') + utc;
+}
+/* Браузер отдаёт СКОЛЬКО ВЫЧЕСТЬ из локального, чтобы получить UTC, — знак
+   обратный привычному, поэтому минус */
+function browserOffsetMin(){ return -new Date().getTimezoneOffset(); }
+
+async function sendTimezone(source){
+  if (!telegramId) return;
+  const off = (source === 'manual') ? (180 + tzSlidePos * 60) : browserOffsetMin();
+  try{
+    const r = await apiRequest(`${API_URL}/users/timezone`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ telegram_id: telegramId, offset_min: off, source: source || 'auto' })
+    }, 10000);
+    if (r && typeof r.offset_min === 'number'){
+      tzOffsetMin = r.offset_min;
+      tzSlidePos = Math.round((tzOffsetMin - 180) / 60);
+    }
+  }catch(e){}
+}
+function personNow(){
+  const off = (tzOffsetMin == null) ? browserOffsetMin() : tzOffsetMin;
+  return new Date(Date.now() + (off - browserOffsetMin()) * 60000);
+}
+function hhmm(d){
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+/* ── шторка поправки ── */
+function openTzSheet(){
+  tzSlidePos = (tzOffsetMin == null) ? Math.round((browserOffsetMin() - 180) / 60) : Math.round((tzOffsetMin - 180) / 60);
+  document.getElementById('tz-range').value = tzSlidePos;
+  tzSlide(tzSlidePos);
+  document.getElementById('tz-veil').classList.add('open');
+  document.getElementById('tz-sheet').classList.add('open');
+}
+function closeTzSheet(){
+  document.getElementById('tz-veil').classList.remove('open');
+  document.getElementById('tz-sheet').classList.remove('open');
+}
+function tzSlide(v){
+  tzSlidePos = parseInt(v, 10) || 0;
+  const d = new Date(Date.now() + ((180 + tzSlidePos * 60) - browserOffsetMin()) * 60000);
+  document.getElementById('tz-val').textContent = hhmm(d);
+  document.getElementById('tz-zone').textContent = tzNameFor(tzSlidePos)
+    + (tzSlidePos === 0 ? '' : ' · ' + (tzSlidePos > 0 ? '+' : '') + tzSlidePos + ' ч к Москве');
+}
+async function saveTz(){
+  await sendTimezone('manual');
+  closeTzSheet();
+  if (document.getElementById('later-card')) renderLaterTimer();
+  track('tz_manual', String(tzSlidePos));
+}
+
+/* ── экран «когда напомнить» ── */
+let laterPick = null;
+function laterOptions(){
+  const now = personNow(), h = now.getHours();
+  const out = [{ key:'hour', label: t('later.opt_hour'), minutes: 60 }];
+  if (h < 17) out.push({ key:'evening', label: t('later.opt_evening'), at: 19 });
+  else        out.push({ key:'morning', label: t('later.opt_morning'), at: 10, tomorrow: true });
+  return out;
+}
+function laterWhen(o){
+  const now = personNow();
+  if (!o) return '';
+  if (o.key === 'hour'){
+    const d = new Date(now.getTime() + 60 * 60000);
+    return 'около ' + hhmm(d);
+  }
+  if (o.key === 'evening') return 'сегодня в 19:00';
+  if (o.key === 'morning') return 'завтра в 10:00';
+  return '';
+}
+function openLaterTimer(){
+  if (!document.getElementById('later-overlay')) buildLaterOverlay();
+  document.getElementById('later-overlay').classList.add('open');
+  laterPick = null;
+  renderLaterTimer();
+  track('later_open', 'deeplink');
+}
+function closeLaterTimer(){
+  const el = document.getElementById('later-overlay');
+  if (el) el.classList.remove('open');
+}
+/* ⚠️ КЛАССЫ ШТОРКИ — `sched-popup`, А НЕ `popup` (13.09.2026). `popup-overlay`
+   живёт в ДАШБОРДЕ, в аппе таких стилей нет: собранный на них оверлей висел
+   в разметке невидимым, и экран таймера просто не появлялся. Поймано стендом */
+function buildLaterOverlay(){
+  const div = document.createElement('div');
+  div.className = 'sched-popup-overlay';
+  div.id = 'later-overlay';
+  div.onclick = function(e){ if (e.target === div) closeLaterTimer(); };
+  div.innerHTML = '<div class="sched-popup" id="later-popup">'
+    + '<div class="sched-popup-handle"></div>'
+    + '<div class="tmr-card" id="later-card"></div></div>';
+  document.body.appendChild(div);
+}
+function renderLaterTimer(){
+  const box = document.getElementById('later-card');
+  if (!box) return;
+  const opts = laterOptions();
+  let html = '<h3>' + escapeHtml(t('later.title')) + '</h3><p>' + escapeHtml(t('later.sub')) + '</p>';
+  opts.forEach(function(o){
+    html += '<button class="tmr-opt' + (laterPick && laterPick.key === o.key ? ' sel' : '') + '" onclick="laterSelect(\'' + o.key + '\')">'
+          + escapeHtml(o.label) + '<span class="when">' + escapeHtml(laterWhen(o)) + '</span></button>';
+  });
+  html += '<button class="tmr-opt' + (laterPick && laterPick.key === 'custom' ? ' sel' : '') + '" onclick="laterSelect(\'custom\')">'
+        + escapeHtml(t('later.opt_custom')) + '<span class="when">' + escapeHtml(t('later.opt_custom_hint')) + '</span></button>';
+  if (laterPick && laterPick.key === 'custom'){
+    html += '<div class="tmr-custom"><select id="later-day">'
+          + '<option value="0">' + escapeHtml(t('later.today')) + '</option>'
+          + '<option value="1">' + escapeHtml(t('later.tomorrow')) + '</option></select>'
+          + '<input type="time" id="later-time" value="19:00"></div>';
+  }
+  html += '<button class="tmr-go" onclick="laterConfirm()">' + escapeHtml(t('later.confirm')) + '</button>'
+        + '<div class="tmr-tz" onclick="openTzSheet()">' + escapeHtml(laterTzLine()) + '</div>';
+  box.innerHTML = html;
+}
+function laterTzLine(){
+  if (tzOffsetMin == null) return t('later.tz_unknown');
+  return (t('later.tz_known') || '').replace('{время}', hhmm(personNow()))
+                                    .replace('{пояс}', tzNameFor(Math.round((tzOffsetMin - 180) / 60)));
+}
+function laterSelect(key){
+  const o = laterOptions().find(function(x){ return x.key === key; }) || { key:'custom' };
+  laterPick = o;
+  renderLaterTimer();
+}
+async function laterConfirm(){
+  if (!laterPick){ showToast(t('later.pick_first')); return; }
+  const body = { telegram_id: telegramId, kind: 'film_back' };
+  if (laterPick.key === 'hour'){
+    body.minutes = 60;
+  } else if (laterPick.key === 'custom'){
+    const d = parseInt((document.getElementById('later-day') || {}).value || '0', 10);
+    const tm = (document.getElementById('later-time') || {}).value || '19:00';
+    const base = personNow();
+    base.setDate(base.getDate() + d);
+    body.at_local = base.getFullYear() + '-' + String(base.getMonth()+1).padStart(2,'0') + '-'
+                  + String(base.getDate()).padStart(2,'0') + 'T' + tm + ':00';
+  } else {
+    const base = personNow();
+    if (laterPick.tomorrow) base.setDate(base.getDate() + 1);
+    body.at_local = base.getFullYear() + '-' + String(base.getMonth()+1).padStart(2,'0') + '-'
+                  + String(base.getDate()).padStart(2,'0') + 'T'
+                  + String(laterPick.at).padStart(2,'0') + ':00:00';
+  }
+  try{
+    const r = await apiRequest(`${API_URL}/nudge/postpone`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    }, 15000);
+    const box = document.getElementById('later-card');
+    if (box) box.innerHTML = '<h3>' + escapeHtml(t('later.done_title')) + '</h3>'
+      + '<p>' + escapeHtml((t('later.done_sub') || '').replace('{когда}', (r && r.когда_у_него) || '')) + '</p>'
+      + '<button class="tmr-go" onclick="closeLaterTimer()">' + escapeHtml(t('later.done_btn')) + '</button>';
+    track('later_set', laterPick.key);
+  }catch(e){
+    showToast(t('later.error'));
+  }
 }
 
 function track(event, ref, value){
@@ -14662,6 +14884,32 @@ const APP_TEXTS = {
   'chargefail.text_last': {
     c:'Подписка', l:'Текст окна на последней попытке', w:'Окно «не получилось списать»', i:false,
     t:'Это была последняя попытка списания — дальше доступ закроется. Поменяй карту прямо сейчас, это займёт минуту, и ничего не потеряется.' },
+  'later.title': { c:'Таймер', l:'Заголовок экрана «когда напомнить»', w:'Экран таймера', i:false,
+    t:'Когда напомнить?' },
+  'later.sub': { c:'Таймер', l:'Подзаголовок экрана таймера', w:'Экран таймера', i:false,
+    t:'Пришлём фильм одним сообщением. Тридцать минут — и станет понятно, ради чего всё это.' },
+  'later.opt_hour': { c:'Таймер', l:'Вариант «через час»', w:'Экран таймера', i:false, t:'Через час' },
+  'later.opt_evening': { c:'Таймер', l:'Вариант «сегодня вечером»', w:'Экран таймера', i:false, t:'Сегодня вечером' },
+  'later.opt_morning': { c:'Таймер', l:'Вариант «завтра утром»', w:'Экран таймера', i:false, t:'Завтра утром' },
+  'later.opt_custom': { c:'Таймер', l:'Вариант «своё время»', w:'Экран таймера', i:false, t:'Своё время' },
+  'later.opt_custom_hint': { c:'Таймер', l:'Подпись у «своё время»', w:'Экран таймера', i:false, t:'выбрать' },
+  'later.today': { c:'Таймер', l:'Слово «сегодня» в выборе дня', w:'Экран таймера', i:false, t:'Сегодня' },
+  'later.tomorrow': { c:'Таймер', l:'Слово «завтра» в выборе дня', w:'Экран таймера', i:false, t:'Завтра' },
+  'later.confirm': { c:'Таймер', l:'Кнопка подтверждения', w:'Экран таймера', i:false, t:'Напомнить' },
+  'later.pick_first': { c:'Таймер', l:'Если не выбрал время', w:'Экран таймера', i:false, t:'Сначала выбери время' },
+  'later.done_title': { c:'Таймер', l:'Заголовок после выбора', w:'Экран таймера', i:false, t:'Договорились' },
+  'later.done_sub': { c:'Таймер', l:'Текст после выбора ({когда})', w:'Экран таймера', i:false,
+    t:'Напомню {когда}. Фильм придёт одним сообщением.' },
+  'later.done_btn': { c:'Таймер', l:'Кнопка после выбора', w:'Экран таймера', i:false, t:'Хорошо' },
+  'later.error': { c:'Таймер', l:'Ошибка при переносе', w:'Экран таймера', i:false, t:'Не получилось — попробуй ещё раз' },
+  'later.tz_unknown': { c:'Таймер', l:'Строка поправки пояса, пока пояс неизвестен', w:'Экран таймера', i:false,
+    t:'У меня время не московское' },
+  'later.tz_known': { c:'Таймер', l:'Строка поправки пояса ({время}, {пояс})', w:'Экран таймера', i:false,
+    t:'У тебя сейчас {время} — {пояс}. Не так?' },
+  'tz.title': { c:'Таймер', l:'Заголовок шторки пояса', w:'Шторка «твоё время»', i:false, t:'Твоё время' },
+  'tz.sub': { c:'Таймер', l:'Текст шторки пояса', w:'Шторка «твоё время»', i:false,
+    t:'Двигай, пока часы не совпадут с твоими. Будем считать напоминания по нему.' },
+  'tz.ok': { c:'Таймер', l:'Кнопка шторки пояса', w:'Шторка «твоё время»', i:false, t:'Так и есть' },
   'chargefail.btn_card': {
     c:'Подписка', l:'Кнопка «поменять карту»', w:'Окно «не получилось списать»', i:false,
     t:'Поменять карту' },
@@ -18027,6 +18275,8 @@ const DEEPLINKS = {
      окно смены карты: у участника — с кнопкой запуска, у остальных — на главную.
      guests:false осознанно: гостю менять нечего */
   'card':        { go: () => openCardChange(),            guests: false },
+  /* Кнопка «Давай» в дожиме про фильм ведёт сюда: выбрать, когда напомнить */
+  'later':       { go: () => openLaterTimer(),            guests: true  },
   'karta':       { go: () => openCardChange(),            guests: false },
   /* [stated] Denis 28.08: «где игры, где игра про богов?» Ссылка на КОНКРЕТНУЮ
      игру (`g_`/`gs_`) была с самого начала, а входа на саму вкладку не было —
@@ -18310,6 +18560,7 @@ const PARAM_LINKS = {
   'g':       { param: 'ключ игры',   label: 'Игра — правила',                  guests: true  },
   'pay':     { param: 'метка источника', label: 'Оплата с меткой',             guests: true  },
   'card':    { param: '',            label: 'Смена карты (для бота)',           guests: false },
+  'later':   { param: '',            label: 'Когда напомнить про фильм',        guests: true  },
   'u':       { param: 'код единицы', label: 'Мягкая метка источника',          guests: true  },
   'r':       { param: 'айди игрока', label: 'Приглашение друга',               guests: true  },
   'c':       { param: 'ключ карточки', label: 'Расшаренная карточка',          guests: true  }
@@ -24451,6 +24702,8 @@ function startApp(){
   // Состояние разрешения нужно ДО первого действия, иначе заслонка мигнёт у
   // того, кто давно всё разрешил. Следом — сам вопрос о праве писать: Telegram
   // рисует своё окно на первом же экране, до фильма (см. botAccessAskOnStart)
+  /* Пояс — сразу при старте: он нужен всем дожимам, а не только таймеру */
+  if (typeof sendTimezone === 'function') sendTimezone('auto');
   if (typeof loadBotAccess === 'function'){
     loadBotAccess().then(function(){
       if (typeof botAccessAskOnStart === 'function') botAccessAskOnStart();
