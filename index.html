@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v364 -->
+<!-- FILE_VERSION: index-v365 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10880,7 +10880,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v364 · 15.09.2026 знакомство: «сделать в боте» ведёт в нужный блок Salebot (step1tg/step2tg/step4tg, в ВК — подписная с onb_step). До неё v363 — ворота обязательных';
+const APP_BUILD = 'v365 · 15.09.2026 знакомство: видно, что факты подменены тестом; бар не застревает на пустом втором уровне. До неё v364 — «сделать в боте»';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16763,6 +16763,7 @@ function nbRenderMand(){
   document.getElementById('nb-mand-body').innerHTML =
     '<div class="sched-popup-header"><div class="sched-popup-title">' + esc2(s.n) + '</div></div>' +
     '<div class="nb-sub">' + esc2(s.why || '') + '</div><div class="nb-sub">' + esc2(nbT('mand.title_sub')) + '</div>' +
+    (((nbState.test_facts || []).indexOf(k) >= 0) ? '<div class="nb-sub" style="color:#d98a3a">Тестовая подмена: сервер считает, что шаг не сделан. Снять — в диагностике профиля</div>' : '') +
     '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
     '<button class="nb-btn ghost" onclick="nbMandBot()">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>' +
     '<button class="nb-btn ghost" onclick="nbMandLater()">' + esc2(nbT('mand.later') || 'Позже') + '</button>';
@@ -16799,7 +16800,8 @@ function nbRenderTestPanel(){
   ['channel','chat','plat2','home'].forEach(function(k){ var el = document.getElementById('nbt-' + k); if (el) el.checked = !!f[k]; });
   var d = document.getElementById('nbt-day'); if (d) d.value = nbState.day || 1;
   var o = document.getElementById('nbt-out');
-  if (o) o.textContent = 'active=' + nbState.active + ' · очки ' + nbState.points + ' · уровень ' + nbState.level + (nbState.gated ? ' (заперт обязательными)' : '') + ' · день ' + nbState.day +
+  if (o) o.textContent = 'active=' + nbState.active + ' · очки ' + nbState.points + ' · показываем уровень ' + nbState.level + ' (заработан ' + (nbState.earned || 0) + ')' + (nbState.gated ? ', заперт обязательными' : '') + ' · день ' + nbState.day +
+    ((nbState.test_facts || []).length ? '\n⚠️ ПОДМЕНЕНЫ ТЕСТОМ: ' + nbState.test_facts.join(', ') + ' — настоящие факты сервера не учитываются, пока не снимешь подмену' : '\nподмены фактов нет, всё по-настоящему') +
     '\nгде купил: ' + (f.purchase_place || '?') + ' · площадка: ' + (f.platform || '?') + ' · обязательных открыто: ' + ((nbState.mandatory_open || []).join(', ') || 'нет') +
     '\nследующий: ' + (nbState.next ? nbState.next.n : '—');
 }
