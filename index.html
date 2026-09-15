@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v361 -->
+<!-- FILE_VERSION: index-v362 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5199,6 +5199,40 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .live-chat-send{width:46px;height:46px;border:none;border-radius:14px;flex-shrink:0;
   background:linear-gradient(135deg,var(--lav,#9b8cf2),var(--coral,#e8614a));
   color:#fff;font-size:19px;cursor:pointer}
+/* ── ЗНАКОМСТВО С КЛУБОМ (ветка Г, 15.09.2026) — префикс nb-, чтобы не пересечься с туром onb- ── */
+.nb-start{margin:0 0 14px;padding:16px;border-radius:22px;background:var(--bg2);box-shadow:var(--sh-out, 0 8px 22px rgba(0,0,0,.18))}
+.nb-start h3{margin:0 0 6px;font-family:var(--disp);font-size:17px;font-weight:700}
+.nb-start .nb-sub{font-size:13.5px;color:var(--text-dim);margin:4px 0 10px;line-height:1.4}
+.nb-mand{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(232,140,60,.18);color:#d98a3a;margin-left:6px;vertical-align:middle;font-weight:700}
+.nb-btn{display:block;width:100%;padding:12px;border:0;border-radius:16px;background:var(--warm);color:#fff;font-weight:700;font-size:14.5px;font-family:inherit;cursor:pointer}
+.nb-btn.ghost{background:transparent;color:var(--text-dim);font-weight:600;padding:9px;margin-top:4px}
+.nb-count{font-size:12px;color:var(--text-dim);margin-top:10px;display:flex;justify-content:space-between}
+.nb-prolog{display:flex;gap:12px;align-items:center;margin:0 0 14px;padding:12px;border-radius:20px;background:var(--bg2);box-shadow:var(--sh-out, 0 8px 22px rgba(0,0,0,.18))}
+.nb-prolog .nb-art{width:58px;height:78px;border-radius:12px;flex:none;background-size:cover;background-position:center;background-color:#5a4632;position:relative;transition:filter .5s}
+.nb-prolog .nb-art.locked{filter:grayscale(.85) brightness(.6)}
+.nb-prolog .nb-art .nb-lk{position:absolute;top:6px;right:6px;width:15px;height:15px;border-radius:4px;background:rgba(0,0,0,.55);border:1.5px solid #fff;border-top-width:5px}
+.nb-prolog .nb-t{font-size:13px;flex:1}
+.nb-prolog .nb-t b{display:block;font-size:14px;margin-bottom:2px}
+.nb-prolog .nb-t .nb-sub{color:var(--text-dim);margin:0}
+.nb-l2{margin:0 0 14px;padding:16px;border-radius:22px;background:linear-gradient(160deg,rgba(232,97,74,.18),rgba(232,97,74,.04));box-shadow:var(--sh-out, 0 8px 22px rgba(0,0,0,.18));text-align:center}
+.nb-l2 b{display:block;font-size:17px;font-family:var(--disp)}
+.nb-l2 p{margin:6px 0 0;font-size:13.5px;color:var(--text-dim)}
+.nb-chk .nb-g{font-size:12px;color:var(--text-dim);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.nb-chk .nb-i{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--bg);margin:6px 0;font-size:14px;cursor:pointer}
+.nb-chk .nb-i .nb-bx{width:20px;height:20px;border-radius:7px;flex:none;background:var(--bg2);box-shadow:inset 0 0 0 1.5px rgba(128,128,128,.35);position:relative}
+.nb-chk .nb-i.dn .nb-bx{background:var(--warm);box-shadow:none}
+.nb-chk .nb-i.dn .nb-bx::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(42deg)}
+.nb-chk .nb-i .nb-n{flex:1;min-width:0}
+.nb-chk .nb-i.dn .nb-n{color:var(--text-dim);text-decoration:line-through}
+.nb-chk .nb-i .nb-go{font-size:12px;color:var(--warm);white-space:nowrap}
+.nb-chk .nb-i.soon{opacity:.5;cursor:default}
+.nb-test{font-size:13px}
+.nb-test .nb-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
+.nb-test select,.nb-test input[type=number]{font:inherit;color:var(--text);background:var(--bg);border:1px solid rgba(128,128,128,.3);border-radius:10px;padding:6px 8px}
+.nb-test label.nb-cb{display:flex;align-items:center;gap:6px}
+.nb-test .nb-out{font-size:11.5px;color:var(--text-dim);white-space:pre-wrap;margin-top:8px;text-align:left}
+#nb-mand-overlay .sched-popup{max-height:70vh}
+
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -5625,6 +5659,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          резервный ВК и приложение на экран «Домой» в туре только тормозят, но и
          терять их нельзя. Третьей идут уведомления. Каждая строка закрывается
          крестиком НАВСЕГДА — это предложение, а не задача -->
+    <!-- ЗНАКОМСТВО С КЛУБОМ (ветка Г, 15.09.2026): «Пролог» с замком, следующий
+         шаг, экран второго уровня. Рисуется nbRenderStart() из состояния
+         /onb/state; пусто у тех, кому знакомство не включено -->
+    <div id="nb-start-host"></div>
+
     <div id="onb-notes"></div>
 
     <!-- Неудачное списание (02.09.2026). Бот уже пишет человеку о каждой попытке;
@@ -6077,6 +6116,23 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="debugResetPoints()">Сбросить</button>
         </div>
         <div style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center" id="debug-level-result"></div>
+      </div>
+      <div class="card nb-test" id="nb-test-panel" style="display:none;margin-top:12px">
+        <div class="section-label" style="margin-bottom:8px">Тест знакомства с клубом (только свои)</div>
+        <div class="nb-row"><span>Где купил</span><select id="nbt-where"><option value="">не трогать</option><option value="bot">в боте</option><option value="app">из аппа</option></select></div>
+        <div class="nb-row"><span>Площадка</span><select id="nbt-plat"><option value="">как есть</option><option value="tg">Телеграм</option><option value="vk">ВК</option></select></div>
+        <div class="nb-row"><span>Факты сервера</span><span style="display:flex;gap:10px;flex-wrap:wrap">
+          <label class="nb-cb"><input type="checkbox" id="nbt-channel"> канал</label>
+          <label class="nb-cb"><input type="checkbox" id="nbt-chat"> чат</label>
+          <label class="nb-cb"><input type="checkbox" id="nbt-plat2"> 2-я площадка</label>
+          <label class="nb-cb"><input type="checkbox" id="nbt-home"> на экране</label></span></div>
+        <div class="nb-row"><span>День после входа</span><input type="number" id="nbt-day" min="1" max="30" value="1" style="width:64px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(false)">Применить</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(true)">Сбросить и применить</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestClear()">Снять подмену фактов</button>
+        </div>
+        <div class="nb-out" id="nbt-out">Галочки фактов — это то, что «видит сервер». Сняты — попап обязательных покажется.</div>
       </div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Версия приложения</div>
@@ -7135,6 +7191,25 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
     <div id="sched-popup-events"></div>
       <div id="sched-popup-recs"></div>
+  </div>
+</div>
+
+<!-- Шторка чеклиста знакомства (тап по бару) -->
+<div class="sched-popup-overlay" id="nb-sheet-overlay" onclick="if(event.target===this) nbCloseSheet()">
+  <div class="sched-popup" id="nb-sheet">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title" id="nb-sheet-title">Знакомство с клубом</div>
+      <button class="icon-btn" onclick="nbCloseSheet()">✕</button>
+    </div>
+    <div id="nb-sheet-body" class="nb-chk"></div>
+  </div>
+</div>
+<!-- Попап обязательного шага: фон не закрывает, только кнопки -->
+<div class="sched-popup-overlay" id="nb-mand-overlay">
+  <div class="sched-popup" id="nb-mand">
+    <div class="sched-popup-handle"></div>
+    <div id="nb-mand-body"></div>
   </div>
 </div>
 
@@ -10804,7 +10879,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v361 · 14.09.2026 время в таймере всегда 24-часовое (свои списки вместо системного поля). До неё v360 — таймер поверх бара уровня';
+const APP_BUILD = 'v362 · 15.09.2026 знакомство с клубом (ветка Г): шкала двух уровней в баре, Пролог с замком, следующий шаг, попап обязательных, тест-панель. До неё v361 — время в таймере 24 ч';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13002,6 +13077,8 @@ function renderDemoBanner(){
     aiBtn.textContent = (isMember ? '' : '🔒 ') + 'Спросить ИИ-помощника своими словами';
   }
   renderLevelCard();
+  /* Знакомство с клубом — отдельным запросом, после профиля: главная не ждёт */
+  try { nbLoad(); } catch(e){}
 }
 
 /* ── Управление подпиской ─────────────────────────────────────────────────────
@@ -16494,6 +16571,238 @@ function liteOfferNo(){
   liteResetBad();   /* отказался — не долбим при каждом следующем запуске */
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ЗНАКОМСТВО С КЛУБОМ — ветка Г (15.09.2026). Префикс nb-, чтобы не
+   пересечься со старым туром (onb*). Источник истины — сервер, /onb/state.
+   Пока знакомство активно (уровень < 2), бар наверху показывает ЕГО шкалу
+   вместо регистрации; тап по бару открывает чеклист; на главной живёт блок
+   «Следующий шаг» и «Пролог» с замком. Обязательные шаги — попапом, только
+   когда сервер видит «нет».
+   ═══════════════════════════════════════════════════════════════════════ */
+let nbState = null;          // ответ /onb/state
+let nbMandDeferred = false;  // «Позже» на попапе обязательных — до конца сессии
+let nbLoading = false;
+
+function nbMode(){
+  return !!(nbState && nbState.active && isMember && (nbState.level || 0) < 2);
+}
+function nbT(key, vars){
+  var s = (nbState && nbState.texts && nbState.texts[key]) || '';
+  if (vars) Object.keys(vars).forEach(function(k){ s = s.split('{' + k + '}').join(vars[k]); });
+  return s;
+}
+async function nbLoad(){
+  if (!telegramId || !isMember || nbLoading) return;
+  nbLoading = true;
+  try {
+    var st = await apiRequest(API_URL + '/onb/state?telegram_id=' + telegramId, {}, 12000);
+    nbState = st || null;
+  } catch(e){
+    /* Знакомство не должно ронять главную: молчим, но пишем в консоль с кодом */
+    console.warn('nb/state', e && e.message);
+  } finally { nbLoading = false; }
+  nbRenderAll();
+}
+function nbRenderAll(){
+  try { renderLevelCard(); } catch(e){}
+  try { nbRenderStart(); } catch(e){}
+  try { nbRenderMand(); } catch(e){}
+  try { nbRenderTestPanel(); } catch(e){}
+  try { if (document.getElementById('nb-sheet-overlay').classList.contains('open')) nbRenderSheet(); } catch(e){}
+}
+function nbApplyState(st){
+  if (st && typeof st.active !== 'undefined') nbState = st;
+  nbRenderAll();
+}
+
+/* ── события ── */
+async function nbEvent(key, note){
+  if (!nbState || !nbState.active || !telegramId) return;
+  var step = (nbState.steps || []).find(function(s){ return s.k === key; });
+  if (step && step.done >= step.cap) return;   // уже закрыт — не дёргаем сервер
+  try {
+    var r = await apiRequest(API_URL + '/onb/event', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), key: key, note: note || '' })
+    }, 12000);
+    var prevLvl = (nbState && nbState.level) || 0;
+    nbApplyState(r.state);
+    (r.rewards || []).forEach(function(rw){
+      if (rw.kind === 'prologue') showToast(nbT('tip.l1') || 'Уровень 1 — карта открыта');
+      if (rw.kind === 'points' && rw.points) showToast('Уровень 2: +' + rw.points + ' баллов');
+    });
+    if (r.gained && !(r.rewards || []).length) showToast('+' + r.gained + ' к знакомству');
+    if ((r.state && r.state.level || 0) > prevLvl && r.state.level >= 2) nbShowL2();
+  } catch(e){ showToast(e.message || 'Не удалось записать шаг'); }
+}
+async function nbLater(key){
+  try {
+    var st = await apiRequest(API_URL + '/onb/later', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), key: key, days: 1 })
+    }, 12000);
+    nbApplyState(st);
+  } catch(e){ showToast(e.message || 'Не получилось отложить'); }
+}
+/* Хук самоинициации: старые отметки тура (onbDone) и прямые действия зовут
+   сюда. Ключи тура → ключи знакомства */
+function nbHook(key){
+  var map = { live: 'live', plan: 'plan', games: 'game', lib: 'lecture' };
+  if (map[key]) nbEvent(map[key], 'сделано в аппе');
+}
+
+/* ── куда ведёт шаг ── */
+function nbDoStep(key){
+  var f = nbState && nbState.facts || {};
+  var vk = f.platform === 'vk';
+  switch(key){
+    case 'channel': vk ? openVkAccessFlow() : openTgAccess('channel'); break;
+    case 'chat':    vk ? openVkLink(VK_CHAT_LINK) : openTgAccess('chat'); break;
+    case 'plat2':   vk ? linkTelegramFromVk() : openVkAccessFlow(); break;
+    case 'home':    openAddToHomeScreenPopup(); break;
+    case 'lecture': switchView('library'); break;
+    case 'audio':   switchView('library'); showToast('Нажми «Слушать» у любого занятия'); break;
+    case 'live':    switchView('schedule'); break;
+    case 'game':    switchView('games'); break;
+    case 'plan':    openPersonalPlan(); break;
+    case 'intro':   vk ? openVkLink(VK_CHAT_LINK) : openUrl(CHAT_JOIN_LINK); break;
+    case 'tour':    if (typeof onbRestart === 'function') onbRestart(); break;
+    case 'ask':     switchView('library'); if (typeof openAiPopup === 'function') openAiPopup(); break;
+    default: break;
+  }
+  nbCloseSheet();
+}
+
+/* ── бар наверху (вызывается из renderLevelCard) ── */
+function nbRenderBar(card){
+  var st = nbState, lvl = st.level || 0, bar = st.bar || {};
+  card.style.display = 'block';
+  document.body.classList.add('onboarding-bar-visible');
+  document.getElementById('level-card-title').textContent = lvl >= 1 ? (nbT('bar.l2') || 'Уровень 2') : (nbT('bar.l1') || 'Уровень 1');
+  document.getElementById('level-card-frac').textContent = (bar.in_level || 0) + ' / ' + (bar.of_level || 0);
+  var fill = document.getElementById('level-bar-fill');
+  if (fill) fill.style.width = Math.round((bar.frac || 0) * 100) + '%';
+  var w = document.getElementById('level-card-warning'); if (w) w.style.display = 'none';
+  var b = document.getElementById('reward-level-badge'); if (b) b.style.display = 'none';
+}
+
+/* ── блок на главной ── */
+function nbRenderStart(){
+  var host = document.getElementById('nb-start-host'); if (!host) return;
+  if (!nbState || !nbState.active || !isMember){ host.innerHTML = ''; return; }
+  var st = nbState, h = '';
+  /* Пролог */
+  if (st.prologue && st.prologue.has_card){
+    var unl = st.prologue.unlocked, cl = st.prologue.claimed;
+    var god = (typeof QUIZ_RESULTS !== 'undefined' && QUIZ_RESULTS[st.facts && st.facts.quiz_code] && QUIZ_RESULTS[st.facts.quiz_code].god) || 'бог';
+    h += '<div class="nb-prolog" onclick="switchView(\'profile\')"><div class="nb-art' + (unl ? '' : ' locked') + '">' + (unl ? '' : '<div class="nb-lk"></div>') + '</div><div class="nb-t">' +
+      (!unl ? '<b>' + esc2(nbT('prolog.wait')) + '</b><div class="nb-sub">' + esc2(nbT('prolog.wait_sub', {god: god})) + '</div>' :
+       (!cl ? '<b>' + esc2(nbT('prolog.open')) + '</b><button class="nb-btn" style="margin-top:6px;padding:9px" onclick="event.stopPropagation();claimCard(' + st.prologue.card_id + ')">' + esc2(nbT('prolog.claim')) + '</button>' :
+              '<b>' + esc2(nbT('prolog.owned')) + '</b><div class="nb-sub">' + esc2(nbT('prolog.owned_sub')) + '</div>')) +
+      '</div></div>';
+  }
+  /* Уровень 2 — один раз */
+  if ((st.level || 0) >= 2 && !nbL2Seen()){
+    h += '<div class="nb-l2"><b>' + esc2(nbT('l2.title', {n: st.level2_points})) + '</b><p>' + esc2(nbT('l2.sub')) + '</p>' +
+      '<button class="nb-btn" style="margin-top:10px" onclick="nbL2Ack();switchView(\'profile\')">Посмотреть, куда потратить</button></div>';
+  }
+  /* Следующий шаг — пока знакомство идёт */
+  if ((st.level || 0) < 2){
+    var n = st.next, all = (st.steps || []).length, dn = (st.steps || []).filter(function(s){ return s.done >= s.cap; }).length;
+    if (n){
+      h += '<div class="nb-start"><h3>' + esc2(nbT('next.title') || 'Следующий шаг') + '</h3><div><b>' + esc2(n.n) + '</b>' + (n.mand ? '<span class="nb-mand">обязательно</span>' : '') + '</div>' +
+        '<div class="nb-sub">' + esc2(n.why || '') + '</div>' +
+        '<button class="nb-btn" onclick="nbDoStep(\'' + n.k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
+        (n.mand ? '' : '<button class="nb-btn ghost" onclick="nbLater(\'' + n.k + '\')">' + esc2(nbT('next.later') || 'Не сейчас') + '</button>') +
+        '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">Все шаги →</span></div></div>';
+    } else {
+      var soon = (st.steps || []).some(function(s){ return s.soon; });
+      h += '<div class="nb-start"><h3>' + esc2(soon ? (nbT('next.done_today') || 'На сегодня всё') : (nbT('next.all') || 'Ты знаешь клуб')) + '</h3>' +
+        '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">Все шаги →</span></div></div>';
+    }
+  }
+  host.innerHTML = h;
+}
+function esc2(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function nbL2Seen(){ try { return localStorage.getItem('nb_l2_seen_' + telegramId) === '1'; } catch(e){ return false; } }
+function nbL2Ack(){ try { localStorage.setItem('nb_l2_seen_' + telegramId, '1'); } catch(e){} nbRenderStart(); }
+function nbShowL2(){ try { localStorage.removeItem('nb_l2_seen_' + telegramId); } catch(e){} nbRenderStart(); switchView('portal'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+/* ── шторка-чеклист ── */
+function nbOpenSheet(){ nbRenderSheet(); document.getElementById('nb-sheet-overlay').classList.add('open'); renderLevelCard(); }
+function nbCloseSheet(){ document.getElementById('nb-sheet-overlay').classList.remove('open'); renderLevelCard(); }
+function nbRenderSheet(){
+  var el = document.getElementById('nb-sheet-body'); if (!el || !nbState) return;
+  var st = nbState, groups = [
+    { t: nbT('chk.mand') || 'Обязательное', f: function(s){ return s.mand; } },
+    { t: nbT('chk.l1') || 'Осмотреться', f: function(s){ return !s.mand && s.lvl == 1; } },
+    { t: nbT('chk.l2') || 'Второй день и дальше', f: function(s){ return !s.mand && s.lvl == 2; } }
+  ];
+  var all = (st.steps || []).length, dn = (st.steps || []).filter(function(s){ return s.done >= s.cap; }).length, h = '';
+  h += '<div class="nb-sub" style="margin-top:4px">' + esc2(nbT('chk.title', {done: dn, all: all})) + ' · ' + (st.points || 0) + ' очков · день ' + (st.day || 1) + '</div>';
+  groups.forEach(function(g){
+    var list = (st.steps || []).filter(g.f); if (!list.length) return;
+    h += '<div class="nb-g">' + esc2(g.t) + '</div>';
+    list.forEach(function(s){
+      var done = s.done >= s.cap;
+      h += '<div class="nb-i' + (done ? ' dn' : '') + (s.soon ? ' soon' : '') + '"' + (done || s.soon ? '' : ' onclick="nbDoStep(\'' + s.k + '\')"') + '><span class="nb-bx"></span><span class="nb-n">' + esc2(s.n) + '</span><span class="nb-go">' + (done ? '' : (s.soon ? esc2(nbT('chk.soon', {day: s.day})) : ('+' + s.p))) + '</span></div>';
+    });
+  });
+  el.innerHTML = h;
+}
+
+/* ── попап обязательных ── */
+function nbRenderMand(){
+  var ov = document.getElementById('nb-mand-overlay'); if (!ov) return;
+  var open = nbMode() && !nbMandDeferred && (nbState.mandatory_open || []).length && !levelBarMustHide();
+  if (!open){ ov.classList.remove('open'); return; }
+  var k = nbState.mandatory_open[0], s = (nbState.steps || []).find(function(x){ return x.k === k; }) || { n: k };
+  document.getElementById('nb-mand-body').innerHTML =
+    '<div class="sched-popup-header"><div class="sched-popup-title">' + esc2(s.n) + '</div></div>' +
+    '<div class="nb-sub">' + esc2(s.why || '') + '</div><div class="nb-sub">' + esc2(nbT('mand.title_sub')) + '</div>' +
+    '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
+    '<button class="nb-btn ghost" onclick="nbMandBot()">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>' +
+    '<button class="nb-btn ghost" onclick="nbMandLater()">' + esc2(nbT('mand.later') || 'Позже') + '</button>';
+  ov.classList.add('open');
+}
+function nbMandDo(k){ document.getElementById('nb-mand-overlay').classList.remove('open'); nbDoStep(k); }
+function nbMandBot(){ document.getElementById('nb-mand-overlay').classList.remove('open'); openUrl(botLinkForAccess()); }
+function nbMandLater(){ nbMandDeferred = true; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard(); }
+
+/* ── тест-панель (только свои; сервер проверяет сам) ── */
+function nbRenderTestPanel(){
+  var p = document.getElementById('nb-test-panel'); if (!p) return;
+  var show = !!(nbState && nbState.staff) || (typeof isStaffUser === 'function' && isStaffUser());
+  p.style.display = show ? '' : 'none';
+  if (!show || !nbState) return;
+  var f = nbState.facts || {};
+  ['channel','chat','plat2','home'].forEach(function(k){ var el = document.getElementById('nbt-' + k); if (el) el.checked = !!f[k]; });
+  var d = document.getElementById('nbt-day'); if (d) d.value = nbState.day || 1;
+  var o = document.getElementById('nbt-out');
+  if (o) o.textContent = 'active=' + nbState.active + ' · очки ' + nbState.points + ' · уровень ' + nbState.level + ' · день ' + nbState.day +
+    '\nгде купил: ' + (f.purchase_place || '?') + ' · площадка: ' + (f.platform || '?') + ' · обязательных открыто: ' + ((nbState.mandatory_open || []).join(', ') || 'нет') +
+    '\nследующий: ' + (nbState.next ? nbState.next.n : '—');
+}
+async function nbTestApply(reset){
+  var body = { telegram_id: Number(telegramId), reset: !!reset,
+    purchase_place: document.getElementById('nbt-where').value, platform: document.getElementById('nbt-plat').value,
+    channel: document.getElementById('nbt-channel').checked, chat: document.getElementById('nbt-chat').checked,
+    plat2: document.getElementById('nbt-plat2').checked, home: document.getElementById('nbt-home').checked,
+    day: Number(document.getElementById('nbt-day').value) || 1 };
+  try {
+    var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 15000);
+    nbMandDeferred = false;
+    nbApplyState(r.state);
+    showToast('Тест-режим применён');
+  } catch(e){ var o = document.getElementById('nbt-out'); if (o) o.textContent = 'Ошибка: ' + (e.message || e); showToast(e.message || 'Не получилось'); }
+}
+async function nbTestClear(){
+  try {
+    var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), clear_test: true }) }, 15000);
+    nbMandDeferred = false; nbApplyState(r.state); showToast('Подмена снята — факты настоящие');
+  } catch(e){ showToast(e.message || 'Не получилось'); }
+}
+
 function levelBarMustHide(){
   if (pfFieldOpen) return true;    // поле выбора тем
   /* ⚠️ ЭКРАН ТАЙМЕРА И ПОПРАВКА ПОЯСА (14.09.2026). Бар приклеен к верху со
@@ -16519,6 +16828,8 @@ function levelBarMustHide(){
      Причина прячется ЗДЕСЬ, в одном месте, а не в вызывающем коде */
   var ai = document.getElementById('ai-popup-overlay');
   if (ai && ai.classList.contains('open')) return true;
+  var nbs = document.getElementById('nb-sheet-overlay');
+  if (nbs && nbs.classList.contains('open')) return true;
   return false;
 }
 
@@ -16543,6 +16854,9 @@ function renderLevelCard(){
     if (badge) badge.style.display = 'none';
     return;
   }
+  /* ЗНАКОМСТВО С КЛУБОМ (ветка Г): пока оно идёт, бар показывает его шкалу,
+     а не регистрацию. Всё остальное в этой функции не трогаем */
+  if (nbMode()){ nbRenderBar(card); return; }
   checkLevelUp(); // шаги могли завершиться сами (напр. пришёл channel_joined с сервера) — проверяем переход на новый уровень при каждой отрисовке, не только по клику
   const def = currentLevelDef();
   card.style.display = 'block';
@@ -16692,6 +17006,7 @@ async function refreshOnboardStatus(){
 }
 
 async function openStepsPopup(){
+  if (nbMode()){ nbOpenSheet(); return; }
   await refreshOnboardStatus();
   renderLevelCard();
   renderStepsPopup();
@@ -17925,6 +18240,7 @@ function onbQuizBlocked(){
    проиграл, нажимаю продолжить — снова первый этап»). Дело сделано —
    значит шаг закрыт, кто бы там что ни нажимал до этого */
 function onbDone(key){
+  try { nbHook(key); } catch(e){}   // знакомство с клубом считает те же действия
   if (!onbActive) return;
   const st = ONB_STEPS[onbIdx];
   if (!st || st.key !== key) return;
@@ -22655,6 +22971,7 @@ function openLecture(index) {
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
+  try { nbEvent('lecture', 'открыл занятие'); } catch(e){}
   if (l.link) openTgVideo(l.link); else openUrl(l.link_vk);
 }
 
@@ -28482,6 +28799,12 @@ async function claimCard(cardId){
     if (btn){ btn.disabled = false; btn.textContent = 'Забрать'; }
     // Гость нажал «Забрать» на карточке «Пролога»: баллы внутри есть, но
     // открываются подпиской. Это момент предложения, а не отказа
+    if (e && e.status === 402 && /^ONB-04/.test(e.message || '')){
+      // Замок знакомства: карта откроется на первом уровне — ведём в чеклист
+      showToast(e.message);
+      setTimeout(nbOpenSheet, 500);
+      return;
+    }
     if (e && e.status === 402){
       showToast(e.message || t('prologue.locked'));
       // ⚠️ НЕ ОБЩИЙ ПЕЙВОЛЛ: он говорит «не вижу подписки», а здесь у человека
@@ -30421,6 +30744,7 @@ function playLecture(index, src){
   var list = cardList(src) || [];
   var clicked = list[index];
   if (!plHasAudio(clicked)) { showToast('У этого занятия пока нет аудиоверсии'); return; }
+  try { nbEvent('audio', 'включил аудио'); } catch(e){}
 
   var withAudio = list.filter(plHasAudio);
   var pos = withAudio.findIndex(function(x){ return x.slug === clicked.slug; });
