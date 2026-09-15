@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v368 -->
+<!-- FILE_VERSION: index-v369 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10889,7 +10889,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v368 · 16.09.2026 «Поделиться» в карточке занятия — пиктограммой, ряду кнопок не хватало места. До неё v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v369 · 16.09.2026 ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -24928,6 +24928,23 @@ async function askAi(){
   btn.disabled = true;
   answerEl.innerHTML = '<div class="ai-loading">Думаю над ответом...</div>';
 
+  /* ⚠️ РАЗБОР ВОПРОСА ДО SALEBOT (16.09.2026, этап 4 ветки Г). Раньше никто не
+     решал, про что вопрос: всё уходило в Salebot за занятиями, и «как добавить
+     апп на экран» получало «переформулируй». Теперь наш сервер сортирует:
+     app → статьи справки, start → тур и шаги, sales → как раньше. Сервер не
+     ответил или не разобрал — идём старым путём, поиск от этого не зависит */
+  try {
+    const cls = await apiRequest(`${API_URL}/onb/ask`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), question: question })
+    }, 16000);
+    if (cls && (cls.kind === 'app' || cls.kind === 'start')){
+      renderAiRouted(cls);
+      btn.disabled = false;
+      return;
+    }
+  } catch (e) {}
+
   try {
     await fetch(`${API_URL}/app/action`, {
       method: 'POST',
@@ -24955,6 +24972,43 @@ async function askAi(){
   }
   answerEl.innerHTML = roundTripErrorHtml();
   btn.disabled = false;
+}
+
+/* Вопрос не про продажи: карточки справки или развилка «осмотреться».
+   Тексты — из настройки знакомства (`texts`, ключи ask.*), в ответе сервера */
+function renderAiRouted(cls){
+  const answerEl = document.getElementById('ai-answer-area');
+  const tx = (cls && cls.texts) || {};
+  const T = function(k, d){ return esc2(tx[k] || d); };
+  document.getElementById('ai-question-input').style.display = 'none';
+  document.getElementById('ai-ask-btn').style.display = 'none';
+  let h = '';
+  if (cls.kind === 'app'){
+    const arts = cls.articles || [];
+    h += '<div class="ai-answer-intro">' + T(arts.length ? 'ask.app_intro' : 'ask.app_none', arts.length ? 'Вот что есть в справке:' : 'В справке такого пока нет') + '</div>';
+    arts.forEach(function(a){
+      h += '<div class="ai-answer-card" style="cursor:pointer" onclick="nbOpenHelpArticle(' + jsArg(a.section_key) + ',' + jsArg(a.key) + ')"><b>' + esc2(a.title) + '</b>' +
+           (a.snippet ? '<div class="nb-sub">' + esc2(a.snippet) + '</div>' : '') + '</div>';
+    });
+    h += '<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="nbOpenHelpArticle(\'\',\'\')">' + T('ask.app_open', 'Открыть справку') + '</button>';
+    h += '<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="nbMandSupport()">' + T('ask.app_support', 'Написать в поддержку') + '</button>';
+  } else {
+    h += '<div class="ai-answer-intro">' + T('ask.start_intro', 'Осмотреться проще всего через тур или шаги знакомства.') + '</div>';
+    h += '<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="closeAiPopup();onbRestart()">' + T('ask.start_tour', 'Пройти тур') + '</button>';
+    h += '<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="closeAiPopup();nbMode() ? nbOpenSheet() : openHowToUsePopup()">' + T('ask.start_steps', 'Открыть шаги') + '</button>';
+  }
+  h += '<button class="lec-link-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="askAiAgain()">' + T('ask.again', 'Спросить ещё раз') + '</button>';
+  answerEl.innerHTML = h;
+}
+/* Статья справки из выдачи: открыть справку, дождаться её данных, перейти.
+   Пустые ключи — просто главная справки */
+async function nbOpenHelpArticle(secKey, artKey){
+  closeAiPopup();
+  openHelpDocs();
+  if (!secKey || !artKey) return;
+  let tries = 0;
+  while (!hdData && tries < 30){ await new Promise(function(r){ setTimeout(r, 200); }); tries++; }
+  if (hdData) helpDocsGo(secKey, artKey);
 }
 
 async function renderAiAnswerCards(rawAnswer){
