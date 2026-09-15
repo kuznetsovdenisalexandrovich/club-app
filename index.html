@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v362 -->
+<!-- FILE_VERSION: index-v364 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -6131,6 +6131,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(false)">Применить</button>
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(true)">Сбросить и применить</button>
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestClear()">Снять подмену фактов</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestDisable()">Выключить у себя</button>
         </div>
         <div class="nb-out" id="nbt-out">Галочки фактов — это то, что «видит сервер». Сняты — попап обязательных покажется.</div>
       </div>
@@ -10879,7 +10880,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v362 · 15.09.2026 знакомство с клубом (ветка Г): шкала двух уровней в баре, Пролог с замком, следующий шаг, попап обязательных, тест-панель. До неё v361 — время в таймере 24 ч';
+const APP_BUILD = 'v364 · 15.09.2026 знакомство: «сделать в боте» ведёт в нужный блок Salebot (step1tg/step2tg/step4tg, в ВК — подписная с onb_step). До неё v363 — ворота обязательных';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16679,9 +16680,9 @@ function nbRenderBar(card){
   card.style.display = 'block';
   document.body.classList.add('onboarding-bar-visible');
   document.getElementById('level-card-title').textContent = lvl >= 1 ? (nbT('bar.l2') || 'Уровень 2') : (nbT('bar.l1') || 'Уровень 1');
-  document.getElementById('level-card-frac').textContent = (bar.in_level || 0) + ' / ' + (bar.of_level || 0);
+  document.getElementById('level-card-frac').textContent = st.gated ? 'закрой обязательное' : ((bar.in_level || 0) + ' / ' + (bar.of_level || 0));
   var fill = document.getElementById('level-bar-fill');
-  if (fill) fill.style.width = Math.round((bar.frac || 0) * 100) + '%';
+  if (fill) fill.style.width = Math.round((st.gated ? 0.97 : (bar.frac || 0)) * 100) + '%';
   var w = document.getElementById('level-card-warning'); if (w) w.style.display = 'none';
   var b = document.getElementById('reward-level-badge'); if (b) b.style.display = 'none';
 }
@@ -16713,7 +16714,8 @@ function nbRenderStart(){
       h += '<div class="nb-start"><h3>' + esc2(nbT('next.title') || 'Следующий шаг') + '</h3><div><b>' + esc2(n.n) + '</b>' + (n.mand ? '<span class="nb-mand">обязательно</span>' : '') + '</div>' +
         '<div class="nb-sub">' + esc2(n.why || '') + '</div>' +
         '<button class="nb-btn" onclick="nbDoStep(\'' + n.k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
-        (n.mand ? '' : '<button class="nb-btn ghost" onclick="nbLater(\'' + n.k + '\')">' + esc2(nbT('next.later') || 'Не сейчас') + '</button>') +
+        (n.mand ? '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + n.k + '\')">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>'
+                : '<button class="nb-btn ghost" onclick="nbLater(\'' + n.k + '\')">' + esc2(nbT('next.later') || 'Не сейчас') + '</button>') +
         '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">Все шаги →</span></div></div>';
     } else {
       var soon = (st.steps || []).some(function(s){ return s.soon; });
@@ -16723,6 +16725,7 @@ function nbRenderStart(){
   }
   host.innerHTML = h;
 }
+function nbStaffCached(){ try { return localStorage.getItem('nb_staff_' + telegramId) === '1'; } catch(e){ return false; } }
 function esc2(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function nbL2Seen(){ try { return localStorage.getItem('nb_l2_seen_' + telegramId) === '1'; } catch(e){ return false; } }
 function nbL2Ack(){ try { localStorage.setItem('nb_l2_seen_' + telegramId, '1'); } catch(e){} nbRenderStart(); }
@@ -16766,20 +16769,37 @@ function nbRenderMand(){
   ov.classList.add('open');
 }
 function nbMandDo(k){ document.getElementById('nb-mand-overlay').classList.remove('open'); nbDoStep(k); }
-function nbMandBot(){ document.getElementById('nb-mand-overlay').classList.remove('open'); openUrl(botLinkForAccess()); }
+/* «Сделать в боте» — адрес собирает сервер: в Telegram диплинк на блок
+   (step1tg/step2tg/step4tg), в ВК подписная с параметром onb_step. Если
+   сервер не смог — честно говорим, а не кидаем человека на тарифы */
+async function nbMandBot(){
+  var k = (nbState && (nbState.mandatory_open || [])[0]) || '';
+  document.getElementById('nb-mand-overlay').classList.remove('open');
+  await nbOpenInBot(k);
+}
+async function nbOpenInBot(key){
+  if (!key) { showToast('Не понял, какой шаг открыть в боте'); return; }
+  try {
+    var r = await apiRequest(API_URL + '/onb/bot-link?telegram_id=' + telegramId + '&key=' + encodeURIComponent(key), {}, 12000);
+    if (r && r.url) { openUrl(r.url); return; }
+    showToast(r && r.error ? r.error : 'Ссылка на бота пока не настроена');
+  } catch(e){ showToast(e.message || 'Не получилось открыть бота'); }
+}
 function nbMandLater(){ nbMandDeferred = true; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard(); }
 
 /* ── тест-панель (только свои; сервер проверяет сам) ── */
 function nbRenderTestPanel(){
   var p = document.getElementById('nb-test-panel'); if (!p) return;
-  var show = !!(nbState && nbState.staff) || (typeof isStaffUser === 'function' && isStaffUser());
+  var show = !!(nbState && nbState.staff) || nbStaffCached();
+  if (nbState && nbState.staff) try { localStorage.setItem('nb_staff_' + telegramId, '1'); } catch(e){}
   p.style.display = show ? '' : 'none';
-  if (!show || !nbState) return;
+  if (!show) return;
+  if (!nbState || !nbState.active){ var o0 = document.getElementById('nbt-out'); if (o0) o0.textContent = 'Знакомство у тебя выключено. «Сбросить и применить» включит заново.'; return; }
   var f = nbState.facts || {};
   ['channel','chat','plat2','home'].forEach(function(k){ var el = document.getElementById('nbt-' + k); if (el) el.checked = !!f[k]; });
   var d = document.getElementById('nbt-day'); if (d) d.value = nbState.day || 1;
   var o = document.getElementById('nbt-out');
-  if (o) o.textContent = 'active=' + nbState.active + ' · очки ' + nbState.points + ' · уровень ' + nbState.level + ' · день ' + nbState.day +
+  if (o) o.textContent = 'active=' + nbState.active + ' · очки ' + nbState.points + ' · уровень ' + nbState.level + (nbState.gated ? ' (заперт обязательными)' : '') + ' · день ' + nbState.day +
     '\nгде купил: ' + (f.purchase_place || '?') + ' · площадка: ' + (f.platform || '?') + ' · обязательных открыто: ' + ((nbState.mandatory_open || []).join(', ') || 'нет') +
     '\nследующий: ' + (nbState.next ? nbState.next.n : '—');
 }
@@ -16795,6 +16815,12 @@ async function nbTestApply(reset){
     nbApplyState(r.state);
     showToast('Тест-режим применён');
   } catch(e){ var o = document.getElementById('nbt-out'); if (o) o.textContent = 'Ошибка: ' + (e.message || e); showToast(e.message || 'Не получилось'); }
+}
+async function nbTestDisable(){
+  try {
+    await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), disable: true }) }, 15000);
+    nbState = null; nbMandDeferred = false; nbRenderAll(); showToast('Знакомство выключено — апп как раньше. «Сбросить и применить» включит снова');
+  } catch(e){ showToast(e.message || 'Не получилось'); }
 }
 async function nbTestClear(){
   try {
@@ -17032,6 +17058,8 @@ document.addEventListener('visibilitychange', function(){
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !isMember) return;
   await refreshOnboardStatus();
+  /* Знакомство: вернулся из канала/чата — сервер сам переспросит Telegram */
+  try { nbMandDeferred = false; setTimeout(nbLoad, 600); } catch(e){}
   renderLevelCard();
   if (document.getElementById('steps-popup-overlay').classList.contains('open')) {
     renderStepsPopup();
@@ -24751,6 +24779,7 @@ async function askAi(){
       if (data.status === 'done' && data.result && data.result.answer) {
         await renderAiAnswerCards(data.result.answer);
         btn.disabled = false;
+        try { nbEvent('ask', 'вопрос ИИ-помощнику'); } catch(e){}   // шаг знакомства «вопрос о своей проблеме»
         return;
       }
     } catch (e) {}
