@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v367 -->
+<!-- FILE_VERSION: index-v368 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -326,6 +326,9 @@ header{padding:calc(max(var(--safe-top, 0px), 8px) + 20px) 0 20px;display:flex;a
 .lec-links{display:flex;gap:8px;margin-top:12px}
 .lec-link-btn{flex:1;font-size:12px;font-weight:700;padding:9px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--lav);cursor:pointer}
 .lec-link-btn.insights-btn{color:var(--lav-deep)}
+/* «Поделиться» — пиктограммой: ряд кнопок и так не влезает ([stated] Denis 16.09) */
+.lec-link-btn.lec-share-btn{flex:0 0 auto;min-width:44px;padding:9px 11px;display:inline-flex;align-items:center;justify-content:center}
+.lec-link-btn.lec-share-btn svg{width:17px;height:17px}
 [data-theme="light"] .lec-link-btn.insights-btn{color:var(--warm)}
 .lec-link-btn:active{transform:scale(0.97)}
 .lec-tag{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--card2);color:var(--text-faint)}
@@ -10886,7 +10889,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v367 · 15.09.2026 знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v368 · 16.09.2026 «Поделиться» в карточке занятия — пиктограммой, ряду кнопок не хватало места. До неё v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19633,6 +19636,8 @@ let savedSlugs = new Set();
 const SAVE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // Наушники для кнопки «Слушать». SVG, а не эмодзи — как и все иконки аппа
+/* Стрелка из лотка — тот же значок, что у фильма и бонуса */
+const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>';
 const LISTEN_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px"><path d="M4 14v-2a8 8 0 0 1 16 0v2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><rect x="2.6" y="13.4" width="4.6" height="7.2" rx="2.3" stroke="currentColor" stroke-width="1.9"/><rect x="16.8" y="13.4" width="4.6" height="7.2" rx="2.3" stroke="currentColor" stroke-width="1.9"/></svg>';
 
 function lecCardHtml(l, i, src){
@@ -19676,7 +19681,7 @@ function lecCardHtml(l, i, src){
         ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${insightsLockCls}" onclick="event.stopPropagation();${insightsClick}">${insightsLockIcon}Главные идеи</button>` : ''}
         ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
         ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
-        <button class="lec-link-btn" onclick="event.stopPropagation();shareLecture('${l.slug}')">${escapeHtml(t('share.lecture_btn'))}</button>
+        <button class="lec-link-btn lec-share-btn" aria-label="${escapeHtml(t('share.lecture_btn'))}" title="${escapeHtml(t('share.lecture_btn'))}" onclick="event.stopPropagation();shareLecture('${l.slug}')">${SHARE_ICON}</button>
       </div>
     </div>`;
 }
