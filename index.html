@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v366 -->
+<!-- FILE_VERSION: index-v367 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10886,7 +10886,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v366 · 15.09.2026 знакомство: попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v367 · 15.09.2026 знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12286,6 +12286,7 @@ function runAppRoute(payload){
     if (p.indexOf('l_') === 0 && typeof openLectureByKey === 'function'){
       openLectureByKey(contentKeyWithoutTail(p.slice(2)), ''); return;
     }
+    if (p.indexOf('nb_') === 0 && typeof nbGoStep === 'function'){ nbGoStep(p.slice(3)); return; }
     const route = DEEPLINKS[p];
     if (route){ route.go(); return; }
     /* Незнакомый ключ — не молчим: человек нажал и ждёт реакции */
@@ -16587,8 +16588,13 @@ function liteOfferNo(){
    когда сервер видит «нет».
    ═══════════════════════════════════════════════════════════════════════ */
 let nbState = null;          // ответ /onb/state
-let nbMandDeferred = false;  // «Позже» на попапе обязательных — до конца сессии
+/* v367: «Позже» — НА ВРЕМЯ, а не до конца сессии. Раньше флаг сбрасывался при
+   каждом возврате в апп: открыл занятие в канале, вернулся — попап снова.
+   Срок берётся из настройки (`mand_later_min`), по умолчанию 2 минуты */
+let nbMandDeferUntil = 0;
 let nbLoading = false;
+let nbLoaded = false;        // /onb/state ответил хоть раз (пусть и «не активно»)
+function nbMandDeferred(){ return Date.now() < nbMandDeferUntil; }
 
 function nbMode(){
   return !!(nbState && nbState.active && isMember && (nbState.level || 0) < 2);
@@ -16607,8 +16613,11 @@ async function nbLoad(){
   } catch(e){
     /* Знакомство не должно ронять главную: молчим, но пишем в консоль с кодом */
     console.warn('nb/state', e && e.message);
-  } finally { nbLoading = false; }
+  } finally { nbLoading = false; nbLoaded = true; }
   nbRenderAll();
+  /* v367: старое знакомство (окно «Ты в клубе») предлагаем только тому, у кого
+     НЕ идёт новое. Оно ждало ответа сервера здесь, а не гадало по нулю */
+  try { if (!nbMode() && typeof onbMaybeOffer === 'function') onbMaybeOffer(); } catch(e){}
 }
 function nbRenderAll(){
   try { renderLevelCard(); } catch(e){}
@@ -16635,12 +16644,13 @@ async function nbEvent(key, note){
     var prevLvl = (nbState && nbState.level) || 0;
     nbApplyState(r.state);
     (r.rewards || []).forEach(function(rw){
-      if (rw.kind === 'prologue') showToast(nbT('tip.l1') || 'Уровень 1 — карта открыта');
-      if (rw.kind === 'points' && rw.points) showToast('Уровень 2: +' + rw.points + ' баллов');
+      /* v367: если карты нет (теста не было), не зовём забирать то, чего нет */
+      if (rw.kind === 'prologue') showToast(rw.card_id ? (nbT('tip.l1') || 'Уровень 1 — карта открыта') : (nbT('tip.l1_nocard') || 'Уровень 1 взят'));
+      if (rw.kind === 'points' && rw.points) showToast(nbT('tip.l2', {n: rw.points}) || ('Уровень 2: +' + rw.points));
     });
-    if (r.gained && !(r.rewards || []).length) showToast('+' + r.gained + ' к знакомству');
+    if (r.gained && !(r.rewards || []).length) showToast(nbT('evt.gained', {n: r.gained}) || ('+' + r.gained));
     if ((r.state && r.state.level || 0) > prevLvl && r.state.level >= 2) nbShowL2();
-  } catch(e){ showToast(e.message || 'Не удалось записать шаг'); }
+  } catch(e){ showToast(e.message || nbT('err.event') || 'Не удалось записать шаг'); }
 }
 async function nbLater(key){
   try {
@@ -16649,13 +16659,47 @@ async function nbLater(key){
       body: JSON.stringify({ telegram_id: Number(telegramId), key: key, days: 1 })
     }, 12000);
     nbApplyState(st);
-  } catch(e){ showToast(e.message || 'Не получилось отложить'); }
+  } catch(e){ showToast(e.message || nbT('err.later') || 'Не получилось отложить'); }
 }
 /* Хук самоинициации: старые отметки тура (onbDone) и прямые действия зовут
    сюда. Ключи тура → ключи знакомства */
 function nbHook(key){
   var map = { live: 'live', plan: 'plan', games: 'game', lib: 'lecture' };
   if (map[key]) nbEvent(map[key], 'сделано в аппе');
+}
+
+/* ── диплинк на шаг: `startapp=nb_<шаг>` (v367) ── */
+function nbFromUrl(){
+  const param = appStartParam();
+  if (param.indexOf('nb_') !== 0) return false;
+  const key = param.slice(3).replace(/[^a-z0-9]/gi, '');
+  if (!key) return false;
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  rememberEntrySource('link_' + param);
+  (async function(){
+    await waitProfile();
+    if (!isMember){ openPaywall(); return; }
+    nbGoStep(key);
+  })();
+  return true;
+}
+/* Ждём ответ /onb/state (до 5 с), потом ведём на экран шага. Если знакомство
+   не активно — на тот же экран, куда ведёт кнопка, без зачёта */
+async function nbGoStep(key){
+  var waited = 0;
+  while (!nbLoaded && waited < 5000){ await new Promise(function(r){ setTimeout(r, 200); }); waited += 200; }
+  try { nbDoStep(key); } catch(e){}
+}
+/* Апп сообщает серверу, с какого занятия человек пришёл: этап 7 выбирает
+   по нему первое занятие. Пишется один раз, первый сигнал важнее */
+async function nbMeta(fields){
+  if (!telegramId || !isMember) return;
+  try {
+    await apiRequest(API_URL + '/onb/meta', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ telegram_id: Number(telegramId) }, fields || {})) }, 12000);
+  } catch(e){}
 }
 
 /* ── куда ведёт шаг ── */
@@ -16668,11 +16712,13 @@ function nbDoStep(key){
     case 'plat2':   vk ? linkTelegramFromVk() : openVkAccessFlow(); break;
     case 'home':    openAddToHomeScreenPopup(); break;
     case 'lecture': switchView('library'); break;
-    case 'audio':   switchView('library'); showToast('Нажми «Слушать» у любого занятия'); break;
+    case 'audio':   switchView('library'); showToast(nbT('next.audio_hint') || 'Нажми «Слушать» у любого занятия'); break;
     case 'live':    switchView('schedule'); break;
     case 'game':    switchView('games'); break;
     case 'plan':    openPersonalPlan(); break;
-    case 'intro':   vk ? openVkLink(VK_CHAT_LINK) : openUrl(CHAT_JOIN_LINK); break;
+    /* v367: рассказ о себе проверять нечем — засчитывается по нажатию
+       ([stated] Denis 15.09: «слишком заморочно проверять») */
+    case 'intro':   vk ? openVkLink(VK_CHAT_LINK) : openUrl(CHAT_JOIN_LINK); nbEvent('intro', 'открыл чат для рассказа о себе'); break;
     case 'tour':    if (typeof onbRestart === 'function') onbRestart(); break;
     case 'ask':     switchView('library'); if (typeof openAiPopup === 'function') openAiPopup(); break;
     default: break;
@@ -16686,7 +16732,11 @@ function nbRenderBar(card){
   card.style.display = 'block';
   document.body.classList.add('onboarding-bar-visible');
   document.getElementById('level-card-title').textContent = lvl >= 1 ? (nbT('bar.l2') || 'Уровень 2') : (nbT('bar.l1') || 'Уровень 1');
-  document.getElementById('level-card-frac').textContent = st.gated ? 'закрой обязательное' : ((bar.in_level || 0) + ' / ' + (bar.of_level || 0));
+  /* v367: порог набран, но полезного действия нет — шкала стоит на 97 % с подписью */
+  var fracTxt = st.gated ? (nbT('bar.gated') || 'закрой обязательное')
+              : ((st.need_useful && (bar.frac || 0) >= 0.97) ? (nbT('bar.need_useful') || 'осталось одно действие')
+              : ((bar.in_level || 0) + ' / ' + (bar.of_level || 0)));
+  document.getElementById('level-card-frac').textContent = fracTxt;
   var fill = document.getElementById('level-bar-fill');
   if (fill) fill.style.width = Math.round((st.gated ? 0.97 : (bar.frac || 0)) * 100) + '%';
   var w = document.getElementById('level-card-warning'); if (w) w.style.display = 'none';
@@ -16699,34 +16749,36 @@ function nbRenderStart(){
   if (!nbState || !nbState.active || !isMember){ host.innerHTML = ''; return; }
   var st = nbState, h = '';
   /* Пролог */
-  if (st.prologue && st.prologue.has_card){
+  /* v367: забранный «Пролог» после второго уровня с главной уходит — блок
+     висел вечно с надписью «В коллекции» */
+  if (st.prologue && st.prologue.has_card && !(st.prologue.claimed && (st.level || 0) >= 2)){
     var unl = st.prologue.unlocked, cl = st.prologue.claimed;
     var god = (typeof QUIZ_RESULTS !== 'undefined' && QUIZ_RESULTS[st.facts && st.facts.quiz_code] && QUIZ_RESULTS[st.facts.quiz_code].god) || 'бог';
     h += '<div class="nb-prolog" onclick="switchView(\'profile\')"><div class="nb-art' + (unl ? '' : ' locked') + '">' + (unl ? '' : '<div class="nb-lk"></div>') + '</div><div class="nb-t">' +
       (!unl ? '<b>' + esc2(nbT('prolog.wait')) + '</b><div class="nb-sub">' + esc2(nbT('prolog.wait_sub', {god: god})) + '</div>' :
-       (!cl ? '<b>' + esc2(nbT('prolog.open')) + '</b><button class="nb-btn" style="margin-top:6px;padding:9px" onclick="event.stopPropagation();claimCard(' + st.prologue.card_id + ')">' + esc2(nbT('prolog.claim')) + '</button>' :
+       (!cl ? '<b>' + esc2(nbT('prolog.open')) + '</b><button class="nb-btn" style="margin-top:6px;padding:9px" onclick="event.stopPropagation();nbClaimPrologue(' + st.prologue.card_id + ')">' + esc2(nbT('prolog.claim')) + '</button>' :
               '<b>' + esc2(nbT('prolog.owned')) + '</b><div class="nb-sub">' + esc2(nbT('prolog.owned_sub')) + '</div>')) +
       '</div></div>';
   }
   /* Уровень 2 — один раз */
   if ((st.level || 0) >= 2 && !nbL2Seen()){
     h += '<div class="nb-l2"><b>' + esc2(nbT('l2.title', {n: st.level2_points})) + '</b><p>' + esc2(nbT('l2.sub')) + '</p>' +
-      '<button class="nb-btn" style="margin-top:10px" onclick="nbL2Ack();switchView(\'profile\')">Посмотреть, куда потратить</button></div>';
+      '<button class="nb-btn" style="margin-top:10px" onclick="nbL2Ack();switchView(\'profile\')">' + esc2(nbT('l2.btn') || 'Посмотреть, куда потратить') + '</button></div>';
   }
   /* Следующий шаг — пока знакомство идёт */
   if ((st.level || 0) < 2){
     var n = st.next, all = (st.steps || []).length, dn = (st.steps || []).filter(function(s){ return s.done >= s.cap; }).length;
     if (n){
-      h += '<div class="nb-start"><h3>' + esc2(nbT('next.title') || 'Следующий шаг') + '</h3><div><b>' + esc2(n.n) + '</b>' + (n.mand ? '<span class="nb-mand">обязательно</span>' : '') + '</div>' +
+      h += '<div class="nb-start"><h3>' + esc2(nbT('next.title') || 'Следующий шаг') + '</h3><div><b>' + esc2(n.n) + '</b>' + (n.mand ? '<span class="nb-mand">' + esc2(nbT('next.mand_tag') || 'обязательно') + '</span>' : '') + '</div>' +
         '<div class="nb-sub">' + esc2(n.why || '') + '</div>' +
         '<button class="nb-btn" onclick="nbDoStep(\'' + n.k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
         (n.mand ? '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + n.k + '\')">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>'
                 : '<button class="nb-btn ghost" onclick="nbLater(\'' + n.k + '\')">' + esc2(nbT('next.later') || 'Не сейчас') + '</button>') +
-        '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">Все шаги →</span></div></div>';
+        '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">' + esc2(nbT('next.all_steps') || 'Все шаги →') + '</span></div></div>';
     } else {
       var soon = (st.steps || []).some(function(s){ return s.soon; });
       h += '<div class="nb-start"><h3>' + esc2(soon ? (nbT('next.done_today') || 'На сегодня всё') : (nbT('next.all') || 'Ты знаешь клуб')) + '</h3>' +
-        '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">Все шаги →</span></div></div>';
+        '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">' + esc2(nbT('next.all_steps') || 'Все шаги →') + '</span></div></div>';
     }
   }
   host.innerHTML = h;
@@ -16735,7 +16787,28 @@ function nbStaffCached(){ try { return localStorage.getItem('nb_staff_' + telegr
 function esc2(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function nbL2Seen(){ try { return localStorage.getItem('nb_l2_seen_' + telegramId) === '1'; } catch(e){ return false; } }
 function nbL2Ack(){ try { localStorage.setItem('nb_l2_seen_' + telegramId, '1'); } catch(e){} nbRenderStart(); }
-function nbShowL2(){ try { localStorage.removeItem('nb_l2_seen_' + telegramId); } catch(e){} nbRenderStart(); switchView('portal'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+/* v367: не выдёргиваем человека из партии/занятия — карточка уровня 2
+   ждёт на главной, куда он вернётся сам */
+function nbShowL2(){ try { localStorage.removeItem('nb_l2_seen_' + telegramId); } catch(e){} nbRenderStart(); }
+/* Забрать «Пролог» одним касанием: карта выдаётся закрытой, а /cards/claim
+   требует сначала перевернуть — переворачиваем сами, потом забираем */
+async function nbClaimPrologue(cardId){
+  if (!cardId) return;
+  try {
+    if (nbState && nbState.prologue && !nbState.prologue.opened){
+      await apiRequest(API_URL + '/cards/open', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: Number(telegramId), card_id: cardId }) }, 15000);
+    }
+    await apiRequest(API_URL + '/cards/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), card_id: cardId }) }, 15000);
+    showToast(nbT('prolog.claimed_toast') || 'Карта в коллекции');
+    if (typeof loadCards === 'function') try { loadCards(); } catch(e){}
+    await nbLoad();
+  } catch(e){
+    if (e && e.status === 402 && /^ONB-04/.test(e.message || '')){ showToast(e.message); setTimeout(nbOpenSheet, 500); return; }
+    showToast((e && e.message) || nbT('err.claim') || 'Не получилось забрать карту');
+  }
+}
 
 /* ── шторка-чеклист ── */
 function nbOpenSheet(){ nbRenderSheet(); document.getElementById('nb-sheet-overlay').classList.add('open'); renderLevelCard(); }
@@ -16774,26 +16847,28 @@ const NB_POLL_MS = 4000, NB_POLL_TRIES = 8;
 
 function nbRenderMand(){
   var ov = document.getElementById('nb-mand-overlay'); if (!ov) return;
-  var open = nbMode() && !nbMandDeferred && (nbState.mandatory_open || []).length && !levelBarMustHide();
+  var open = nbMode() && !nbMandDeferred() && (nbState.mandatory_open || []).length && !levelBarMustHide();
   if (!open){ ov.classList.remove('open'); nbPollStop(); return; }
   var k = nbMandPhase === 'ask' ? nbState.mandatory_open[0] : (nbMandKey || nbState.mandatory_open[0]);
   var s = (nbState.steps || []).find(function(x){ return x.k === k; }) || { n: k };
+  /* v367: все надписи — из настройки знакомства (`texts`), правятся в дашборде */
   var test = (nbState.test_facts || []).indexOf(k) >= 0
-    ? '<div class="nb-sub" style="color:#d98a3a">Тестовая подмена: сервер считает, что шаг не сделан. Снять — в диагностике профиля</div>' : '';
+    ? '<div class="nb-sub" style="color:#d98a3a">' + esc2(nbT('mand.test_note') || 'Тестовая подмена') + '</div>' : '';
   var h = '<div class="nb-h">' + esc2(s.n) + '</div>';
   if (nbMandPhase === 'wait'){
-    h += '<div class="nb-sub">Как вступишь — вернись сюда, шаг закроется сам.</div>' + test +
-         '<div class="nb-wait"><span class="nb-spin"></span><span>Проверяю…</span></div>' +
-         '<button class="nb-btn ghost" onclick="nbMandCheckNow()">Проверить сейчас</button>';
+    h += '<div class="nb-sub">' + esc2(nbT('mand.wait')) + '</div>' + test +
+         '<div class="nb-wait"><span class="nb-spin"></span><span>' + esc2(nbT('mand.checking') || 'Проверяю…') + '</span></div>' +
+         '<button class="nb-btn ghost" onclick="nbMandCheckNow()">' + esc2(nbT('mand.check_now') || 'Проверить сейчас') + '</button>';
   } else if (nbMandPhase === 'fail'){
-    h += '<div class="nb-sub">Пока не вижу тебя там. Бывает, что заявку одобряют не сразу.</div>' + test +
-         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">Попробовать ещё раз</button>' +
-         '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + k + '\')">' + esc2(nbT('mand.in_bot') || 'Попробовать через бота') + '</button>' +
-         '<button class="nb-btn ghost" onclick="nbMandSupport()">Написать в поддержку</button>' +
+    h += '<div class="nb-sub">' + esc2(nbT('mand.fail')) + '</div>' + test +
+         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('mand.retry') || 'Попробовать ещё раз') + '</button>' +
+         '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + k + '\')">' + esc2(nbT('mand.via_bot') || nbT('mand.in_bot') || 'Попробовать через бота') + '</button>' +
+         '<button class="nb-btn ghost" onclick="nbMandSupport()">' + esc2(nbT('mand.support') || 'Написать в поддержку') + '</button>' +
          '<button class="nb-btn ghost" onclick="nbMandLater()">' + esc2(nbT('mand.later') || 'Пропустить') + '</button>';
   } else {
-    h += '<div class="nb-sub">' + esc2(s.why || '') + '</div><div class="nb-sub">' + esc2(nbT('mand.title_sub')) + '</div>' + test +
-         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">Вступить</button>';
+    /* подпись под шагом — своя на шаг (`mand.sub_<шаг>`), иначе общая */
+    h += '<div class="nb-sub">' + esc2(s.why || '') + '</div><div class="nb-sub">' + esc2(nbT('mand.sub_' + k) || nbT('mand.title_sub')) + '</div>' + test +
+         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('mand.join') || 'Вступить') + '</button>';
   }
   document.getElementById('nb-mand-body').innerHTML = h;
   ov.classList.add('open');
@@ -16807,23 +16882,37 @@ function nbMandDo(k){
 function nbMandSupport(){ try { openUrl(SUPPORT_DM_LINK); } catch(e){ showToast('Напиши Денису: t.me/kuznetsov_denis'); } }
 /* Опрос, пока человек вступает: сервер на каждом /onb/state сам спрашивает
    Telegram. Останавливаемся, когда шаг закрылся или кончились попытки */
-function nbPollStart(){
+function nbMandClosed(){
+  /* Шаг, который ждали, закрылся: знак успеха — первая награда новичка, её
+     стоит показать, а не молча сменить окно на следующий шаг */
+  var s = (nbState && nbState.steps || []).find(function(x){ return x.k === nbMandKey; });
+  if (s) showToast(nbT('mand.done', {n: s.n, p: s.p}) || (s.n + ' — готово'));
+  nbPollStop(); nbMandPhase = 'ask'; nbMandKey = '';
+  setTimeout(nbRenderAll, s ? 900 : 0);
+}
+function nbPollStart(tries, ms){
   nbPollStop();
-  var left = NB_POLL_TRIES;
+  var left = tries || NB_POLL_TRIES;
   nbMandTimer = setInterval(async function(){
     left--;
     await nbLoad();
     if (!nbState || !(nbState.mandatory_open || []).length || (nbState.mandatory_open || []).indexOf(nbMandKey) < 0){
-      nbPollStop(); nbMandPhase = 'ask'; nbRenderAll(); return;
+      nbMandClosed(); return;
     }
     if (left <= 0){ nbPollStop(); nbMandPhase = 'fail'; nbRenderMand(); }
-  }, NB_POLL_MS);
+  }, ms || NB_POLL_MS);
 }
 function nbPollStop(){ if (nbMandTimer){ clearInterval(nbMandTimer); nbMandTimer = null; } }
-async function nbMandCheckNow(){
+/* `soft` — возврат в апп после вступления: Telegram и одобрение заявки могут
+   отстать на секунды, поэтому вместо мгновенного «не вижу тебя» ещё три
+   быстрые проверки. Кнопка «Проверить сейчас» — жёсткая, ответ сразу */
+async function nbMandCheckNow(soft){
   await nbLoad();
-  if (nbState && (nbState.mandatory_open || []).indexOf(nbMandKey) >= 0){ nbMandPhase = 'fail'; nbRenderMand(); }
-  else { nbPollStop(); nbMandPhase = 'ask'; nbRenderAll(); }
+  if (nbState && (nbState.mandatory_open || []).indexOf(nbMandKey) >= 0){
+    if (soft){ nbMandPhase = 'wait'; nbRenderMand(); nbPollStart(3, 3000); return; }
+    nbMandPhase = 'fail'; nbRenderMand();
+  }
+  else nbMandClosed();
 }
 /* «Сделать в боте» — адрес собирает сервер: в Telegram диплинк на блок
    (step1tg/step2tg/step4tg), в ВК подписная с параметром onb_step. Если
@@ -16833,14 +16922,18 @@ async function nbMandBot(){
   await nbOpenInBot(k);
 }
 async function nbOpenInBot(key){
-  if (!key) { showToast('Не понял, какой шаг открыть в боте'); return; }
+  if (!key) { showToast(nbT('err.bot_key') || 'Не понял, какой шаг открыть в боте'); return; }
   try {
     var r = await apiRequest(API_URL + '/onb/bot-link?telegram_id=' + telegramId + '&key=' + encodeURIComponent(key), {}, 12000);
     if (r && r.url) { nbMandKey = key; if (nbMode()) { nbMandPhase = 'wait'; nbRenderMand(); nbPollStart(); } openUrl(r.url); return; }
-    showToast(r && r.error ? r.error : 'Ссылка на бота пока не настроена');
-  } catch(e){ showToast(e.message || 'Не получилось открыть бота'); }
+    showToast(r && r.error ? r.error : (nbT('err.bot_link') || 'Ссылка на бота пока не настроена'));
+  } catch(e){ showToast(e.message || nbT('err.bot_open') || 'Не получилось открыть бота'); }
 }
-function nbMandLater(){ nbMandDeferred = true; nbPollStop(); nbMandPhase = 'ask'; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard(); }
+function nbMandLater(){
+  var min = (nbState && nbState.mand_later_min) || 2;
+  nbMandDeferUntil = Date.now() + min * 60 * 1000;
+  nbPollStop(); nbMandPhase = 'ask'; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard();
+}
 
 /* ── тест-панель (только свои; сервер проверяет сам) ── */
 function nbRenderTestPanel(){
@@ -16867,7 +16960,7 @@ async function nbTestApply(reset){
     day: Number(document.getElementById('nbt-day').value) || 1 };
   try {
     var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 15000);
-    nbMandDeferred = false;
+    nbMandDeferUntil = 0;
     nbApplyState(r.state);
     showToast('Тест-режим применён');
   } catch(e){ var o = document.getElementById('nbt-out'); if (o) o.textContent = 'Ошибка: ' + (e.message || e); showToast(e.message || 'Не получилось'); }
@@ -16875,13 +16968,13 @@ async function nbTestApply(reset){
 async function nbTestDisable(){
   try {
     await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), disable: true }) }, 15000);
-    nbState = null; nbMandDeferred = false; nbRenderAll(); showToast('Знакомство выключено — апп как раньше. «Сбросить и применить» включит снова');
+    nbState = null; nbMandDeferUntil = 0; nbRenderAll(); showToast('Знакомство выключено — апп как раньше. «Сбросить и применить» включит снова');
   } catch(e){ showToast(e.message || 'Не получилось'); }
 }
 async function nbTestClear(){
   try {
     var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), clear_test: true }) }, 15000);
-    nbMandDeferred = false; nbApplyState(r.state); showToast('Подмена снята — факты настоящие');
+    nbMandDeferUntil = 0; nbApplyState(r.state); showToast('Подмена снята — факты настоящие');
   } catch(e){ showToast(e.message || 'Не получилось'); }
 }
 
@@ -17118,8 +17211,8 @@ document.addEventListener('visibilitychange', async () => {
   try {
     /* Вернулся в апп. Если он уходил вступать — это финальная проверка:
        не закрылось — показываем «не получилось» с запасными дорогами */
-    if (nbMandPhase === 'wait'){ setTimeout(nbMandCheckNow, 800); }
-    else { nbMandDeferred = false; setTimeout(nbLoad, 600); }
+    if (nbMandPhase === 'wait'){ setTimeout(function(){ nbMandCheckNow(true); }, 800); }
+    else { setTimeout(nbLoad, 600); }   // «Позже» живёт своё время, здесь не сбрасываем
   } catch(e){}
   renderLevelCard();
   if (document.getElementById('steps-popup-overlay').classList.contains('open')) {
@@ -17768,6 +17861,9 @@ function onbHasSeed(){
 function onbMaybeOffer(){
   if (onbActive || tourDone) return;
   if (!isMember || !telegramId) return;
+  /* v367: пока новое знакомство не ответило или идёт — старое окно молчит.
+     Купивший в боте получал «Ты в клубе» поверх «Следующего шага» */
+  if (typeof nbLoaded !== 'undefined' && (!nbLoaded || nbMode())) return;
   if (!channelJoined || !chatJoined) return;
   onbSeed = onbHasSeed();
   document.getElementById('onb-hi').classList.add('open');
@@ -18015,6 +18111,7 @@ function onbFinish(){
   onbActive = false; onbTrying = null; onbIdx = ONB_STEPS.length;
   tourDone = true;
   markOnboardStep('tour');
+  try { nbEvent('tour', 'прошёл тур целиком'); } catch(e){}   // v367: шаг знакомства «Тур целиком»
   markTourOnServer({ step:'end', action:'done', index: ONB_STEPS.length, finished:true });
   onbDrawTrail();
   onbApplyLocks();
@@ -18162,6 +18259,7 @@ function renderOnbNotes(){
   if (!box) return;
   // Пока идёт знакомство — молчим: у человека уже есть окно, которое им руководит
   if (!isMember || onbActive || !tourDone){ box.innerHTML = ''; return; }
+  if (typeof nbMode === 'function' && nbMode()){ box.innerHTML = ''; return; }   // v367: у знакомства свой блок
   vkNoteVerify();   // сверка идёт в фоне: строка исчезнет сама, если доступ есть
   const rows = ONB_NOTES.filter(function(n){
     try { return !onbNoteHidden(n.key) && n.when(); } catch (e) { return false; }
@@ -18894,7 +18992,11 @@ function contentFromUrl(){
       rememberEntrySource('link_' + param);
       // ⚠️ ЖДЁМ ПРОФИЛЬ, А НЕ ПАУЗУ: `isMember` решает, что показать, и до
       // ответа `/users/me` он ложный — участник увидел бы гостевой путь
-      (async function(){ await waitProfile(); openLectureByKey(key, pairs[i][1]); })();
+      (async function(){
+        await waitProfile();
+        try { if (typeof nbMeta === 'function') nbMeta({ entry_slug: key }); } catch(e){}   // v367: ролик входа — для выбора первого занятия
+        openLectureByKey(key, pairs[i][1]);
+      })();
       return true;
     }
   }
@@ -19035,7 +19137,8 @@ const ROUTE_PREFIXES = [
   ['c_',      'card'],
   ['r_',      'invite'],
   ['u_',      'unit'],
-  ['paid_',   'paid']
+  ['paid_',   'paid'],
+  ['nb_',     'onb-step']   // v367: дожимы знакомства ведут на шаг
 ];
 
 function routeKeyFromParam(){
@@ -26491,6 +26594,9 @@ async function init(){
       // Ссылка на игру: `g_<ключ>` и `gs_<ключ>`. Тоже с параметром,
       // поэтому до таблицы маршрутов
       if (typeof gameFromUrl === 'function' && gameFromUrl()) return;
+      // v367: `nb_<шаг>` — шаг знакомства (из дожимов бота), тот же экран, что
+      // кнопка «Сделать»
+      if (typeof nbFromUrl === 'function' && nbFromUrl()) return;
       // Простые маршруты по таблице DEEPLINKS: schedule, library, cards и т.д.
       // Стоит ПОСЛЕ разборов с параметром и ПЕРЕД тестом.
       // ⚠️ КОММЕНТАРИЙ ЗДЕСЬ ВРАЛ: было написано, что «`quiz` есть и в
