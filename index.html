@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v365 -->
+<!-- FILE_VERSION: index-v366 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5231,7 +5231,13 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .nb-test select,.nb-test input[type=number]{font:inherit;color:var(--text);background:var(--bg);border:1px solid rgba(128,128,128,.3);border-radius:10px;padding:6px 8px}
 .nb-test label.nb-cb{display:flex;align-items:center;gap:6px}
 .nb-test .nb-out{font-size:11.5px;color:var(--text-dim);white-space:pre-wrap;margin-top:8px;text-align:left}
-#nb-mand-overlay .sched-popup{max-height:70vh}
+#nb-mand .nb-h{font-family:var(--disp);font-size:17px;font-weight:700;margin-bottom:6px;text-align:center}
+#nb-mand .nb-sub{font-size:13.5px;color:var(--text-dim);line-height:1.45;text-align:center;margin:4px 0 2px}
+#nb-mand .nb-btn{margin-top:10px}
+#nb-mand .nb-wait{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text-dim);margin-top:12px}
+#nb-mand .nb-spin{width:15px;height:15px;border-radius:50%;border:2px solid rgba(128,128,128,.35);border-top-color:var(--warm);animation:nbSpin .8s linear infinite}
+@keyframes nbSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#nb-mand .nb-spin{animation:none}}
 
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
@@ -7206,10 +7212,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div id="nb-sheet-body" class="nb-chk"></div>
   </div>
 </div>
-<!-- Попап обязательного шага: фон не закрывает, только кнопки -->
-<div class="sched-popup-overlay" id="nb-mand-overlay">
-  <div class="sched-popup" id="nb-mand">
-    <div class="sched-popup-handle"></div>
+<!-- Попап обязательного шага — ПО ЦЕНТРУ ([stated] Denis 15.09), фон не
+     закрывает: выйти можно только кнопкой -->
+<div class="center-modal-overlay" id="nb-mand-overlay" style="z-index:760">
+  <div class="center-modal" id="nb-mand">
     <div id="nb-mand-body"></div>
   </div>
 </div>
@@ -10880,7 +10886,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v365 · 15.09.2026 знакомство: видно, что факты подменены тестом; бар не застревает на пустом втором уровне. До неё v364 — «сделать в боте»';
+const APP_BUILD = 'v366 · 15.09.2026 знакомство: попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16754,39 +16760,87 @@ function nbRenderSheet(){
   el.innerHTML = h;
 }
 
-/* ── попап обязательных ── */
+/* ── попап обязательных ──────────────────────────────────────────────────────
+   Три состояния одного окна ([stated] Denis 15.09):
+     ask   — «Вступить» и всё. Никаких запасных дорог на первом экране:
+             они появляются, только если не получилось
+     wait  — ушёл вступать; опрашиваем сервер, он спрашивает Telegram
+     fail  — вернулся, а факта нет: ещё раз / через бота / поддержка / пропустить
+   Окно по центру, фон не закрывает. */
+let nbMandPhase = 'ask';     // ask | wait | fail
+let nbMandKey = '';
+let nbMandTimer = null;
+const NB_POLL_MS = 4000, NB_POLL_TRIES = 8;
+
 function nbRenderMand(){
   var ov = document.getElementById('nb-mand-overlay'); if (!ov) return;
   var open = nbMode() && !nbMandDeferred && (nbState.mandatory_open || []).length && !levelBarMustHide();
-  if (!open){ ov.classList.remove('open'); return; }
-  var k = nbState.mandatory_open[0], s = (nbState.steps || []).find(function(x){ return x.k === k; }) || { n: k };
-  document.getElementById('nb-mand-body').innerHTML =
-    '<div class="sched-popup-header"><div class="sched-popup-title">' + esc2(s.n) + '</div></div>' +
-    '<div class="nb-sub">' + esc2(s.why || '') + '</div><div class="nb-sub">' + esc2(nbT('mand.title_sub')) + '</div>' +
-    (((nbState.test_facts || []).indexOf(k) >= 0) ? '<div class="nb-sub" style="color:#d98a3a">Тестовая подмена: сервер считает, что шаг не сделан. Снять — в диагностике профиля</div>' : '') +
-    '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
-    '<button class="nb-btn ghost" onclick="nbMandBot()">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>' +
-    '<button class="nb-btn ghost" onclick="nbMandLater()">' + esc2(nbT('mand.later') || 'Позже') + '</button>';
+  if (!open){ ov.classList.remove('open'); nbPollStop(); return; }
+  var k = nbMandPhase === 'ask' ? nbState.mandatory_open[0] : (nbMandKey || nbState.mandatory_open[0]);
+  var s = (nbState.steps || []).find(function(x){ return x.k === k; }) || { n: k };
+  var test = (nbState.test_facts || []).indexOf(k) >= 0
+    ? '<div class="nb-sub" style="color:#d98a3a">Тестовая подмена: сервер считает, что шаг не сделан. Снять — в диагностике профиля</div>' : '';
+  var h = '<div class="nb-h">' + esc2(s.n) + '</div>';
+  if (nbMandPhase === 'wait'){
+    h += '<div class="nb-sub">Как вступишь — вернись сюда, шаг закроется сам.</div>' + test +
+         '<div class="nb-wait"><span class="nb-spin"></span><span>Проверяю…</span></div>' +
+         '<button class="nb-btn ghost" onclick="nbMandCheckNow()">Проверить сейчас</button>';
+  } else if (nbMandPhase === 'fail'){
+    h += '<div class="nb-sub">Пока не вижу тебя там. Бывает, что заявку одобряют не сразу.</div>' + test +
+         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">Попробовать ещё раз</button>' +
+         '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + k + '\')">' + esc2(nbT('mand.in_bot') || 'Попробовать через бота') + '</button>' +
+         '<button class="nb-btn ghost" onclick="nbMandSupport()">Написать в поддержку</button>' +
+         '<button class="nb-btn ghost" onclick="nbMandLater()">' + esc2(nbT('mand.later') || 'Пропустить') + '</button>';
+  } else {
+    h += '<div class="nb-sub">' + esc2(s.why || '') + '</div><div class="nb-sub">' + esc2(nbT('mand.title_sub')) + '</div>' + test +
+         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">Вступить</button>';
+  }
+  document.getElementById('nb-mand-body').innerHTML = h;
   ov.classList.add('open');
 }
-function nbMandDo(k){ document.getElementById('nb-mand-overlay').classList.remove('open'); nbDoStep(k); }
+function nbMandDo(k){
+  nbMandKey = k; nbMandPhase = 'wait';
+  nbRenderMand();                 // окно остаётся: человек вернётся на него же
+  nbDoStep(k);
+  nbPollStart();
+}
+function nbMandSupport(){ try { openUrl(SUPPORT_DM_LINK); } catch(e){ showToast('Напиши Денису: t.me/kuznetsov_denis'); } }
+/* Опрос, пока человек вступает: сервер на каждом /onb/state сам спрашивает
+   Telegram. Останавливаемся, когда шаг закрылся или кончились попытки */
+function nbPollStart(){
+  nbPollStop();
+  var left = NB_POLL_TRIES;
+  nbMandTimer = setInterval(async function(){
+    left--;
+    await nbLoad();
+    if (!nbState || !(nbState.mandatory_open || []).length || (nbState.mandatory_open || []).indexOf(nbMandKey) < 0){
+      nbPollStop(); nbMandPhase = 'ask'; nbRenderAll(); return;
+    }
+    if (left <= 0){ nbPollStop(); nbMandPhase = 'fail'; nbRenderMand(); }
+  }, NB_POLL_MS);
+}
+function nbPollStop(){ if (nbMandTimer){ clearInterval(nbMandTimer); nbMandTimer = null; } }
+async function nbMandCheckNow(){
+  await nbLoad();
+  if (nbState && (nbState.mandatory_open || []).indexOf(nbMandKey) >= 0){ nbMandPhase = 'fail'; nbRenderMand(); }
+  else { nbPollStop(); nbMandPhase = 'ask'; nbRenderAll(); }
+}
 /* «Сделать в боте» — адрес собирает сервер: в Telegram диплинк на блок
    (step1tg/step2tg/step4tg), в ВК подписная с параметром onb_step. Если
    сервер не смог — честно говорим, а не кидаем человека на тарифы */
 async function nbMandBot(){
-  var k = (nbState && (nbState.mandatory_open || [])[0]) || '';
-  document.getElementById('nb-mand-overlay').classList.remove('open');
+  var k = nbMandKey || (nbState && (nbState.mandatory_open || [])[0]) || '';
   await nbOpenInBot(k);
 }
 async function nbOpenInBot(key){
   if (!key) { showToast('Не понял, какой шаг открыть в боте'); return; }
   try {
     var r = await apiRequest(API_URL + '/onb/bot-link?telegram_id=' + telegramId + '&key=' + encodeURIComponent(key), {}, 12000);
-    if (r && r.url) { openUrl(r.url); return; }
+    if (r && r.url) { nbMandKey = key; if (nbMode()) { nbMandPhase = 'wait'; nbRenderMand(); nbPollStart(); } openUrl(r.url); return; }
     showToast(r && r.error ? r.error : 'Ссылка на бота пока не настроена');
   } catch(e){ showToast(e.message || 'Не получилось открыть бота'); }
 }
-function nbMandLater(){ nbMandDeferred = true; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard(); }
+function nbMandLater(){ nbMandDeferred = true; nbPollStop(); nbMandPhase = 'ask'; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard(); }
 
 /* ── тест-панель (только свои; сервер проверяет сам) ── */
 function nbRenderTestPanel(){
@@ -17061,7 +17115,12 @@ document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !isMember) return;
   await refreshOnboardStatus();
   /* Знакомство: вернулся из канала/чата — сервер сам переспросит Telegram */
-  try { nbMandDeferred = false; setTimeout(nbLoad, 600); } catch(e){}
+  try {
+    /* Вернулся в апп. Если он уходил вступать — это финальная проверка:
+       не закрылось — показываем «не получилось» с запасными дорогами */
+    if (nbMandPhase === 'wait'){ setTimeout(nbMandCheckNow, 800); }
+    else { nbMandDeferred = false; setTimeout(nbLoad, 600); }
+  } catch(e){}
   renderLevelCard();
   if (document.getElementById('steps-popup-overlay').classList.contains('open')) {
     renderStepsPopup();
