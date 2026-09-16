@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v370 -->
+<!-- FILE_VERSION: index-v371 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10889,7 +10889,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v370 · 16.09.2026 тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v371 · 16.09.2026 окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15695,7 +15695,7 @@ const APP_TEXTS = {
   'nb.mand.via_bot': { c:'Онбординг', l:'Не получилось — через бота', w:'Окно по центру', i:true, t:'Попробовать через бота' },
   'nb.mand.in_bot': { c:'Онбординг', l:'Кнопка «сделать в боте» у обязательного шага', w:'Главная', i:true, t:'Сделать в боте' },
   'nb.mand.support': { c:'Онбординг', l:'Не получилось — в поддержку', w:'Окно по центру', i:true, t:'Написать в поддержку' },
-  'nb.mand.later': { c:'Онбординг', l:'Не получилось — пропустить', w:'Окно по центру', i:true, t:'Позже' },
+  'nb.mand.later': { c:'Онбординг', l:'Кнопка «отложить» в окне (у чата — и на первом экране, откладывает до завтра)', w:'Окно по центру', i:true, t:'Позже' },
   'nb.mand.done': { c:'Онбординг', l:'Шаг закрылся ({n} — шаг, {p} — очки)', w:'Всплывашка', i:true, t:'{n} — готово · +{p}' },
   'nb.mand.test_note': { c:'Онбординг', l:'Тестовая подмена (видят только свои)', w:'Окно по центру', i:true, t:'Тестовая подмена: сервер считает, что шаг не сделан. Снять — в диагностике профиля' },
   'nb.err.event': { c:'Онбординг', l:'Ошибка: шаг не записался', w:'Всплывашка', i:true, t:'Не удалось записать шаг' },
@@ -16891,7 +16891,7 @@ function nbRenderStart(){
       h += '<div class="nb-start"><h3>' + esc2(nbT('next.title') || 'Следующий шаг') + '</h3><div><b>' + esc2(nbStepName(n)) + '</b>' + (n.mand ? '<span class="nb-mand">' + esc2(nbT('next.mand_tag') || 'обязательно') + '</span>' : '') + '</div>' +
         '<div class="nb-sub">' + esc2(nbStepWhy(n)) + '</div>' +
         '<button class="nb-btn" onclick="nbDoStep(\'' + n.k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
-        (n.mand ? '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + n.k + '\')">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>'
+        ((n.mand && n.gate !== 0) ? '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + n.k + '\')">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>'
                 : '<button class="nb-btn ghost" onclick="nbLater(\'' + n.k + '\')">' + esc2(nbT('next.later') || 'Не сейчас') + '</button>') +
         '<div class="nb-count"><span>' + esc2(nbT('chk.title', {done: dn, all: all})) + '</span><span onclick="nbOpenSheet()" style="color:var(--warm);cursor:pointer">' + esc2(nbT('next.all_steps') || 'Все шаги →') + '</span></div></div>';
     } else {
@@ -16987,7 +16987,10 @@ function nbRenderMand(){
   } else {
     /* подпись под шагом — своя на шаг (`mand.sub_<шаг>`), иначе общая */
     h += '<div class="nb-sub">' + esc2(nbStepWhy(s)) + '</div><div class="nb-sub">' + esc2(nbT('mand.sub_' + k) || nbT('mand.title_sub')) + '</div>' + test +
-         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('mand.join') || 'Вступить') + '</button>';
+         '<button class="nb-btn" onclick="nbMandDo(\'' + k + '\')">' + esc2(nbT('mand.join') || 'Вступить') + '</button>' +
+         /* v371: шаг, который не держит ворота уровней (чат), можно отложить
+            сразу. Канал — нет: без него занятия не откроются */
+         (s.gate === 0 ? '<button class="nb-btn ghost" onclick="nbMandLater()">' + esc2(nbT('mand.later') || 'Позже') + '</button>' : '');
   }
   document.getElementById('nb-mand-body').innerHTML = h;
   ov.classList.add('open');
@@ -17049,9 +17052,15 @@ async function nbOpenInBot(key){
   } catch(e){ showToast(e.message || nbT('err.bot_open') || 'Не получилось открыть бота'); }
 }
 function nbMandLater(){
+  /* v371: чат (шаг без ворот) откладывается на сервере до завтра — иначе окно
+     встречало бы при каждом открытии аппа. Канал — на пару минут, как было */
+  var key = nbMandKey || ((nbState && nbState.mandatory_open) || [])[0] || '';
+  var step = (nbState && nbState.steps || []).find(function(x){ return x.k === key; });
   var min = (nbState && nbState.mand_later_min) || 2;
   nbMandDeferUntil = Date.now() + min * 60 * 1000;
-  nbPollStop(); nbMandPhase = 'ask'; document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard();
+  nbPollStop(); nbMandPhase = 'ask'; nbMandKey = '';
+  document.getElementById('nb-mand-overlay').classList.remove('open'); renderLevelCard();
+  if (step && step.gate === 0){ nbMandDeferUntil = 0; nbLater(key); }
 }
 
 /* ── тест-панель (только свои; сервер проверяет сам) ── */
