@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v371 -->
+<!-- FILE_VERSION: index-v372 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5151,6 +5151,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   color:var(--text-dim,#8b8b8b);cursor:pointer;flex-shrink:0}
 .live-frame-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000}
 #live-frame{position:absolute;inset:0;width:100%;height:100%;border:0}
+/* Плеер ЗАПИСИ эфира в попапе диплинка — тот же контейнер 16:9, но у самого
+   iframe правила не было: он рисовался размером по умолчанию (300×150) и не
+   совпадал с окном — отсюда чёрная полоса под видео (17.09.2026) */
+#live-record-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 .live-actions{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px}
 .live-btn{display:flex;align-items:center;justify-content:center;width:100%;
   padding:14px;border:none;border-radius:14px;cursor:pointer;
