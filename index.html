@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v372 -->
+<!-- FILE_VERSION: index-v373 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -6133,7 +6133,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="card nb-test" id="nb-test-panel" style="display:none;margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Тест знакомства с клубом (только свои)</div>
         <div class="nb-row"><span>Где купил</span><select id="nbt-where"><option value="">не трогать</option><option value="bot">в боте</option><option value="app">из аппа</option></select></div>
-        <div class="nb-row"><span>Площадка</span><select id="nbt-plat"><option value="">как есть</option><option value="tg">Телеграм</option><option value="vk">ВК</option></select></div>
+        <div class="nb-row"><span>Площадка</span><select id="nbt-plat"><option value="">как есть</option><option value="auto">по входу</option><option value="tg">Телеграм</option><option value="vk">ВК</option></select></div>
         <div class="nb-row"><span>Факты сервера</span><span style="display:flex;gap:10px;flex-wrap:wrap">
           <label class="nb-cb"><input type="checkbox" id="nbt-channel"> канал</label>
           <label class="nb-cb"><input type="checkbox" id="nbt-chat"> чат</label>
@@ -10893,7 +10893,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v371 · 16.09.2026 окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15689,7 +15689,7 @@ const APP_TEXTS = {
   'nb.l2.sub': { c:'Онбординг', l:'Карточка уровня 2 — текст', w:'Главная', i:true, t:'Баллы — валюта клуба. Их можно потратить прямо сейчас:' },
   'nb.l2.btn': { c:'Онбординг', l:'Карточка уровня 2 — кнопка', w:'Главная', i:true, t:'Посмотреть, куда потратить' },
   'nb.mand.title_sub': { c:'Онбординг', l:'Окно обязательного шага — общая подпись', w:'Окно по центру', i:true, t:'Обязательный шаг. Без него занятия не откроются.' },
-  'nb.mand.sub_chat': { c:'Онбординг', l:'Окно обязательного шага — подпись у чата', w:'Окно по центру', i:true, t:'Обязательный шаг. В чате отвечают на вопросы между эфирами.' },
+  'nb.mand.sub_chat': { c:'Онбординг', l:'Окно обязательного шага — подпись у чата или беседы', w:'Окно по центру', i:true, t:'Обязательный шаг. Отвечаем на вопросы между эфирами.' },
   'nb.mand.join': { c:'Онбординг', l:'Окно обязательного шага — кнопка', w:'Окно по центру', i:true, t:'Вступить' },
   'nb.mand.wait': { c:'Онбординг', l:'Ушёл вступать — пояснение', w:'Окно по центру', i:true, t:'Как вступишь — вернись сюда, шаг закроется сам.' },
   'nb.mand.checking': { c:'Онбординг', l:'Ушёл вступать — «проверяю»', w:'Окно по центру', i:true, t:'Проверяю…' },
@@ -15722,8 +15722,10 @@ const APP_TEXTS = {
   'nb.why.channel_tg': { c:'Онбординг', l:'Шаг «Вступление в канал» — пояснение', w:'Шаги знакомства', i:true, t:'Там выходят занятия. Без этого ссылки не откроются.' },
   'nb.step.channel_vk': { c:'Онбординг', l:'Шаг «Вступление в группу ВК» — название', w:'Шаги знакомства', i:true, t:'Вступление в группу ВК' },
   'nb.why.channel_vk': { c:'Онбординг', l:'Шаг «Вступление в группу ВК» — пояснение', w:'Шаги знакомства', i:true, t:'Там выходят занятия. Без этого ссылки не откроются.' },
-  'nb.step.chat': { c:'Онбординг', l:'Шаг «Вступление в чат» — название', w:'Шаги знакомства', i:true, t:'Вступление в чат' },
-  'nb.why.chat': { c:'Онбординг', l:'Шаг «Вступление в чат» — пояснение', w:'Шаги знакомства', i:true, t:'В чате отвечают на вопросы между эфирами.' },
+  'nb.step.chat_tg': { c:'Онбординг', l:'Шаг «Вступление в чат» — название (Телеграм)', w:'Шаги знакомства', i:true, t:'Вступление в чат' },
+  'nb.why.chat_tg': { c:'Онбординг', l:'Шаг «Вступление в чат» — пояснение (Телеграм)', w:'Шаги знакомства', i:true, t:'В чате отвечают на вопросы между эфирами.' },
+  'nb.step.chat_vk': { c:'Онбординг', l:'Шаг «Вступление в беседу» — название (ВКонтакте)', w:'Шаги знакомства', i:true, t:'Вступление в беседу ВК' },
+  'nb.why.chat_vk': { c:'Онбординг', l:'Шаг «Вступление в беседу» — пояснение (ВКонтакте)', w:'Шаги знакомства', i:true, t:'В беседе отвечают на вопросы между эфирами.' },
   'nb.step.lecture': { c:'Онбординг', l:'Шаг «Первое занятие или выжимка» — название', w:'Шаги знакомства', i:true, t:'Первое занятие или выжимка' },
   'nb.why.lecture': { c:'Онбординг', l:'Шаг «Первое занятие или выжимка» — пояснение', w:'Шаги знакомства', i:true, t:'Одно занятие, 40 минут. Или его выжимка за минуту.' },
   'nb.step.audio': { c:'Онбординг', l:'Шаг «Занятие в режиме подкаста» — название', w:'Шаги знакомства', i:true, t:'Занятие в режиме подкаста' },
@@ -16700,6 +16702,10 @@ function nbMandDeferred(){ return Date.now() < nbMandDeferUntil; }
 function nbMode(){
   return !!(nbState && nbState.active && isMember && (nbState.level || 0) < 2);
 }
+/* v373: откуда апп открыт ПРЯМО СЕЙЧАС. По базе этого не понять: у человека
+   со связанными обеими площадками карточка выглядит телеграмной, и вход из
+   ВК встречал «Вступление в канал» */
+function nbPlatform(){ return (typeof isInsideVk === 'function' && isInsideVk()) ? 'vk' : 'tg'; }
 /* ⚠️ ТЕКСТЫ — ИЗ РЕЕСТРА АППА (v370), раздел «Онбординг» в дашборде, ключи
    `nb.*`. Раньше они жили только в настройке знакомства на сервере, и в
    дашборде их не было видно ([stated] Denis 16.09: «куда улетели тексты»).
@@ -16713,7 +16719,7 @@ function nbT(key, vars){
 /* Название и пояснение шага — из реестра; у канала и второй площадки свой
    текст для Телеграма и для ВК. Нет в реестре — берём присланное сервером */
 function nbStepKey(k){
-  if (k !== 'channel' && k !== 'plat2') return k;
+  if (k !== 'channel' && k !== 'plat2' && k !== 'chat') return k;
   var vk = nbState && nbState.facts && nbState.facts.platform === 'vk';
   return k + (vk ? '_vk' : '_tg');
 }
@@ -16731,7 +16737,7 @@ async function nbLoad(){
   if (!telegramId || !isMember || nbLoading) return;
   nbLoading = true;
   try {
-    var st = await apiRequest(API_URL + '/onb/state?telegram_id=' + telegramId, {}, 12000);
+    var st = await apiRequest(API_URL + '/onb/state?telegram_id=' + telegramId + '&platform=' + nbPlatform(), {}, 12000);
     nbState = st || null;
   } catch(e){
     /* Знакомство не должно ронять главную: молчим, но пишем в консоль с кодом */
@@ -16762,7 +16768,7 @@ async function nbEvent(key, note){
   try {
     var r = await apiRequest(API_URL + '/onb/event', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: Number(telegramId), key: key, note: note || '' })
+      body: JSON.stringify({ telegram_id: Number(telegramId), key: key, note: note || '', platform: nbPlatform() })
     }, 12000);
     var prevLvl = (nbState && nbState.level) || 0;
     nbApplyState(r.state);
@@ -16831,7 +16837,9 @@ function nbDoStep(key){
   var vk = f.platform === 'vk';
   switch(key){
     case 'channel': vk ? openVkAccessFlow() : openTgAccess('channel'); break;
-    case 'chat':    vk ? openVkLink(VK_CHAT_LINK) : openTgAccess('chat'); break;
+    /* v373: во ВКонтакте вступление в беседу сервер не видит — шаг
+       засчитывается по нажатию, как рассказ о себе */
+    case 'chat':    vk ? (openVkLink(VK_CHAT_LINK), nbEvent('chat', 'открыл беседу ВК')) : openTgAccess('chat'); break;
     case 'plat2':   vk ? linkTelegramFromVk() : openVkAccessFlow(); break;
     case 'home':    openAddToHomeScreenPopup(); break;
     case 'lecture': switchView('library'); break;
