@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v377 -->
+<!-- FILE_VERSION: index-v378 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -6156,6 +6156,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <label class="nb-cb"><input type="checkbox" id="nbt-chat"> чат</label>
           <label class="nb-cb"><input type="checkbox" id="nbt-plat2"> 2-я площадка</label>
           <label class="nb-cb"><input type="checkbox" id="nbt-home"> на экране</label></span></div>
+        <div class="nb-row"><span>Живая проверка</span><label class="nb-cb"><input type="checkbox" id="nbt-release" checked> снимать подмену по нажатию «Вступить»</label></div>
         <div class="nb-row"><span>День после входа</span><input type="number" id="nbt-day" min="1" max="30" value="1" style="width:64px"></div>
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(false)">Применить</button>
@@ -6163,7 +6164,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestClear()">Снять подмену фактов</button>
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestDisable()">Выключить у себя</button>
         </div>
-        <div class="nb-out" id="nbt-out">Галочки фактов — это то, что «видит сервер». Сняты — попап обязательных покажется.</div>
+        <div class="nb-out" id="nbt-out">Галочки фактов — это то, что «видит сервер». Сняты — попап обязательных покажется. С «живой проверкой» подмена снимается, как только нажал «Вступить», и шаг закрывается по-настоящему.</div>
       </div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Версия приложения</div>
@@ -10920,7 +10921,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v377 · 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17034,9 +17035,18 @@ function nbRenderMand(){
   document.getElementById('nb-mand-body').innerHTML = h;
   ov.classList.add('open');
 }
-function nbMandDo(k){
+async function nbMandDo(k){
   nbMandKey = k; nbMandPhase = 'wait';
   nbRenderMand();                 // окно остаётся: человек вернётся на него же
+  /* v378: в тест-режиме с живым снятием подмена этого шага снимается прямо
+     сейчас — дальше решает настоящая проверка членства, и шаг закрывается
+     по-честному. Иначе подмена держала бы окно открытым навсегда */
+  if (nbState && nbState.test_release && (nbState.test_facts || []).indexOf(k) >= 0){
+    try {
+      await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: Number(telegramId), release_key: k }) }, 15000);
+    } catch(e){}
+  }
   nbDoStep(k);
   nbPollStart();
 }
@@ -17124,6 +17134,7 @@ async function nbTestApply(reset){
     purchase_place: document.getElementById('nbt-where').value, platform: document.getElementById('nbt-plat').value,
     channel: document.getElementById('nbt-channel').checked, chat: document.getElementById('nbt-chat').checked,
     plat2: document.getElementById('nbt-plat2').checked, home: document.getElementById('nbt-home').checked,
+    release: document.getElementById('nbt-release').checked,
     day: Number(document.getElementById('nbt-day').value) || 1 };
   try {
     var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 15000);
