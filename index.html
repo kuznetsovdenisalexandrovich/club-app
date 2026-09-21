@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v378 -->
+<!-- FILE_VERSION: index-v383 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5826,11 +5826,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.3c0-1.5 1.2-2.6 2.7-2.6s2.6 1 2.6 2.3c0 1.7-2.4 1.9-2.6 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></div>
         <div class="tile-label">Как пользоваться клубом</div>
       </div>
-      <div class="tile" onclick="openTgAccess('channel')">
+      <div class="tile" onclick="openClubChannelTile()">
         <div class="tile-icon" style="background:rgba(255,184,77,0.16);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11v2a2 2 0 0 0 2 2h1l3 4V7l-3 4H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
         <div class="tile-label">Открыть канал</div>
       </div>
-      <div class="tile" onclick="openTgAccess('chat')">
+      <div class="tile" onclick="openClubChatTile()">
         <div class="tile-icon" style="background:rgba(232,97,74,0.14);color:var(--warm)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a7.5 7.5 0 0 1-11.4 6.4L4 19l1.2-4.3A7.5 7.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
         <div class="tile-label">Открыть чат</div>
       </div>
@@ -6486,6 +6486,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          несколько раз подряд без результата — см. noteAccessReturn() -->
     <div class="stuck-box" id="access-stuck" style="display:none">
       <div class="stuck-title" data-text="access.stuck_title">Проблема с оплатой?</div>
+      <div class="vk-dm-note" style="display:none;font-size:13px;color:var(--text-dim);margin-bottom:8px"></div>
       <button class="lec-link-btn access-btn" style="margin-bottom:8px" onclick="openPaymentTrouble()" data-text="access.stuck_yes">Да, не могу оплатить</button>
       <div class="payment-help-link" style="margin:0" onclick="hideAccessStuck()" data-text="access.stuck_no">Нет, всё в порядке</div>
     </div>
@@ -6500,8 +6501,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     </div>
     <div class="card">
       <div class="access-intro">После оплаты приложение само поймает платёж — обычно на это уходят секунды, иногда до пары минут. Никуда уходить не нужно, просто вернись сюда, и я сразу покажу, что делать дальше.<br><br>Если оплатить не получается или карта не РФ, дай знать:</div>
-      <button class="lec-link-btn access-btn" onclick="openUrl('https://t.me/kuznetsov_denis?text=Приветики_хочу_оплатить_доступ_зарубежной_картой')">Оплата не из РФ</button>
-      <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_получается_оплатить_доступ')">Проблемы с оплатой</button>
+      <div class="vk-dm-note" style="display:none;font-size:13px;color:var(--text-dim);margin-bottom:8px"></div>
+      <button class="lec-link-btn access-btn" onclick="openSupportDm('Приветики, хочу оплатить доступ зарубежной картой')">Оплата не из РФ</button>
+      <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openSupportDm('Не получается оплатить доступ')">Проблемы с оплатой</button>
     </div>
     <div class="scroll-spacer"></div>
   </div>
@@ -6804,11 +6806,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div id="web-login-notfound" style="display:none;width:100%;max-width:320px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:14px">
     <div id="web-login-notfound-text" style="font-size:13px;color:var(--text-dim);line-height:1.45;margin-bottom:12px"></div>
     <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:6px" onclick="openAccessPage()">Оплатить доступ</button>
-    <div class="payment-help-link" style="margin:0" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_залогиниться_в_приложении')" data-text="pay.a5">Уже оплачивал — написать Денису</div>
+    <div class="payment-help-link" style="margin:0" onclick="openSupportDm('Не могу залогиниться в приложении')" data-text="pay.a5">Уже оплачивал — написать Денису</div>
   </div>
   <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
   <div class="payment-help-link" id="web-login-fallback" style="display:none" onclick="loginWithoutCode()" data-text="pay.a6">Не приходит смс? Войти по номеру</div>
-  <div class="payment-help-link" id="web-login-help-link" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_авторизоваться_в_приложении')">Не удаётся зайти по номеру</div>
+  <div class="payment-help-link" id="web-login-help-link" onclick="openSupportDm('Не могу авторизоваться в приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
   <div style="margin-top:14px;font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openQuiz()" data-text="misc.a2">Узнай, кто ты из боженек продаж</div>
   <div id="web-requisites-bar" class="requisites" style="position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:13px;color:#fff;display:none">ИП Кузнецов Денис Александрович · ИНН 616616492674</div>
@@ -10390,6 +10392,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       <iframe id="live-record-frame" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>
     </div>
     <button class="lec-link-btn access-btn" id="live-entry-library-btn" onclick="closeLiveEntryPopup();switchView('library')" data-text="live.none.btn">Открыть библиотеку</button>
+    <button class="lec-link-btn access-btn" id="live-entry-access-btn" style="display:none" onclick="closeLiveEntryPopup();openAccessPage()" data-text="live.guest.btn">Открыть доступ</button>
   </div>
 </div>
 <div class="center-modal-overlay" id="vk-access-overlay" onclick="if(event.target===this) document.getElementById('vk-access-overlay').classList.remove('open')">
@@ -10921,7 +10924,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12036,7 +12039,10 @@ function laterSelect(key){
 }
 async function laterConfirm(){
   if (!laterPick){ showToast(t('later.pick_first')); return; }
-  const body = { telegram_id: telegramId, kind: 'film_back' };
+  /* Ситуацию НЕ называем (v380): экран открывается только по диплинку «later»
+     из дожимного сообщения, а оно может быть про что угодно (фильм, оплата,
+     цепочка). Сервер берёт последнюю отправленную ситуацию этого человека. */
+  const body = { telegram_id: telegramId };
   if (laterPick.key === 'hour'){
     body.minutes = 60;
   } else if (laterPick.key === 'custom'){
@@ -12201,7 +12207,7 @@ function openContinue() {
   if (welcomeLectureData){
     const l = welcomeLectureData;
     rememberLastLecture(l);         // дальше это уже обычная «последняя лекция»
-    if (l.link) openTgVideo(l.link); else openUrl(l.link_vk);
+    openLectureByPlatform(l);
     // Гасим ПОСЛЕ открытия, а не при показе: человек мог не заметить виджет
     // и вернуться позже — до тапа он должен видеть его снова при каждом заходе
     if (telegramId){
@@ -12693,6 +12699,8 @@ let profileReadyResolve = null;
 let profileReady = new Promise(function(res){ profileReadyResolve = res; });
 function markProfileReady(){
   if (profileReadyResolve){ profileReadyResolve(); profileReadyResolve = null; }
+  /* v381: личность появилась — отдаём отложенную привязку к пригласившему */
+  try { if (telegramId && typeof attachPendingReferral === 'function') attachPendingReferral(); } catch(e){}
 }
 /* Потолок ожидания: если профиль не пришёл (нет сети, гость), маршрут всё
    равно обязан отработать — просто по тем данным, что есть */
@@ -12734,7 +12742,9 @@ async function loadProfile() {
       return;
     }
 
-    document.getElementById('header-sub').textContent = u.full_name || u.name || 'Участник клуба';
+    // У гостя теперь тоже есть карточка (заводится по первому событию) — без
+    // имени он не «Участник клуба», а гость
+    document.getElementById('header-sub').textContent = u.full_name || u.name || (u.is_member ? 'Участник клуба' : 'Гость');
     // Месяцы в клубе и дата платежа переехали в экран управления подпиской
     const pointsEl = document.getElementById('p-points');
     if (pointsEl) pointsEl.textContent = u.points || 0;
@@ -15126,6 +15136,12 @@ const APP_TEXTS = {
   'access.trouble_text': {
     c:'Оплата', l:'Текст, который подставляется в переписку с Денисом', w:'Личка Telegram', i:false,
     t:'Не получается оплатить доступ' },
+  'access.vk_dm_link': {
+    c:'Оплата', l:'Ссылка на личку ВКонтакте (для тех, кто открыл апп в ВК)', w:'Экраны «проблема с оплатой» в ВК', i:false,
+    t:'https://vk.ru/kuznetsov_denis_alexandrovich' },
+  'access.vk_dm_note': {
+    c:'Оплата', l:'Приписка над кнопкой в ВК (в личку ВК текст подставить нельзя)', w:'Экраны «проблема с оплатой» в ВК', i:false,
+    t:'Напиши пожалуйста «проблемы с доступом» вот сюда:' },
   'live.gate.buy': {
     c:'Эфир', l:'Кнопка доступа в окошке поверх эфира', w:'Окошко на эфире', i:false,
     t:'Получить доступ' },
@@ -15567,6 +15583,15 @@ const APP_TEXTS = {
   'live.none.btn': {
     c:'Эфиры', l:'Кнопка в попапе «эфира нет»', w:'Попап по ссылке на эфир', i:true,
     t:'Открыть библиотеку' },
+  'live.guest.record': {
+    c:'Эфиры', l:'Гость по ссылке: запись есть, но для участников', w:'Попап по ссылке на эфир (гость)', i:true,
+    t:'Запись этого эфира открыта участникам клуба ещё неделю. Открой доступ — и запись, и все занятия будут твои.' },
+  'live.guest.live': {
+    c:'Эфиры', l:'Гость по ссылке: эфир идёт, бесплатная часть закрыта', w:'Попап по ссылке на эфир (гость)', i:true,
+    t:'Эфир уже идёт, открытая часть закончилась. Дальше — для участников клуба: открой доступ и подключайся прямо сейчас.' },
+  'live.guest.btn': {
+    c:'Эфиры', l:'Кнопка гостю в попапе эфира', w:'Попап по ссылке на эфир (гость)', i:true,
+    t:'Открыть доступ' },
 
   'settings.vk1': {
     c:'Настройки приложения', l:'Кнопка получения доступа в ВК', w:'Настройки приложения', i:true,
@@ -15805,6 +15830,7 @@ function tf(key, vars){
 /* Раскладываем тексты по элементам с data-text="ключ" — так в разметке можно
    не звать t() руками */
 function applyAppTexts(){
+  try { applyVkDmNotes(); } catch(e){}   // v382: приписка над кнопками личики в ВК
   document.querySelectorAll('[data-text]').forEach(el => {
     const key = el.getAttribute('data-text');
     const val = t(key);
@@ -16141,13 +16167,15 @@ function shareWithChoice(text, payload){
   if (saved){ shareSomething(text, shareTargetLink(saved, payload)); return; }
   sharePending = { text: text, payload: payload };
   const el = document.getElementById('share-where-overlay');
-  if (el) el.classList.add('open');
+  /* v381: оверлей семейства gg — показывается классом `gg-open`, а не `open`;
+     с `open` кнопка «поделиться» в вебе молча не работала */
+  if (el) el.classList.add('gg-open');
   else shareSomething(text, shareLink(payload));   /* окно не нашлось — не молчим */
 }
 
 function shareWhereClose(){
   const el = document.getElementById('share-where-overlay');
-  if (el) el.classList.remove('open');
+  if (el) el.classList.remove('gg-open');
   sharePending = null;
 }
 
@@ -16293,7 +16321,7 @@ const REG_STEPS_VK = [
   /* Последним — и мягким: занятия идут в Telegram, но заставлять человека,
      который живёт в ВК, заводить там аккаунт мы не будем. Засчитывается, как
      только рукопожатие состоялось — у карточки появился настоящий tg */
-  { key: 'tg_link',  label: 'Подключить Telegram (по желанию)', action: 'linkTelegramFromSteps' },
+  { key: 'tg_link',  label: 'Подключить Telegram (по желанию)', action: 'linkTelegramFromSteps', optional: true },
 ];
 /* ВК-набор — тому, кто открыл клуб В ВК, и тому, у кого Telegram ещё не
    привязан (заменитель −vk_id): иначе человек упирается в шаг, который ему
@@ -16375,8 +16403,11 @@ function checkLevelUp(){
   const lvl = currentLevelNum();
   const def = LEVELS[lvl];
   if (!def || def.pointsMode) return; // очковый уровень — открытый, порог для следующего ещё не решён
-  const done = def.steps.filter(s => onboardStepDone(s.key)).length;
-  if (done >= def.steps.length && LEVELS[lvl + 1]) {
+  /* ⚠️ «ПО ЖЕЛАНИЮ» НЕ ДЕРЖИТ УРОВЕНЬ (21.09.2026): шаг tg_link у ВК-набора
+     требовал настоящий Telegram, и уровень 1 у ВК-участника не закрывался никогда */
+  const обязательные = def.steps.filter(s => !s.optional);
+  const done = обязательные.filter(s => onboardStepDone(s.key)).length;
+  if (done >= обязательные.length && LEVELS[lvl + 1]) {
     serverLevel = lvl + 1;
     if (telegramId) {
       fetch(`${API_URL}/users/push`, {
@@ -17008,6 +17039,12 @@ function nbRenderMand(){
   var ov = document.getElementById('nb-mand-overlay'); if (!ov) return;
   var open = nbMode() && !nbMandDeferred() && (nbState.mandatory_open || []).length && !levelBarMustHide();
   if (!open){ ov.classList.remove('open'); nbPollStop(); return; }
+  /* v381: окно лежит на слое 760 и накрывало всё, что само открывает —
+     «добавить на экран» (600), ворота ВК (600), попап ИИ (200), а при шаге
+     «занятие/эфир/игра/план» просто переключало экран под собой. Человек
+     нажимал «Сделать» и видел ту же модалку. Пока открыт другой слой — не
+     лезем; после шага, уводящего на другой экран, ждём возврата на главную */
+  if (nbMandLayerBusy()){ ov.classList.remove('open'); return; }
   var k = nbMandPhase === 'ask' ? nbState.mandatory_open[0] : (nbMandKey || nbState.mandatory_open[0]);
   var s = (nbState.steps || []).find(function(x){ return x.k === k; }) || { k: k, n: k };
   /* v367: все надписи — из настройки знакомства (`texts`), правятся в дашборде */
@@ -17035,6 +17072,18 @@ function nbRenderMand(){
   document.getElementById('nb-mand-body').innerHTML = h;
   ov.classList.add('open');
 }
+/* Занят ли экран чем-то, поверх чего окну обязательных стоять нельзя */
+function nbMandLayerBusy(){
+  if (document.querySelector('.center-modal-overlay.open:not(#nb-mand-overlay), .sched-popup-overlay.open, .tour-overlay.open, .fullscreen-popup-overlay.open, .fp-overlay.open, .quiz-overlay.open, .god-overlay.open')) return true;
+  /* Шаг увёл на другой экран (занятие, эфир, игра, план, вопрос ИИ) — окно
+     вернётся, когда человек вернётся на главную */
+  if (nbMandPhase !== 'ask' && nbMandKey && NB_STEPS_LEAVE_HOME.indexOf(nbMandKey) >= 0){
+    var v = document.querySelector('.view.active');
+    if (v && v.id !== 'view-portal') return true;
+  }
+  return false;
+}
+var NB_STEPS_LEAVE_HOME = ['lecture', 'audio', 'live', 'game', 'plan', 'tour', 'ask', 'home'];
 async function nbMandDo(k){
   nbMandKey = k; nbMandPhase = 'wait';
   nbRenderMand();                 // окно остаётся: человек вернётся на него же
@@ -17070,7 +17119,8 @@ function nbPollStart(tries, ms){
     if (!nbState || !(nbState.mandatory_open || []).length || (nbState.mandatory_open || []).indexOf(nbMandKey) < 0){
       nbMandClosed(); return;
     }
-    if (left <= 0){ nbPollStop(); nbMandPhase = 'fail'; nbRenderMand(); }
+    if (left <= 0){ nbPollStop(); nbMandPhase = 'fail'; }
+    nbRenderMand();   // v381: слой закрылся или вернулись на главную — окно назад
   }, ms || NB_POLL_MS);
 }
 function nbPollStop(){ if (nbMandTimer){ clearInterval(nbMandTimer); nbMandTimer = null; } }
@@ -17183,8 +17233,25 @@ function levelBarMustHide(){
   if (ai && ai.classList.contains('open')) return true;
   var nbs = document.getElementById('nb-sheet-overlay');
   if (nbs && nbs.classList.contains('open')) return true;
+  /* v381: ВСЁ СЕМЕЙСТВО ШТОРОК (попап дня, шаги доступа, награды, уровни,
+     настройки — слои 200/210 под баром 500) и тур (400) — одной строкой, а не
+     поимённо: список выше показал, что поимённо забывают */
+  if (document.querySelector('.sched-popup-overlay.open, .tour-overlay.open')) return true;
   return false;
 }
+/* Закрытие шторки должно вернуть бар, а закрывающих функций десятки — поэтому
+   не правим каждую, а следим за классом самих оверлеев */
+(function watchOverlaysForLevelBar(){
+  if (typeof MutationObserver !== 'function') return;
+  var timer = null;
+  function kick(){ if (timer) return; timer = setTimeout(function(){ timer = null; try { renderLevelCard(); } catch(e){} }, 30); }
+  function start(){
+    var els = document.querySelectorAll('.sched-popup-overlay, .tour-overlay, .center-modal-overlay');
+    var obs = new MutationObserver(kick);
+    for (var i = 0; i < els.length; i++) obs.observe(els[i], { attributes: true, attributeFilter: ['class'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
 
 function renderLevelCard(){
   updateMenuPointsBadge();
@@ -17521,6 +17588,20 @@ function tgAccessViaBot(fallback){
     el.onclick = function(){ openUrl(fallback); };
   }
   openUrl(BOT_LINK + '?start=' + BOT_START_ACCESS);
+}
+
+/* ⚠️ ПЛИТКИ «ОТКРЫТЬ КАНАЛ / ЧАТ» — ПО ПЛОЩАДКЕ (21.09.2026). Вели в Telegram
+   без проверки; внутри ВК у человека без Telegram открывалась ссылка t.me, а
+   родные группа и беседа ВК стояли рядом с подписью «резервные» */
+function openClubChannelTile(){
+  const вВк = (typeof isInsideVk === 'function' && isInsideVk()) || !hasRealTg();
+  if (вВк){ if (typeof openVkAccessFlow === 'function' && !vkAccessGranted) openVkAccessFlow(); else openVkLink(VK_CHANNEL_LINK); return; }
+  openTgAccess('channel');
+}
+function openClubChatTile(){
+  const вВк = (typeof isInsideVk === 'function' && isInsideVk()) || !hasRealTg();
+  if (вВк){ openVkLink(VK_CHAT_LINK); return; }
+  openTgAccess('chat');
 }
 
 function openChannelJoinLink(){ openTgAccess('channel'); pendingJoinKey = 'channel'; renderStepsPopup(); }
@@ -18899,7 +18980,8 @@ function payFromUrl(){
   if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
 
   rememberEntrySource(src);
-  setTimeout(function(){
+  setTimeout(async function(){
+    await waitProfile();   // v381: та же гонка, что у табличных маршрутов
     if (isMember) { switchView('portal'); return; }
     /* ⚠️ 28.08: БЫЛ ПЕЙВОЛ, СТАЛА САМА СТРАНИЦА ОПЛАТЫ. [stated] Denis:
        «нужен диплинк напрямую на страницу оплаты». Пейвол — окно «не вижу
@@ -19375,10 +19457,11 @@ function routeFromUrl(){
      Пауза тут вообще была не про профиль, а чтобы дать оболочке отрисоваться,
      — поэтому ждём и то, и другое: кадр на отрисовку плюс готовность данных. */
   setTimeout(async function(){
-    if (!route.guests){
-      await waitProfile();
-      if (!isMember){ openPaywall(); return; }
-    }
+    /* v381: ждём профиль ДЛЯ ВСЕХ маршрутов, не только закрытых: `film` и
+       `pay` открыты гостям, но ветвятся по `isMember` — участник по своей
+       ссылке на фильм получал продающий экран */
+    await waitProfile();
+    if (!route.guests && !isMember){ openPaywall(); return; }
     try { route.go(); } catch(e){}
   }, 80);
   return true;
@@ -20821,7 +20904,16 @@ function planStopWatch(i, platform){
      в пейволл, и открытая часть до него не доживала. Открытую отдаём как есть */
   if (!isMember){
     closePlanStop();
+    /* v381: баннер открытой части рисуется в библиотеке, а человек стоял на
+       карте плана — кнопка «ничего не делала». Одна ссылка — открываем сразу,
+       две — ведём в библиотеку к баннеру выбора площадки */
+    const ftg = (s.lec.free_tg_url || '').trim(), fvk = (s.lec.free_vk_url || '').trim();
+    if ((ftg && !fvk) || (!ftg && fvk)){ openFreeVersion(ftg || fvk, s.lec.slug || ''); return; }
     showFreeVersion(s.lec);
+    if (ftg || fvk){
+      switchView('library');
+      setTimeout(function(){ const b = document.getElementById('dl-banner'); if (b) b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 250);
+    }
     return;
   }
   openLectureLink(i, platform, 'plan');
@@ -22948,6 +23040,10 @@ async function openLiveEntry(){
     const d = await r.json();
 
     if (d.state === 'live'){
+      /* v381: гость при закрытой бесплатной части не видит блока эфира —
+         раньше его проматывало к пустому месту без единого слова */
+      await waitProfile();
+      if (!isMember && d.free_open === false){ showLiveGuest(d, 'live'); return; }
       switchView('portal');
       // Блок сам появится на главной по /schedule/now — просто убеждаемся,
       // что человек его увидит, и снимаем «закрыл крестиком»
@@ -22960,7 +23056,9 @@ async function openLiveEntry(){
     if (d.state === 'record'){
       // Своя проверка участия — значит и здесь профиль должен быть загружен
       await waitProfile();
-      if (!isMember) { openPaywall(); return; }
+      /* v381: ссылка рассылается публично — гостю не голый пейвол, а окно
+         «запись для участников» с кнопкой доступа */
+      if (!isMember) { showLiveGuest(d, 'record'); return; }
       openLiveRecord(d);
       return;
     }
@@ -22988,11 +23086,27 @@ function openLiveRecord(d){
     (days > 0 ? tf('live.record.left', { n: days }) : t('live.record.soon'));
   document.getElementById('live-record-wrap').style.display = 'block';
   document.getElementById('live-entry-library-btn').style.display = 'none';
+  const b1 = document.getElementById('live-entry-access-btn');
+  if (b1) b1.style.display = 'none';
   document.getElementById('live-record-frame').src = d.embed_link || '';
   document.getElementById('live-entry-overlay').classList.add('open');
 }
 
+/* Гость по публичной ссылке на эфир: что это и как попасть. Тексты — в
+   реестре (раздел «Эфиры»), кнопка ведёт на страницу оплаты */
+function showLiveGuest(d, kind){
+  document.getElementById('live-entry-title').textContent = d.title || t('live.title.default');
+  document.getElementById('live-entry-text').textContent = t(kind === 'live' ? 'live.guest.live' : 'live.guest.record');
+  document.getElementById('live-record-wrap').style.display = 'none';
+  document.getElementById('live-entry-library-btn').style.display = 'none';
+  const b = document.getElementById('live-entry-access-btn');
+  if (b) b.style.display = '';
+  document.getElementById('live-entry-overlay').classList.add('open');
+  track('live_guest_' + kind, d.title || '');
+}
 function showLiveNothing(){
+  const b0 = document.getElementById('live-entry-access-btn');
+  if (b0) b0.style.display = 'none';
   document.getElementById('live-entry-title').textContent = t('live.none.title');
   document.getElementById('live-entry-text').textContent = t('live.none.text');
   document.getElementById('live-record-wrap').style.display = 'none';
@@ -23313,7 +23427,9 @@ function renderAccessRows(){
     if (el) el.style.display = on ? '' : 'none';
   };
   show('acc-open-vk', !inVk);              // в ВК звать в ВК незачем
-  show('acc-vk-grant', !inVk);             // доступ в группу ВК нужен телеграмным
+  // ⚠️ И В ВК ТОЖЕ, ПОКА ДОСТУПА НЕТ (21.09.2026): кнопка была спрятана ровно
+  // от тех, кому нужнее всего — открывшему апп в ВК и не попавшему в группу
+  show('acc-vk-grant', !inVk || !vkAccessGranted);
   show('acc-tg-grant', linked);            // шагам регистрации нужен telegram_id
   show('acc-tg-link', inVk && !linked);    // рукопожатие — только непривязанным
   show('acc-tg-link-hint', inVk && !linked);
@@ -23344,6 +23460,17 @@ function openLecture(index) {
   if (!l) return;
   rememberLastLecture(l);
   try { nbEvent('lecture', 'открыл занятие'); } catch(e){}
+  openLectureByPlatform(l);
+}
+
+/* ⚠️ ССЫЛКА ЗАНЯТИЯ — ПО ПЛОЩАДКЕ ЧЕЛОВЕКА (21.09.2026). Раньше телеграмная
+   ссылка была главнее всегда: человек без Telegram получал `t.me/…`, хотя у
+   занятия заполнена ссылка ВК. Без Telegram и с ВК-зеркалом — идём в ВК; иначе
+   как прежде, через ворота канала */
+function openLectureByPlatform(l){
+  if (!l) return;
+  const безТг = (typeof hasRealTg === 'function') ? !hasRealTg() : false;
+  if (l.link_vk && безТг){ openUrl(l.link_vk); return; }
   if (l.link) openTgVideo(l.link); else openUrl(l.link_vk);
 }
 
@@ -24818,7 +24945,9 @@ function renderPostPayTimeout(){
     <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px">Платёж пока не дошёл</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">Иногда банк думает чуть дольше. Проверь ещё раз или напиши — разберёмся руками.</div>
     <button class="lec-link-btn access-btn" onclick="startPaymentWatch()">Проверить ещё раз</button>
-    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openUrl('https://t.me/kuznetsov_denis?text=Не_могу_получить_доступ')">Написать в поддержку</button>`;
+    <div class="vk-dm-note" style="display:none;font-size:13px;color:var(--text-dim);margin-bottom:8px"></div>
+    <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="openSupportDm('Не могу получить доступ')">Написать в поддержку</button>`;
+  applyVkDmNotes();
 }
 
 function startPaymentWatch(){
@@ -24999,6 +25128,7 @@ function noteAccessReturn(){
 function showAccessStuck(){
   var box = document.getElementById('access-stuck');
   if (box) box.style.display = 'block';
+  applyVkDmNotes();
 }
 function hideAccessStuck(){
   var box = document.getElementById('access-stuck');
@@ -25007,11 +25137,30 @@ function hideAccessStuck(){
 }
 
 /* Личка с уже подставленным текстом: человеку не надо ничего формулировать.
-   ⚠️ Текст кодируем — в адресе кириллица */
+   ⚠️ Текст кодируем — в адресе кириллица.
+   v382: в ВК — личка ВКонтакте ([stated] Denis 21.09: «пускай пока будет
+   личка», в ВК ссылку поменять на его ВК). Текст туда подставить нельзя,
+   поэтому над кнопками показываем приписку из реестра */
+function supportDmUrl(msg){
+  if (isInsideVk()) return t('access.vk_dm_link') || SUPPORT_DM_LINK;
+  return SUPPORT_DM_LINK + (msg ? '?text=' + encodeURIComponent(msg) : '');
+}
 function openPaymentTrouble(){
   track('payment_trouble_click');
   var msg = t('access.trouble_text') || 'Не получается оплатить доступ';
-  openUrl(SUPPORT_DM_LINK + '?text=' + encodeURIComponent(msg));
+  openUrl(supportDmUrl(msg));
+}
+function openSupportDm(msg){
+  track('support_dm_click', isInsideVk() ? 'vk' : 'tg');
+  openUrl(supportDmUrl(msg));
+}
+/* Приписка видна только в ВК */
+function applyVkDmNotes(){
+  var on = isInsideVk();
+  document.querySelectorAll('.vk-dm-note').forEach(function(el){
+    el.textContent = t('access.vk_dm_note') || '';
+    el.style.display = on && el.textContent ? '' : 'none';
+  });
 }
 
 function goToPayment(i){
@@ -26228,6 +26377,11 @@ function launchIdentity(){
 }
 
 function actionIdent(){
+  /* ⚠️ ЗАМЕНИТЕЛЬ −vk_id — ЭТО ВК (21.09.2026). У купившего во ВКонтакте
+     telegramId отрицательный; раньше он уходил как telegram_id, и сервер звал
+     телеграмного бота на несуществующий номер — экран оплаты, ИИ и тумблеры
+     уведомлений молча умирали. Отдаём vk_id — тем же путём, что у ВК-гостя */
+  if (telegramId && Number(telegramId) < 0) return { vk_id: Math.abs(Number(telegramId)) };
   if (telegramId) return { telegram_id: telegramId };
   if (typeof isInsideVk === 'function' && isInsideVk()) return { vk_id: Number(vkUserId()) || 0 };
   return { telegram_id: telegramId };
@@ -27742,13 +27896,16 @@ function openGodInfo(name){
     + note;
 
   const ov = document.getElementById('god-overlay');
+  /* v381: с результата теста (870, непрозрачный) «Читать про бога целиком»
+     ничего не показывало — экран бога лежит на 850. Поднимаем на время */
+  ov.style.zIndex = document.querySelector('.quiz-overlay.open') ? '890' : '';
   ov.classList.add('open');
   ov.scrollTop = 0;
 }
 
 function closeGodInfo(){
   const ov = document.getElementById('god-overlay');
-  if (ov) ov.classList.remove('open');
+  if (ov){ ov.classList.remove('open'); ov.style.zIndex = ''; }
 }
 
 function cardWordApp(n){
@@ -30682,9 +30839,31 @@ function cardEntryStartQuiz(){
 /* Пришёл по чужой ссылке — привязываем к пригласившему. Сервер сам решит,
    можно ли: себя не пригласишь, повторно не перепривяжешься, уже платящего
    задним числом не запишешь */
+const REF_PENDING_KEY = 'club_ref_pending';
+/* v381: гость без личности — хвост пригласившего ждёт в телефоне, а привязка
+   уходит, как только личность появится (вход по номеру, ВК, оплата) */
+async function attachPendingReferral(){
+  let ref = '';
+  try { ref = localStorage.getItem(REF_PENDING_KEY) || ''; } catch(e){}
+  if (!ref || !telegramId) return;
+  try { localStorage.removeItem(REF_PENDING_KEY); } catch(e){}
+  await attachReferralRef(ref);
+}
+async function attachReferralRef(ref){
+  const asCode = /^u[0-9a-z]{8}$/.test(String(ref || ''));
+  const refId = asCode ? 0 : Number(ref);
+  if (!asCode && (!refId || refId === Number(telegramId))) return;
+  try {
+    await fetch(`${API_URL}/referral/attach`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(asCode ? { telegram_id: telegramId, ref_code: ref }
+                                  : { telegram_id: telegramId, ref_id: refId })
+    });
+  } catch (e) { /* не критично: привязка не должна ломать вход */ }
+}
 async function attachReferralFromStart(){
   const p = appStartParam();
-  if (!p || !telegramId) return;
+  if (!p) return;
   let ref = null;
   if (p.startsWith('r_')) ref = p.slice(2);
   else if (p.startsWith('c_')) {
@@ -30703,18 +30882,16 @@ async function attachReferralFromStart(){
        никого МОЛЧА (поймано проверкой 18.08) */
     if (parts.length >= 3 && (/^\d+$/.test(tail) || /^u[0-9a-z]{8}$/.test(tail))) ref = tail;
   }
-  /* Хвост теперь двух видов: `u`+8 знаков — код карточки, число — старый
+  if (!ref) return;
+  if (!telegramId){
+    /* v381: раньше здесь был молчаливый выход — приглашающему ничего не
+       засчитывалось, если гость пришёл не из Telegram */
+    try { localStorage.setItem(REF_PENDING_KEY, String(ref)); } catch(e){}
+    return;
+  }
+  /* Хвост двух видов: `u`+8 знаков — код карточки, число — старый
      телеграмный айди. Старые ссылки уже разошлись по чатам — ломать нельзя */
-  const asCode = /^u[0-9a-z]{8}$/.test(String(ref || ''));
-  const refId = asCode ? 0 : Number(ref);
-  if (!asCode && (!refId || refId === Number(telegramId))) return;
-  try {
-    await fetch(`${API_URL}/referral/attach`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(asCode ? { telegram_id: telegramId, ref_code: ref }
-                                  : { telegram_id: telegramId, ref_id: refId })
-    });
-  } catch (e) { /* не критично: привязка не должна ломать вход */ }
+  await attachReferralRef(ref);
 }
 
 function appStartParam(){
@@ -30760,6 +30937,12 @@ function appStartParam(){
           try { v = decodeURIComponent(v); } catch(e){}
           if (v) return String(v);
         }
+      }
+      /* v381: ВК на компьютере дописывает свои `ключ=значение` в хеш рядом с
+         нашей нагрузкой — `#later`, `#live`, `#link_…` терялись, потому что
+         хеш переставал быть «чистым». Берём кусок без знака равенства */
+      for (let i = 0; i < pairs.length; i++){
+        if (pairs[i].indexOf('=') < 0 && /^[A-Za-z0-9_-]+$/.test(pairs[i])) return pairs[i];
       }
     }
   } catch(e){}
@@ -31182,7 +31365,9 @@ function plHasAudio(lec){ return !!(lec && (lec.audio_url || '').trim()); }
 /* Главная точка входа: жмут «Слушать» на карточке. Очередь — весь список, где
    человек нажал, но только те занятия, у которых аудио есть */
 function playLecture(index, src){
-  if (!isMember) { openPaywall(); return; }
+  /* v381: заслон `!isMember → пейвол` снят. Сервер сам отдаёт гостю урезанное
+     превью (настройка «минут превью»), а при нуле отвечает 402 — и тогда
+     пейвол показывает plResolveAudioUrl. Раньше вся механика превью была мёртвой */
   // Первое «Слушать» — рассказываем про подкаст-режим, дальше молчим
   showOnbTip('onb.tip_listen', '#mini-player', 900);
   var list = cardList(src) || [];
@@ -31202,7 +31387,6 @@ function playLecture(index, src){
 
 /* Запуск всего потока/списка с первого занятия — для кнопки на странице потока */
 function playAllFrom(src){
-  if (!isMember) { openPaywall(); return; }
   var withAudio = (cardList(src) || []).filter(plHasAudio);
   if (!withAudio.length) { showToast('В этом списке пока нет аудиоверсий'); return; }
   plQueue = withAudio;
