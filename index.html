@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v384 -->
+<!-- FILE_VERSION: index-v385 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10392,6 +10392,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       <iframe id="live-record-frame" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>
     </div>
     <button class="lec-link-btn access-btn" id="live-entry-library-btn" onclick="closeLiveEntryPopup();switchView('library')" data-text="live.none.btn">Открыть библиотеку</button>
+    <button class="lec-link-btn access-btn" id="live-entry-remind-btn" style="display:none" onclick="liveRemindMe()" data-text="live.soon.remind">Напомнить за 15 минут</button>
     <button class="lec-link-btn access-btn" id="live-entry-access-btn" style="display:none" onclick="closeLiveEntryPopup();openAccessPage()" data-text="live.guest.btn">Открыть доступ</button>
   </div>
 </div>
@@ -10924,7 +10925,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15592,6 +15593,27 @@ const APP_TEXTS = {
   'live.guest.btn': {
     c:'Эфиры', l:'Кнопка гостю в попапе эфира', w:'Попап по ссылке на эфир (гость)', i:true,
     t:'Открыть доступ' },
+  'live.soon.text': {
+    c:'Эфиры', l:'Скоро: текст до начала ({когда} — «сегодня в 19:00»)', w:'Попап по ссылке на эфир (скоро)', i:true,
+    t:'Начинаем {когда} по твоему времени. Эфир появится на главной приложения — заходи чуть раньше, чтобы задать вопрос.' },
+  'live.soon.started': {
+    c:'Эфиры', l:'Скоро: время уже наступило, а эфир ещё не запущен', w:'Попап по ссылке на эфир (скоро)', i:true,
+    t:'Вот-вот начнём — эфир появится на главной приложения через пару минут.' },
+  'live.soon.remind': {
+    c:'Эфиры', l:'Кнопка «напомнить»', w:'Попап по ссылке на эфир (скоро)', i:true,
+    t:'Напомнить за 15 минут' },
+  'live.soon.remind_set': {
+    c:'Эфиры', l:'Кнопка после нажатия', w:'Попап по ссылке на эфир (скоро)', i:true,
+    t:'Напомню за 15 минут' },
+  'live.soon.remind_already': {
+    c:'Эфиры', l:'Напоминание уже стояло', w:'Попап по ссылке на эфир (скоро)', i:true,
+    t:'Напоминание уже стоит' },
+  'live.soon.remind_fail': {
+    c:'Эфиры', l:'Не получилось поставить напоминание', w:'Попап по ссылке на эфир (скоро)', i:true,
+    t:'Не получилось поставить напоминание — попробуй ещё раз' },
+  'live.soon.today': { c:'Эфиры', l:'Слово «сегодня»', w:'Попап по ссылке на эфир (скоро)', i:false, t:'сегодня' },
+  'live.soon.tomorrow': { c:'Эфиры', l:'Слово «завтра»', w:'Попап по ссылке на эфир (скоро)', i:false, t:'завтра' },
+  'live.soon.at': { c:'Эфиры', l:'Предлог перед временем', w:'Попап по ссылке на эфир (скоро)', i:false, t:'в' },
 
   'settings.vk1': {
     c:'Настройки приложения', l:'Кнопка получения доступа в ВК', w:'Настройки приложения', i:true,
@@ -23062,6 +23084,14 @@ async function openLiveEntry(){
       return;
     }
 
+    if (d.state === 'upcoming'){
+      /* v385: ссылку на эфир рассылают утром — до старта показываем «скоро»
+         с временем по поясу человека и кнопкой «Напомнить за 15 минут» */
+      await waitProfile();
+      showLiveUpcoming(d);
+      return;
+    }
+
     if (d.state === 'record'){
       // Своя проверка участия — значит и здесь профиль должен быть загружен
       await waitProfile();
@@ -23097,8 +23127,51 @@ function openLiveRecord(d){
   document.getElementById('live-entry-library-btn').style.display = 'none';
   const b1 = document.getElementById('live-entry-access-btn');
   if (b1) b1.style.display = 'none';
+  const r1 = document.getElementById('live-entry-remind-btn');
+  if (r1) r1.style.display = 'none';
   document.getElementById('live-record-frame').src = d.embed_link || '';
   document.getElementById('live-entry-overlay').classList.add('open');
+}
+
+/* «Скоро»: событие расписания ещё не началось. Время — по поясу человека */
+let liveUpcoming = null;
+function liveWhenLabel(iso){
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const off = (tzOffsetMin == null) ? -d.getTimezoneOffset() : tzOffsetMin;
+  const p = new Date(d.getTime() + off * 60000);
+  const hm = String(p.getUTCHours()).padStart(2,'0') + ':' + String(p.getUTCMinutes()).padStart(2,'0');
+  const now = new Date(Date.now() + off * 60000);
+  const sameDay = p.getUTCFullYear() === now.getUTCFullYear() && p.getUTCMonth() === now.getUTCMonth() && p.getUTCDate() === now.getUTCDate();
+  return (sameDay ? (t('live.soon.today') || 'сегодня') : (t('live.soon.tomorrow') || 'завтра')) + ' ' + (t('live.soon.at') || 'в') + ' ' + hm;
+}
+function showLiveUpcoming(d){
+  liveUpcoming = d;
+  document.getElementById('live-entry-title').textContent = d.title || t('live.title.default');
+  const когда = liveWhenLabel(d.starts_at_utc);
+  document.getElementById('live-entry-text').textContent =
+    tf(d.started ? 'live.soon.started' : 'live.soon.text', { когда: когда });
+  document.getElementById('live-record-wrap').style.display = 'none';
+  document.getElementById('live-entry-library-btn').style.display = 'none';
+  const acc = document.getElementById('live-entry-access-btn');
+  if (acc) acc.style.display = isMember ? 'none' : '';
+  const rem = document.getElementById('live-entry-remind-btn');
+  if (rem){ rem.style.display = telegramId ? '' : 'none'; rem.disabled = false; rem.textContent = t('live.soon.remind'); }
+  document.getElementById('live-entry-overlay').classList.add('open');
+  track('live_soon_shown', d.event_key || '');
+}
+async function liveRemindMe(){
+  const btn = document.getElementById('live-entry-remind-btn');
+  if (!telegramId || !btn) return;
+  btn.disabled = true;
+  try {
+    const r = await apiRequest(`${API_URL}/live/remind`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), event_key: (liveUpcoming && liveUpcoming.event_key) || '' })
+    }, 12000);
+    if (r && r.ok){ btn.textContent = t(r.already ? 'live.soon.remind_already' : 'live.soon.remind_set'); }
+    else { btn.disabled = false; showToast(t('live.soon.remind_fail')); }
+  } catch(e){ btn.disabled = false; showToast(e.message || t('live.soon.remind_fail')); }
 }
 
 /* Гость по публичной ссылке на эфир: что это и как попасть. Тексты — в
@@ -23110,12 +23183,16 @@ function showLiveGuest(d, kind){
   document.getElementById('live-entry-library-btn').style.display = 'none';
   const b = document.getElementById('live-entry-access-btn');
   if (b) b.style.display = '';
+  const r2 = document.getElementById('live-entry-remind-btn');
+  if (r2) r2.style.display = 'none';
   document.getElementById('live-entry-overlay').classList.add('open');
   track('live_guest_' + kind, d.title || '');
 }
 function showLiveNothing(){
   const b0 = document.getElementById('live-entry-access-btn');
   if (b0) b0.style.display = 'none';
+  const r0 = document.getElementById('live-entry-remind-btn');
+  if (r0) r0.style.display = 'none';
   document.getElementById('live-entry-title').textContent = t('live.none.title');
   document.getElementById('live-entry-text').textContent = t('live.none.text');
   document.getElementById('live-record-wrap').style.display = 'none';
