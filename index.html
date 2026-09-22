@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v385 -->
+<!-- FILE_VERSION: index-v386 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -5172,6 +5172,26 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
    iframe правила не было: он рисовался размером по умолчанию (300×150) и не
    совпадал с окном — отсюда чёрная полоса под видео (17.09.2026) */
 #live-record-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+/* ── РЕАКЦИИ ПОД ЭФИРОМ (v386) ────────────────────────────────────────────
+   Полоса смайлов с числами. Нажатие рисует всплывающий смайл — он живёт в
+   своём слое над полосой и НЕ двигает раскладку (position:absolute), иначе
+   лента чата дёргалась бы на каждом нажатии соседа */
+.live-reacts{position:relative;padding:8px 12px 0}
+.live-react-row{display:flex;gap:6px;flex-wrap:wrap}
+.live-react{display:flex;align-items:center;gap:5px;padding:7px 11px;border:none;border-radius:999px;
+  cursor:pointer;background:var(--card2,rgba(127,127,127,.12));color:var(--text,#222);
+  font-size:15px;line-height:1;transition:transform .12s ease}
+.live-react:active{transform:scale(.92)}
+.live-react .n{font-size:12px;font-weight:700;opacity:.65;font-variant-numeric:tabular-nums}
+.live-react.locked{opacity:.45}
+.live-react.mine{background:var(--lav-dim,#e9e5ff)}
+.live-react-fly{position:absolute;bottom:14px;font-size:22px;pointer-events:none;
+  animation:reactFly 1.1s ease-out forwards}
+@keyframes reactFly{
+  0%{opacity:0;transform:translateY(0) scale(.6)}
+  15%{opacity:1;transform:translateY(-6px) scale(1.1)}
+  100%{opacity:0;transform:translateY(-70px) scale(1)}
+}
 .live-actions{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px}
 .live-btn{display:flex;align-items:center;justify-content:center;width:100%;
   padding:14px;border:none;border-radius:14px;cursor:pointer;
@@ -10925,7 +10945,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v386 · 22.09.2026 реакции под эфиром: наборы и порог уровня из пульта, числа в общем опросе, всплывающие смайлы. До неё v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15611,6 +15631,15 @@ const APP_TEXTS = {
   'live.soon.remind_fail': {
     c:'Эфиры', l:'Не получилось поставить напоминание', w:'Попап по ссылке на эфир (скоро)', i:true,
     t:'Не получилось поставить напоминание — попробуй ещё раз' },
+  'live.react.locked': {
+    c:'Эфиры', l:'Подсказка про закрытые реакции ({n} — уровень)', w:'Полоса реакций под эфиром', i:true,
+    t:'Эти реакции открываются с {n} уровня — они и правда редкие.' },
+  'live.react.need_login': {
+    c:'Эфиры', l:'Реакция без входа', w:'Полоса реакций под эфиром', i:true,
+    t:'Чтобы реагировать, открой клуб через бота или войди по номеру' },
+  'live.react.fail': {
+    c:'Эфиры', l:'Реакция не отправилась', w:'Полоса реакций под эфиром', i:true,
+    t:'Не получилось поставить реакцию' },
   'live.soon.today': { c:'Эфиры', l:'Слово «сегодня»', w:'Попап по ссылке на эфир (скоро)', i:false, t:'сегодня' },
   'live.soon.tomorrow': { c:'Эфиры', l:'Слово «завтра»', w:'Попап по ссылке на эфир (скоро)', i:false, t:'завтра' },
   'live.soon.at': { c:'Эфиры', l:'Предлог перед временем', w:'Попап по ссылке на эфир (скоро)', i:false, t:'в' },
@@ -22918,6 +22947,105 @@ function openLivePractice(){
 
 /* Рисуем то, что вернул сервер. Ошибки показываем ТЕКСТОМ, а не молчим —
    Denis просил подробную диагностику, тут много движущихся частей */
+/* ── РЕАКЦИИ ПОД ЭФИРОМ (v386) ───────────────────────────────────────────
+   Наборы смайлов и порог уровня живут НА СЕРВЕРЕ (настройки, правятся в
+   пульте эфира) — в коде их нет. Числа приезжают тем же опросом `/schedule/now`,
+   что и всё про эфир: второй опрос ради счётчиков был бы лишней нагрузкой.
+
+   ⚠️ СЧИТАЕМ ОПТИМИСТИЧНО: своё нажатие рисуем сразу, не дожидаясь сервера —
+   иначе смайл «залипает» на десять секунд до следующего опроса. Настоящее
+   число приедет следом и заменит наше. */
+let reactSets = null;          // {base, pro, pro_level, pro_open}
+let reactCounts = {};          // смайл → число
+let reactMine = {};            // что нажимал я — для подсветки
+let reactLoading = false;
+
+async function loadReactionSets(force){
+  if (reactSets && !force) return reactSets;
+  if (reactLoading) return null;
+  reactLoading = true;
+  try {
+    const q = telegramId ? ('?telegram_id=' + encodeURIComponent(telegramId)) : '';
+    const d = await apiRequest(`${API_URL}/live/reactions${q}`, {}, 10000);
+    if (d && d.ok){
+      reactSets = d;
+      if (d.counts) reactCounts = d.counts;
+    }
+  } catch(e){ /* реакции — украшение, их отказ не должен ломать эфир */ }
+  finally { reactLoading = false; }
+  renderReactions();
+  return reactSets;
+}
+
+function renderReactions(){
+  const hosts = ['live-reacts-feed', 'live-reacts-full'];
+  const s = reactSets;
+  hosts.forEach(function(id){
+    const box = document.getElementById(id);
+    if (!box) return;
+    /* ⚠️ КНОПКИ ЖИВУТ В СВОЁМ РЯДУ, А НЕ ПРЯМО В БЛОКЕ. Перерисовка меняет
+       только ряд; улетающие смайлы лежат рядом с ним и переживают её —
+       иначе своё же сердечко исчезало в тот же миг, когда приходил ответ */
+    let row = box.querySelector('.live-react-row');
+    if (!row){ row = document.createElement('div'); row.className = 'live-react-row'; box.appendChild(row); }
+    if (!s || !(s.base || []).length || !(liveNow && liveNow.found && liveNow.is_live)){
+      row.innerHTML = ''; return;
+    }
+    const список = (s.base || []).concat(s.pro_open ? (s.pro || []) : []);
+    const закрытые = s.pro_open ? [] : (s.pro || []);
+    row.innerHTML = список.map(function(e){
+      const n = reactCounts[e] || 0;
+      return '<button class="live-react' + (reactMine[e] ? ' mine' : '') + '" onclick="sendReaction(' + jsArg(e) + ')">'
+        + '<span>' + esc2(e) + '</span>' + (n ? '<span class="n">' + n + '</span>' : '') + '</button>';
+    }).join('')
+    + закрытые.map(function(e){
+      return '<button class="live-react locked" onclick="reactLockedHint()"><span>' + esc2(e) + '</span></button>';
+    }).join('');
+  });
+}
+
+function reactLockedHint(){
+  const lvl = (reactSets && reactSets.pro_level) || 3;
+  showToast(tf('live.react.locked', { n: lvl }));
+}
+
+function reactFly(emoji){
+  ['live-reacts-feed', 'live-reacts-full'].forEach(function(id){
+    const box = document.getElementById(id);
+    const row = box && box.querySelector('.live-react-row');
+    if (!row || !row.children.length) return;
+    const el = document.createElement('div');
+    el.className = 'live-react-fly';
+    el.textContent = emoji;
+    el.style.left = (12 + Math.random() * Math.max(20, box.clientWidth - 60)) + 'px';
+    box.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 1200);
+  });
+}
+
+async function sendReaction(emoji){
+  if (!telegramId){ showToast(t('live.react.need_login')); return; }
+  // своё нажатие — сразу на экран
+  reactCounts[emoji] = (reactCounts[emoji] || 0) + 1;
+  reactMine[emoji] = true;
+  renderReactions();
+  reactFly(emoji);
+  try {
+    const d = await apiRequest(`${API_URL}/live/reaction`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), emoji: emoji })
+    }, 10000);
+    if (d && d.counts){ reactCounts = d.counts; renderReactions(); }
+  } catch(e){
+    // Сервер отказал (набор сменили, уровень не тот) — возвращаем как было
+    const было = (reactCounts[emoji] || 1) - 1;
+    if (было > 0) reactCounts[emoji] = было; else delete reactCounts[emoji];
+    renderReactions();
+    showToast(e.message || t('live.react.fail'));
+    loadReactionSets(true);
+  }
+}
+
 /* ── БАЛЛЫ ЗА ПРИХОД НА ЭФИР ──────────────────────────────────────────────
    Зовём в момент, когда блок эфира ДЕЙСТВИТЕЛЬНО показался человеку, а не
    когда апп узнал о существовании эфира: узнаёт он и в фоне, опросом.
@@ -23038,6 +23166,10 @@ function renderLiveBlock(){
   slot.style.display = 'block';
   host.style.display = 'block';
   markLiveEnter();
+  /* v386: числа реакций приезжают вместе с состоянием эфира, набор смайлов —
+     один раз при первом показе блока */
+  if (liveNow && liveNow.reactions) reactCounts = liveNow.reactions;
+  if (!reactSets) loadReactionSets(); else renderReactions();
 
   document.getElementById('live-title').textContent = liveNow.title || t('live.title.default');
   const badge = document.getElementById('live-badge');
@@ -33665,6 +33797,7 @@ function openDigestFromHome(){
             onclick="openLiveHandout()" style="display:none">Скачать майндкарту</button>
     <button class="live-btn live-btn-main live-practice-top" id="live-full-practice"
             onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
+    <div class="live-reacts" id="live-reacts-full"></div>
     <div class="live-chat-list" id="live-chat-list"></div>
     <div class="live-chat-note" id="live-chat-note"></div>
     <div class="live-chat-form" id="live-chat-form">
@@ -33713,6 +33846,7 @@ function openDigestFromHome(){
          нам не видны — без неё уголок было бы нечем развернуть -->
     <div class="live-tap-catch" id="live-tap-catch" onclick="expandLiveFull()"></div>
   </div>
+  <div class="live-reacts" id="live-reacts-feed"></div>
   <div class="live-actions" id="live-actions">
     <button class="live-btn live-btn-main" onclick="expandLiveFull()" data-text="live.open">Смотреть и обсуждать</button>
     <button class="live-btn" id="live-practice-btn" onclick="openLivePractice()" style="display:none" data-text="live.practice">Подключиться к практике</button>
