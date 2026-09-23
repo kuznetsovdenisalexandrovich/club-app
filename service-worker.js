@@ -1,3 +1,4 @@
+// FILE_VERSION: sw-v2
 // Service worker для Web Push — обязателен, чтобы уведомления приходили,
 // даже когда сама страница закрыта. Держится "живым" в фоне у браузера.
 
@@ -39,8 +40,20 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // ⚠️ sw-v2 (23.09.2026): ПУШ С МАРШРУТОМ ВЕДЁТ ПО МАРШРУТУ. Раньше открытое
+      // в фоне приложение просто выводилось вперёд, и адрес из пуша терялся:
+      // «Продолжить оплату» приводила туда, где человек был. Если в адресе есть
+      // `startapp=` — перезагружаем окно на этот адрес (апп разберёт маршрут
+      // при запуске, как из Telegram). Без маршрута (пуш про пак и т.п.) —
+      // как раньше, только выводим окно вперёд, без перезагрузки
+      const withRoute = url.indexOf('startapp=') !== -1;
       for (const client of clientList) {
         if (client.url.includes(location.origin) && 'focus' in client) {
+          if (withRoute && 'navigate' in client) {
+            return client.navigate(url)
+              .then((c) => (c || client).focus())
+              .catch(() => client.focus());
+          }
           return client.focus();
         }
       }
