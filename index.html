@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v386 -->
+<!-- FILE_VERSION: index-v387 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -19247,7 +19247,13 @@ function showFreeVersion(lec){
 async function openLectureByKey(key, mode){
   if (!ensureBotAccess(function(){ openLectureByKey(key, mode); })) return;
   await ensureLibrary();
-  const lec = lectureBySafeKey(key);
+  let lec = lectureBySafeKey(key);
+  if (!lec){
+    try {
+      const response = await fetch(`${API_URL}/gpt/lecture-address/${encodeURIComponent(key)}`);
+      if (response.ok) { const address = await response.json(); lec = lectureBySafeKey(address.slug); }
+    } catch(e) { /* Show the usual not-found state if resolution is unavailable. */ }
+  }
   if (!lec){
     switchView('library');
     showToast(t('deeplink.not_found'));
