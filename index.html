@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v392 -->
+<!-- FILE_VERSION: index-v393 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -6175,22 +6175,23 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
       <div class="card nb-test" id="nb-test-panel" style="display:none;margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Тест знакомства с клубом (только свои)</div>
-        <div class="nb-row"><span>Где купил</span><select id="nbt-where"><option value="">не трогать</option><option value="bot">в боте</option><option value="app">из аппа</option></select></div>
-        <div class="nb-row"><span>Площадка</span><select id="nbt-plat"><option value="">как есть</option><option value="auto">по входу</option><option value="tg">Телеграм</option><option value="vk">ВК</option></select></div>
-        <div class="nb-row"><span>Факты сервера</span><span style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="nb-row"><span>Где купил</span><select id="nbt-where"><option value="">как есть</option><option value="bot">в боте</option><option value="app">в приложении</option></select></div>
+        <div class="nb-row"><span>Откуда зашёл</span><select id="nbt-plat"><option value="">как есть</option><option value="auto">как открыл сейчас</option><option value="tg">из Телеграма</option><option value="vk">из ВКонтакте</option></select></div>
+        <div style="font-size:13px;font-weight:600;margin:12px 0 4px">Притвориться, что я не вступал в:</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
           <label class="nb-cb"><input type="checkbox" id="nbt-channel"> канал</label>
           <label class="nb-cb"><input type="checkbox" id="nbt-chat"> чат</label>
-          <label class="nb-cb"><input type="checkbox" id="nbt-plat2"> 2-я площадка</label>
-          <label class="nb-cb"><input type="checkbox" id="nbt-home"> на экране</label></span></div>
-        <div class="nb-row"><span>Живая проверка</span><label class="nb-cb"><input type="checkbox" id="nbt-release" checked> снимать подмену по нажатию «Вступить»</label></div>
-        <div class="nb-row"><span>День после входа</span><input type="number" id="nbt-day" min="1" max="30" value="1" style="width:64px"></div>
+          <label class="nb-cb"><input type="checkbox" id="nbt-plat2"> вторую площадку</label>
+          <label class="nb-cb"><input type="checkbox" id="nbt-home"> иконку на экране</label></div>
+        <div style="font-size:12px;color:var(--text-dim);margin:4px 0 8px;line-height:1.45">Галочка стоит — приложение делает вид, что этого у тебя нет. Снята — всё по-настоящему. Нажмёшь «Вступить» в окне — притворство для этого шага снимется само, и приложение проверит тебя по-настоящему.</div>
+        <div class="nb-row"><span>Какой день изобразить</span><input type="number" id="nbt-day" min="1" max="30" value="1" style="width:64px"></div>
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(false)">Применить</button>
-          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(true)">Сбросить и применить</button>
-          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestClear()">Снять подмену фактов</button>
-          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestDisable()">Выключить у себя</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(true)">Начать знакомство заново</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestClear()">Перестать притворяться</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestDisable()">Выключить знакомство у себя</button>
         </div>
-        <div class="nb-out" id="nbt-out">Галочки фактов — это то, что «видит сервер». Сняты — попап обязательных покажется. С «живой проверкой» подмена снимается, как только нажал «Вступить», и шаг закрывается по-настоящему.</div>
+        <div class="nb-out" id="nbt-out">…</div>
       </div>
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Версия приложения</div>
@@ -10974,7 +10975,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v392 · 27.09.2026 пролог в двух версиях: гость на экране результата теста видит рядом со своей картой её версию участника и кнопку забрать её (тексты в реестре, раздел «Карточки»). До неё v391 · 27.09.2026 дайджест: картинки оформления из дашборда — на обложке, колонке, идеях и финале вместо орнамента, на остальных полосах вставкой внизу. До неё v390 · 25.09.2026 идущее событие (эфир или встреча): строка «Сейчас идёт» в обновлениях клуба на главной и окно «Началось» где угодно в приложении, один раз на событие (тексты в реестре, раздел «Эфиры»). До неё v389 · 23.09.2026 «Продолжить» на главной сама выбирает главное: эфир идёт → эфир скоро → запись прошедшего эфира (пока не открыта) → последнее занятие или журнал (тексты в реестре, раздел «Эфиры»). До неё v388 · 23.09.2026 гостю в «Что посмотреть» — блок «Можно посмотреть бесплатно»: занятия с открытой версией, по нажатию карточка и кнопки открытой части (тексты в реестре, раздел «Библиотека»). До неё v387 · 23.09.2026 адрес занятия от контент-завода. До неё v386 · 22.09.2026 реакции под эфиром: наборы и порог уровня из пульта, числа в общем опросе, всплывающие смайлы. До неё v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v393 · 27.09.2026 тест знакомства человеческими словами: галочка = «притвориться, что не вступал», снятая галочка больше ничего не подделывает, после «Вступить» притворство снимается всегда. До неё v392 · 27.09.2026 пролог в двух версиях: гость на экране результата теста видит рядом со своей картой её версию участника и кнопку забрать её (тексты в реестре, раздел «Карточки»). До неё v391 · 27.09.2026 дайджест: картинки оформления из дашборда — на обложке, колонке, идеях и финале вместо орнамента, на остальных полосах вставкой внизу. До неё v390 · 25.09.2026 идущее событие (эфир или встреча): строка «Сейчас идёт» в обновлениях клуба на главной и окно «Началось» где угодно в приложении, один раз на событие (тексты в реестре, раздел «Эфиры»). До неё v389 · 23.09.2026 «Продолжить» на главной сама выбирает главное: эфир идёт → эфир скоро → запись прошедшего эфира (пока не открыта) → последнее занятие или журнал (тексты в реестре, раздел «Эфиры»). До неё v388 · 23.09.2026 гостю в «Что посмотреть» — блок «Можно посмотреть бесплатно»: занятия с открытой версией, по нажатию карточка и кнопки открытой части (тексты в реестре, раздел «Библиотека»). До неё v387 · 23.09.2026 адрес занятия от контент-завода. До неё v386 · 22.09.2026 реакции под эфиром: наборы и порог уровня из пульта, числа в общем опросе, всплывающие смайлы. До неё v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15939,7 +15940,7 @@ const APP_TEXTS = {
   'nb.mand.support': { c:'Онбординг', l:'Не получилось — в поддержку', w:'Окно по центру', i:true, t:'Написать в поддержку' },
   'nb.mand.later': { c:'Онбординг', l:'Кнопка «отложить» в окне (у чата — и на первом экране, откладывает до завтра)', w:'Окно по центру', i:true, t:'Позже' },
   'nb.mand.done': { c:'Онбординг', l:'Шаг закрылся ({n} — шаг, {p} — очки)', w:'Всплывашка', i:true, t:'{n} — готово · +{p}' },
-  'nb.mand.test_note': { c:'Онбординг', l:'Тестовая подмена (видят только свои)', w:'Окно по центру', i:true, t:'Тестовая подмена: сервер считает, что шаг не сделан. Снять — в диагностике профиля' },
+  'nb.mand.test_note': { c:'Онбординг', l:'Тестовая подмена (видят только свои)', w:'Окно по центру', i:true, t:'Это тест: приложение притворяется, что ты сюда не вступал. Нажми «Вступить» — и оно проверит тебя по-настоящему.' },
   'nb.err.event': { c:'Онбординг', l:'Ошибка: шаг не записался', w:'Всплывашка', i:true, t:'Не удалось записать шаг' },
   'nb.err.later': { c:'Онбординг', l:'Ошибка: шаг не отложился', w:'Всплывашка', i:true, t:'Не получилось отложить' },
   'nb.err.claim': { c:'Онбординг', l:'Ошибка: карта не забралась', w:'Всплывашка', i:true, t:'Не получилось забрать карту' },
@@ -17275,7 +17276,7 @@ async function nbMandDo(k){
   /* v378: в тест-режиме с живым снятием подмена этого шага снимается прямо
      сейчас — дальше решает настоящая проверка членства, и шаг закрывается
      по-честному. Иначе подмена держала бы окно открытым навсегда */
-  if (nbState && nbState.test_release && (nbState.test_facts || []).indexOf(k) >= 0){
+  if (nbState && (nbState.test_facts || []).indexOf(k) >= 0){   // v393: всегда, без отдельной галочки
     try {
       await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ telegram_id: Number(telegramId), release_key: k }) }, 15000);
@@ -17354,40 +17355,60 @@ function nbRenderTestPanel(){
   if (nbState && nbState.staff) try { localStorage.setItem('nb_staff_' + telegramId, '1'); } catch(e){}
   p.style.display = show ? '' : 'none';
   if (!show) return;
-  if (!nbState || !nbState.active){ var o0 = document.getElementById('nbt-out'); if (o0) o0.textContent = 'Знакомство у тебя выключено. «Сбросить и применить» включит заново.'; return; }
+  if (!nbState || !nbState.active){ var o0 = document.getElementById('nbt-out'); if (o0) o0.textContent = 'Знакомство у тебя выключено. «Начать знакомство заново» включит его.'; return; }
   var f = nbState.facts || {};
-  ['channel','chat','plat2','home'].forEach(function(k){ var el = document.getElementById('nbt-' + k); if (el) el.checked = !!f[k]; });
+  /* v393: галочка = «притворяемся, что этого нет», то есть ключ лежит в
+     списке притворства. Раньше галочка значила «сервер видит», и снятая
+     галочка молча включала притворство — Denis две недели запирал себе экран */
+  var fakes = nbState.test_facts || [];
+  ['channel','chat','plat2','home'].forEach(function(k){ var el = document.getElementById('nbt-' + k); if (el) el.checked = fakes.indexOf(k) >= 0; });
   var d = document.getElementById('nbt-day'); if (d) d.value = nbState.day || 1;
   var o = document.getElementById('nbt-out');
-  if (o) o.textContent = 'active=' + nbState.active + ' · очки ' + nbState.points + ' · показываем уровень ' + nbState.level + ' (заработан ' + (nbState.earned || 0) + ')' + (nbState.gated ? ', заперт обязательными' : '') + ' · день ' + nbState.day +
-    ((nbState.test_facts || []).length ? '\n⚠️ ПОДМЕНЕНЫ ТЕСТОМ: ' + nbState.test_facts.join(', ') + ' — настоящие факты сервера не учитываются, пока не снимешь подмену' : '\nподмены фактов нет, всё по-настоящему') +
-    '\nгде купил: ' + (f.purchase_place || '?') + ' · площадка: ' + (f.platform || '?') + ' · обязательных открыто: ' + ((nbState.mandatory_open || []).join(', ') || 'нет') +
-    '\nследующий: ' + (nbState.next ? nbState.next.n : '—');
+  var NAMES = { channel: 'канал', chat: 'чат', plat2: 'вторую площадку', home: 'иконку на экране' };
+  var lines = [];
+  lines.push('Приложение сейчас просит: ' + (nbState.next ? nbState.next.n : 'ничего, всё сделано'));
+  lines.push(fakes.length
+    ? 'Притворяемся, что ты не вступал в: ' + fakes.map(function(k){ return NAMES[k] || k; }).join(', ')
+    : 'Ничего не притворяемся — всё по-настоящему');
+  lines.push('Уровень ' + (nbState.level || 0) + ' · очков ' + (nbState.points || 0) + ' · день ' + (nbState.day || 1));
+  lines.push('Где купил: ' + (f.purchase_place === 'app' ? 'в приложении' : 'в боте') + ' · зашёл: ' + (f.platform === 'vk' ? 'из ВКонтакте' : 'из Телеграма'));
+  /* Сервер без v12 не умеет снимать притворство по «Вступить» — тогда окно
+     не закроется. Говорим прямо, чтобы снова не искать это две недели */
+  if (fakes.length && typeof nbState.test_release === 'undefined')
+    lines.push('⚠️ Сервер старый: после «Вступить» притворство само не снимется. Нужен onboard-v12');
+  if (o) o.textContent = lines.join('\n');
 }
 async function nbTestApply(reset){
-  var body = { telegram_id: Number(telegramId), reset: !!reset,
+  /* v393: шлём ТОЛЬКО то, что просят притворить (галочка → «нет»). Снятая
+     галочка не шлётся вовсе — значит, по-настоящему. Поэтому сперва снимаем
+     прежнее притворство, потом ставим выбранное */
+  var body = { telegram_id: Number(telegramId), reset: !!reset, release: true,
     purchase_place: document.getElementById('nbt-where').value, platform: document.getElementById('nbt-plat').value,
-    channel: document.getElementById('nbt-channel').checked, chat: document.getElementById('nbt-chat').checked,
-    plat2: document.getElementById('nbt-plat2').checked, home: document.getElementById('nbt-home').checked,
-    release: document.getElementById('nbt-release').checked,
     day: Number(document.getElementById('nbt-day').value) || 1 };
+  ['channel','chat','plat2','home'].forEach(function(k){
+    if (document.getElementById('nbt-' + k).checked) body[k] = false;
+  });
   try {
+    if (!reset){
+      await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: Number(telegramId), clear_test: true }) }, 15000);
+    }
     var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 15000);
     nbMandDeferUntil = 0;
     nbApplyState(r.state);
-    showToast('Тест-режим применён');
+    showToast(reset ? 'Знакомство начато заново' : 'Применено');
   } catch(e){ var o = document.getElementById('nbt-out'); if (o) o.textContent = 'Ошибка: ' + (e.message || e); showToast(e.message || 'Не получилось'); }
 }
 async function nbTestDisable(){
   try {
     await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), disable: true }) }, 15000);
-    nbState = null; nbMandDeferUntil = 0; nbRenderAll(); showToast('Знакомство выключено — апп как раньше. «Сбросить и применить» включит снова');
+    nbState = null; nbMandDeferUntil = 0; nbRenderAll(); showToast('Знакомство выключено. «Начать знакомство заново» включит его');
   } catch(e){ showToast(e.message || 'Не получилось'); }
 }
 async function nbTestClear(){
   try {
     var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), clear_test: true }) }, 15000);
-    nbMandDeferUntil = 0; nbApplyState(r.state); showToast('Подмена снята — факты настоящие');
+    nbMandDeferUntil = 0; nbApplyState(r.state); showToast('Больше не притворяемся — всё по-настоящему');
   } catch(e){ showToast(e.message || 'Не получилось'); }
 }
 
