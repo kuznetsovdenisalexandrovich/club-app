@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v394 -->
+<!-- FILE_VERSION: index-v395 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -683,7 +683,12 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .access-btn{flex:none;width:100%;justify-content:center;margin-bottom:10px;text-align:center;display:block}
 .payment-help-link{text-align:center;font-size:12.5px;color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-top:8px}
 .ai-loading{font-size:13px;color:var(--text-faint);text-align:center;padding:20px 0}
-.sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:none}
+.sched-popup{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;padding:0 20px calc(24px + env(safe-area-inset-bottom));touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* ⚠️ v395: БЫЛО touch-action:none — и на айфоне шторка с длинным списком не
+   листалась пальцем вовсе ([stated] Denis 27.09: выдача ИИ-помощника «не
+   прокручивается»). Закрытие свайпом (initSwipeToClose) слушает касания
+   пассивно и прокрутке не мешает; pan-y разрешает вертикаль, contain не
+   даёт прокрутке утечь в страницу под шторкой */
 .sched-popup-handle{width:40px;height:4px;border-radius:2px;background:var(--card2);margin:12px auto 16px}
 .sched-popup-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .sched-popup-title{font-family:var(--disp);font-weight:700;font-size:15px}
@@ -5269,7 +5274,44 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .nb-chk .nb-i .nb-n{flex:1;min-width:0}
 .nb-chk .nb-i.dn .nb-n{color:var(--text-dim);text-decoration:line-through}
 .nb-chk .nb-i .nb-go{font-size:12px;color:var(--warm);white-space:nowrap}
-.nb-chk .nb-i.soon{opacity:.5;cursor:default}
+.nb-chk .nb-i.soon{opacity:.62}
+/* v395: малый блок «Что ещё есть в приложении» — после первых трёх шагов */
+.nb-more{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border-radius:18px;background:var(--bg2);box-shadow:var(--sh-out, 0 6px 16px rgba(0,0,0,.12));cursor:pointer}
+.nb-more .nb-more-t{flex:1;min-width:0;font-size:13px}
+.nb-more .nb-more-t b{display:block;font-size:14px;margin-bottom:2px}
+.nb-more .nb-more-t .nb-sub{color:var(--text-dim);margin:0;font-size:12.5px}
+.nb-more .nb-more-btn{flex:none;border:0;border-radius:12px;padding:8px 14px;background:transparent;color:var(--warm);font:inherit;font-weight:700;font-size:13px;box-shadow:inset 0 0 0 1.5px rgba(232,97,74,.35);cursor:pointer}
+/* v395: окно обязательного шага — счётчик и сделанное */
+#nb-mand .nb-cnt{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--warm);text-align:center;font-weight:700;margin-bottom:6px}
+#nb-mand .nb-okline{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;color:#3e9c6a;font-weight:600;margin:0 0 8px}
+#nb-mand .nb-okline i{width:15px;height:15px;border-radius:50%;background:#3e9c6a;position:relative;flex:none}
+#nb-mand .nb-okline i::after{content:"";position:absolute;left:5px;top:2px;width:3px;height:7px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(42deg)}
+/* v395: окно ближайшей встречи */
+#nb-live .nb-h{font-family:var(--disp);font-size:17px;font-weight:700;margin-bottom:6px;text-align:center}
+#nb-live .nb-sub{font-size:13px;color:var(--text-dim);line-height:1.45;text-align:center;margin:4px 0}
+#nb-live .nb-meet{margin:12px 0 4px;padding:12px;border-radius:14px;background:var(--bg);text-align:center}
+#nb-live .nb-meet b{display:block;font-size:15px;margin-bottom:3px}
+#nb-live .nb-meet .nb-when{font-size:13px;color:var(--warm);font-weight:700}
+#nb-live .nb-meet .nb-now{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.05em;color:#fff;background:#d4463a;border-radius:99px;padding:2px 9px}
+#nb-live .nb-btn{margin-top:10px}
+#nb-live .nb-pts{font-size:12.5px;color:var(--warm);text-align:center;margin-top:8px;font-weight:600}
+/* v395: попап дня — встреча ещё не началась */
+.sched-cal-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sched-cal-row .lec-link-btn{flex:1;justify-content:center}
+.sched-not-yet{font-size:12px;color:var(--text-faint);margin-top:8px}
+/* v395: СТРЕЛКИ-ПОДСКАЗКИ ([stated] Denis 27.09: «маленькие анимированные
+   стрелочки, которые будут на разные фичи указывать»). Рисуются кодом, а не
+   картинкой: легче, красятся под тему. Пальцу не мешают — pointer-events:none */
+.nb-arrow{position:fixed;z-index:846;display:none;flex-direction:column;align-items:center;pointer-events:none;transform:translate(-50%,-100%)}
+.nb-arrow.open{display:flex;animation:nbArrowIn .25s ease both}
+.nb-arrow.up{flex-direction:column-reverse;transform:translate(-50%,0)}
+.nb-arrow .nb-arrow-tag{background:var(--warm);color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:10px;white-space:nowrap;box-shadow:0 6px 16px rgba(232,97,74,.35);max-width:70vw;overflow:hidden;text-overflow:ellipsis}
+.nb-arrow svg{display:block;margin:2px 0;color:var(--warm);animation:nbArrowBob 1s ease-in-out infinite}
+.nb-arrow.up svg{transform:rotate(180deg);animation-name:nbArrowBobUp}
+@keyframes nbArrowBob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@keyframes nbArrowBobUp{0%,100%{transform:rotate(180deg) translateY(0)}50%{transform:rotate(180deg) translateY(5px)}}
+@keyframes nbArrowIn{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.nb-arrow svg{animation:none}}
 .nb-test{font-size:13px}
 .nb-test .nb-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
 .nb-test select,.nb-test input[type=number]{font:inherit;color:var(--text);background:var(--bg);border:1px solid rgba(128,128,128,.3);border-radius:10px;padding:6px 8px}
@@ -5933,6 +5975,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          функции отрисовки продолжают находить его через getElementById —
          поэтому ни одну из них переписывать не пришлось.
          #library-blocks хранит их исходное место, чтобы вернуть на него -->
+    <!-- v395: кнопка помощника — ПЕРВОЙ на экране, над планом, потоками и
+         лекциями ([stated] Denis 27.09: «саму кнопку вынести вверх»). Раньше
+         её надо было искать под всеми блоками, и тур докручивал к ней -->
+    <button class="ai-btn" id="ai-helper-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
+    <div class="payment-help-link" style="margin:-4px 0 14px" onclick="openAskDenisPopup()" data-text="quiz.a1">Или задать вопрос прямо Денису →</div>
     <div id="library-blocks">
 
     <div class="hblock" data-block="plan">
@@ -5960,8 +6007,6 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div id="free-demo" style="display:none"></div>
 
     <div class="section-label">Библиотека</div>
-    <button class="ai-btn" id="ai-helper-btn" onclick="openAiPopup()">Спросить ИИ-помощника своими словами</button>
-    <div class="payment-help-link" style="margin:-4px 0 12px" onclick="openAskDenisPopup()" data-text="quiz.a1">Или задать вопрос прямо Денису →</div>
     <div id="saved-banner" class="saved-banner" style="display:none"></div>
     <div id="tag-filter-row" class="tag-filter-row"></div>
     <div id="dl-banner" class="dl-banner" style="display:none"></div>
@@ -6190,7 +6235,9 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestApply(true)">Начать знакомство заново</button>
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestClear()">Перестать притворяться</button>
           <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestDisable()">Выключить знакомство у себя</button>
+          <button class="lec-card" style="flex:1;border:none;font-size:13px;padding:8px" onclick="nbTestHintsReset()">Показать все подсказки заново</button>
         </div>
+        <div style="font-size:12px;color:var(--text-dim);margin:6px 0 0;line-height:1.45">Притворство «не вступал в канал» закрывает и двери к занятиям: «Смотреть в ТГ» и «Смотреть в VK» покажут окно доступа, как новичку.</div>
         <div class="nb-out" id="nbt-out">…</div>
       </div>
       <div class="card" style="margin-top:12px">
@@ -7275,6 +7322,12 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 </div>
 <!-- Попап обязательного шага — ПО ЦЕНТРУ ([stated] Denis 15.09), фон не
      закрывает: выйти можно только кнопкой -->
+<!-- v395: окно ближайшей встречи (шаг знакомства «живая встреча»). Слой
+     center-modal — окно обязательных само не лезет поверх (nbMandLayerBusy) -->
+<div class="center-modal-overlay" id="nb-live-overlay" onclick="if(event.target===this) nbCloseLive()">
+  <div class="center-modal" id="nb-live"><div id="nb-live-body"></div></div>
+</div>
+<div class="nb-arrow" id="nb-arrow"><div class="nb-arrow-tag" id="nb-arrow-tag"></div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v14m0 0-6-6m6 6 6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
 <div class="center-modal-overlay" id="nb-mand-overlay" style="z-index:760">
   <div class="center-modal" id="nb-mand">
     <div id="nb-mand-body"></div>
@@ -10975,7 +11028,7 @@ function swapPlanImagesTheme(theme){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v394 · 27.09.2026 демо из режима отладки просит карту за тест «как гостю» — видно гостевую карту и блок версии участника. До неё v393 · 27.09.2026 тест знакомства человеческими словами: галочка = «притвориться, что не вступал», снятая галочка больше ничего не подделывает, после «Вступить» притворство снимается всегда. До неё v392 · 27.09.2026 пролог в двух версиях: гость на экране результата теста видит рядом со своей картой её версию участника и кнопку забрать её (тексты в реестре, раздел «Карточки»). До неё v391 · 27.09.2026 дайджест: картинки оформления из дашборда — на обложке, колонке, идеях и финале вместо орнамента, на остальных полосах вставкой внизу. До неё v390 · 25.09.2026 идущее событие (эфир или встреча): строка «Сейчас идёт» в обновлениях клуба на главной и окно «Началось» где угодно в приложении, один раз на событие (тексты в реестре, раздел «Эфиры»). До неё v389 · 23.09.2026 «Продолжить» на главной сама выбирает главное: эфир идёт → эфир скоро → запись прошедшего эфира (пока не открыта) → последнее занятие или журнал (тексты в реестре, раздел «Эфиры»). До неё v388 · 23.09.2026 гостю в «Что посмотреть» — блок «Можно посмотреть бесплатно»: занятия с открытой версией, по нажатию карточка и кнопки открытой части (тексты в реестре, раздел «Библиотека»). До неё v387 · 23.09.2026 адрес занятия от контент-завода. До неё v386 · 22.09.2026 реакции под эфиром: наборы и порог уровня из пульта, числа в общем опросе, всплывающие смайлы. До неё v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
+const APP_BUILD = 'v395 · 27.09.2026 знакомство, первая волна правок: встреча первым шагом и окно ближайшей встречи с кнопкой «в календарь» (баллы за первое добавление), лекция и аудио одним шагом, после трёх шагов — маленькое «Что ещё есть в приложении», шаги второго дня нажимаются, окна канала и чата различаются счётчиком, карта «Пролога» видна и открывается, стрелки-подсказки и «показать подсказки заново», стены доступа закрыты для теста, опросы плана в туре не проскакиваются, кнопка помощника над лекциями, попапы листаются на айфоне, плей/пауза при смене трека, ссылка на встречу — только пока она идёт. До неё v394 · 27.09.2026 демо из режима отладки просит карту за тест «как гостю» — видно гостевую карту и блок версии участника. До неё v393 · 27.09.2026 тест знакомства человеческими словами: галочка = «притвориться, что не вступал», снятая галочка больше ничего не подделывает, после «Вступить» притворство снимается всегда. До неё v392 · 27.09.2026 пролог в двух версиях: гость на экране результата теста видит рядом со своей картой её версию участника и кнопку забрать её (тексты в реестре, раздел «Карточки»). До неё v391 · 27.09.2026 дайджест: картинки оформления из дашборда — на обложке, колонке, идеях и финале вместо орнамента, на остальных полосах вставкой внизу. До неё v390 · 25.09.2026 идущее событие (эфир или встреча): строка «Сейчас идёт» в обновлениях клуба на главной и окно «Началось» где угодно в приложении, один раз на событие (тексты в реестре, раздел «Эфиры»). До неё v389 · 23.09.2026 «Продолжить» на главной сама выбирает главное: эфир идёт → эфир скоро → запись прошедшего эфира (пока не открыта) → последнее занятие или журнал (тексты в реестре, раздел «Эфиры»). До неё v388 · 23.09.2026 гостю в «Что посмотреть» — блок «Можно посмотреть бесплатно»: занятия с открытой версией, по нажатию карточка и кнопки открытой части (тексты в реестре, раздел «Библиотека»). До неё v387 · 23.09.2026 адрес занятия от контент-завода. До неё v386 · 22.09.2026 реакции под эфиром: наборы и порог уровня из пульта, числа в общем опросе, всплывающие смайлы. До неё v385 · 22.09.2026 ссылка на эфир до старта: окно «скоро» с временем по поясу и кнопкой «Напомнить за 15 минут», гостю — «Открыть доступ». До неё v384 · 22.09.2026 нажатие кнопки практики/телемоста отмечает приход — список пришедших в пульте эфира. До неё v383 · 22.09.2026 то же, что v382, с верной версией в шапке файла. v382 · 21.09.2026 в ВК «проблема с оплатой» ведёт в личку ВКонтакте с припиской (тексты в реестре, раздел «Оплата»). До неё v381 · 21.09.2026 слои: окно обязательных не накрывает то, что открывает; бар прячется под любой шторкой и туром; «про бога целиком» с результата теста; «поделиться» в вебе; участник по ссылке на фильм/оплату не видит продающий экран; диплинки ВК на компьютере; аудио-превью и открытая часть занятия гостю; рефералка гостя без Telegram; гость по ссылке на эфир видит объяснение и кнопку доступа. До неё v380 · 21.09.2026 «напомнить позже» переносит ту ситуацию, из которой пришли, а не всегда фильм. До неё v379 · 21.09.2026 ВК-участник: бот, занятия, плитки канала и чата, кнопка доступа в группу — по площадке; «Подключить Telegram» не держит уровень. До неё v378 · 18.09.2026 тест знакомства: подмена факта снимается, как только нажал «Вступить» — дальше решает настоящая проверка. До неё v377 — 18.09.2026 отказ браузерной ручки больше не закрывает приложение аварийным экраном; смена трека не роняет ошибку. До неё v375 · 18.09.2026 значок на иконке больше не роняет ошибку у гостей из ВК. До неё v374 · 18.09.2026 пейвол и экран после оплаты больше не уходят под попап, из которого открыты. До неё v373 · 18.09.2026 знакомство во ВКонтакте: шаги про группу и беседу ВК, площадка берётся от входа, а не из базы. До неё v372 — плеер записи эфира во всё окно; v371 — окно «Вступление в чат» можно отложить до завтра, уровни без чата растут (канал по-прежнему обязателен). До неё v370 — тексты знакомства и разбора вопроса — в реестре, раздел «Онбординг» в дашборде. До неё v369 — ИИ-помощник: разбор вопроса на нашем сервере (/onb/ask) — про приложение ведёт в справку, «что здесь есть» в тур и шаги, продажи как раньше в Salebot. До неё v368 — «Поделиться» пиктограммой; v367 — знакомство, ревизия: тексты из настройки, «Позже» на время, мягкая проверка при возврате, диплинки nb_, Пролог забирается одним касанием, старый тур не лезет поверх. До неё v366 — попап обязательных по центру, одна кнопка «Вступить», опрос вступления и экран «не получилось» (ещё раз / через бота / поддержка / пропустить). До неё v365 — видно тестовую подмену';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -11417,7 +11470,7 @@ function switchView(name) {
   else if (typeof ggChrome === 'function'){ ggChrome(false); ggHideAppHeader(false); ggMode(false); }
   if (name === 'magazine') { loadMagazine(); }
   if (name === 'deck-rules') { renderDeckRulesChances(); }
-  if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); }
+  if (name === 'plan') { renderPlanScreen(); } else { hidePlanField(); planQuizOpen = false; }
   if (name === 'schedule') { window._scheduleLoadPromise = Promise.all([loadCalendarMonth(), loadNotifications()]); }
   if (name === 'points-info') {
     const el = document.getElementById('pi-points');
@@ -12652,7 +12705,9 @@ async function toggleNotifyCards(){
 async function toggleNotif(key) {
   /* PP ШАГ ЗАКРЫВАЕТ ИМЕННО «ЖИВЫЕ ЗАНЯТИЯ» (список 2100153), а не любой
      тумблер: в этом и смысл шага — не пропустить встречу */
-  if (key === 'l2100153') onbDone('live');
+  /* v395: засчитываем ВКЛЮЧЕНИЕ, а не любое касание: выключивший
+     напоминания шаг «встреча» не сделал */
+  if (key === 'l2100153' && listMembership[key] !== 'True') onbDone('live');
   const cfg = NOTIF_LISTS.find(c => c.key === key);
   if (!cfg) return;
   const isOn = listMembership[key] === 'True';
@@ -15915,7 +15970,7 @@ const APP_TEXTS = {
   'nb.next.audio_hint': { c:'Онбординг', l:'Подсказка после кнопки шага «подкаст»', w:'Всплывашка', i:true, t:'Нажми «Слушать» у любого занятия' },
   'nb.evt.gained': { c:'Онбординг', l:'Всплывашка за шаг ({n} — очки)', w:'Всплывашка', i:true, t:'+{n} к знакомству' },
   'nb.prolog.wait': { c:'Онбординг', l:'Карта «Пролога» заперта — заголовок', w:'Главная', i:true, t:'Твоя карта ждёт' },
-  'nb.prolog.wait_sub': { c:'Онбординг', l:'Карта «Пролога» заперта — пояснение ({god})', w:'Главная', i:true, t:'Юный {god} из «Пролога». Откроется на первом уровне.' },
+  'nb.prolog.wait_sub': { c:'Онбординг', l:'Карта «Пролога» заперта — пояснение ({god})', w:'Главная', i:true, t:'{god} в юности — карта из «Пролога». Откроется на первом уровне.' },
   'nb.prolog.open': { c:'Онбординг', l:'Карта открыта — заголовок', w:'Главная', i:true, t:'Карта открыта' },
   'nb.prolog.claim': { c:'Онбординг', l:'Кнопка «забрать карту»', w:'Главная', i:true, t:'Забрать в коллекцию' },
   'nb.prolog.owned': { c:'Онбординг', l:'Карта забрана — заголовок', w:'Главная', i:true, t:'В коллекции' },
@@ -15955,7 +16010,7 @@ const APP_TEXTS = {
   'nb.ask.start_tour': { c:'Онбординг', l:'ИИ-помощник: кнопка тура', w:'Попап ИИ-помощника', i:true, t:'Пройти тур' },
   'nb.ask.start_steps': { c:'Онбординг', l:'ИИ-помощник: кнопка шагов', w:'Попап ИИ-помощника', i:true, t:'Открыть шаги' },
   'nb.ask.again': { c:'Онбординг', l:'ИИ-помощник: спросить ещё раз', w:'Попап ИИ-помощника', i:true, t:'Спросить ещё раз' },
-  'nb.step.ask': { c:'Онбординг', l:'Шаг «Вопрос о своей проблеме» — название', w:'Шаги знакомства', i:true, t:'Вопрос о своей проблеме' },
+  'nb.step.ask': { c:'Онбординг', l:'Шаг «Что тебя интересует» — название', w:'Шаги знакомства', i:true, t:'Что тебя сейчас интересует' },
   'nb.why.ask': { c:'Онбординг', l:'Шаг «Вопрос о своей проблеме» — пояснение', w:'Шаги знакомства', i:true, t:'Одной фразой, что сейчас мешает продавать.' },
   'nb.step.channel_tg': { c:'Онбординг', l:'Шаг «Вступление в канал» — название', w:'Шаги знакомства', i:true, t:'Вступление в канал' },
   'nb.why.channel_tg': { c:'Онбординг', l:'Шаг «Вступление в канал» — пояснение', w:'Шаги знакомства', i:true, t:'Там выходят занятия. Без этого ссылки не откроются.' },
@@ -15965,16 +16020,16 @@ const APP_TEXTS = {
   'nb.why.chat_tg': { c:'Онбординг', l:'Шаг «Вступление в чат» — пояснение (Телеграм)', w:'Шаги знакомства', i:true, t:'В чате отвечают на вопросы между эфирами.' },
   'nb.step.chat_vk': { c:'Онбординг', l:'Шаг «Вступление в беседу» — название (ВКонтакте)', w:'Шаги знакомства', i:true, t:'Вступление в беседу ВК' },
   'nb.why.chat_vk': { c:'Онбординг', l:'Шаг «Вступление в беседу» — пояснение (ВКонтакте)', w:'Шаги знакомства', i:true, t:'В беседе отвечают на вопросы между эфирами.' },
-  'nb.step.lecture': { c:'Онбординг', l:'Шаг «Первое занятие или выжимка» — название', w:'Шаги знакомства', i:true, t:'Первое занятие или выжимка' },
-  'nb.why.lecture': { c:'Онбординг', l:'Шаг «Первое занятие или выжимка» — пояснение', w:'Шаги знакомства', i:true, t:'Одно занятие, 40 минут. Или его выжимка за минуту.' },
+  'nb.step.lecture': { c:'Онбординг', l:'Шаг «Открыть первую лекцию» — название (смотреть, слушать, выжимка — один шаг)', w:'Шаги знакомства', i:true, t:'Открыть первую лекцию' },
+  'nb.why.lecture': { c:'Онбординг', l:'Шаг «Открыть первую лекцию» — пояснение', w:'Шаги знакомства', i:true, t:'Смотри, слушай в дороге как подкаст или прочитай выжимку за минуту.' },
   'nb.step.audio': { c:'Онбординг', l:'Шаг «Занятие в режиме подкаста» — название', w:'Шаги знакомства', i:true, t:'Занятие в режиме подкаста' },
   'nb.why.audio': { c:'Онбординг', l:'Шаг «Занятие в режиме подкаста» — пояснение', w:'Шаги знакомства', i:true, t:'Занятия можно слушать в дороге, экран не нужен.' },
-  'nb.step.live': { c:'Онбординг', l:'Шаг «Запись на эфир» — название', w:'Шаги знакомства', i:true, t:'Запись на эфир' },
-  'nb.why.live': { c:'Онбординг', l:'Шаг «Запись на эфир» — пояснение', w:'Шаги знакомства', i:true, t:'Эфиры по четвергам и пятницам. Там можно задать вопрос лично.' },
+  'nb.step.live': { c:'Онбординг', l:'Шаг «Записаться на живую встречу» — название', w:'Шаги знакомства', i:true, t:'Записаться на живую встречу' },
+  'nb.why.live': { c:'Онбординг', l:'Шаг «Записаться на живую встречу» — пояснение', w:'Шаги знакомства', i:true, t:'По четвергам и пятницам Денис разбирает вопросы вживую. Добавь встречу в календарь — можно прийти просто послушать.' },
   'nb.step.game': { c:'Онбординг', l:'Шаг «Первый ход в игре» — название', w:'Шаги знакомства', i:true, t:'Первый ход в игре' },
   'nb.why.game': { c:'Онбординг', l:'Шаг «Первый ход в игре» — пояснение', w:'Шаги знакомства', i:true, t:'Три хода против бога продаж. Арбитр разберёт каждый.' },
   'nb.step.tour': { c:'Онбординг', l:'Шаг «Тур целиком» — название', w:'Шаги знакомства', i:true, t:'Тур целиком' },
-  'nb.why.tour': { c:'Онбординг', l:'Шаг «Тур целиком» — пояснение', w:'Шаги знакомства', i:true, t:'Две минуты, пять экранов. Можно пропустить.' },
+  'nb.why.tour': { c:'Онбординг', l:'Шаг «Тур целиком» — пояснение', w:'Шаги знакомства', i:true, t:'Две минуты, пять экранов, первая партия в игре. Можно пропустить.' },
   'nb.step.plat2_tg': { c:'Онбординг', l:'Шаг «Заглянуть в резерв ВК» — название', w:'Шаги знакомства', i:true, t:'Заглянуть в резерв ВК' },
   'nb.why.plat2_tg': { c:'Онбординг', l:'Шаг «Заглянуть в резерв ВК» — пояснение', w:'Шаги знакомства', i:true, t:'Часть занятий и эфиров идёт и там. Доступ выдаётся один раз, дальше кнопки просто работают.' },
   'nb.step.plat2_vk': { c:'Онбординг', l:'Шаг «Заглянуть в Телеграм» — название', w:'Шаги знакомства', i:true, t:'Заглянуть в Телеграм' },
@@ -15983,6 +16038,27 @@ const APP_TEXTS = {
   'nb.why.home': { c:'Онбординг', l:'Шаг «Апп на экране телефона» — пояснение', w:'Шаги знакомства', i:true, t:'Иконка на экране — и клуб открывается в одно касание.' },
   'nb.step.plan': { c:'Онбординг', l:'Шаг «Личный план по темам» — название', w:'Шаги знакомства', i:true, t:'Личный план по темам' },
   'nb.why.plan': { c:'Онбординг', l:'Шаг «Личный план по темам» — пояснение', w:'Шаги знакомства', i:true, t:'Отметь темы, которые волнуют, — план соберётся сам.' },
+  /* v395: новые строки знакомства — окна, малый блок, встреча, стрелки */
+  'nb.mand.counter': { c:'Онбординг', l:'Окно обязательного шага — счётчик ({n} из {m})', w:'Окно по центру', i:true, t:'Шаг {n} из {m}' },
+  'nb.mand.done_line': { c:'Онбординг', l:'Окно обязательного шага — строка о сделанном шаге ({n})', w:'Окно по центру', i:true, t:'{n} — готово' },
+  'nb.more.title': { c:'Онбординг', l:'Малый блок после первых шагов — заголовок', w:'Главная', i:true, t:'Что ещё есть в приложении' },
+  'nb.more.sub': { c:'Онбординг', l:'Малый блок — подпись ({n} — сколько шагов осталось)', w:'Главная', i:true, t:'Осталось шагов: {n}. За каждый — очки знакомства' },
+  'nb.more.btn': { c:'Онбординг', l:'Малый блок — кнопка', w:'Главная', i:true, t:'Узнать' },
+  'nb.live.title': { c:'Онбординг', l:'Окно ближайшей встречи — заголовок', w:'Окно встречи', i:true, t:'Живая встреча с Денисом' },
+  'nb.live.sub': { c:'Онбординг', l:'Окно ближайшей встречи — пояснение', w:'Окно встречи', i:true, t:'Денис разбирает вопросы участников вживую. Можно прийти просто послушать — добавь встречу в календарь, чтобы не пропустить.' },
+  'nb.live.now': { c:'Онбординг', l:'Окно встречи — пометка «идёт сейчас»', w:'Окно встречи', i:true, t:'Идёт прямо сейчас' },
+  'nb.live.join': { c:'Онбординг', l:'Окно встречи — кнопка «зайти», пока встреча идёт', w:'Окно встречи', i:true, t:'Зайти сейчас' },
+  'nb.live.cal': { c:'Онбординг', l:'Кнопка «в календарь» (разовая встреча)', w:'Окно встречи и попап дня', i:true, t:'Добавить в календарь' },
+  'nb.live.cal_weekly': { c:'Онбординг', l:'Кнопка «в календарь каждую неделю»', w:'Окно встречи и попап дня', i:true, t:'Каждую неделю — в календарь' },
+  'nb.live.cal_once': { c:'Онбординг', l:'Кнопка «в календарь только эту встречу»', w:'Окно встречи и попап дня', i:true, t:'Только эту встречу' },
+  'nb.live.points': { c:'Онбординг', l:'Окно встречи — баллы за календарь ({n})', w:'Окно встречи', i:true, t:'За встречу в календаре — +{n} баллов клуба' },
+  'nb.live.awarded': { c:'Онбординг', l:'Всплывашка: баллы за календарь начислены ({n})', w:'Всплывашка', i:true, t:'+{n} баллов клуба за встречу в календаре' },
+  'nb.live.all': { c:'Онбординг', l:'Окно встречи — ссылка на расписание', w:'Окно встречи', i:true, t:'Всё расписание' },
+  'nb.live.close': { c:'Онбординг', l:'Окно встречи — закрыть', w:'Окно встречи', i:true, t:'Закрыть' },
+  'nb.live.none': { c:'Онбординг', l:'Ближайших встреч нет', w:'Всплывашка', i:true, t:'Ближайших встреч пока нет — вот расписание' },
+  'nb.live.not_yet': { c:'Онбординг', l:'Попап дня: встреча ещё не началась', w:'Попап дня в расписании', i:true, t:'Ссылка на встречу появится здесь, когда она начнётся' },
+  'nb.arrow.save': { c:'Онбординг', l:'Стрелка у значка «смотреть позже»', w:'Стрелки-подсказки', i:true, t:'Отложи на потом' },
+  'nb.arrow.listen': { c:'Онбординг', l:'Стрелка у кнопки «Слушать»', w:'Стрелки-подсказки', i:true, t:'Можно слушать как подкаст' },
   'nb.step.intro': { c:'Онбординг', l:'Шаг «Рассказ о себе в чате» — название', w:'Шаги знакомства', i:true, t:'Рассказ о себе в чате' },
   'nb.why.intro': { c:'Онбординг', l:'Шаг «Рассказ о себе в чате» — пояснение', w:'Шаги знакомства', i:true, t:'Два предложения: кто ты и что продаёшь. Люди отвечают.' },
 };
@@ -17009,7 +17085,10 @@ function nbApplyState(st){
 async function nbEvent(key, note){
   if (!nbState || !nbState.active || !telegramId) return;
   var step = (nbState.steps || []).find(function(s){ return s.k === key; });
-  if (step && step.done >= step.cap) return;   // уже закрыт — не дёргаем сервер
+  /* v395: шага нет в списке (снят в настройке — например, отдельная игра) —
+     молчим, а не ловим «такого шага нет» */
+  if (!step) return;
+  if (step.done >= step.cap) return;   // уже закрыт — не дёргаем сервер
   try {
     var r = await apiRequest(API_URL + '/onb/event', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -17038,7 +17117,10 @@ async function nbLater(key){
 /* Хук самоинициации: старые отметки тура (onbDone) и прямые действия зовут
    сюда. Ключи тура → ключи знакомства */
 function nbHook(key){
-  var map = { live: 'live', plan: 'plan', games: 'game', lib: 'lecture' };
+  /* v395: игры — только в туре ([stated] Denis 27.09), отдельного шага нет.
+     Сохранение занятия шаг лекции больше не закрывает: его закрывает переход
+     по кнопке занятия (смотреть, слушать, выжимка) */
+  var map = { live: 'live', plan: 'plan' };
   if (map[key]) nbEvent(map[key], 'сделано в аппе');
 }
 
@@ -17087,9 +17169,13 @@ function nbDoStep(key){
     case 'chat':    vk ? (openVkLink(VK_CHAT_LINK), nbEvent('chat', 'открыл беседу ВК')) : openTgAccess('chat'); break;
     case 'plat2':   vk ? linkTelegramFromVk() : openVkAccessFlow(); break;
     case 'home':    openAddToHomeScreenPopup(); break;
-    case 'lecture': switchView('library'); break;
-    case 'audio':   switchView('library'); showToast(nbT('next.audio_hint') || 'Нажми «Слушать» у любого занятия'); break;
-    case 'live':    switchView('schedule'); break;
+    /* v395: лекция и аудио — один шаг. Ведём в библиотеку и показываем
+       стрелкой, что занятие можно слушать */
+    case 'lecture':
+    case 'audio':   switchView('library'); nbPointListen(); break;
+    /* v395: не голое расписание, а окно ближайшей встречи с кнопкой «в
+       календарь» ([stated] Denis 27.09: «может проще чисто попап самим открыть») */
+    case 'live':    nbOpenLive(); break;
     case 'game':    switchView('games'); break;
     case 'plan':    openPersonalPlan(); break;
     /* v367: рассказ о себе проверять нечем — засчитывается по нажатию
@@ -17130,8 +17216,13 @@ function nbRenderStart(){
   if (st.prologue && st.prologue.has_card && !(st.prologue.claimed && (st.level || 0) >= 2)){
     var unl = st.prologue.unlocked, cl = st.prologue.claimed;
     var god = (typeof QUIZ_RESULTS !== 'undefined' && QUIZ_RESULTS[st.facts && st.facts.quiz_code] && QUIZ_RESULTS[st.facts.quiz_code].god) || 'бог';
-    h += '<div class="nb-prolog" onclick="switchView(\'profile\')"><div class="nb-art' + (unl ? '' : ' locked') + '">' + (unl ? '' : '<div class="nb-lk"></div>') + '</div><div class="nb-t">' +
-      (!unl ? '<b>' + esc2(nbT('prolog.wait')) + '</b><div class="nb-sub">' + esc2(nbT('prolog.wait_sub', {god: god})) + '</div>' :
+    /* v395: у блока своя картинка — сама карта из каталога ([stated] Denis
+       27.09: «картинка из пака пролога не показывается»), и нажатие ведёт
+       туда, где с ней что-то можно сделать: заперта — к шагам, открыта — забрать,
+       забрана — посмотреть. Раньше нажатие молча открывало профиль */
+    var art = nbPrologueArt(st.prologue.card_key);
+    h += '<div class="nb-prolog" onclick="nbPrologueTap()"><div class="nb-art' + (unl ? '' : ' locked') + '"' + (art ? ' style="background-image:url(\'' + esc2(art).replace(/'/g, '%27') + '\')"' : '') + '>' + (unl ? '' : '<div class="nb-lk"></div>') + '</div><div class="nb-t">' +
+      (!unl ? '<b>' + esc2(nbT('prolog.wait')) + '</b><div class="nb-sub">' + esc2(nbCap(nbT('prolog.wait_sub', {god: god}))) + '</div>' :
        (!cl ? '<b>' + esc2(nbT('prolog.open')) + '</b><button class="nb-btn" style="margin-top:6px;padding:9px" onclick="event.stopPropagation();nbClaimPrologue(' + st.prologue.card_id + ')">' + esc2(nbT('prolog.claim')) + '</button>' :
               '<b>' + esc2(nbT('prolog.owned')) + '</b><div class="nb-sub">' + esc2(nbT('prolog.owned_sub')) + '</div>')) +
       '</div></div>';
@@ -17144,7 +17235,17 @@ function nbRenderStart(){
   /* Следующий шаг — пока знакомство идёт */
   if ((st.level || 0) < 2){
     var n = st.next, all = (st.steps || []).length, dn = (st.steps || []).filter(function(s){ return s.done >= s.cap; }).length;
-    if (n){
+    /* v395: КРУПНЫЙ БЛОК — ТОЛЬКО ДЛЯ ПЕРВЫХ ШАГОВ ([stated] Denis 27.09:
+       «Следующий шаг» после трёх шагов «начинает грузить»). Обязательные и
+       шаги с `hero` (встреча, вопрос, первая лекция) — крупно; дальше —
+       маленькое «Что ещё есть в приложении» с одной спокойной кнопкой.
+       «Пропустить знакомство» нет нарочно: галочки просто висят открытыми */
+    if (n && !n.mand && !nbIsHero(n)){
+      var left = (st.steps || []).filter(function(s){ return s.done < s.cap; }).length;
+      h += '<div class="nb-more" onclick="nbOpenSheet()"><div class="nb-more-t"><b>' + esc2(nbT('more.title') || 'Что ещё есть в приложении') + '</b>' +
+        '<div class="nb-sub">' + esc2(nbT('more.sub', {n: left})) + '</div></div>' +
+        '<button class="nb-more-btn" onclick="event.stopPropagation();nbOpenSheet()">' + esc2(nbT('more.btn') || 'Узнать') + '</button></div>';
+    } else if (n){
       h += '<div class="nb-start"><h3>' + esc2(nbT('next.title') || 'Следующий шаг') + '</h3><div><b>' + esc2(nbStepName(n)) + '</b>' + (n.mand ? '<span class="nb-mand">' + esc2(nbT('next.mand_tag') || 'обязательно') + '</span>' : '') + '</div>' +
         '<div class="nb-sub">' + esc2(nbStepWhy(n)) + '</div>' +
         '<button class="nb-btn" onclick="nbDoStep(\'' + n.k + '\')">' + esc2(nbT('next.do') || 'Сделать') + '</button>' +
@@ -17160,6 +17261,32 @@ function nbRenderStart(){
   host.innerHTML = h;
 }
 function nbStaffCached(){ try { return localStorage.getItem('nb_staff_' + telegramId) === '1'; } catch(e){ return false; } }
+/* v395: строка может начинаться с подстановки («бог в юности…») — с заглавной */
+function nbCap(s){ s = String(s || ''); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+/* v395: крупный ли шаг. Сервер v14 шлёт `hero`; старый — нет, тогда по списку */
+var NB_HERO_FALLBACK = ['live', 'ask', 'lecture'];
+function nbIsHero(s){
+  if (!s) return false;
+  var full = (nbState && nbState.steps || []).find(function(x){ return x.k === s.k; }) || s;
+  if (typeof full.hero !== 'undefined') return !!full.hero;
+  return NB_HERO_FALLBACK.indexOf(s.k) >= 0;
+}
+/* Картинка «Пролога» — из каталога карт (он уже грузится для коллекции) */
+function nbPrologueArt(key){
+  if (!key) return '';
+  try {
+    var c = (cardCatalog || []).find(function(x){ return x.key === key; });
+    return c ? (cardArtSrc(c) || '') : '';
+  } catch(e){ return ''; }
+}
+function nbPrologueTap(){
+  var p = nbState && nbState.prologue;
+  if (!p) { switchView('profile'); return; }
+  if (!p.unlocked){ nbOpenSheet(); return; }
+  if (!p.claimed){ nbClaimPrologue(p.card_id); return; }
+  if (p.card_key && typeof openAlbumCard === 'function'){ try { openAlbumCard(p.card_key); return; } catch(e){} }
+  switchView('profile');
+}
 function esc2(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function nbL2Seen(){ try { return localStorage.getItem('nb_l2_seen_' + telegramId) === '1'; } catch(e){ return false; } }
 function nbL2Ack(){ try { localStorage.setItem('nb_l2_seen_' + telegramId, '1'); } catch(e){} nbRenderStart(); }
@@ -17203,7 +17330,9 @@ function nbRenderSheet(){
     h += '<div class="nb-g">' + esc2(g.t) + '</div>';
     list.forEach(function(s){
       var done = s.done >= s.cap;
-      h += '<div class="nb-i' + (done ? ' dn' : '') + (s.soon ? ' soon' : '') + '"' + (done || s.soon ? '' : ' onclick="nbDoStep(\'' + s.k + '\')"') + '><span class="nb-bx"></span><span class="nb-n">' + esc2(nbStepName(s)) + '</span><span class="nb-go">' + (done ? '' : (s.soon ? esc2(nbT('chk.soon', {day: s.day})) : ('+' + s.p))) + '</span></div>';
+      /* v395: шаг «со второго дня» тоже нажимается ([stated] Denis 27.09: «если
+         человек сам хочет продолжить — пускай»). Пометка дня остаётся */
+      h += '<div class="nb-i' + (done ? ' dn' : '') + (s.soon ? ' soon' : '') + '"' + (done ? '' : ' onclick="nbDoStep(\'' + s.k + '\')"') + '><span class="nb-bx"></span><span class="nb-n">' + esc2(nbStepName(s)) + '</span><span class="nb-go">' + (done ? '' : (s.soon ? esc2(nbT('chk.soon', {day: s.day})) : ('+' + s.p))) + '</span></div>';
     });
   });
   el.innerHTML = h;
@@ -17236,7 +17365,17 @@ function nbRenderMand(){
   /* v367: все надписи — из настройки знакомства (`texts`), правятся в дашборде */
   var test = (nbState.test_facts || []).indexOf(k) >= 0
     ? '<div class="nb-sub" style="color:#d98a3a">' + esc2(nbT('mand.test_note') || 'Тестовая подмена') + '</div>' : '';
-  var h = '<div class="nb-h">' + esc2(nbStepName(s)) + '</div>';
+  /* v395: ОКНА КАНАЛА И ЧАТА ВЫГЛЯДЕЛИ ОДИНАКОВО ([stated] Denis 27.09): вернулся
+     из канала — и не видно, что что-то сменилось. Теперь сверху «Шаг 1 из 2»,
+     а над вторым окном — зелёная строка о том, что первое сделано */
+  var mandAll = (nbState.steps || []).filter(function(x){ return x.mand; });
+  var pos = mandAll.findIndex(function(x){ return x.k === k; });
+  var h = '';
+  if (mandAll.length > 1 && pos >= 0) h += '<div class="nb-cnt">' + esc2(nbT('mand.counter', {n: pos + 1, m: mandAll.length}) || ('Шаг ' + (pos + 1) + ' из ' + mandAll.length)) + '</div>';
+  mandAll.slice(0, Math.max(0, pos)).forEach(function(x){
+    if (x.done >= x.cap) h += '<div class="nb-okline"><i></i><span>' + esc2(nbT('mand.done_line', {n: nbStepName(x)}) || (nbStepName(x) + ' — готово')) + '</span></div>';
+  });
+  h += '<div class="nb-h">' + esc2(nbStepName(s)) + '</div>';
   if (nbMandPhase === 'wait'){
     h += '<div class="nb-sub">' + esc2(nbT('mand.wait')) + '</div>' + test +
          '<div class="nb-wait"><span class="nb-spin"></span><span>' + esc2(nbT('mand.checking') || 'Проверяю…') + '</span></div>' +
@@ -17399,6 +17538,21 @@ async function nbTestApply(reset){
     showToast(reset ? 'Знакомство начато заново' : 'Применено');
   } catch(e){ var o = document.getElementById('nbt-out'); if (o) o.textContent = 'Ошибка: ' + (e.message || e); showToast(e.message || 'Не получилось'); }
 }
+/* v395: ВСЕ ПОДСКАЗКИ ЗАНОВО. Они показываются один раз на устройство и
+   помнят это в памяти телефона — сброс знакомства их не трогал, и Denis не
+   увидел подсказку про «смотреть позже» ([stated] 27.09) */
+function nbTestHintsReset(){
+  var n = 0;
+  try {
+    var ks = [];
+    for (var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if (k && (k.indexOf('club_app_tip_') === 0 || k.indexOf('club_app_arrow_') === 0 || k === 'club_app_ai_save_hint')) ks.push(k);
+    }
+    ks.forEach(function(k){ localStorage.removeItem(k); n++; });
+  } catch(e){}
+  showToast(n ? ('Подсказки снова покажутся: ' + n) : 'Подсказки и так не показывались');
+}
 async function nbTestDisable(){
   try {
     await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), disable: true }) }, 15000);
@@ -17410,6 +17564,169 @@ async function nbTestClear(){
     var r = await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegram_id: Number(telegramId), clear_test: true }) }, 15000);
     nbMandDeferUntil = 0; nbApplyState(r.state); showToast('Больше не притворяемся — всё по-настоящему');
   } catch(e){ showToast(e.message || 'Не получилось'); }
+}
+
+/* ══ v395: СТРЕЛКИ-ПОДСКАЗКИ ════════════════════════════════════════════════
+   Одна стрелка на экране за раз. Каждая — один раз на устройство (ключ
+   `club_app_arrow_<имя>`), `force` — показать, даже если уже видел (шаг
+   знакомства сам просит). Стрелка едет за целью при прокрутке и гаснет сама */
+var nbArrowTimer = null, nbArrowRaf = null, nbArrowTarget = null;
+function nbArrowSeen(key){ try { return localStorage.getItem('club_app_arrow_' + key) === '1'; } catch(e){ return false; } }
+function nbArrow(key, target, force){
+  if (!target || !target.getBoundingClientRect) return;
+  if (!force && nbArrowSeen(key)) return;
+  try { localStorage.setItem('club_app_arrow_' + key, '1'); } catch(e){}
+  var el = document.getElementById('nb-arrow'), tag = document.getElementById('nb-arrow-tag');
+  if (!el || !tag) return;
+  tag.textContent = nbT('arrow.' + key) || '';
+  nbArrowTarget = target;
+  el.classList.add('open');
+  nbArrowPlace();
+  clearTimeout(nbArrowTimer);
+  nbArrowTimer = setTimeout(nbArrowHide, 6500);
+  var track = function(){ if (!nbArrowTarget) return; nbArrowPlace(); nbArrowRaf = requestAnimationFrame(track); };
+  cancelAnimationFrame(nbArrowRaf); nbArrowRaf = requestAnimationFrame(track);
+  target.addEventListener('click', nbArrowHide, { once: true });
+}
+function nbArrowPlace(){
+  var el = document.getElementById('nb-arrow'), t0 = nbArrowTarget;
+  if (!el || !t0) return;
+  var r = t0.getBoundingClientRect();
+  if (!r.width || r.bottom < 0 || r.top > innerHeight){ el.style.opacity = '0'; return; }
+  el.style.opacity = '';
+  var up = r.top < 80;               // над целью места нет — стрелка снизу, остриём вверх
+  el.classList.toggle('up', up);
+  el.style.left = Math.round(Math.min(Math.max(r.left + r.width / 2, 60), innerWidth - 60)) + 'px';
+  el.style.top = Math.round(up ? r.bottom + 4 : r.top - 4) + 'px';
+}
+function nbArrowHide(){
+  clearTimeout(nbArrowTimer); cancelAnimationFrame(nbArrowRaf);
+  nbArrowTarget = null;
+  var el = document.getElementById('nb-arrow'); if (el) el.classList.remove('open');
+}
+/* Шаг «первая лекция»: библиотека, первое занятие с аудио — к центру экрана и
+   стрелка на «Слушать». Нет занятий с аудио — просто библиотека */
+async function nbPointListen(){
+  try {
+    await tourWaitFor(function(){ var l = document.getElementById('lib-list'); return l && !l.querySelector('.loading') && l.children.length > 0; }, 6000);
+    var btn = document.querySelector('#lib-list .listen-btn:not(.locked)');
+    if (!btn) return;
+    var card = btn.closest('.lec-card') || btn;
+    var r = card.getBoundingClientRect();
+    window.scrollTo({ top: Math.max(0, r.top + (window.pageYOffset || 0) - innerHeight / 3), behavior: 'smooth' });
+    setTimeout(function(){ nbArrow('listen', btn, true); }, 650);
+  } catch(e){}
+}
+
+/* ══ v395: ОКНО БЛИЖАЙШЕЙ ВСТРЕЧИ ════════════════════════════════════════════
+   Сервер (`/onb/live-next`) отдаёт встречи, куда зовём новичков ([stated]
+   Denis 27.09: только живые занятия с ним — не воскресные встречи участников и
+   не книжный клуб; флаг правится в дашборде). Шаг закрывается нажатием «в
+   календарь» или «зайти» — проверять, добавил ли, нечем и не нужно */
+var nbLiveItems = [], nbLivePts = 0;
+async function nbOpenLive(){
+  var r = null;
+  try { r = await apiRequest(API_URL + '/onb/live-next?telegram_id=' + (telegramId || 0) + '&limit=3', {}, 10000); } catch(e){}
+  if (!r || !r.found || !(r.items || []).length){
+    switchView('schedule');
+    showToast(nbT('live.none') || 'Ближайших встреч пока нет — вот расписание');
+    return;
+  }
+  nbLiveItems = r.items; nbLivePts = r.calendar_points || 0;
+  nbRenderLive();
+  document.getElementById('nb-live-overlay').classList.add('open');
+}
+function nbCloseLive(){ var o = document.getElementById('nb-live-overlay'); if (o) o.classList.remove('open'); }
+function nbWhenLabel(ts){
+  try {
+    var d = new Date(ts);
+    var wd = d.toLocaleDateString('ru-RU', { weekday: 'long' });
+    var dm = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    var hm = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return wd.charAt(0).toUpperCase() + wd.slice(1) + ', ' + dm + ', ' + hm;
+  } catch(e){ return ''; }
+}
+function nbRenderLive(){
+  var m = nbLiveItems[0]; if (!m) return;
+  var h = '<div class="nb-h">' + esc2(nbT('live.title') || 'Живая встреча') + '</div>' +
+    '<div class="nb-sub">' + esc2(nbT('live.sub')) + '</div>' +
+    '<div class="nb-meet"><b>' + esc2(m.title) + '</b><div class="nb-when">' + esc2(nbWhenLabel(m.start_ts)) + '</div>' +
+    (m.live_now ? '<span class="nb-now">' + esc2(nbT('live.now') || 'Идёт сейчас') + '</span>' : '') + '</div>';
+  if (m.live_now && m.link) h += '<button class="nb-btn" onclick="nbLiveJoin()">' + esc2(nbT('live.join') || 'Зайти сейчас') + '</button>';
+  if (m.weekly){
+    h += '<button class="nb-btn' + (m.live_now ? ' ghost' : '') + '" onclick="nbLiveCal(0, 1)">' + esc2(nbT('live.cal_weekly') || 'Каждую неделю — в календарь') + '</button>' +
+         '<button class="nb-btn ghost" onclick="nbLiveCal(0, 0)">' + esc2(nbT('live.cal_once') || 'Только эту встречу') + '</button>';
+  } else {
+    h += '<button class="nb-btn' + (m.live_now ? ' ghost' : '') + '" onclick="nbLiveCal(0, 0)">' + esc2(nbT('live.cal') || 'Добавить в календарь') + '</button>';
+  }
+  if (nbLivePts > 0) h += '<div class="nb-pts">' + esc2(nbT('live.points', {n: nbLivePts})) + '</div>';
+  h += '<button class="nb-btn ghost" onclick="nbCloseLive();switchView(\'schedule\')">' + esc2(nbT('live.all') || 'Всё расписание') + '</button>' +
+       '<button class="nb-btn ghost" onclick="nbCloseLive()">' + esc2(nbT('live.close') || 'Закрыть') + '</button>';
+  document.getElementById('nb-live-body').innerHTML = h;
+}
+/* Адрес события для календаря. На Android — Google Календарь (файл там
+   открывается через «Загрузки»), на остальных — файл .ics: айфон сам
+   предлагает «Добавить в календарь» */
+function nbCalUrl(key, date, weekly){
+  var android = /Android/i.test(navigator.userAgent || '');
+  return API_URL + '/onb/ics?key=' + encodeURIComponent(key) + '&date=' + encodeURIComponent(date || '') +
+    '&repeat=' + (weekly ? 1 : 0) + (android ? '&fmt=google' : '');
+}
+/* Человек нажал «в календарь»: сначала открываем (жест пальца нужен сейчас,
+   а не после ответа сервера), потом засчитываем шаг и баллы */
+function nbCalGo(key, date, weekly){
+  openUrl(nbCalUrl(key, date, weekly));
+  try { nbEvent('live', weekly ? 'встреча в календарь каждую неделю' : 'встреча в календарь'); } catch(e){}
+  if (telegramId && isMember){
+    apiRequest(API_URL + '/onb/calendar-click', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), key: key }) }, 10000)
+      .then(function(r){
+        if (!r || !r.awarded) return;
+        nbLivePts = 0;
+        try { points += r.awarded; renderLevelCard(); } catch(e){}   // как у просмотра занятия
+        showToast(nbT('live.awarded', {n: r.awarded}) || ('+' + r.awarded));
+      })
+      .catch(function(){});
+  }
+}
+function nbLiveCal(i, weekly){
+  var m = nbLiveItems[i]; if (!m) return;
+  nbCalGo(m.key, m.date, weekly);
+  nbCloseLive();
+}
+function nbLiveJoin(){
+  var m = nbLiveItems[0]; if (!m || !m.link) return;
+  openUrl(m.link);
+  try { nbEvent('live', 'зашёл на встречу'); } catch(e){}
+  nbCloseLive();
+}
+
+/* ══ v395: СТЕНЫ ДОСТУПА ПРИТВОРЯЮТСЯ ВМЕСТЕ С ТЕСТОМ ════════════════════════
+   [stated] Denis 27.09: «стены тоже сделай закрытыми для теста». Притворство
+   «не вступал в канал» жило только в знакомстве: «Смотреть в ТГ» и «Смотреть в
+   VK» смотрели на настоящие отметки и пускали сразу. Теперь у своих в тесте
+   стена ведёт себя как у новичка; нажал в ней «получить доступ» или «я уже
+   там» — притворство снимается, и дальше решает настоящая проверка.
+   Только для своих (staff) — у обычного человека ничего не меняется */
+function nbWallKey(which){
+  var vk = nbState && nbState.facts && nbState.facts.platform === 'vk';
+  if (which === 'tg') return vk ? '' : 'channel';
+  return vk ? 'channel' : 'plat2';
+}
+function nbWallFake(which){
+  try {
+    if (!nbState || !nbState.staff) return false;
+    var k = nbWallKey(which);
+    return !!k && (nbState.test_facts || []).indexOf(k) >= 0;
+  } catch(e){ return false; }
+}
+async function nbWallRelease(which){
+  if (!nbWallFake(which)) return;
+  try {
+    await apiRequest(API_URL + '/onb/test', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: Number(telegramId), release_key: nbWallKey(which) }) }, 15000);
+  } catch(e){}
+  await nbLoad();
 }
 
 function levelBarMustHide(){
@@ -18620,6 +18937,11 @@ function onbModalTick(){
     clearTimeout(window._onbReturnTimer);
     window._onbReturnTimer = setTimeout(function(){
       if (!onbActive || !onbTrying || onbModalOpen()) return;
+      /* v395: ПОЛЕ ТЕМ ЗАКРЫЛОСЬ, НО АНКЕТА ИДЁТ ДАЛЬШЕ — второй и третий
+         вопрос живут уже не в окне, а на экране плана. Возврат карточки шага
+         перерисовывал экран картой, и опросы мелькали на полсекунды ([stated]
+         Denis 27.09). Пока анкета не закончена — тур ждёт */
+      if (onbTrying === 'plan' && planQuizOpen) return;
       if (document.getElementById('onb-wrap').classList.contains('open')) return;
       onbShow();
     }, 900);
@@ -21336,7 +21658,11 @@ function renderPlanScreen(){
 // план», «Пересобрать план →» — ни одна не обещает «продолжить с того же
 // места». Denis попросил вести себя буквально: полный сброс к пустым корням,
 // а не восстановление прежних галочек с заранее раскрытыми ветками
+/* v395: анкета плана идёт (от поля тем до «Показать план»). Держит тур от
+   возврата карточки шага посреди второго и третьего вопроса */
+var planQuizOpen = false;
 async function startPlanQuiz(){
+  planQuizOpen = true;
   planStep = 0;
   planDraft = { problems: [], expanded: [], level: '', depth: '', note: '' };
   switchView('plan');
@@ -22525,6 +22851,7 @@ function planPickLevel(key){ planDraft.level = key; planStep = 2; renderPlanQues
 function planPickDepth(key){ planDraft.depth = key; planStep = 3; renderPlanQuestion(); window.scrollTo(0, 0); }
 
 async function finishPlanQuiz(){
+  planQuizOpen = false;
   onbDone('plan');
   const noteEl = document.getElementById('plan-note');
   planDraft.note = noteEl ? noteEl.value.trim() : '';
@@ -22613,6 +22940,7 @@ function openInsightsModal(index, src){
   // Видео и PDF внутри попапа для него закрыты.
   const l = cardList(src)[index];
   if (!l || !(l.key_insights||[]).length) return;
+  if (isMember) try { nbEvent('lecture', 'открыл выжимку'); } catch(e){}   // v395: выжимка тоже закрывает шаг
 
   document.getElementById('insights-modal-title').textContent = l.title;
 
@@ -23699,7 +24027,7 @@ async function openVkAccessGate(index, src){
   pendingVkOpenSrc = src || 'lib';
   pendingVkOpenUrl = null;
   // Может оказаться, что доступ уже есть — тогда ворота не нужны вовсе
-  if (await vkAccessFresh()){ proceedAfterVkAccess(); return; }
+  if (!nbWallFake('vk') && await vkAccessFresh()){ proceedAfterVkAccess(); return; }
   document.getElementById('vk-access-overlay').classList.add('open');
 }
 
@@ -23707,7 +24035,7 @@ async function openVkAccessGate(index, src){
 async function openVkGateForUrl(url){
   pendingVkOpenIndex = null;
   pendingVkOpenUrl = url;
-  if (await vkAccessFresh()){ proceedAfterVkAccess(); return; }
+  if (!nbWallFake('vk') && await vkAccessFresh()){ proceedAfterVkAccess(); return; }
   document.getElementById('vk-access-overlay').classList.add('open');
 }
 
@@ -23725,7 +24053,7 @@ async function openVkAccessFlow(){
 
 function openVkLink(url){
   if (!isMember) { openPaywall(); return; }
-  if (!vkAccessGranted) { openVkGateForUrl(url); return; }
+  if (!vkAccessGranted || nbWallFake('vk')) { openVkGateForUrl(url); return; }
   openUrl(url);
 }
 
@@ -23745,6 +24073,7 @@ function markVkAccessGranted(){
 // в момент реального одобрения заявки, а мы её подхватываем при возврате в апп.
 async function grantVkAccessAndJoin(){
   document.getElementById('vk-access-overlay').classList.remove('open');
+  nbWallRelease('vk');   // v395: тест — дальше настоящая проверка
   let url = VK_GROUP_LINK;
   try {
     const r = await fetch(`${API_URL}/access/vk/start`, {
@@ -23759,7 +24088,8 @@ async function grantVkAccessAndJoin(){
   openUrl(url);
 }
 
-function alreadyHaveVkAccess(){
+async function alreadyHaveVkAccess(){
+  await nbWallRelease('vk');   // v395
   markVkAccessGranted();
   proceedAfterVkAccess();
 }
@@ -23838,14 +24168,14 @@ async function openTgAccessGate(index, src){
   pendingTgIndex = index;
   pendingTgSrc = src || 'lib';
   pendingTgUrl = null;
-  if (await tgChannelFresh()){ proceedAfterTgAccess(); return; }
+  if (!nbWallFake('tg') && await tgChannelFresh()){ proceedAfterTgAccess(); return; }
   document.getElementById('tg-access-overlay').classList.add('open');
 }
 
 async function openTgGateForUrl(url){
   pendingTgIndex = null;
   pendingTgUrl = url;
-  if (await tgChannelFresh()){ proceedAfterTgAccess(); return; }
+  if (!nbWallFake('tg') && await tgChannelFresh()){ proceedAfterTgAccess(); return; }
   document.getElementById('tg-access-overlay').classList.add('open');
 }
 
@@ -23857,12 +24187,13 @@ function openTgVideo(url){
   // ⚠️ БЕЗ TELEGRAM_ID ВОРОТА БЕССМЫСЛЕННЫ: сервер не сможет ни проверить
   // членство, ни выдать ссылку. Это человек из ВК или веб-версии — пускаем,
   // как пускали раньше. Настоящий путь для него — рукопожатие ВК→ТГ
-  if (!hasRealTg() || channelJoined){ openUrl(url); return; }
+  if (!hasRealTg() || (channelJoined && !nbWallFake('tg'))){ openUrl(url); return; }
   openTgGateForUrl(url);
 }
 
 function grantTgAccessAndJoin(){
   document.getElementById('tg-access-overlay').classList.remove('open');
+  nbWallRelease('tg');   // v395: тест — дальше настоящая проверка
   tgAccessWatch = true;
   openTgAccess('channel');     // та же цепочка, что у шага регистрации
 }
@@ -23871,6 +24202,7 @@ function grantTgAccessAndJoin(){
    там отметка ставится по нажатию. В Telegram есть getChatMember — пускать по
    заявлению значило бы своими руками оставить дыру в воротах */
 async function alreadyHaveTgAccess(){
+  await nbWallRelease('tg');   // v395
   if (await tgChannelFresh()){ proceedAfterTgAccess(); return; }
   showToast(t('tg.gate_not_yet'));
 }
@@ -23944,11 +24276,13 @@ function renderAccessRows(){
 
 function openLectureLink(index, platform, src) {
   if (!isMember) { openPaywall(); return; }
-  if (platform === 'vk' && !vkAccessGranted) { openVkAccessGate(index, src); return; }
-  if (platform !== 'vk' && hasRealTg() && !channelJoined) { openTgAccessGate(index, src); return; }
+  /* v395: у своих в тесте стена притворяется вместе со знакомством */
+  if (platform === 'vk' && (!vkAccessGranted || nbWallFake('vk'))) { openVkAccessGate(index, src); return; }
+  if (platform !== 'vk' && hasRealTg() && (!channelJoined || nbWallFake('tg'))) { openTgAccessGate(index, src); return; }
   const l = cardList(src)[index];
   if (!l) return;
   rememberLastLecture(l);
+  try { nbEvent('lecture', platform === 'vk' ? 'смотрит занятие в ВК' : 'смотрит занятие в ТГ'); } catch(e){}   // v395: шаг «первая лекция»
   openUrl(platform === 'vk' ? l.link_vk : l.link);
   if (telegramId && l.slug) {
     fetch(`${API_URL}/lectures/viewed`, {
@@ -24250,7 +24584,7 @@ function openDayPopup(dateStr){
       ${e.category ? `<div class="sched-event-time" style="color:${categoryColor(e.category)}">${e.category}${e.time ? ' · '+e.time : ''}</div>` : (e.time ? `<div class="sched-event-time">${e.time}</div>` : '')}
       <div class="sched-event-title">${e.title}</div>
       ${e.description ? `<div class="sched-event-desc">${e.description}</div>` : ''}
-      ${e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn${isMember?'':' locked'}" onclick="isMember ? openUrl(popupDayEvents[${i}].link) : openPaywall()">${isMember?'':'🔒 '}Перейти</button></div>` : ''}
+      ${schedEventActionsHtml(e, i, dateStr)}
       ${!isMember ? `<div style="margin-top:8px;text-align:center"><span style="font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline" onclick="openPaywall()">Попасть на занятие</span></div>` : ''}
     </div>`).join('');
   /* Записи с этого дня — отдельным блоком под встречами. Их может не быть
@@ -24268,6 +24602,50 @@ function openDayPopup(dateStr){
     );
   }
   document.getElementById('sched-popup-overlay').classList.add('open');
+}
+
+/* v395: КНОПКА ВСТРЕЧИ — ТОЛЬКО ПОКА ОНА ИДЁТ ([stated] Denis 27.09: «сейчас
+   воскресенье, а кнопка пятничной встречи позволяет зайти на телемост»).
+   Идёт — «Перейти». Ещё впереди — «в календарь» (у повторяющейся ещё и
+   «каждую неделю»), шаг знакомства и баллы за первое добавление. Прошла —
+   ничего. Время у событий — по Москве; окно — от 15 минут до начала и два
+   часа после (длительность в ответе /schedule не приходит) */
+function schedEventWindow(e, dateStr){
+  var m = /^(\d{1,2}):(\d{2})/.exec((e && e.time) || '');
+  if (!m || !dateStr) return null;
+  var p = dateStr.split('-').map(Number);
+  var start = Date.UTC(p[0], p[1] - 1, p[2], Number(m[1]) - 3, Number(m[2]));
+  return { start: start, from: start - 15 * 60000, end: start + (Number(e.duration_min) || 120) * 60000 };
+}
+function schedEventKey(e){
+  if (!e || e.id == null) return '';
+  var s = String(e.id);
+  if (s.indexOf('rule-') === 0) return 'rule:' + s.slice(5);
+  return /^\d+$/.test(s) ? ('event:' + s) : '';
+}
+function schedEventActionsHtml(e, i, dateStr){
+  if (!e || !e.link) return '';
+  if (!isMember) return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn locked" onclick="openPaywall()">🔒 Перейти</button></div>`;
+  var w = schedEventWindow(e, dateStr), key = schedEventKey(e), now = Date.now();
+  // Нет времени или не понять, что за событие, — как раньше
+  if (!w || !key) return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(popupDayEvents[${i}].link)">Перейти</button></div>`;
+  if (now >= w.from && now <= w.end) return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="schedJoin(${i})">Перейти</button></div>`;
+  if (now > w.end) return '';
+  var weekly = key.indexOf('rule:') === 0;
+  var btns = weekly
+    ? `<button class="lec-link-btn" onclick="schedCal(${i}, ${jsArg(dateStr)}, 1)">${esc2(nbT('live.cal_weekly') || 'Каждую неделю — в календарь')}</button><button class="lec-link-btn" onclick="schedCal(${i}, ${jsArg(dateStr)}, 0)">${esc2(nbT('live.cal_once') || 'Только эту встречу')}</button>`
+    : `<button class="lec-link-btn" onclick="schedCal(${i}, ${jsArg(dateStr)}, 0)">${esc2(nbT('live.cal') || 'Добавить в календарь')}</button>`;
+  return `<div class="sched-cal-row">${btns}</div><div class="sched-not-yet">${esc2(nbT('live.not_yet') || '')}</div>`;
+}
+function schedCal(i, dateStr, weekly){
+  var e = popupDayEvents[i]; if (!e) return;
+  var key = schedEventKey(e); if (!key) return;
+  nbCalGo(key, dateStr, weekly);
+}
+function schedJoin(i){
+  var e = popupDayEvents[i]; if (!e || !e.link) return;
+  openUrl(e.link);
+  try { nbEvent('live', 'зашёл на встречу из расписания'); } catch(err){}
 }
 
 function closeSchedPopup(){
@@ -25892,6 +26270,7 @@ function aiFirstSaveHint(){
   btns.forEach(function(b){ b.classList.add('hintme'); });
   // Подсказку вешаем на ПЕРВЫЙ значок и разрешаем её даже во время знакомства
   showOnbTip('onb.tip_ai_saved', '#ai-answer-area .save-btn', 700, true);
+  setTimeout(function(){ nbArrow('save', btns[0]); }, 900);   // v395: и стрелка на сам значок
 }
 
 // ── Init ──
@@ -28453,6 +28832,7 @@ async function loadCards(){
   renderCardsBadge();
   renderCollectionStrip();
   updateAppBadge();
+  try { nbRenderStart(); } catch(e){}   // v395: картинка «Пролога» — из каталога
 }
 
 function ownedMap(){
@@ -31916,7 +32296,7 @@ function playLecture(index, src){
   var list = cardList(src) || [];
   var clicked = list[index];
   if (!plHasAudio(clicked)) { showToast('У этого занятия пока нет аудиоверсии'); return; }
-  try { nbEvent('audio', 'включил аудио'); } catch(e){}
+  try { nbEvent('lecture', 'слушает занятие'); } catch(e){}   // v395: аудио — часть шага «первая лекция»
 
   var withAudio = list.filter(plHasAudio);
   var pos = withAudio.findIndex(function(x){ return x.slug === clicked.slug; });
@@ -32021,7 +32401,7 @@ function plLoadCurrent(autoplay){
       if (at) { try { plAudio.currentTime = at; } catch(e){} }
       // ⚠️ `try` НЕ ЛОВИТ ОТКАЗ ОБЕЩАНИЯ: `play()` отвечает отложенно, и на iOS
       // отказ «нужен жест человека» летел бы мимо обёртки прямо в чат
-      if (wasPlaying) { var pr = plAudio.play(); if (pr && pr.catch) pr.catch(function(){ plSetPlayIcon(false); }); }
+      if (wasPlaying) { var pr = plAudio.play(); if (pr && pr.catch) pr.catch(plSyncIcon); }
     }
   });
 
@@ -32062,9 +32442,14 @@ function plPlay(){
   var p = plAudio.play();
   // На iOS play() может отвергнуться, если жеста не было — тогда честно
   // показываем паузу, а не врём иконкой
-  if (p && p.catch) p.catch(function(){ plSetPlayIcon(false); });
+  if (p && p.catch) p.catch(plSyncIcon);
   plSetPlayIcon(true);
 }
+/* v395: ИКОНКА — ПО НАСТОЯЩЕМУ СОСТОЯНИЮ, а не «раз отказ, значит пауза».
+   При смене трека отказ прилетал от ПРЕЖНЕГО play(), прерванного сменой
+   адреса, когда новый трек уже играл, — и кнопка оставалась «плей» ([stated]
+   Denis 27.09). Спрашиваем сам плеер */
+function plSyncIcon(){ plSetPlayIcon(!!(plAudio && !plAudio.paused)); }
 
 function plTogglePlay(){
   if (!plAudio || !plQueue.length) return;
@@ -32372,6 +32757,7 @@ function plInit(){
     if (b) b.style.width = pct;
   });
   plAudio.addEventListener('play',  function(){ plSetPlayIcon(true); });
+  plAudio.addEventListener('playing', function(){ plSetPlayIcon(true); });   // v395: звук пошёл — значит «пауза»
   plAudio.addEventListener('pause', function(){
     plSetPlayIcon(false);
     var lec = plQueue[plIndex];
