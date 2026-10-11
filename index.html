@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v464 -->
+<!-- FILE_VERSION: index-v465 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -7340,6 +7340,15 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   <div class="mark">БП</div>
   <h2>Добавь на главный экран</h2>
   <p id="web-add-home-screen-text" data-text="home.add_hint">Это займёт 10 секунд — и апп будет открываться так же быстро, как обычное приложение.</p>
+  <!-- v465: на iPhone, но НЕ в Safari (Яндекс.Браузер, Chrome…) — шаги Safari
+       там не сходятся с экраном, а значок с «Домой» откроется вкладкой браузера.
+       Ведём в Safari: кнопка открытия (iOS 17+) и копия ссылки как запасной путь -->
+  <div id="hs-not-safari" style="display:none;width:100%;max-width:360px;margin-top:6px;text-align:center">
+    <p data-text="home.not_safari" style="margin-bottom:16px">Ты сейчас не в Safari. Чтобы клуб открывался как приложение, его нужно добавить на «Домой» именно из Safari.</p>
+    <button class="help-btn" style="width:100%;margin-bottom:10px" onclick="hsOpenInSafari()" data-text="home.open_safari_btn">Открыть в Safari</button>
+    <button class="help-btn" style="width:100%" onclick="hsCopyLink()" data-text="home.copy_link_btn">Скопировать ссылку</button>
+    <p data-text="home.copy_link_hint" style="font-size:12.5px;opacity:.75;margin-top:10px">Если Safari не открылся — скопируй ссылку и вставь её в адресную строку Safari.</p>
+  </div>
   <div id="web-add-home-screen-steps" style="display:none;width:100%;max-width:360px;margin-top:6px">
     <div class="hs-step">
       <div class="hs-step-num">1 шаг</div>
@@ -11652,7 +11661,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v464 · 11.10.2026 запасной сервер: если основной долго молчит и запасной это подтверждает — приложение само уходит на Railway, с плашкой; вернулся основной — возвращается';
+const APP_BUILD = 'v465 · 11.10.2026 экран «Добавь на главный» в Яндекс.Браузере, Chrome и других браузерах на iPhone ведёт открыть страницу в Safari, а не показывает шаги Safari';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17095,6 +17104,12 @@ const APP_TEXTS = {
   'login.no_bot': {
     c:'Вход и оплата', l:'Некуда прислать код', w:'Экран входа', i:false,
     t:'Номер нашёлся, но код прислать некуда: к нему не привязан бот клуба. Открой приложение из бота в Telegram или ВКонтакте — там вход без номера. Или напиши Денису.' },
+  'home.not_safari': { c:'Вход и оплата', l:'iPhone не в Safari — почему надо в Safari', w:'Экран «Добавь на главный экран»', i:false,
+    t:'Ты сейчас не в Safari. Чтобы клуб открывался как приложение, его нужно добавить на «Домой» именно из Safari.' },
+  'home.open_safari_btn': { c:'Вход и оплата', l:'iPhone не в Safari — кнопка открытия', w:'Экран «Добавь на главный экран»', i:false, t:'Открыть в Safari' },
+  'home.copy_link_btn': { c:'Вход и оплата', l:'iPhone не в Safari — кнопка копирования ссылки', w:'Экран «Добавь на главный экран»', i:false, t:'Скопировать ссылку' },
+  'home.copy_link_hint': { c:'Вход и оплата', l:'iPhone не в Safari — подсказка под кнопками', w:'Экран «Добавь на главный экран»', i:false, t:'Если Safari не открылся — скопируй ссылку и вставь её в адресную строку Safari.' },
+  'home.link_copied': { c:'Вход и оплата', l:'iPhone не в Safari — ссылка скопирована', w:'Всплывашка', i:false, t:'Ссылка скопирована — вставь её в Safari' },
   'home.add_hint': {
     c:'Вход и оплата', l:'Зачем ставить на «Домой»', w:'Экран «Добавь на главный экран»', i:false,
     t:'Это займёт 10 секунд — и апп будет открываться так же быстро, как обычное приложение.' },
@@ -30715,6 +30730,22 @@ async function proceedToWebLogin(){
 
 let addHomeThemeBefore = '';
 
+/* v465: Safari ли это на iPhone. Остальные браузеры на iOS работают на том же
+   движке и пишут в userAgent «Safari», поэтому ищем ИХ метки, а не Safari.
+   Встроенные браузеры Telegram и ВК показывают Safari-окно — их не трогаем */
+function isIosSafari(ua){
+  return !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|YaBrowser|YaApp|YaSearch|GSA\/|DuckDuckGo|Instagram|FBAN|FBAV|Line\/|MiuiBrowser|SamsungBrowser|UCBrowser|Puffin/i.test(ua || '');
+}
+function hsOpenInSafari(){
+  // Схема x-safari-https открывает Safari из других браузеров (iOS 17+).
+  // Не сработала — человек остаётся здесь и берёт ссылку кнопкой ниже
+  location.href = 'x-safari-' + location.href;
+}
+async function hsCopyLink(){
+  try { await navigator.clipboard.writeText(location.href); showToast(t('home.link_copied')); }
+  catch(e){ showToast(location.href); }
+}
+
 function proceedPastHomeScreenInstructions(){
   document.getElementById('web-add-home-screen-screen').style.display = 'none';
   // Возвращаем тему, которая была до этого экрана (см. её принудительное затемнение)
@@ -30761,7 +30792,13 @@ function startWebSession(){
   const ua = navigator.userAgent || '';
   const textEl = document.getElementById('web-add-home-screen-text');
   const stepsEl = document.getElementById('web-add-home-screen-steps');
-  if (/iPhone|iPad|iPod/i.test(ua)) {
+  if (/iPhone|iPad|iPod/i.test(ua) && !isIosSafari(ua)) {
+    // v465: тестер прислал этот экран из Яндекс.Браузера — шаги Safari там
+    // не совпадают с кнопками, а добавленный значок открывается вкладкой
+    textEl.style.display = 'none';
+    stepsEl.style.display = 'none';
+    document.getElementById('hs-not-safari').style.display = 'block';
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
     textEl.style.display = 'none';
     stepsEl.style.display = 'block';
   } else if (/Android/i.test(ua)) {
