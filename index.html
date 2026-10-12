@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v465 -->
+<!-- FILE_VERSION: index-v467 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11661,7 +11661,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v465 · 11.10.2026 экран «Добавь на главный» в Яндекс.Браузере, Chrome и других браузерах на iPhone ведёт открыть страницу в Safari, а не показывает шаги Safari';
+const APP_BUILD = 'v467 · 12.10.2026 запасная ссылка на оплату: если бот не собрал ссылки за 12 с, «База 990» приходит с сервера, а полный набор подменит её, как только бот ответит';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28708,9 +28708,19 @@ async function openAccessPage(){
   /* ⚠️ ЖДЁМ ДО 40 СЕКУНД, А НЕ 18 (02.09.2026). Ссылку собирает Salebot, и его
      задержка в час рекламы бывает в полминуты. Посередине меняем подпись,
      чтобы ожидание не выглядело зависанием */
+  /* v467 · ЗАПАСНАЯ ССЫЛКА. [stated] Denis 12.10: Salebot лёг вместе с
+     дата-центром, а ссылки собирает только он — купить было нельзя. Через
+     ~12 с без ответа бота берём у сервера «Базу 990» (скидку первого платежа
+     Продамус из ссылки пока не принимает, поэтому «рубля» в запасе нет) и
+     ПРОДОЛЖАЕМ ждать бота: ответит — его полный набор заменит запасной */
+  let fallbackShown = false;
   for (let i = 0; i < 26; i++) {
     await new Promise(r => setTimeout(r, 1500));
-    if (i === 6) el.innerHTML = '<div class="loading">Бот собирает ссылки под тебя, ещё чуть-чуть…</div>';
+    if (i === 6 && !fallbackShown) el.innerHTML = '<div class="loading">Бот собирает ссылки под тебя, ещё чуть-чуть…</div>';
+    if (i === 7 && !fallbackShown) {
+      const fb = await payFallbackLinks();
+      if (fb) { renderAccessButtons(fb); fallbackShown = true; track('pay_fallback_links'); }
+    }
     try {
       const r = await fetch(`${API_URL}/app/action?${actionIdentQuery()}&action=get_payment_links`);
       const data = await r.json();
@@ -28720,6 +28730,7 @@ async function openAccessPage(){
       }
     } catch (e) {}
   }
+  if (fallbackShown) return;
   el.innerHTML = accessLinksErrorHtml();
 }
 
@@ -28731,6 +28742,18 @@ async function openAccessPage(){
    ещё раз» зовёт этот же экран заново, запасной выход — оплатить в боте.
    Задержку отмечаем событием, чтобы в ленте было видно, сколько людей
    упирается именно здесь */
+async function payFallbackLinks(){
+  try {
+    const q = telegramId ? ('telegram_id=' + encodeURIComponent(telegramId))
+            : ((typeof vkUserId === 'function' && vkUserId()) ? ('vk_id=' + encodeURIComponent(vkUserId())) : '');
+    if (!q) return null;
+    const r = await fetch(`${API_URL}/payments/fallback-links?${q}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && d.monthly_link ? { monthly_link: d.monthly_link } : null;
+  } catch (e) { return null; }
+}
+
 function accessLinksErrorHtml(){
   track('access_open', 'links_late');
   return `<div class="empty" style="line-height:1.5">${escapeHtml(t('access.links_late'))}</div>`
