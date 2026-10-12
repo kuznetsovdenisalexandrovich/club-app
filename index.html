@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v469 -->
+<!-- FILE_VERSION: index-v470 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11671,7 +11671,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v469 · 13.10.2026 дайджест: слово редакции на полосах — вводное, комментарии к мыслям, закрывающее';
+const APP_BUILD = 'v470 · 13.10.2026 дайджест: подпись номера на несколько месяцев, порядковый номер, крупные обложки занятий';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -38021,6 +38021,8 @@ function dgsRender(d){
   if (!dgsPages.length){ dgsEmpty(t('digest.empty')); return; }
   let месяц = '';
   for (let i = 0; i < dgsPages.length; i++){
+    /* v470: номер на полтора месяца — «сентябрь — октябрь 2026» от сервера */
+    if (dgsPages[i].month_label){ месяц = dgsPages[i].month_label; break; }
     if (dgsPages[i].month){ месяц = dgsMonth(dgsPages[i].month); break; }
   }
   if (!месяц && d.period) месяц = dgsDate(d.period.to);
@@ -38164,7 +38166,7 @@ function dgsPage(p, месяц){
       + '<div class="dgs-veil"></div>'
       + '<div class="dgs-brand"><span>' + escapeHtml(t('digest.title')) + '</span><span>' + escapeHtml(месяц) + '</span></div>'
       + '<div class="dgs-cover-layer">'
-      +   '<div class="dgs-no">' + escapeHtml(String(p.month || '').split('-').pop() || '01') + '</div>'
+      +   '<div class="dgs-no">' + escapeHtml(p.no || String(p.month || '').split('-').pop() || '01') + '</div>'
       +   '<div class="dgs-cover-month">' + escapeHtml(месяц) + '</div>'
       +   '<div class="dgs-cover-dek">' + escapeHtml(подводка) + '</div>'
       +   (p.note ? '<div class="dgs-cover-note">' + dgsNoteParas(p.note) + '</div>' : '')
@@ -38264,14 +38266,22 @@ function dgsPage(p, месяц){
     if (p.layout === 'schedule' && m.time) подпись = (m.time + ' · ' + подпись).replace(/ · $/, '');
     else if (m.duration) подпись = (m.duration + ' мин · ' + подпись).replace(/ · $/, '');
     const строка = it.insight || {};
-    const мини = it.image_url
+    /* v470: у занятий в «Что было» обложка во всю ширину строки, а не марка
+       64×48 — [stated] Denis 13.10 «обложки можно крупнее» */
+    const крупно = p.layout === 'afisha' && it.image_url;
+    const мини = (it.image_url && !крупно)
       ? '<div class="dgs-art" style="flex:0 0 64px;height:48px;border-radius:12px 3px 12px 3px">'
+        + '<img src="' + escapeHtml(it.image_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>'
+      : '';
+    const баннер = крупно
+      ? '<div class="dgs-art" style="height:150px;border-radius:16px 4px 16px 4px;margin:4px 0 10px">'
         + '<img src="' + escapeHtml(it.image_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>'
       : '';
     return '<div class="dgs-row">'
       + '<div class="dgs-date">' + escapeHtml(дм[0]) + '<span>' + escapeHtml(дм[1]) + '</span></div>'
       + мини
       + '<div style="flex:1;min-width:0">'
+      +   баннер
       +   '<div class="dgs-t">' + escapeHtml(it.title || '') + '</div>'
       +   (подпись ? '<div class="dgs-s">' + escapeHtml(подпись) + '</div>' : '')
       +   (строка.text ? '<div class="dgs-idea-line">' + escapeHtml(строка.text) + '</div>' : '')
