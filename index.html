@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v468 -->
+<!-- FILE_VERSION: index-v469 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10530,6 +10530,16 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 .dgs-no{font-family:Georgia,serif;font-weight:400;font-size:108px;line-height:.82;
   letter-spacing:-.05em;margin:0 0 6px;color:#eadfc9}
 .dgs-cover-month{font-family:Georgia,serif;font-size:22px;color:#e7dcc8}
+/* v469: слово редакции — необязательный живой текст на любой полосе номера */
+.dgs-note{margin-top:20px;padding:14px 0 2px 16px;border-left:2px solid var(--dgs-accent);
+  font-family:Georgia,serif;font-style:italic;font-size:15px;line-height:1.55;color:var(--dgs-soft)}
+.dgs-note p{margin:0 0 10px}
+.dgs-note-l{font-family:inherit;font-style:normal;font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--dgs-accent);margin-bottom:8px}
+.dgs-page.dark .dgs-note{color:rgba(243,234,219,.80)}
+.dgs-cover-note{margin-top:18px;font-family:Georgia,serif;font-style:italic;font-size:15px;line-height:1.55;
+  color:rgba(243,234,219,.88);max-width:34em}
+.dgs-cover-note p{margin:0 0 10px}
 .dgs-cover-dek{margin-top:16px;font-family:Georgia,serif;font-size:17px;line-height:1.48;color:rgba(243,234,219,.84)}
 .dgs-hint{margin-top:22px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(243,234,219,.48)}
 
@@ -11661,7 +11671,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v468 · 12.10.2026 диплинк pay2 — сразу ссылки на оплату от сервера, мимо бота; в запасном наборе появился вечный доступ';
+const APP_BUILD = 'v469 · 13.10.2026 дайджест: слово редакции на полосах — вводное, комментарии к мыслям, закрывающее';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15659,6 +15669,7 @@ const APP_TEXTS = {
   'digest.more':         { c:'Дайджест', l:'Сколько мыслей осталось в выжимке', w:'Экран выпуска', i:false, t:'Ещё {n} — в полной выжимке занятия' },
   'digest.lesson_foot':  { c:'Дайджест', l:'Колонтитул полосы выжимки', w:'Экран выпуска', i:false, t:'Выжимка' },
   'digest.final':        { c:'Дайджест', l:'Текст финальной полосы', w:'Экран выпуска', i:false, t:'Это был месяц клуба' },
+  'digest.note_label':   { c:'Дайджест', l:'Подпись над словом редакции на полосе', w:'Экран выпуска', i:false, t:'От редакции' },
   'digest.back':         { c:'Дайджест', l:'Ссылка возврата с финала', w:'Экран выпуска', i:false, t:'Вернуться в клуб' },
   'digest.loading':      { c:'Дайджест', l:'Пока выпуск грузится', w:'Экран выпуска', i:false, t:'Собираю выпуск…' },
   'digest.loading_missed':{c:'Дайджест', l:'Пока грузится «что я пропустил»', w:'Экран выпуска', i:false, t:'Смотрю, что ты пропустил…' },
@@ -38060,6 +38071,18 @@ function dgsDecor(p){
   return '<div class="dgs-decor" style="position:relative;margin-top:18px;height:190px;border-radius:18px 5px 18px 5px;overflow:hidden">'
     + '<img src="' + escapeHtml(p.decor_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>';
 }
+/* v469: СЛОВО РЕДАКЦИИ. Пишется в дашборде у полосы («Выпуски» → «Править
+   номер»), необязательное. Пустая строка делит абзацы. Нет текста — ничего */
+function dgsNoteParas(текст){
+  return String(текст || '').split(/\n\s*\n/).map(function(k){ return k.trim(); }).filter(Boolean)
+    .map(function(k){ return '<p>' + escapeHtml(k).replace(/\n/g, '<br>') + '</p>'; }).join('');
+}
+function dgsNote(p, безПодписи){
+  if (!p || !p.note) return '';
+  return '<div class="dgs-note">'
+    + (безПодписи ? '' : '<div class="dgs-note-l">' + escapeHtml(t('digest.note_label')) + '</div>')
+    + dgsNoteParas(p.note) + '</div>';
+}
 function dgsTop(рубрика, месяц){
   return '<div class="dgs-top"><span>' + escapeHtml(рубрика || t('digest.title'))
        + '</span><span class="dgs-accent">' + escapeHtml(месяц) + '</span></div>';
@@ -38144,6 +38167,7 @@ function dgsPage(p, месяц){
       +   '<div class="dgs-no">' + escapeHtml(String(p.month || '').split('-').pop() || '01') + '</div>'
       +   '<div class="dgs-cover-month">' + escapeHtml(месяц) + '</div>'
       +   '<div class="dgs-cover-dek">' + escapeHtml(подводка) + '</div>'
+      +   (p.note ? '<div class="dgs-cover-note">' + dgsNoteParas(p.note) + '</div>' : '')
       +   '<div class="dgs-hint">' + escapeHtml(t('digest.swipe')) + '</div>'
       + '</div></div>';
   }
@@ -38152,7 +38176,7 @@ function dgsPage(p, месяц){
     const абзацы = String(p.text || '').split(/\n\s*\n/).filter(Boolean)
       .map(function(k){ return '<div class="dgs-dek">' + escapeHtml(k) + '</div>'; }).join('');
     return '<div class="dgs-page dgs-tint">' + dgsTop(t('digest.column'), месяц)
-      + '<div class="dgs-body">' + dgsHead('', p.title || t('digest.column')) + абзацы + '</div>'
+      + '<div class="dgs-body">' + dgsHead('', p.title || t('digest.column')) + абзацы + dgsNote(p) + '</div>'
       + dgsArt(num, 'dgs-strip', '', p.image_url || '') + dgsFoot(t('digest.column'), num) + '</div>';
   }
 
@@ -38163,7 +38187,7 @@ function dgsPage(p, месяц){
         + '<div class="dgs-toc-t">' + escapeHtml(r.rubric || '') + '</div></div>';
     }).join('');
     return '<div class="dgs-page">' + dgsTop(t('digest.toc'), месяц)
-      + '<div class="dgs-body">' + dgsHead('', t('digest.toc')) + строки + dgsDecor(p) + '</div>'
+      + '<div class="dgs-body">' + dgsHead('', t('digest.toc')) + dgsNote(p) + строки + dgsDecor(p) + '</div>'
       + dgsFoot(t('digest.toc'), num) + '</div>';
   }
 
@@ -38179,6 +38203,7 @@ function dgsPage(p, месяц){
       +   '<div class="dgs-idea' + (текст.length > 150 ? ' long' : '') + ' dgs-serif">' + escapeHtml(текст) + '</div>'
       +   (p.phrase ? '<div class="dgs-phrase">' + escapeHtml(p.phrase) + '</div>' : '')
       +   (подпись ? '<div class="dgs-from">' + escapeHtml(подпись) + '</div>' : '')
+      +   dgsNote(p)
       +   (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ',\'insights\',' + (p.index == null ? 'null' : Number(p.index)) + ')">'
                     + escapeHtml(t(p.index == null ? 'digest.to_lecture' : 'digest.to_idea')) + '</div>' : '')
       + '</div>' + dgsFoot(p.rubric || '', num) + '</div>';
@@ -38195,7 +38220,7 @@ function dgsPage(p, месяц){
         + '</div></div>';
     }).join('');
     return '<div class="dgs-page' + тёмная + '">' + dgsTop(t('digest.lesson_foot'), месяц)
-      + '<div class="dgs-body">' + dgsHead(t('digest.lesson_foot'), p.title || '') + строки
+      + '<div class="dgs-body">' + dgsHead(t('digest.lesson_foot'), p.title || '') + dgsNote(p) + строки
       +   (p.more ? '<div class="dgs-more">' + escapeHtml(tf('digest.more', { n: p.more })) + '</div>' : '')
       +   (p.phrase ? '<div class="dgs-phrase">' + escapeHtml(p.phrase) + '</div>' : '')
       +   (p.slug ? '<div class="dgs-link" onclick="dgsOpenLecture(' + jsArg(p.slug) + ')">'
@@ -38213,7 +38238,7 @@ function dgsPage(p, месяц){
         + dgsLinks(it) + '</div>';
     }).join('');
     return '<div class="dgs-page dgs-tint">' + dgsTop(p.rubric || '', месяц)
-      + '<div class="dgs-body">' + dgsHead(p.rubric || '', t('digest.qa_head')) + куски + dgsDecor(p) + '</div>'
+      + '<div class="dgs-body">' + dgsHead(p.rubric || '', t('digest.qa_head')) + dgsNote(p) + куски + dgsDecor(p) + '</div>'
       + dgsVrezka(p) + dgsFoot(p.rubric || '', num) + '</div>';
   }
 
@@ -38223,6 +38248,8 @@ function dgsPage(p, месяц){
       + '<div class="dgs-body">'
       +   '<div class="dgs-rule"></div>'
       +   '<div class="dgs-idea dgs-serif">' + escapeHtml(p.text || p.title || t('digest.final')) + '</div>'
+      /* v469: закрывающее слово — под заголовком финала, без подписи «от редакции» */
+      +   dgsNote(p, true)
       +   '<div class="dgs-link" onclick="closeDigest()">' + escapeHtml(t('digest.back')) + '</div>'
       + '</div>' + dgsFoot(t('digest.title'), num) + '</div>';
   }
@@ -38257,7 +38284,7 @@ function dgsPage(p, месяц){
       + '</div></div>';
   }).join('');
   return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric || '', месяц)
-    + '<div class="dgs-body">' + dgsHead(p.rubric || '', p.rubric || '') + строки + dgsDecor(p) + '</div>'
+    + '<div class="dgs-body">' + dgsHead(p.rubric || '', p.rubric || '') + dgsNote(p) + строки + dgsDecor(p) + '</div>'
     + dgsVrezka(p) + dgsFoot(p.rubric || '', num) + '</div>';
 }
 
