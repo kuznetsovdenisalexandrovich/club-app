@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v467 -->
+<!-- FILE_VERSION: index-v468 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11661,7 +11661,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v467 · 12.10.2026 запасная ссылка на оплату: если бот не собрал ссылки за 12 с, «База 990» приходит с сервера, а полный набор подменит её, как только бот ответит';
+const APP_BUILD = 'v468 · 12.10.2026 диплинк pay2 — сразу ссылки на оплату от сервера, мимо бота; в запасном наборе появился вечный доступ';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -21154,9 +21154,9 @@ function payFromUrl(){
 
 /* Голая ссылка на оплату — без метки источника. Для кнопок «Вступить» там,
    где считать источник незачем. Метку по-прежнему несёт `pay_<метка>`. */
-function openBuyRoute(){
+function openBuyRoute(direct){
   if (isMember){ switchView('portal'); return; }
-  openAccessPage();
+  openAccessPage(direct === true);
 }
 
 /* ══ v431: ОФФЕР ТЕСТИРОВЩИКАМ — МЕСЯЦ ЗА 1 ₽ ═══════════════════════════════
@@ -21315,6 +21315,9 @@ const DEEPLINKS = {
   'pay':         { go: () => openBuyRoute(),              guests: true  },
   'buy':         { go: () => openBuyRoute(),              guests: true  },
   'oplata':      { go: () => openBuyRoute(),              guests: true  },
+  /* v468: то же, но ссылки сразу от сервера, мимо Salebot — на случай, когда
+     бот лежит (12.10 упал вместе с дата-центром Яндекса) */
+  'pay2':        { go: () => openBuyRoute(true),          guests: true  },
   'guide':       { go: () => openHelpDocs(),              guests: true  },
   /* [stated] Denis 12.09: «сделай сразу диплинк, я его прям в бота засуну,
      чтобы пользователи через приложение ходили карту менять». Ведёт прямо в
@@ -28673,9 +28676,9 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && paymentWatchUntil) pollPaymentOnce();
 });
 
-async function openAccessPage(){
+async function openAccessPage(direct){
   if (isPaused){ openPauseSheet(); return; }   // v427
-  if (!ensureBotAccess(openAccessPage)) return;
+  if (!ensureBotAccess(function(){ openAccessPage(direct); })) return;
   switchView('access');
   track('access_open');
   const el = document.getElementById('access-buttons');
@@ -28691,6 +28694,16 @@ async function openAccessPage(){
   if (!telegramId && !hasVkIdent) {
     el.innerHTML = '<div class="empty" style="line-height:1.5">Оплата проходит в боте — так платёж сразу свяжется с твоим аккаунтом.</div>'
       + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(botLinkForAccess())">Открыть бота</button>';
+    return;
+  }
+
+  /* v468: диплинк `pay2` — ссылки сразу от сервера, бота не ждём совсем.
+     [stated] Denis 12.10: на время, пока Salebot лежит, дать в каналы ссылку,
+     которая не упирается в его молчание */
+  if (direct === true) {
+    const fb = await payFallbackLinks();
+    if (fb) { renderAccessButtons(fb); track('pay_fallback_links', 'direct'); return; }
+    el.innerHTML = accessLinksErrorHtml();
     return;
   }
 
@@ -28750,7 +28763,7 @@ async function payFallbackLinks(){
     const r = await fetch(`${API_URL}/payments/fallback-links?${q}`);
     if (!r.ok) return null;
     const d = await r.json();
-    return d && d.monthly_link ? { monthly_link: d.monthly_link } : null;
+    return d && d.monthly_link ? { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '' } : null;
   } catch (e) { return null; }
 }
 
