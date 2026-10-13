@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v477 -->
+<!-- FILE_VERSION: index-v478 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11454,6 +11454,43 @@ let foActive = false;
 try { foActive = !apiOverride && localStorage.getItem('club_failover') === '1'; } catch (e) {}
 const API_URL = apiOverride || (foActive ? API_STANDBY : API_PROD);
 
+/* ══ v478 · ПРОПУСК К КАЖДОМУ ЗАПРОСУ (аудит A02) ══════════════════════════
+   Сервер выдаёт аппу подписанный «пропуск» на номер, который подтвердила
+   площадка (см. clubPassEnsure). Здесь — ОДНА обёртка над fetch: к каждому
+   запросу на наш сервер дописывается `_cp=<пропуск>`. Остальной код о пропуске
+   не знает и не меняется. Сервер пока только считает, с пропуском ли пришли,
+   и ничего не отклоняет. Любая ошибка здесь — запрос уходит как раньше */
+let clubPass = '', clubPassId = '';
+const CLUB_PASS_KEY = 'club_pass_v1';
+function clubPassUse(id){
+  clubPass = ''; clubPassId = String(id || '');
+  try {
+    const all = JSON.parse(localStorage.getItem(CLUB_PASS_KEY) || '{}') || {};
+    const p = all[clubPassId] || '';
+    const exp = Number(String(p).split('.')[1] || 0);
+    if (p && exp > Date.now() / 1000 + 3 * 86400) clubPass = p;
+  } catch(e){}
+  return !!clubPass;
+}
+(function(){
+  try {
+    if (!window.fetch || window.__clubPassFetch) return;
+    window.__clubPassFetch = true;
+    const origFetch = window.fetch.bind(window);
+    window.fetch = function(input, init){
+      try {
+        if (typeof input === 'string' && input.indexOf(API_URL) === 0 && telegramId){
+          if (clubPassId !== String(telegramId)) clubPassUse(telegramId);
+          if (clubPass && input.indexOf('_cp=') < 0 && input.indexOf('#') < 0){
+            input = input + (input.indexOf('?') >= 0 ? '&' : '?') + '_cp=' + encodeURIComponent(clubPass);
+          }
+        }
+      } catch(e){}
+      return origFetch(input, init);
+    };
+  } catch(e){}
+})();
+
 /* ══ v464 · ПЕРЕХОД НА ЗАПАСНОЙ СЕРВЕР ════════════════════════════════════
    [stated] Denis 11.10.2026: «важно, чтобы я знал, что приложение
    переключилось на рейлвей», «не перескакивать при маленьком сбое или
@@ -11686,7 +11723,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v477 · 13.10.2026 аудит: баннер хранилища над меню, честный текст второй натуры в тесте';
+const APP_BUILD = 'v478 · 13.10.2026 пропуск к запросам (сервер пока только наблюдает)';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -29669,6 +29706,7 @@ function applyTelegramSafeAreaSoon(){
 }
 
 function startApp(){
+  try { clubPassEnsure(); } catch(e){}
   sendSellerTouch();
   track('app_open');
   // Состояние разрешения нужно ДО первого действия, иначе заслонка мигнёт у
@@ -30455,6 +30493,45 @@ function launchIdentity(){
      «привязка случится сама» в startMaxSession был неправдой */
   try { const m = (typeof isInsideMax === 'function' && isInsideMax()) ? maxLaunchData() : ''; if (m) out.max_launch = m; } catch(e){}
   return out;
+}
+
+/* Получить пропуск: предъявляем серверу всё, чем площадка подтверждает
+   человека. Свежий пропуск есть — сервер не дёргаем. Не вышло — не беда:
+   запросы уходят как раньше, сервер только отметит, что без пропуска */
+function clubPassTgData(){
+  let d = '';
+  try { d = tgLaunchData(); } catch(e){}
+  if (!d){
+    try {
+      const tg = window.Telegram && Telegram.WebApp;
+      if (tg && tg.initData) d = 'tgWebAppData=' + encodeURIComponent(tg.initData);
+    } catch(e){}
+  }
+  return d;
+}
+async function clubPassEnsure(){
+  try {
+    if (!telegramId || clubPassUse(telegramId)) return;
+    const body = Object.assign({}, launchIdentity());
+    const tgd = clubPassTgData();
+    if (tgd) body.tg_launch = tgd;
+    try { if (VIEW_TOKEN) body.view_token = VIEW_TOKEN; } catch(e){}
+    const r = await fetch(API_URL + '/auth/pass', {
+      method: 'POST', credentials: 'include',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, sessionHeaders()),
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) return;
+    const d = await r.json().catch(function(){ return {}; });
+    const got = d.passes || {};
+    let all = {};
+    try { all = JSON.parse(localStorage.getItem(CLUB_PASS_KEY) || '{}') || {}; } catch(e){}
+    Object.keys(got).forEach(function(k){ all[k] = got[k]; });
+    try { localStorage.setItem(CLUB_PASS_KEY, JSON.stringify(all)); } catch(e){}
+    clubPassUse(telegramId);
+    /* В хранилище не записалось (приватный режим) — держим в памяти */
+    if (!clubPass && got[String(telegramId)]){ clubPass = got[String(telegramId)]; clubPassId = String(telegramId); }
+  } catch(e){}
 }
 
 function actionIdent(){
