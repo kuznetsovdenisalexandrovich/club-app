@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v471 -->
+<!-- FILE_VERSION: index-v473 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10459,6 +10459,14 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 .dgs-pdf-x{width:100%;margin-top:6px;padding:8px;border:0;background:transparent;color:#211c18;opacity:.6;font-size:12.5px;cursor:pointer}
 /* Счётчик полос вместо полосы прокрутки: у прилипающего листания её не видно,
    а понимать, сколько осталось, человеку нужно */
+/* v473: круглая «поделиться» в углу номера — с любой полосы [stated Denis 13.10] */
+.dgs-share-btn{
+  position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:3;
+  width:46px;height:46px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(154,125,77,.45);background:rgba(243,234,219,.88);color:#211c18;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:0;
+}
+.dgs-share-btn svg{width:20px;height:20px}
 .dgs-count{
   position:fixed;top:calc(var(--safe-top, 0px) + 20px);left:20px;z-index:3;
   font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dgs-mute);
@@ -10811,6 +10819,10 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <button class="dgs-close dgs-pdf-btn" id="dgs-pdf-btn" style="display:none" onclick="dgsPdfOpen()" data-text="digest.pdf_btn">PDF</button>
   <div class="dgs-count" id="dgs-count"></div>
   <div id="dgs-pages"></div>
+  <!-- v473: поделиться номером с любой полосы -->
+  <button class="dgs-share-btn" id="dgs-share-btn" style="display:none" onclick="dgsShare()" aria-label="Поделиться номером">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+  </button>
   <div class="dgs-pdf-sheet" id="dgs-pdf-sheet" style="display:none"></div>
 </div>
 
@@ -11671,7 +11683,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v471 · 13.10.2026 дайджест: фото-полосы — свои листы номера с фото во весь экран и подписью';
+const APP_BUILD = 'v473 · 13.10.2026 дайджест: фото-полоса целиком с размытым фоном; круглая кнопка «поделиться» в углу номера';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15669,6 +15681,8 @@ const APP_TEXTS = {
   'digest.more':         { c:'Дайджест', l:'Сколько мыслей осталось в выжимке', w:'Экран выпуска', i:false, t:'Ещё {n} — в полной выжимке занятия' },
   'digest.lesson_foot':  { c:'Дайджест', l:'Колонтитул полосы выжимки', w:'Экран выпуска', i:false, t:'Выжимка' },
   'digest.final':        { c:'Дайджест', l:'Текст финальной полосы', w:'Экран выпуска', i:false, t:'Это был месяц клуба' },
+  'digest.share_btn':    { c:'Дайджест', l:'Кнопка «поделиться номером» на последней полосе', w:'Экран выпуска', i:false, t:'Поделиться номером с другом' },
+  'digest.share_text':   { c:'Дайджест', l:'Текст, который уходит вместе со ссылкой на номер', w:'Шеринг выпуска', i:false, t:'Смотри, какой журнал выпускает наш клуб продаж — полистай:' },
   'digest.note_label':   { c:'Дайджест', l:'Подпись над словом редакции на полосе', w:'Экран выпуска', i:false, t:'От редакции' },
   'digest.back':         { c:'Дайджест', l:'Ссылка возврата с финала', w:'Экран выпуска', i:false, t:'Вернуться в клуб' },
   'digest.loading':      { c:'Дайджест', l:'Пока выпуск грузится', w:'Экран выпуска', i:false, t:'Собираю выпуск…' },
@@ -16235,6 +16249,11 @@ const APP_TEXTS = {
   'access.stuck_no': {
     c:'Оплата', l:'Отказ от помощи', w:'Окошко застрявшего', i:false,
     t:'Нет, всё в порядке' },
+  /* v472: [stated] Denis 13.10 — пока Salebot лежит, ссылки на тест-драйв выдать
+     нельзя, только «База» с сервера. Показывается ТОЛЬКО над запасным набором */
+  'access.fallback_note': {
+    c:'Оплата', l:'Извинение над запасными ссылками оплаты', w:'Экран «Получить доступ», когда бот молчит и ссылки дал сервер', i:false,
+    t:'Из-за неполадок на серверах Яндекса бот временно не выдаёт ссылку на тест-драйв — сейчас доступна только помесячная оплата. Извини за неудобство, скоро всё вернётся.' },
   'access.links_late': {
     c:'Оплата', l:'Ссылки на оплату не пришли вовремя', w:'Экран «Получить доступ», если бот не ответил за 18 секунд', i:false,
     t:'Ссылки на оплату задержались — бот собирает их под тебя, иногда это занимает минуту.' },
@@ -28774,7 +28793,7 @@ async function payFallbackLinks(){
     const r = await fetch(`${API_URL}/payments/fallback-links?${q}`);
     if (!r.ok) return null;
     const d = await r.json();
-    return d && d.monthly_link ? { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '' } : null;
+    return d && d.monthly_link ? { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '', fallback: true } : null;
   } catch (e) { return null; }
 }
 
@@ -28799,7 +28818,9 @@ function renderAccessButtons(result){
   }
 
   window._paymentLinks = buttons;
-  el.innerHTML = buttons.map((b, i) =>
+  const извинение = (result.fallback && t('access.fallback_note'))
+    ? `<div class="empty" style="line-height:1.5;margin-bottom:10px">${escapeHtml(t('access.fallback_note'))}</div>` : '';
+  el.innerHTML = извинение + buttons.map((b, i) =>
     `<button class="lec-link-btn access-btn" onclick="goToPayment(${i})">${b.label}</button>`
   ).join('') + `<div class="payment-help-link" onclick="switchView('payment-help')">Оплата не из РФ/Проблема с оплатой</div>`;
 }
@@ -37922,6 +37943,7 @@ function dgsLoading(текст){
   const ov = dgsOpenLayer();
   if (!ov) return;
   dgsPdfBtn(false);
+  dgsShareBtnShow(false);   /* v473: «поделиться» — только у открытого номера */
   document.getElementById('dgs-count').textContent = '';
   document.getElementById('dgs-pages').innerHTML =
     '<div class="dgs-page"><div class="dgs-body dgs-center" style="text-align:center;opacity:.6">'
@@ -37968,6 +37990,7 @@ async function openDigest(slug){
     if (d && d.early){ dgsEmpty(tf('digest.early', { 'дата': dgsDate(d.opens_at) })); return; }
     dgsRender(d);
     dgsPdfBtn(!!telegramId);
+    dgsShareBtnShow(true);   /* v473 */
     dgMarkSeen(slug);
     track('digest_open', String(slug).slice(0, 120));
   } catch(e){ dgsEmpty(t('digest.fail')); }
@@ -38178,7 +38201,10 @@ function dgsPage(p, месяц){
      подпись (слово редакции) поверх затемнения снизу, если есть */
   if (p.layout === 'photo'){
     return '<div class="dgs-page dark" style="padding:0">'
-      + (p.image_url ? '<img src="' + escapeHtml(p.image_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0">' : '')
+      /* v473: снимок ЦЕЛИКОМ — карта колоды вытянута сильнее экрана, и заполнение
+         с обрезкой съедало имя бога. По краям — размытое продолжение того же фото */
+      + (p.image_url ? '<img src="' + escapeHtml(p.image_url) + '" alt="" style="position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(30px) brightness(.55);z-index:0">'
+          + '<img src="' + escapeHtml(p.image_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:0">' : '')
       + (p.note ? '<div style="position:absolute;left:0;right:0;bottom:0;height:50%;z-index:1;background:linear-gradient(180deg,transparent,rgba(12,12,10,.8))"></div>'
           + '<div class="dgs-cover-note" style="position:absolute;left:26px;right:26px;bottom:calc(env(safe-area-inset-bottom, 0px) + 54px);z-index:2;margin:0">'
           + dgsNoteParas(p.note) + '</div>' : '')
@@ -38263,6 +38289,8 @@ function dgsPage(p, месяц){
       +   '<div class="dgs-idea dgs-serif">' + escapeHtml(p.text || p.title || t('digest.final')) + '</div>'
       /* v469: закрывающее слово — под заголовком финала, без подписи «от редакции» */
       +   dgsNote(p, true)
+      /* v472: поделиться номером — ссылка с меткой приводящего, как у занятий */
+      +   ((dgsMode === 'issue' && dgsSlug) ? '<div class="dgs-link" onclick="dgsShare()">' + escapeHtml(t('digest.share_btn')) + '</div>' : '')
       +   '<div class="dgs-link" onclick="closeDigest()">' + escapeHtml(t('digest.back')) + '</div>'
       + '</div>' + dgsFoot(t('digest.title'), num) + '</div>';
   }
@@ -38307,6 +38335,19 @@ function dgsPage(p, месяц){
   return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric || '', месяц)
     + '<div class="dgs-body">' + dgsHead(p.rubric || '', p.rubric || '') + dgsNote(p) + строки + dgsDecor(p) + '</div>'
     + dgsVrezka(p) + dgsFoot(p.rubric || '', num) + '</div>';
+}
+
+/* v472: «Поделиться номером». [stated] Denis 13.10: друг приходит посмотреть на
+   красоту, а может, что-то купит. Ссылка `dg_<номер>_<код>` — приведённый
+   запишется за тем, кто поделился (разбор хвоста — тот же, что у занятий) */
+function dgsShareBtnShow(show){
+  const b = document.getElementById('dgs-share-btn');
+  if (b) b.style.display = show ? 'flex' : 'none';
+}
+function dgsShare(){
+  if (!dgsSlug) return;
+  track('digest_share', String(dgsSlug).slice(0, 120));
+  shareWithChoice(t('digest.share_text'), 'dg_' + dgsSlug + shareTail());
 }
 
 function dgsPlural(n, одна, две, много){
