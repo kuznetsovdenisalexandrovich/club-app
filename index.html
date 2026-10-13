@@ -10459,6 +10459,14 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 .dgs-pdf-x{width:100%;margin-top:6px;padding:8px;border:0;background:transparent;color:#211c18;opacity:.6;font-size:12.5px;cursor:pointer}
 /* Счётчик полос вместо полосы прокрутки: у прилипающего листания её не видно,
    а понимать, сколько осталось, человеку нужно */
+/* v473: круглая «поделиться» в углу номера — с любой полосы [stated Denis 13.10] */
+.dgs-share-btn{
+  position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:3;
+  width:46px;height:46px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(154,125,77,.45);background:rgba(243,234,219,.88);color:#211c18;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:0;
+}
+.dgs-share-btn svg{width:20px;height:20px}
 .dgs-count{
   position:fixed;top:calc(var(--safe-top, 0px) + 20px);left:20px;z-index:3;
   font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dgs-mute);
@@ -10811,6 +10819,10 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <button class="dgs-close dgs-pdf-btn" id="dgs-pdf-btn" style="display:none" onclick="dgsPdfOpen()" data-text="digest.pdf_btn">PDF</button>
   <div class="dgs-count" id="dgs-count"></div>
   <div id="dgs-pages"></div>
+  <!-- v473: поделиться номером с любой полосы -->
+  <button class="dgs-share-btn" id="dgs-share-btn" style="display:none" onclick="dgsShare()" aria-label="Поделиться номером">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+  </button>
   <div class="dgs-pdf-sheet" id="dgs-pdf-sheet" style="display:none"></div>
 </div>
 
@@ -11671,7 +11683,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v473 · 13.10.2026 дайджест: фото-полоса показывает снимок целиком, по краям размытое продолжение';
+const APP_BUILD = 'v473 · 13.10.2026 дайджест: фото-полоса целиком с размытым фоном; круглая кнопка «поделиться» в углу номера';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -37931,6 +37943,7 @@ function dgsLoading(текст){
   const ov = dgsOpenLayer();
   if (!ov) return;
   dgsPdfBtn(false);
+  dgsShareBtnShow(false);   /* v473: «поделиться» — только у открытого номера */
   document.getElementById('dgs-count').textContent = '';
   document.getElementById('dgs-pages').innerHTML =
     '<div class="dgs-page"><div class="dgs-body dgs-center" style="text-align:center;opacity:.6">'
@@ -37977,6 +37990,7 @@ async function openDigest(slug){
     if (d && d.early){ dgsEmpty(tf('digest.early', { 'дата': dgsDate(d.opens_at) })); return; }
     dgsRender(d);
     dgsPdfBtn(!!telegramId);
+    dgsShareBtnShow(true);   /* v473 */
     dgMarkSeen(slug);
     track('digest_open', String(slug).slice(0, 120));
   } catch(e){ dgsEmpty(t('digest.fail')); }
@@ -38326,6 +38340,10 @@ function dgsPage(p, месяц){
 /* v472: «Поделиться номером». [stated] Denis 13.10: друг приходит посмотреть на
    красоту, а может, что-то купит. Ссылка `dg_<номер>_<код>` — приведённый
    запишется за тем, кто поделился (разбор хвоста — тот же, что у занятий) */
+function dgsShareBtnShow(show){
+  const b = document.getElementById('dgs-share-btn');
+  if (b) b.style.display = show ? 'flex' : 'none';
+}
 function dgsShare(){
   if (!dgsSlug) return;
   track('digest_share', String(dgsSlug).slice(0, 120));
