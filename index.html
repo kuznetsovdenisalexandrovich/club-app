@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v475 -->
+<!-- FILE_VERSION: index-v476 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -10460,13 +10460,13 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 /* Счётчик полос вместо полосы прокрутки: у прилипающего листания её не видно,
    а понимать, сколько осталось, человеку нужно */
 /* v473: круглая «поделиться» в углу номера — с любой полосы [stated Denis 13.10] */
+/* v476: наверху, в ряд с PDF и закрытием — внизу кнопка закрывала номер полосы */
 .dgs-share-btn{
-  position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:3;
-  width:46px;height:46px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  border:1px solid rgba(154,125,77,.45);background:rgba(243,234,219,.88);color:#211c18;
-  box-shadow:0 6px 18px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:0;
+  position:fixed;top:calc(var(--safe-top, 0px) + 12px);right:56px;z-index:3;
+  width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(154,125,77,.45);background:rgba(243,234,219,.92);color:#211c18;padding:0;
 }
-.dgs-share-btn svg{width:20px;height:20px}
+.dgs-share-btn svg{width:16px;height:16px}
 .dgs-count{
   position:fixed;top:calc(var(--safe-top, 0px) + 20px);left:20px;z-index:3;
   font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--dgs-mute);
@@ -11683,7 +11683,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v475 · 13.10.2026 дайджест: крупная обложка у любого занятия, и в «Новом в библиотеке»';
+const APP_BUILD = 'v476 · 13.10.2026 дайджест: картинка полосой у любой записи; «поделиться» наверху рядом с PDF, номер полосы не закрывает';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -38309,8 +38309,9 @@ function dgsPage(p, месяц){
     const строка = it.insight || {};
     /* v470: у занятий в «Что было» обложка во всю ширину строки, а не марка
        64×48 — [stated] Denis 13.10 «обложки можно крупнее» */
-    /* v475: крупно — у любой записи-занятия, не только в «Что было» */
-    const крупно = it.image_url && (p.layout === 'afisha' || (m.slug && (m.kind || 'lecture') === 'lecture'));
+    /* v476: полосой над текстом — у ЛЮБОЙ записи с картинкой (карты в «Новом в
+       клубе» стояли маркой сбоку). Экран растёт по содержимому, места хватает */
+    const крупно = !!it.image_url;
     const мини = (it.image_url && !крупно)
       ? '<div class="dgs-art" style="flex:0 0 64px;height:48px;border-radius:12px 3px 12px 3px">'
         + '<img src="' + escapeHtml(it.image_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>'
@@ -38345,7 +38346,12 @@ function dgsPage(p, месяц){
    запишется за тем, кто поделился (разбор хвоста — тот же, что у занятий) */
 function dgsShareBtnShow(show){
   const b = document.getElementById('dgs-share-btn');
-  if (b) b.style.display = show ? 'flex' : 'none';
+  if (!b) return;
+  b.style.display = show ? 'flex' : 'none';
+  /* левее кнопки PDF, если она есть (у гостя без Telegram её нет) */
+  const pdf = document.getElementById('dgs-pdf-btn');
+  const ширина = (pdf && pdf.style.display !== 'none') ? pdf.offsetWidth : 0;
+  b.style.right = (ширина ? 56 + ширина + 8 : 56) + 'px';
 }
 function dgsShare(){
   if (!dgsSlug) return;
