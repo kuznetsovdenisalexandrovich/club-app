@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v476 -->
+<!-- FILE_VERSION: index-v477 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -3174,7 +3174,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .storage-banner{
   position:fixed;
   left:12px;right:12px;
-  bottom:calc(var(--safe-bottom, 0px) + 12px);
+  /* v477 (аудит A17): стоял поверх нижнего меню и закрывал вкладки ровно
+     тогда, когда хранилище легло. Теперь — над меню */
+  bottom:calc(14px + env(safe-area-inset-bottom) + var(--tabbar-h, 72px) + 10px);
+  max-width:488px;margin:0 auto;
   z-index:850;
   display:flex;
   align-items:center;
@@ -11683,7 +11686,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v476 · 13.10.2026 дайджест: картинка полосой у любой записи; «поделиться» наверху рядом с PDF, номер полосы не закрывает';
+const APP_BUILD = 'v477 · 13.10.2026 аудит: баннер хранилища над меню, честный текст второй натуры в тесте';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16877,6 +16880,12 @@ const APP_TEXTS = {
   'legal.a1': {
     c:'Юридическое', l:'Согласие на обработку персональных данных', w:'', i:true,
     t:'Согласие на обработку персональных данных' },
+  'quiz.ally_close': {
+    c:'Тест и вопросы', l:'Вторая натура, когда одна ось почти поровну ({role} — роль второго бога)', w:'Результат теста', i:true,
+    t:'На одной из осей у тебя почти поровну, и вторая твоя сторона — {role}.' },
+  'quiz.ally_strong': {
+    c:'Тест и вопросы', l:'Вторая натура, когда близкой оси нет ({role} — роль второго бога)', w:'Результат теста', i:true,
+    t:'У каждого есть вторая сторона. Твоя — {role}.' },
   'quiz.a1': {
     c:'Тест и вопросы', l:'Или задать вопрос прямо Денису →', w:'', i:true,
     t:'Или задать вопрос прямо Денису →' },
@@ -35270,6 +35279,14 @@ function quizPlusTake(key){
   if (typeof openPaywall === 'function') openPaywall();
 }
 
+/* v477 (аудит A19): «разделился почти пополам» показывалось и при 100% по всем
+   осям. Близкой считаем ось, где победившая сторона взяла не больше двух третей.
+   Нет данных по осям (результат пришёл с сервера одним кодом) — берём общий текст */
+function quizHasCloseAxis(r){
+  const axes = (r && r.axes) || [];
+  return axes.some(function(a){ return (a.share || 0) < 0.99; });
+}
+
 function renderQuizResult(){
   const r = quizResult;
   if (!r || !QUIZ_RESULTS[r.code]){ renderQuizIntro(); return; }
@@ -35324,8 +35341,9 @@ function renderQuizResult(){
       + '<div class="qr-ally-sign">' + (secondSign || '') + '</div>'
       + '<div>'
         + '<div class="qr-ally-title">За плечом — ' + escapeHtml(second.god) + '.</div>'
-        + '<div class="qr-ally-text">На одной из осей ты разделился почти пополам, '
-        + 'и вторая твоя сторона — ' + escapeHtml(second.role.toLowerCase()) + '. '
+        + '<div class="qr-ally-text">'
+        + escapeHtml(tf(quizHasCloseAxis(r) ? 'quiz.ally_close' : 'quiz.ally_strong',
+                        { role: second.role.toLowerCase() })) + ' '
         + '<span class="god-link" onclick="openQuizShadow()">Посмотреть теневую сторону</span></div>'
       + '</div></div>'
     : '';
