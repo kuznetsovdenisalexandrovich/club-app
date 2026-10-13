@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v478 -->
+<!-- FILE_VERSION: index-v479 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11610,7 +11610,11 @@ function foStart(){
   // Событие — позже: на старте ещё не знаем, кто это
   setTimeout(function(){ try { track('failover_on'); } catch (e) {} }, 20000);
   clearInterval(FO.timer);
-  FO.timer = setInterval(async function(){
+  /* v479: проверяем основной СРАЗУ при открытии и дальше каждые 20 с, а не
+     раз в минуту. Три ответа подряд — меньше минуты. Раньше нужно было три
+     минуты держать апп на экране, и человек, открывающий его на минуту,
+     навсегда оставался на запасном (Denis 13.10) */
+  async function foTick(){
     if (FO.back || document.visibilityState !== 'visible') return;
     if (await foPrimaryAlive()){
       FO.okStreak++;
@@ -11618,7 +11622,9 @@ function foStart(){
     } else {
       FO.okStreak = 0;
     }
-  }, 60000);
+  }
+  setTimeout(foTick, 3000);
+  FO.timer = setInterval(foTick, 20000);
 }
 document.addEventListener('visibilitychange', function(){
   // Вернулись, пока приложение было свёрнуто, — тихо перезагружаемся на основной
@@ -11723,7 +11729,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v478 · 13.10.2026 пропуск к запросам (сервер пока только наблюдает)';
+const APP_BUILD = 'v479 · 13.10.2026 возврат с запасного: кнопка «на боевой» и быстрая проверка';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15634,6 +15640,10 @@ function apiApplyAndReload(url){
   try {
     if (url) localStorage.setItem('club_api_override', url);
     else localStorage.removeItem('club_api_override');
+    /* v479: «вернуться на боевой» снимает и пометку автоперехода на
+       запасной — раньше она оставалась, и после перезагрузки апп снова
+       уходил на запасной (Denis 13.10) */
+    if (!url){ localStorage.removeItem('club_failover'); localStorage.removeItem('club_failover_at'); }
   } catch(e){}
   location.reload();
 }
