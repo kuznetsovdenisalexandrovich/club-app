@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v471 -->
+<!-- FILE_VERSION: index-v472 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11671,7 +11671,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v471 · 13.10.2026 дайджест: фото-полосы — свои листы номера с фото во весь экран и подписью';
+const APP_BUILD = 'v472 · 13.10.2026 «Поделиться номером» с меткой приводящего; извинение на оплате, пока бот не выдаёт тест-драйв';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15669,6 +15669,8 @@ const APP_TEXTS = {
   'digest.more':         { c:'Дайджест', l:'Сколько мыслей осталось в выжимке', w:'Экран выпуска', i:false, t:'Ещё {n} — в полной выжимке занятия' },
   'digest.lesson_foot':  { c:'Дайджест', l:'Колонтитул полосы выжимки', w:'Экран выпуска', i:false, t:'Выжимка' },
   'digest.final':        { c:'Дайджест', l:'Текст финальной полосы', w:'Экран выпуска', i:false, t:'Это был месяц клуба' },
+  'digest.share_btn':    { c:'Дайджест', l:'Кнопка «поделиться номером» на последней полосе', w:'Экран выпуска', i:false, t:'Поделиться номером с другом' },
+  'digest.share_text':   { c:'Дайджест', l:'Текст, который уходит вместе со ссылкой на номер', w:'Шеринг выпуска', i:false, t:'Смотри, какой журнал выпускает наш клуб продаж — полистай:' },
   'digest.note_label':   { c:'Дайджест', l:'Подпись над словом редакции на полосе', w:'Экран выпуска', i:false, t:'От редакции' },
   'digest.back':         { c:'Дайджест', l:'Ссылка возврата с финала', w:'Экран выпуска', i:false, t:'Вернуться в клуб' },
   'digest.loading':      { c:'Дайджест', l:'Пока выпуск грузится', w:'Экран выпуска', i:false, t:'Собираю выпуск…' },
@@ -16235,6 +16237,11 @@ const APP_TEXTS = {
   'access.stuck_no': {
     c:'Оплата', l:'Отказ от помощи', w:'Окошко застрявшего', i:false,
     t:'Нет, всё в порядке' },
+  /* v472: [stated] Denis 13.10 — пока Salebot лежит, ссылки на тест-драйв выдать
+     нельзя, только «База» с сервера. Показывается ТОЛЬКО над запасным набором */
+  'access.fallback_note': {
+    c:'Оплата', l:'Извинение над запасными ссылками оплаты', w:'Экран «Получить доступ», когда бот молчит и ссылки дал сервер', i:false,
+    t:'Из-за неполадок на серверах Яндекса бот временно не выдаёт ссылку на тест-драйв — сейчас доступна только помесячная оплата. Извини за неудобство, скоро всё вернётся.' },
   'access.links_late': {
     c:'Оплата', l:'Ссылки на оплату не пришли вовремя', w:'Экран «Получить доступ», если бот не ответил за 18 секунд', i:false,
     t:'Ссылки на оплату задержались — бот собирает их под тебя, иногда это занимает минуту.' },
@@ -28774,7 +28781,7 @@ async function payFallbackLinks(){
     const r = await fetch(`${API_URL}/payments/fallback-links?${q}`);
     if (!r.ok) return null;
     const d = await r.json();
-    return d && d.monthly_link ? { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '' } : null;
+    return d && d.monthly_link ? { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '', fallback: true } : null;
   } catch (e) { return null; }
 }
 
@@ -28799,7 +28806,9 @@ function renderAccessButtons(result){
   }
 
   window._paymentLinks = buttons;
-  el.innerHTML = buttons.map((b, i) =>
+  const извинение = (result.fallback && t('access.fallback_note'))
+    ? `<div class="empty" style="line-height:1.5;margin-bottom:10px">${escapeHtml(t('access.fallback_note'))}</div>` : '';
+  el.innerHTML = извинение + buttons.map((b, i) =>
     `<button class="lec-link-btn access-btn" onclick="goToPayment(${i})">${b.label}</button>`
   ).join('') + `<div class="payment-help-link" onclick="switchView('payment-help')">Оплата не из РФ/Проблема с оплатой</div>`;
 }
@@ -38263,6 +38272,8 @@ function dgsPage(p, месяц){
       +   '<div class="dgs-idea dgs-serif">' + escapeHtml(p.text || p.title || t('digest.final')) + '</div>'
       /* v469: закрывающее слово — под заголовком финала, без подписи «от редакции» */
       +   dgsNote(p, true)
+      /* v472: поделиться номером — ссылка с меткой приводящего, как у занятий */
+      +   ((dgsMode === 'issue' && dgsSlug) ? '<div class="dgs-link" onclick="dgsShare()">' + escapeHtml(t('digest.share_btn')) + '</div>' : '')
       +   '<div class="dgs-link" onclick="closeDigest()">' + escapeHtml(t('digest.back')) + '</div>'
       + '</div>' + dgsFoot(t('digest.title'), num) + '</div>';
   }
@@ -38307,6 +38318,15 @@ function dgsPage(p, месяц){
   return '<div class="dgs-page' + тёмная + '">' + dgsTop(p.rubric || '', месяц)
     + '<div class="dgs-body">' + dgsHead(p.rubric || '', p.rubric || '') + dgsNote(p) + строки + dgsDecor(p) + '</div>'
     + dgsVrezka(p) + dgsFoot(p.rubric || '', num) + '</div>';
+}
+
+/* v472: «Поделиться номером». [stated] Denis 13.10: друг приходит посмотреть на
+   красоту, а может, что-то купит. Ссылка `dg_<номер>_<код>` — приведённый
+   запишется за тем, кто поделился (разбор хвоста — тот же, что у занятий) */
+function dgsShare(){
+  if (!dgsSlug) return;
+  track('digest_share', String(dgsSlug).slice(0, 120));
+  shareWithChoice(t('digest.share_text'), 'dg_' + dgsSlug + shareTail());
 }
 
 function dgsPlural(n, одна, две, много){
