@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v474 -->
+<!-- FILE_VERSION: index-v475 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11683,7 +11683,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v474 · 13.10.2026 дайджест: фото-полоса вписывается по высоте экрана, широкий снимок обрезается по бокам';
+const APP_BUILD = 'v475 · 13.10.2026 дайджест: крупная обложка у любого занятия, и в «Новом в библиотеке»';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -38309,7 +38309,8 @@ function dgsPage(p, месяц){
     const строка = it.insight || {};
     /* v470: у занятий в «Что было» обложка во всю ширину строки, а не марка
        64×48 — [stated] Denis 13.10 «обложки можно крупнее» */
-    const крупно = p.layout === 'afisha' && it.image_url;
+    /* v475: крупно — у любой записи-занятия, не только в «Что было» */
+    const крупно = it.image_url && (p.layout === 'afisha' || (m.slug && (m.kind || 'lecture') === 'lecture'));
     const мини = (it.image_url && !крупно)
       ? '<div class="dgs-art" style="flex:0 0 64px;height:48px;border-radius:12px 3px 12px 3px">'
         + '<img src="' + escapeHtml(it.image_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>'
