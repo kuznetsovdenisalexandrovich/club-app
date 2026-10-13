@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v480 -->
+<!-- FILE_VERSION: index-v481 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11729,7 +11729,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v480 · 13.10.2026 запасная ссылка оплаты без опознания и с повтором';
+const APP_BUILD = 'v481 · 13.10.2026 тест-драйв за 1 ₽ в запасных ссылках оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16303,7 +16303,9 @@ const APP_TEXTS = {
      нельзя, только «База» с сервера. Показывается ТОЛЬКО над запасным набором */
   'access.fallback_note': {
     c:'Оплата', l:'Извинение над запасными ссылками оплаты', w:'Экран «Получить доступ», когда бот молчит и ссылки дал сервер', i:false,
-    t:'Из-за неполадок на серверах Яндекса бот временно не выдаёт ссылку на тест-драйв — сейчас доступна только помесячная оплата. Извини за неудобство, скоро всё вернётся.' },
+    /* v481: тест-драйв теперь есть и в запасных ссылках — извиняться не за что,
+       пустой текст = надписи нет. Понадобится — впиши в дашборде */
+    t:'' },
   'access.links_late': {
     c:'Оплата', l:'Ссылки на оплату не пришли вовремя', w:'Экран «Получить доступ», если бот не ответил за 18 секунд', i:false,
     t:'Ссылки на оплату задержались — бот собирает их под тебя, иногда это занимает минуту.' },
@@ -28856,7 +28858,7 @@ async function payFallbackLinks(){
       const r = await fetch(`${API_URL}/payments/fallback-links` + (q ? ('?' + q) : ''));
       if (!r.ok) continue;
       const d = await r.json();
-      if (d && d.monthly_link) return { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '', fallback: true };
+      if (d && d.monthly_link) return { trial_link: d.trial_link || '', monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '', fallback: true };   // v481: + тест-драйв
     } catch (e) {}
   }
   return null;
