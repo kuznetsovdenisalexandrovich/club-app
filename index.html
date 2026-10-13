@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v479 -->
+<!-- FILE_VERSION: index-v480 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11729,7 +11729,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v479 · 13.10.2026 возврат с запасного: кнопка «на боевой» и быстрая проверка';
+const APP_BUILD = 'v480 · 13.10.2026 запасная ссылка оплаты без опознания и с повтором';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28841,16 +28841,25 @@ async function openAccessPage(direct){
    ещё раз» зовёт этот же экран заново, запасной выход — оплатить в боте.
    Задержку отмечаем событием, чтобы в ленте было видно, сколько людей
    упирается именно здесь */
+/* v480: ссылка общая, личность не обязательна — спрашиваем и без неё; не
+   вышло с первого раза — ещё одна попытка через 2 с (Denis 13.10: человек
+   упёрся в «ссылки задержались», со второй загрузки прошло) */
 async function payFallbackLinks(){
+  let q = '';
   try {
-    const q = telegramId ? ('telegram_id=' + encodeURIComponent(telegramId))
-            : ((typeof vkUserId === 'function' && vkUserId()) ? ('vk_id=' + encodeURIComponent(vkUserId())) : '');
-    if (!q) return null;
-    const r = await fetch(`${API_URL}/payments/fallback-links?${q}`);
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d && d.monthly_link ? { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '', fallback: true } : null;
-  } catch (e) { return null; }
+    q = telegramId ? ('telegram_id=' + encodeURIComponent(telegramId))
+      : ((typeof vkUserId === 'function' && vkUserId()) ? ('vk_id=' + encodeURIComponent(vkUserId())) : '');
+  } catch (e) {}
+  for (let attempt = 0; attempt < 2; attempt++){
+    if (attempt) await new Promise(function(r){ setTimeout(r, 2000); });
+    try {
+      const r = await fetch(`${API_URL}/payments/fallback-links` + (q ? ('?' + q) : ''));
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (d && d.monthly_link) return { monthly_link: d.monthly_link, lifetime_link: d.lifetime_link || '', fallback: true };
+    } catch (e) {}
+  }
+  return null;
 }
 
 function accessLinksErrorHtml(){
