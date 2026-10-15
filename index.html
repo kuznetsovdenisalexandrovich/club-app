@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v481 -->
+<!-- FILE_VERSION: index-v482 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11599,8 +11599,22 @@ function foBack(){
   }
 }
 
-function foStart(){
+async function foStart(){
   if (!foActive) return;
+  /* v482: [stated] Denis 15.10 — «приложение встречает меня предупреждением при
+     живом сервере». Переход запоминается на устройстве, и раньше полоса
+     вставала сразу, а возврат требовал трёх проверок по 20 с и нажатия. Теперь
+     первым делом спрашиваем основной: ответил дважды подряд — забываем переход
+     и тихо перезагружаемся на него, человек ничего не видит. И запасному не
+     сообщаем «я переключился» — иначе ложная тревога ставила там паузу копии */
+  if (await foPrimaryAlive()){
+    await foSleep(1500);
+    if (await foPrimaryAlive()){
+      try { localStorage.removeItem('club_failover'); localStorage.removeItem('club_failover_at'); } catch (e) {}
+      location.reload();
+      return;
+    }
+  }
   document.body.classList.add('fo-on');
   const bar = document.getElementById('fo-bar');
   if (bar) bar.textContent = t('failover.banner');   // текст из реестра; правки Denis'а подставит applyAppTexts
@@ -11618,7 +11632,7 @@ function foStart(){
     if (FO.back || document.visibilityState !== 'visible') return;
     if (await foPrimaryAlive()){
       FO.okStreak++;
-      if (FO.okStreak >= 3) foBack();
+      if (FO.okStreak >= 2) foBack();      // v482: двух ответов подряд достаточно
     } else {
       FO.okStreak = 0;
     }
@@ -11729,7 +11743,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v481 · 13.10.2026 тест-драйв за 1 ₽ в запасных ссылках оплаты';
+const APP_BUILD = 'v482 · 15.10.2026 запасной сервер: живой основной — сразу назад, без полосы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
