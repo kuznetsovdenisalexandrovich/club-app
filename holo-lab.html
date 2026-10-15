@@ -1,0 +1,432 @@
+<title>Голо-лаборатория карточек</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- FILE_VERSION: holo-lab-v1 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Раскладка: карточка слева (на телефоне — сверху, прилипает), пульт справа.
+   Один тёплый тёмный мир, как в клубе: матовое стекло, медный акцент. */
+:root{
+  --bg:#141010;
+  --panel:#1d1716;
+  --panel-2:#251d1b;
+  --line:#3a2d29;
+  --fg:#f2e9e4;
+  --muted:#a8978f;
+  --accent:#f08a4b;
+  --accent-soft:rgba(240,138,75,.16);
+  --font-display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 40px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:28px;grid-template-columns:minmax(0,1fr) minmax(0,420px);align-items:start}
+@media (max-width:820px){.wrap{grid-template-columns:minmax(0,1fr)}}
+header.top{max-width:1080px;margin:0 auto 18px}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(20px,4vw,28px);letter-spacing:.01em;margin:0 0 6px;text-wrap:balance}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+
+/* ── сцена карточки ── */
+.stage{position:sticky;top:max(12px, env(safe-area-inset-top, 0px));display:flex;flex-direction:column;align-items:center;gap:14px;z-index:2;background:var(--bg);padding-bottom:6px}
+@media (max-width:820px){.stage{top:env(safe-area-inset-top, 0px)}}
+.scene{perspective:900px;width:min(340px,72vw);max-width:100%}
+@media (max-width:820px){.scene{width:min(300px,62vw)}}
+.card{position:relative;aspect-ratio:63/88;width:100%;border-radius:4.5%/3.2%;overflow:hidden;
+  transform:rotateX(calc(var(--ty,0) * var(--tilt,0) * -1deg)) rotateY(calc(var(--tx,0) * var(--tilt,0) * 1deg));
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.06);
+  touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;will-change:transform;background:#000}
+.card:active{cursor:grabbing}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.holo-clip{position:absolute;inset:0;pointer-events:none;mix-blend-mode:var(--blend,color-dodge);opacity:var(--intensity,.6)}
+.holo{position:absolute;inset:-35%;transform:rotate(var(--angle,45deg));
+  background-image:linear-gradient(90deg,
+    hsl(0 100% 62%) 0%, hsl(40 100% 60%) 8%, hsl(80 100% 58%) 16%, hsl(150 100% 58%) 24%,
+    hsl(195 100% 60%) 32%, hsl(240 100% 66%) 40%, hsl(290 100% 64%) 48%, hsl(340 100% 62%) 56%,
+    hsl(20 100% 60%) 64%, hsl(70 100% 58%) 72%, hsl(140 100% 58%) 80%, hsl(200 100% 60%) 88%, hsl(260 100% 66%) 96%, hsl(300 100% 64%) 100%);
+  background-size:300% 100%;
+  background-position:calc(50% + var(--tx,0) * var(--shift,40%)) 50%;
+  filter:saturate(var(--sat,1));
+  -webkit-mask-repeat:repeat;mask-repeat:repeat}
+.glare{position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;
+  background:radial-gradient(circle at var(--gx,50%) var(--gy,40%), rgba(255,255,255,var(--glare,.5)) 0%, rgba(255,255,255,calc(var(--glare,.5) * .35)) 22%, rgba(255,255,255,0) 55%)}
+.readout{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.pill{border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--panel);font-variant-numeric:tabular-nums}
+.pill b{color:var(--fg);font-weight:500}
+.src-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+/* ── пульт ── */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.group{display:flex;flex-direction:column;gap:10px}
+.group h2{font-family:var(--font-display);font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+.patterns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pat{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:12px;padding:8px 6px 9px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.pat canvas{width:44px;height:44px;border-radius:8px;display:block}
+.pat[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pat:focus-visible,.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center}
+.row label{font-weight:600;font-size:14px}
+.row output{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-variant-numeric:tabular-nums}
+.row input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent);margin:2px 0 0}
+.row .hint{grid-column:1/-1;color:var(--muted);font-size:12.5px;line-height:1.4}
+select{width:100%;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:999px;padding:9px 16px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0f0a}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;line-height:1.5}
+.note{color:var(--muted);font-size:13px;margin:0}
+.toast{min-height:1.4em;font-size:13px;color:var(--accent)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+
+<header class="top">
+  <h1>Голо-лаборатория</h1>
+  <p class="lead">Перелив поверх карточки. Наклоняй телефон или веди мышкой и пальцем по карточке, а ползунками подбирай узор и силу эффекта. Готовые настройки внизу пульта можно скопировать и прислать мне.</p>
+</header>
+
+<main class="wrap">
+  <section class="stage" aria-label="Карточка">
+    <div class="scene">
+      <div class="card" id="card">
+        <img id="art" alt="Образец карточки">
+        <div class="holo-clip"><div class="holo" id="holo"></div></div>
+        <div class="glare"></div>
+      </div>
+    </div>
+    <div class="readout">
+      <span class="pill">Ввод: <b id="src">мышь / палец</b></span>
+      <span class="pill">Кадров/с: <b id="fps">покой</b></span>
+    </div>
+    <div class="src-row">
+      <button class="btn primary" id="gyroBtn" type="button">Включить наклон телефона</button>
+      <button class="btn" id="calBtn" type="button" hidden>Обнулить положение</button>
+      <label class="btn" for="upload">Своя картинка</label>
+      <input class="sr" id="upload" type="file" accept="image/*">
+    </div>
+    <p class="note" id="gyroNote" hidden></p>
+  </section>
+
+  <section class="panel" aria-label="Настройки">
+    <div class="group">
+      <h2>Узор</h2>
+      <div class="patterns" id="patterns"></div>
+    </div>
+
+    <div class="group">
+      <h2>Узор подробнее</h2>
+      <div class="row"><label for="scale">Размер узора</label><output id="scaleOut"></output>
+        <input id="scale" type="range" min="3" max="60" step="1"></div>
+      <div class="row"><label for="density">Плотность</label><output id="densityOut"></output>
+        <input id="density" type="range" min="0.05" max="0.95" step="0.01">
+        <span class="hint">Сколько поверхности занято узором: тонкие линии или жирные.</span></div>
+      <div class="row"><label for="angle">Поворот узора</label><output id="angleOut"></output>
+        <input id="angle" type="range" min="0" max="180" step="1"></div>
+    </div>
+
+    <div class="group">
+      <h2>Сила эффекта</h2>
+      <div class="row"><label for="intensity">Яркость перелива</label><output id="intensityOut"></output>
+        <input id="intensity" type="range" min="0" max="1" step="0.01"></div>
+      <div class="row"><label for="glare">Блик</label><output id="glareOut"></output>
+        <input id="glare" type="range" min="0" max="1" step="0.01"></div>
+      <div class="row"><label for="sat">Насыщенность цвета</label><output id="satOut"></output>
+        <input id="sat" type="range" min="0" max="2" step="0.05"></div>
+      <div class="row"><label for="shift">Ширина перелива</label><output id="shiftOut"></output>
+        <input id="shift" type="range" min="5" max="100" step="1">
+        <span class="hint">Как далеко бегут цвета от края до края наклона.</span></div>
+      <div class="row"><label for="blend">Способ наложения</label><output></output>
+        <select id="blend">
+          <option value="color-dodge">Фольга (осветление)</option>
+          <option value="overlay">Мягкая (перекрытие)</option>
+          <option value="screen">Светлая (экран)</option>
+          <option value="soft-light">Тонкая (мягкий свет)</option>
+          <option value="hard-light">Резкая (жёсткий свет)</option>
+        </select></div>
+    </div>
+
+    <div class="group">
+      <h2>Отклик на движение</h2>
+      <div class="row"><label for="range">Угол полного перелива</label><output id="rangeOut"></output>
+        <input id="range" type="range" min="4" max="45" step="1">
+        <span class="hint">Меньше угол — сильнее отклик: хватит лёгкого наклона.</span></div>
+      <div class="row"><label for="smooth">Скорость реакции</label><output id="smoothOut"></output>
+        <input id="smooth" type="range" min="0.03" max="1" step="0.01">
+        <span class="hint">Слева — плавно и с запаздыванием, справа — мгновенно.</span></div>
+      <div class="row"><label for="tilt">Наклон самой карточки</label><output id="tiltOut"></output>
+        <input id="tilt" type="range" min="0" max="20" step="1"></div>
+    </div>
+
+    <div class="group">
+      <h2>Готовые настройки</h2>
+      <textarea id="json" readonly aria-label="Настройки текстом"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" id="copyBtn" type="button">Скопировать</button>
+        <button class="btn" id="resetBtn" type="button">Сбросить узор</button>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var PATTERNS = [
+    {id:"foil",    name:"Гладкая"},
+    {id:"lines",   name:"Диагональ"},
+    {id:"squares", name:"Квадраты"},
+    {id:"rings",   name:"Круги"},
+    {id:"dots",    name:"Точки"},
+    {id:"glitter", name:"Блёстки"}
+  ];
+  /* Умолчания по узору: у каждого своё, чтобы переключение сразу выглядело прилично */
+  var DEFAULTS = {
+    foil:    {scale:20, density:0.5,  angle:110, intensity:0.4, glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
+    lines:   {scale:8,  density:0.45, angle:45,  intensity:0.4,  glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
+    squares: {scale:14, density:0.6,  angle:45,  intensity:0.4,  glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
+    rings:   {scale:10, density:0.45, angle:0,   intensity:0.4,  glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
+    dots:    {scale:10, density:0.55, angle:30,  intensity:0.45, glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
+    glitter: {scale:9,  density:0.35, angle:0,   intensity:0.6,  glare:0.4,  sat:1.2, shift:60, blend:"color-dodge"}
+  };
+  var MOTION = {range:18, smooth:0.18, tilt:8};
+  var KEY = "holo-lab-v1";
+
+  var S = {pattern:"lines"};
+  Object.assign(S, DEFAULTS.lines, MOTION);
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved && saved.pattern) Object.assign(S, saved); } catch(e) {}
+
+  var card = document.getElementById("card"), holo = document.getElementById("holo");
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ── образец карточки (своя картинка заменяет) ── */
+  function sampleArt(){
+    var c = document.createElement("canvas"); c.width = 630; c.height = 880;
+    var g = c.getContext("2d");
+    var bg = g.createRadialGradient(315,360,40,315,440,620);
+    bg.addColorStop(0,"#7a3a1c"); bg.addColorStop(.45,"#3a1a10"); bg.addColorStop(1,"#0e0806");
+    g.fillStyle = bg; g.fillRect(0,0,630,880);
+    g.save(); g.translate(315,360);
+    for (var i=0;i<36;i++){ g.rotate(Math.PI/18); g.fillStyle = i%2 ? "rgba(255,190,120,.05)" : "rgba(255,190,120,.10)";
+      g.beginPath(); g.moveTo(0,0); g.lineTo(-40,-700); g.lineTo(40,-700); g.closePath(); g.fill(); }
+    g.restore();
+    g.lineWidth = 3; g.strokeStyle = "rgba(255,206,150,.85)";
+    g.beginPath(); g.arc(315,360,150,0,Math.PI*2); g.stroke();
+    g.lineWidth = 1.5; g.beginPath(); g.arc(315,360,170,0,Math.PI*2); g.stroke();
+    // меандр-полоса
+    function meander(y){ g.save(); g.strokeStyle="rgba(255,206,150,.7)"; g.lineWidth=3; g.beginPath();
+      for (var x=40;x<590;x+=30){ g.moveTo(x,y+18); g.lineTo(x,y); g.lineTo(x+22,y); g.lineTo(x+22,y+12); g.lineTo(x+10,y+12); g.lineTo(x+10,y+6); }
+      g.stroke(); g.restore(); }
+    meander(570); meander(820);
+    g.fillStyle = "#f6dcc0"; g.textAlign = "center";
+    g.font = "700 30px Unbounded, Arial Black, sans-serif"; g.fillText("ПАНТЕОН", 315, 92);
+    g.font = "500 16px Manrope, sans-serif"; g.fillStyle = "rgba(246,220,192,.7)"; g.fillText("ОБРАЗЕЦ КАРТОЧКИ", 315, 124);
+    g.font = "700 120px Unbounded, Arial Black, sans-serif"; g.fillStyle = "#ffd9b0"; g.fillText("Б", 315, 405);
+    g.font = "700 44px Unbounded, Arial Black, sans-serif"; g.fillStyle = "#f6dcc0"; g.fillText("БОЖЕНЬКА", 315, 680);
+    g.font = "500 22px Manrope, sans-serif"; g.fillStyle = "rgba(246,220,192,.75)"; g.fillText("Легендарная · 07 / 16", 315, 730);
+    g.lineWidth = 10; g.strokeStyle = "#c98a52"; g.strokeRect(14,14,602,852);
+    g.lineWidth = 2; g.strokeStyle = "rgba(255,220,180,.6)"; g.strokeRect(30,30,570,820);
+    return c.toDataURL("image/jpeg", .9);
+  }
+  function drawSample(){ $("art").src = sampleArt(); }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawSample); else drawSample();
+  drawSample();
+
+  $("upload").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    var r = new FileReader(); r.onload = function(){ $("art").src = r.result; }; r.readAsDataURL(f);
+  });
+
+  /* ── маска узора: плитка рисуется один раз на изменение настроек, не каждый кадр ── */
+  function tileURL(p, scale, d){
+    var dpr = 2, T = (p === "glitter") ? 220 : scale;
+    var c = document.createElement("canvas"); c.width = Math.max(2, Math.round(T*dpr)); c.height = c.width;
+    var g = c.getContext("2d"); g.scale(dpr,dpr); g.fillStyle = "#000";
+    if (p === "lines")   { g.fillRect(0,0,Math.max(.5,T*d),T); }
+    if (p === "squares") { var s = T*d; g.fillRect((T-s)/2,(T-s)/2,s,s); }
+    if (p === "dots")    { g.beginPath(); g.arc(T/2,T/2,Math.max(.4,T*d/2),0,Math.PI*2); g.fill(); }
+    if (p === "glitter") {
+      var seed = 7; function rnd(){ seed = (seed*16807) % 2147483647; return seed/2147483647; }
+      var n = Math.round(d * T*T / (scale*scale) * 3), r = Math.max(.6, scale*.12);
+      for (var i=0;i<n;i++){ g.globalAlpha = .35 + rnd()*.65; g.beginPath(); g.arc(rnd()*T, rnd()*T, r*(.5+rnd()), 0, Math.PI*2); g.fill(); }
+    }
+    return {url: c.toDataURL("image/png"), size: T};
+  }
+  function applyMask(){
+    var st = holo.style, m, size;
+    if (S.pattern === "foil") { m = "none"; size = "auto"; }
+    else if (S.pattern === "rings") {
+      var w = S.scale * S.density;
+      m = "repeating-radial-gradient(circle at 50% 50%, #000 0 " + w.toFixed(2) + "px, transparent " + w.toFixed(2) + "px " + S.scale + "px)";
+      size = "100% 100%";
+    } else { var t = tileURL(S.pattern, S.scale, S.density); m = "url(" + t.url + ")"; size = t.size + "px " + t.size + "px"; }
+    st.webkitMaskImage = m; st.maskImage = m; st.webkitMaskSize = size; st.maskSize = size;
+    st.webkitMaskPosition = "center"; st.maskPosition = "center";
+  }
+  function applyLook(){
+    var cs = card.style;
+    cs.setProperty("--intensity", S.intensity); cs.setProperty("--glare", S.glare);
+    cs.setProperty("--sat", S.sat); cs.setProperty("--shift", S.shift + "%");
+    cs.setProperty("--angle", S.angle + "deg"); cs.setProperty("--blend", S.blend); cs.setProperty("--tilt", S.tilt);
+  }
+
+  /* ── пульт ── */
+  var FIELDS = {
+    scale:{fmt:function(v){return v+" пикс."}},
+    density:{fmt:function(v){return Math.round(v*100)+"%"}},
+    angle:{fmt:function(v){return v+"°"}},
+    intensity:{fmt:function(v){return Math.round(v*100)+"%"}},
+    glare:{fmt:function(v){return Math.round(v*100)+"%"}},
+    sat:{fmt:function(v){return Math.round(v*100)+"%"}},
+    shift:{fmt:function(v){return v+"%"}},
+    range:{fmt:function(v){return v+"°"}},
+    smooth:{fmt:function(v){return Math.round(v*100)+"%"}},
+    tilt:{fmt:function(v){return v+"°"}}
+  };
+  function syncInputs(){
+    Object.keys(FIELDS).forEach(function(k){ $(k).value = S[k]; $(k+"Out").textContent = FIELDS[k].fmt(+S[k]); });
+    $("blend").value = S.blend;
+    document.querySelectorAll(".pat").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.p === S.pattern ? "true" : "false"); });
+  }
+  function save(){
+    var out = {pattern:S.pattern}; Object.keys(FIELDS).forEach(function(k){ out[k] = +S[k]; }); out.blend = S.blend;
+    $("json").value = JSON.stringify(out, null, 2);
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch(e) {}
+  }
+  var maskKeys = {scale:1, density:1};
+  Object.keys(FIELDS).forEach(function(k){
+    $(k).addEventListener("input", function(){
+      S[k] = +this.value; $(k+"Out").textContent = FIELDS[k].fmt(S[k]);
+      if (maskKeys[k]) applyMask(); applyLook(); save(); kick();
+    });
+  });
+  $("blend").addEventListener("change", function(){ S.blend = this.value; applyLook(); save(); });
+
+  var box = $("patterns");
+  PATTERNS.forEach(function(p){
+    var b = document.createElement("button"); b.type = "button"; b.className = "pat"; b.dataset.p = p.id;
+    var c = document.createElement("canvas"); c.width = 88; c.height = 88; b.appendChild(c);
+    var t = document.createElement("span"); t.textContent = p.name; b.appendChild(t);
+    b.addEventListener("click", function(){ S.pattern = p.id; Object.assign(S, DEFAULTS[p.id]); syncInputs(); applyMask(); applyLook(); save(); kick(); });
+    box.appendChild(b);
+    // миниатюра узора
+    var g = c.getContext("2d"), d = DEFAULTS[p.id];
+    var gr = g.createLinearGradient(0,0,88,88);
+    ["#ff5a5a","#ffc94a","#6dff8a","#4ad2ff","#9a6bff","#ff5ad1"].forEach(function(col,i,a){ gr.addColorStop(i/(a.length-1), col); });
+    g.fillStyle = "#2a201d"; g.fillRect(0,0,88,88);
+    g.save(); g.translate(44,44); g.rotate(d.angle*Math.PI/180); g.translate(-88,-88); g.fillStyle = gr;
+    if (p.id === "foil") { g.globalAlpha = .75; g.fillRect(0,0,176,176); }
+    else if (p.id === "rings") { g.restore(); g.save(); g.strokeStyle = gr; g.lineWidth = 3; for (var r=5;r<62;r+=8){ g.beginPath(); g.arc(44,44,r,0,Math.PI*2); g.stroke(); } }
+    else if (p.id === "lines") { for (var x=0;x<176;x+=10) g.fillRect(x,0,4.5,176); }
+    else if (p.id === "squares") { for (var x2=0;x2<176;x2+=16) for (var y2=0;y2<176;y2+=16) g.fillRect(x2+3,y2+3,10,10); }
+    else if (p.id === "dots") { for (var x3=0;x3<176;x3+=12) for (var y3=0;y3<176;y3+=12){ g.beginPath(); g.arc(x3+6,y3+6,3.2,0,Math.PI*2); g.fill(); } }
+    else if (p.id === "glitter") { var sd=3; for (var i=0;i<140;i++){ sd=(sd*16807)%2147483647; var a=sd/2147483647; sd=(sd*16807)%2147483647; var bq=sd/2147483647; g.beginPath(); g.arc(a*176,bq*176,1.6,0,Math.PI*2); g.fill(); } }
+    g.restore();
+  });
+
+  $("resetBtn").addEventListener("click", function(){ Object.assign(S, DEFAULTS[S.pattern], MOTION); syncInputs(); applyMask(); applyLook(); save(); kick(); });
+  $("copyBtn").addEventListener("click", function(){
+    var ta = $("json"), toast = $("toast");
+    function fallback(){ ta.focus(); ta.select(); toast.textContent = "Текст выделен — скопируй вручную"; }
+    try {
+      navigator.clipboard.writeText(ta.value).then(function(){ toast.textContent = "Скопировано"; }, fallback);
+    } catch(e) { fallback(); }
+    setTimeout(function(){ toast.textContent = ""; }, 2500);
+  });
+
+  /* ── движение: цель (target) и сглаженное положение (cur) ── */
+  var target = {x:0, y:0}, cur = {x:0, y:0}, mode = "pointer", running = false;
+  var frames = 0, fpsT = performance.now();
+  function clamp(v){ return v < -1 ? -1 : v > 1 ? 1 : v; }
+  function render(){
+    var cs = card.style;
+    cs.setProperty("--tx", cur.x.toFixed(4)); cs.setProperty("--ty", cur.y.toFixed(4));
+    cs.setProperty("--gx", (50 + cur.x*45).toFixed(2) + "%"); cs.setProperty("--gy", (45 + cur.y*45).toFixed(2) + "%");
+  }
+  function frame(now){
+    var k = +S.smooth;
+    cur.x += (target.x - cur.x) * k; cur.y += (target.y - cur.y) * k;
+    render(); frames++;
+    if (now - fpsT >= 1000){ $("fps").textContent = Math.round(frames*1000/(now-fpsT)); frames = 0; fpsT = now; }
+    // Покой: дошли до цели и ввода нет — кадры не крутим, телефон не греем
+    if (Math.abs(target.x-cur.x) < .0008 && Math.abs(target.y-cur.y) < .0008 && mode === "pointer"){
+      running = false; $("fps").textContent = "покой"; return;
+    }
+    requestAnimationFrame(frame);
+  }
+  function kick(){ if (!running){ running = true; frames = 0; fpsT = performance.now(); requestAnimationFrame(frame); } }
+
+  function fromPointer(e){
+    var r = card.getBoundingClientRect();
+    target.x = clamp(((e.clientX - r.left)/r.width - .5) * 2);
+    target.y = clamp(((e.clientY - r.top)/r.height - .5) * 2);
+    kick();
+  }
+  card.addEventListener("pointermove", function(e){ if (mode !== "pointer") return; if (e.pointerType === "mouse" || e.buttons) fromPointer(e); });
+  card.addEventListener("pointerdown", function(e){ if (mode !== "pointer") return; try{ card.setPointerCapture(e.pointerId); }catch(_){} fromPointer(e); });
+  card.addEventListener("pointerleave", function(e){ if (mode === "pointer" && e.pointerType === "mouse"){ target.x = 0; target.y = 0; kick(); } });
+  card.addEventListener("pointerup", function(){ if (mode === "pointer"){ target.x = 0; target.y = 0; kick(); } });
+
+  /* Гироскоп. Ноль — то положение, в котором человек держит телефон в момент включения */
+  var base = null;
+  function fromAngles(beta, gamma){
+    if (beta == null || gamma == null) return;
+    if (!base) base = {b:beta, g:gamma};
+    var rg = +S.range;
+    target.x = clamp((gamma - base.g) / rg);
+    target.y = clamp((beta - base.b) / rg);
+  }
+  function startGyro(name){
+    mode = "gyro"; $("src").textContent = name; $("calBtn").hidden = false;
+    $("gyroBtn").textContent = "Наклон включён"; $("gyroBtn").disabled = true;
+    base = null; kick();
+  }
+  function note(t){ var n = $("gyroNote"); n.textContent = t; n.hidden = !t; }
+
+  var TG = window.Telegram && window.Telegram.WebApp;
+  $("gyroBtn").addEventListener("click", function(){
+    // Telegram (мини-приложение, версия 8.0+): свой гироскоп, без вопроса о разрешении
+    if (TG && TG.DeviceOrientation && TG.isVersionAtLeast && TG.isVersionAtLeast("8.0")) {
+      TG.onEvent("deviceOrientationChanged", function(){
+        var o = TG.DeviceOrientation; fromAngles(o.beta*180/Math.PI, o.gamma*180/Math.PI);
+      });
+      TG.DeviceOrientation.start({refresh_rate:20, need_absolute:false}, function(ok){
+        if (ok) startGyro("гироскоп Telegram"); else note("Telegram не дал доступ к гироскопу.");
+      });
+      return;
+    }
+    if (typeof DeviceOrientationEvent === "undefined") { note("Это устройство не сообщает наклон. Веди пальцем по карточке."); return; }
+    var go = function(){
+      var got = false;
+      window.addEventListener("deviceorientation", function(e){
+        if (e.beta == null) return;
+        if (!got){ got = true; startGyro("гироскоп"); }
+        fromAngles(e.beta, e.gamma);
+      });
+      setTimeout(function(){ if (!got) note("Наклон не приходит: здесь его не пускают. Открой страницу в Safari или Chrome на телефоне, а пока веди пальцем по карточке."); }, 1500);
+    };
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      DeviceOrientationEvent.requestPermission().then(function(r){
+        if (r === "granted") go(); else note("Доступ к наклону не дан. Его можно разрешить в настройках Safari для этого сайта.");
+      }).catch(function(){ note("Доступ к наклону не дан."); });
+    } else go();
+  });
+  $("calBtn").addEventListener("click", function(){ base = null; });
+
+  // Telegram-скрипт: подключаем, только если страница открыта в Telegram
+  if (/tgWebApp/i.test(location.hash) || /Telegram/i.test(navigator.userAgent)) {
+    var sc = document.createElement("script"); sc.src = "https://telegram.org/js/telegram-web-app.js";
+    sc.onload = function(){ TG = window.Telegram && window.Telegram.WebApp; try{ TG.ready(); TG.expand(); }catch(_){} };
+    document.head.appendChild(sc);
+  }
+
+  syncInputs(); applyMask(); applyLook(); save(); render();
+})();
+</script>
