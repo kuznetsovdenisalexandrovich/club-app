@@ -1,6 +1,6 @@
 <title>Голо-лаборатория карточек</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<!-- FILE_VERSION: holo-lab-v2 -->
+<!-- FILE_VERSION: holo-lab-v3 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -103,10 +103,10 @@ body.open .drawer{visibility:visible;transition:transform .32s cubic-bezier(.2,.
 .drawer-scroll{overflow-y:auto;overscroll-behavior:contain;padding:14px 18px 28px;display:flex;flex-direction:column;gap:20px;min-height:0;flex:1}
 .group{display:flex;flex-direction:column;gap:10px}
 .group h2{font-family:var(--font-display);font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
-.patterns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.patterns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .pat,.seg button{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:12px;font:inherit;font-weight:600;cursor:pointer}
-.pat{padding:8px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12.5px}
-.pat canvas{width:44px;height:44px;border-radius:8px;display:block}
+.pat{padding:7px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;line-height:1.2;text-align:center}
+.pat canvas{width:40px;height:40px;border-radius:8px;display:block}
 .pat[aria-pressed="true"],.seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .seg button{padding:9px 6px;font-size:13px}
@@ -232,9 +232,11 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
 
     <div class="group">
       <h2>Готовые настройки</h2>
-      <textarea id="json" readonly aria-label="Настройки текстом"></textarea>
+      <textarea id="json" aria-label="Настройки текстом" spellcheck="false"></textarea>
+      <p class="ghint">Сюда можно вставить присланные настройки и нажать «Применить».</p>
       <div class="btn-row">
         <button class="btn primary" id="copyBtn" type="button">Скопировать</button>
+        <button class="btn" id="applyBtn" type="button">Применить</button>
         <button class="btn" id="resetBtn" type="button">Сбросить всё</button>
       </div>
       <div class="toast" id="toast" role="status"></div>
@@ -245,29 +247,37 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
 <script>
 (function(){
   "use strict";
+  /* Библиотека узоров. У каждого — своя геометрия по умолчанию (размер,
+     плотность, поворот); сила, свет и отклик при смене узора НЕ сбрасываются */
   var PATTERNS = [
-    {id:"foil",    name:"Гладкая"},
-    {id:"lines",   name:"Диагональ"},
-    {id:"squares", name:"Квадраты"},
-    {id:"rings",   name:"Круги"},
-    {id:"dots",    name:"Точки"},
-    {id:"glitter", name:"Блёстки"}
+    {id:"foil",     name:"Гладкая",       def:{scale:20, density:0.5,  angle:110}},
+    {id:"lines",    name:"Диагональ",     def:{scale:8,  density:0.45, angle:45}},
+    {id:"hatch",    name:"Сетка",         def:{scale:10, density:0.35, angle:45}},
+    {id:"waves",    name:"Волны",         def:{scale:12, density:0.35, angle:0}},
+    {id:"zigzag",   name:"Зигзаг",        def:{scale:12, density:0.3,  angle:0}},
+    {id:"squares",  name:"Квадраты",      def:{scale:14, density:0.6,  angle:45}},
+    {id:"checker",  name:"Шахматка",      def:{scale:10, density:0.9,  angle:0}},
+    {id:"triangles",name:"Треугольники",  def:{scale:14, density:0.6,  angle:0}},
+    {id:"hex",      name:"Соты",          def:{scale:9,  density:0.35, angle:0}},
+    {id:"scales",   name:"Чешуя",         def:{scale:14, density:0.35, angle:0}},
+    {id:"dots",     name:"Точки",         def:{scale:10, density:0.55, angle:30}},
+    {id:"dots2",    name:"Точки вразбег", def:{scale:9,  density:0.6,  angle:0}},
+    {id:"circles",  name:"Колечки",       def:{scale:12, density:0.35, angle:0}},
+    {id:"circles2", name:"Колечки вразбег",def:{scale:10,density:0.35, angle:0}},
+    {id:"rings",    name:"Круги",         def:{scale:10, density:0.45, angle:0}},
+    {id:"sunburst", name:"Лучи",          def:{scale:12, density:0.5,  angle:0}},
+    {id:"stars",    name:"Звёздочки",     def:{scale:14, density:0.6,  angle:0}},
+    {id:"sparks",   name:"Искры",         def:{scale:10, density:0.35, angle:0}},
+    {id:"glitter",  name:"Блёстки",       def:{scale:9,  density:0.35, angle:0}}
   ];
-  /* Умолчания по узору: у каждого свои, чтобы переключение сразу выглядело прилично */
-  var DEFAULTS = {
-    foil:    {scale:20, density:0.5,  angle:110, intensity:0.45, glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
-    lines:   {scale:8,  density:0.45, angle:45,  intensity:0.5,  glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
-    squares: {scale:14, density:0.6,  angle:45,  intensity:0.5,  glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
-    rings:   {scale:10, density:0.45, angle:0,   intensity:0.5,  glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
-    dots:    {scale:10, density:0.55, angle:30,  intensity:0.55, glare:0.45, sat:1.1, shift:45, blend:"color-dodge"},
-    glitter: {scale:9,  density:0.35, angle:0,   intensity:0.7,  glare:0.4,  sat:1.2, shift:60, blend:"color-dodge"}
-  };
+  var DEFAULTS = {}; PATTERNS.forEach(function(p){ DEFAULTS[p.id] = p.def; });
+  var LOOK = {intensity:0.5, glare:0.45, sat:1.1, shift:45, blend:"color-dodge"};
   var LIGHT = {light:"spots", spotSize:220, empty:0.45, soft:0.18, travel:1.2, band:16, bandAngle:115};
   var MOTION = {range:18, smooth:0.18, tilt:8};
-  var KEY = "holo-lab-v2";
+  var KEY = "holo-lab-v2";  // тот же ключ: настройки v2 сохраняются
 
   var S = {pattern:"lines"};
-  Object.assign(S, DEFAULTS.lines, LIGHT, MOTION);
+  Object.assign(S, DEFAULTS.lines, LOOK, LIGHT, MOTION);
   try { var saved = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem("holo-lab-v1") || "null"); if (saved && saved.pattern) Object.assign(S, saved); } catch(e) {}
 
   var $ = function(id){ return document.getElementById(id); };
@@ -322,19 +332,64 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
   });
 
   /* ── маска узора: плитка рисуется один раз на изменение настроек, не каждый кадр ── */
-  function tileURL(p, scale, d){
-    var dpr = 2, T = (p === "glitter") ? 220 : scale;
-    var c = document.createElement("canvas"); c.width = Math.max(2, Math.round(T*dpr)); c.height = c.width;
-    var g = c.getContext("2d"); g.scale(dpr,dpr); g.fillStyle = "#000";
-    if (p === "lines")   { g.fillRect(0,0,Math.max(.5,T*d),T); }
-    if (p === "squares") { var s = T*d; g.fillRect((T-s)/2,(T-s)/2,s,s); }
-    if (p === "dots")    { g.beginPath(); g.arc(T/2,T/2,Math.max(.4,T*d/2),0,Math.PI*2); g.fill(); }
-    if (p === "glitter") {
-      var seed = 7; var rnd = function(){ seed = (seed*16807) % 2147483647; return seed/2147483647; };
-      var n = Math.round(d * T*T / (scale*scale) * 3), r = Math.max(.6, scale*.12);
-      for (var i=0;i<n;i++){ g.globalAlpha = .35 + rnd()*.65; g.beginPath(); g.arc(rnd()*T, rnd()*T, r*(.5+rnd()), 0, Math.PI*2); g.fill(); }
+  /* Плитка узора: рисуется один раз на изменение настроек, не каждый кадр.
+     Чёрное = узор виден, прозрачное = нет. _w/_h — размер плитки в пикселях экрана */
+  function rndGen(seed){ return function(){ seed = (seed*16807) % 2147483647; return seed/2147483647; }; }
+  function tileCanvas(p, S0, d, dpr){
+    var w = S0, h = S0, r3 = Math.sqrt(3);
+    if (p === "waves" || p === "zigzag") { w = S0*2; h = S0; }
+    if (p === "checker" || p === "dots2" || p === "circles2") { w = h = S0*2; }
+    if (p === "triangles") { w = S0; h = S0*r3/2*2; }
+    if (p === "hex") { w = S0*r3; h = S0*3; }
+    if (p === "scales") { w = S0; h = S0; }
+    if (p === "glitter" || p === "sparks") { w = h = 220; }
+    var c = document.createElement("canvas");
+    c.width = Math.max(2, Math.round(w*dpr)); c.height = Math.max(2, Math.round(h*dpr));
+    var g = c.getContext("2d"); g.scale(dpr,dpr); g.fillStyle = "#000"; g.strokeStyle = "#000";
+    var lw = function(k){ g.lineWidth = Math.max(.6, S0*d*k); };
+    if (p === "lines")   g.fillRect(0,0,Math.max(.5,w*d),h);
+    if (p === "hatch")   { var t = Math.max(.5,S0*d/2); g.fillRect(0,0,t,h); g.fillRect(0,0,w,t); }
+    if (p === "waves")   { lw(.6); g.beginPath(); for (var x=-1;x<=w+1;x+=1){ var y = h/2 + h*.28*Math.sin(x/w*Math.PI*2); if (x<0) g.moveTo(x,y); else g.lineTo(x,y); } g.stroke(); }
+    if (p === "zigzag")  { lw(.6); g.lineJoin = "miter"; g.beginPath(); g.moveTo(-w/4,h*.8); g.lineTo(0,h*.2); g.lineTo(w/2,h*.8); g.lineTo(w,h*.2); g.lineTo(w*1.25,h*.8); g.stroke(); }
+    if (p === "squares") { var s1 = S0*d; g.fillRect((w-s1)/2,(h-s1)/2,s1,s1); }
+    if (p === "checker") { var s2 = S0*(.3+.7*d); g.fillRect((S0-s2)/2,(S0-s2)/2,s2,s2); g.fillRect(S0+(S0-s2)/2,S0+(S0-s2)/2,s2,s2); }
+    if (p === "triangles") {
+      var side = S0*(.3+.7*d), th = side*r3/2;
+      [[w/2, h/4],[0, h*3/4],[w, h*3/4]].forEach(function(cxy){ var cx=cxy[0], cy=cxy[1];
+        g.beginPath(); g.moveTo(cx, cy-th/2); g.lineTo(cx+side/2, cy+th/2); g.lineTo(cx-side/2, cy+th/2); g.closePath(); g.fill(); });
     }
-    return {url: c.toDataURL("image/png"), size: T};
+    if (p === "hex") {
+      lw(.5); var R = S0;
+      [[0,0],[w,0],[w/2,1.5*R],[0,3*R],[w,3*R]].forEach(function(cxy){ g.beginPath();
+        for (var k=0;k<6;k++){ var a = Math.PI/3*k + Math.PI/6, px = cxy[0]+R*Math.cos(a), py = cxy[1]+R*Math.sin(a); if (k) g.lineTo(px,py); else g.moveTo(px,py); }
+        g.closePath(); g.stroke(); });
+    }
+    if (p === "scales") { lw(.35); [[0,0],[w,0],[w/2,h/2],[0,h],[w,h]].forEach(function(cxy){ g.beginPath(); g.arc(cxy[0],cxy[1],w/2,0,Math.PI); g.stroke(); }); }
+    if (p === "dots")    { g.beginPath(); g.arc(w/2,h/2,Math.max(.4,S0*d/2),0,Math.PI*2); g.fill(); }
+    if (p === "dots2")   { var rr = Math.max(.4,S0*d/2); [[S0/2,S0/2],[S0*1.5,S0*1.5]].forEach(function(q){ g.beginPath(); g.arc(q[0],q[1],rr,0,Math.PI*2); g.fill(); }); }
+    if (p === "circles") { lw(.3); g.beginPath(); g.arc(w/2,h/2,S0*.33,0,Math.PI*2); g.stroke(); }
+    if (p === "circles2"){ lw(.3); [[S0/2,S0/2],[S0*1.5,S0*1.5]].forEach(function(q){ g.beginPath(); g.arc(q[0],q[1],S0*.36,0,Math.PI*2); g.stroke(); }); }
+    if (p === "stars") {
+      var ro = S0*(.15+.35*d), ri = ro*.28; g.beginPath();
+      for (var k2=0;k2<8;k2++){ var a2 = Math.PI/4*k2 - Math.PI/2, rad = k2%2 ? ri : ro; var px2 = w/2+rad*Math.cos(a2), py2 = h/2+rad*Math.sin(a2); if (k2) g.lineTo(px2,py2); else g.moveTo(px2,py2); }
+      g.closePath(); g.fill();
+    }
+    if (p === "glitter") {
+      var rnd = rndGen(7), n = Math.round(d * w*h / (S0*S0) * 3), r = Math.max(.6, S0*.12);
+      for (var i=0;i<n;i++){ g.globalAlpha = .35 + rnd()*.65; g.beginPath(); g.arc(rnd()*w, rnd()*h, r*(.5+rnd()), 0, Math.PI*2); g.fill(); }
+    }
+    if (p === "sparks") {
+      var rnd2 = rndGen(5), n2 = Math.round(d * w*h / (S0*S0) * 1.2);
+      for (var j=0;j<n2;j++){ var x0 = rnd2()*w, y0 = rnd2()*h, L = S0*(.25+rnd2()*.5), t2 = Math.max(.6, L*.12);
+        g.globalAlpha = .5 + rnd2()*.5; g.fillRect(x0-L, y0-t2/2, L*2, t2); g.fillRect(x0-t2/2, y0-L, t2, L*2); }
+    }
+    c._w = w; c._h = h;
+    return c;
+  }
+  function cssPattern(p, S0, d){
+    if (p === "rings") { var rw = S0*d; return "repeating-radial-gradient(circle at 50% 50%, #000 0 " + rw.toFixed(2) + "px, transparent " + rw.toFixed(2) + "px " + S0 + "px)"; }
+    if (p === "sunburst") { var step = Math.max(2, S0/2), f = step*d; return "repeating-conic-gradient(from 0deg at 50% 50%, #000 0deg " + f.toFixed(2) + "deg, transparent " + f.toFixed(2) + "deg " + step.toFixed(2) + "deg)"; }
+    return "";
   }
   function setMask(el, img, size, repeat){
     var st = el.style;
@@ -343,13 +398,13 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
     st.webkitMaskRepeat = repeat; st.maskRepeat = repeat;
   }
   function applyPattern(){
-    if (S.pattern === "foil") { setMask(holo, "none", "auto", "repeat"); }
-    else if (S.pattern === "rings") {
-      var w = S.scale * S.density;
-      setMask(holo, "repeating-radial-gradient(circle at 50% 50%, #000 0 " + w.toFixed(2) + "px, transparent " + w.toFixed(2) + "px " + S.scale + "px)", "100% 100%", "no-repeat");
-    } else { var t = tileURL(S.pattern, S.scale, S.density); setMask(holo, "url(" + t.url + ")", t.size + "px " + t.size + "px", "repeat"); }
+    var css = cssPattern(S.pattern, S.scale, S.density);
+    if (S.pattern === "foil") setMask(holo, "none", "auto", "repeat");
+    else if (css) setMask(holo, css, "100% 100%", "no-repeat");
+    else { var t = tileCanvas(S.pattern, S.scale, S.density, 2); setMask(holo, "url(" + t.toDataURL("image/png") + ")", t._w + "px " + t._h + "px", "repeat"); }
     holo.style.webkitMaskPosition = "center"; holo.style.maskPosition = "center";
   }
+
 
   /* ── «где ловится свет»: поле мягких пятен или полоса блика ──
      Поле — бесшовная плитка: пятна рисуются с повтором через край, потом
@@ -464,27 +519,45 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
   });
 
   var box = $("patterns");
+  function thumb(c, p){
+    var g = c.getContext("2d"), d = p.def, N = 88;
+    g.fillStyle = "#2a201d"; g.fillRect(0,0,N,N);
+    var m = document.createElement("canvas"); m.width = m.height = N; var mg = m.getContext("2d");
+    mg.fillStyle = "#000"; mg.strokeStyle = "#000";
+    if (p.id === "foil") mg.fillRect(0,0,N,N);
+    else if (p.id === "rings") { mg.lineWidth = 3; for (var r=4;r<64;r+=8){ mg.beginPath(); mg.arc(N/2,N/2,r,0,Math.PI*2); mg.stroke(); } }
+    else if (p.id === "sunburst") { for (var k=0;k<24;k++){ var a = k/24*Math.PI*2; mg.beginPath(); mg.moveTo(N/2,N/2); mg.arc(N/2,N/2,70,a,a+Math.PI/24); mg.closePath(); mg.fill(); } }
+    else {
+      var sc = p.id === "glitter" || p.id === "sparks" ? d.scale*1.4 : d.scale*1.15;
+      var t = tileCanvas(p.id, sc, d.density, 1), pat = mg.createPattern(t, "repeat");
+      mg.save(); mg.translate(N/2,N/2); mg.rotate(d.angle*Math.PI/180); mg.fillStyle = pat; mg.fillRect(-N,-N,N*2,N*2); mg.restore();
+    }
+    var rb = document.createElement("canvas"); rb.width = rb.height = N; var rg = rb.getContext("2d");
+    var gr = rg.createLinearGradient(0,0,N,N);
+    ["#ff5a5a","#ffc94a","#6dff8a","#4ad2ff","#9a6bff","#ff5ad1"].forEach(function(col,i,arr){ gr.addColorStop(i/(arr.length-1), col); });
+    rg.fillStyle = gr; rg.fillRect(0,0,N,N);
+    rg.globalCompositeOperation = "destination-in"; rg.drawImage(m,0,0);
+    if (p.id === "foil") g.globalAlpha = .8;
+    g.drawImage(rb,0,0);
+  }
   PATTERNS.forEach(function(p){
     var b = document.createElement("button"); b.type = "button"; b.className = "pat"; b.dataset.p = p.id;
     var c = document.createElement("canvas"); c.width = 88; c.height = 88; b.appendChild(c);
     var t = document.createElement("span"); t.textContent = p.name; b.appendChild(t);
-    b.addEventListener("click", function(){ S.pattern = p.id; Object.assign(S, DEFAULTS[p.id]); syncInputs(); applyPattern(); applyLook(); save(); kick(); });
+    b.addEventListener("click", function(){ S.pattern = p.id; Object.assign(S, p.def); syncInputs(); applyPattern(); applyLook(); save(); kick(); });
     box.appendChild(b);
-    var g = c.getContext("2d"), d = DEFAULTS[p.id];
-    var gr = g.createLinearGradient(0,0,88,88);
-    ["#ff5a5a","#ffc94a","#6dff8a","#4ad2ff","#9a6bff","#ff5ad1"].forEach(function(col,i,a){ gr.addColorStop(i/(a.length-1), col); });
-    g.fillStyle = "#2a201d"; g.fillRect(0,0,88,88);
-    g.save(); g.translate(44,44); g.rotate(d.angle*Math.PI/180); g.translate(-88,-88); g.fillStyle = gr;
-    if (p.id === "foil") { g.globalAlpha = .75; g.fillRect(0,0,176,176); }
-    else if (p.id === "rings") { g.restore(); g.save(); g.strokeStyle = gr; g.lineWidth = 3; for (var r=5;r<62;r+=8){ g.beginPath(); g.arc(44,44,r,0,Math.PI*2); g.stroke(); } }
-    else if (p.id === "lines") { for (var x=0;x<176;x+=10) g.fillRect(x,0,4.5,176); }
-    else if (p.id === "squares") { for (var x2=0;x2<176;x2+=16) for (var y2=0;y2<176;y2+=16) g.fillRect(x2+3,y2+3,10,10); }
-    else if (p.id === "dots") { for (var x3=0;x3<176;x3+=12) for (var y3=0;y3<176;y3+=12){ g.beginPath(); g.arc(x3+6,y3+6,3.2,0,Math.PI*2); g.fill(); } }
-    else if (p.id === "glitter") { var sd=3; for (var i=0;i<140;i++){ sd=(sd*16807)%2147483647; var a=sd/2147483647; sd=(sd*16807)%2147483647; var bq=sd/2147483647; g.beginPath(); g.arc(a*176,bq*176,1.6,0,Math.PI*2); g.fill(); } }
-    g.restore();
+    thumb(c, p);
   });
 
-  $("resetBtn").addEventListener("click", function(){ Object.assign(S, DEFAULTS[S.pattern], LIGHT, MOTION); syncInputs(); applyPattern(); applyLight(); applyLook(); save(); kick(); });
+  $("resetBtn").addEventListener("click", function(){ Object.assign(S, DEFAULTS[S.pattern], LOOK, LIGHT, MOTION); syncInputs(); applyPattern(); applyLight(); applyLook(); save(); kick(); });
+  $("applyBtn").addEventListener("click", function(){
+    var toast = $("toast"), v;
+    try { v = JSON.parse($("json").value); } catch(e) { toast.textContent = "Текст не похож на настройки — проверь, что скопирован целиком"; return; }
+    if (v.pattern && !DEFAULTS[v.pattern]) v.pattern = S.pattern;
+    Object.keys(v).forEach(function(k){ if (k in S) S[k] = v[k]; });
+    syncInputs(); applyPattern(); applyLight(); applyLook(); save(); kick();
+    toast.textContent = "Применено"; setTimeout(function(){ toast.textContent = ""; }, 2500);
+  });
   $("copyBtn").addEventListener("click", function(){
     var ta = $("json"), toast = $("toast");
     function fallback(){ ta.focus(); ta.select(); toast.textContent = "Текст выделен — скопируй вручную"; }
