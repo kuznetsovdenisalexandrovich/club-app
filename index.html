@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v486 -->
+<!-- FILE_VERSION: index-v487 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11811,7 +11811,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v486 · 16.10.2026 голографический перелив открытой карты по серии';
+const APP_BUILD = 'v487 · 16.10.2026 перелив светлеет, а не темнит; карта в покое чистая';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39222,7 +39222,7 @@ function ivAutoOpen(){
   if (root.HoloFX) return;
 
   var CSS = ''
-    + '.hfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit;z-index:var(--hfx-z,5)}'
+    + '.hfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}'
     + '.hfx-light{position:absolute;inset:0;mix-blend-mode:var(--hfx-blend,color-dodge);opacity:var(--hfx-intensity,.5);'
     +   '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}'
     + '.hfx-pat{position:absolute;inset:-35%;transform:rotate(var(--hfx-angle,45deg));'
@@ -39271,7 +39271,7 @@ function ivAutoOpen(){
   var RANGES = {
     scale:[8,3,60], density:[0.45,0.05,0.95], angle:[45,0,180],
     intensity:[0.5,0,1], glare:[0.45,0,1], sat:[1.1,0,2], shift:[45,5,100],
-    band:[16,4,45], bandAngle:[115,0,180], soft:[0.18,0.02,0.5], travel:[1.2,0.2,3],
+    band:[16,4,45], bandAngle:[115,0,180], bandRest:[1,-1.5,1.5], soft:[0.18,0.02,0.5], travel:[1.2,0.2,3],
     range:[18,4,45], smooth:[0.18,0.03,1], tilt:[8,0,20]
   };
   var BLENDS = ["color-dodge","overlay","screen","soft-light","hard-light"];
@@ -39422,7 +39422,11 @@ function ivAutoOpen(){
     injectCss(); opts = opts || {};
     var S = normalize(settings);
     var root = document.createElement("div"); root.className = "hfx"; root.setAttribute("aria-hidden", "true");
-    if (opts.z != null) root.style.setProperty("--hfx-z", opts.z);
+    /* ⚠️ У СЛОЯ НЕТ z-index И НЕ ДОЛЖНО БЫТЬ. z-index делает его отдельной
+       «группой наложения», и режимы смешивания (осветление, перекрытие)
+       смешивают радугу с ПУСТОТОЙ этой группы, а не с картинкой карты: узор
+       ложится тёмной радугой поверх арта ([stated] Denis 16.10, v4). Слой
+       кладётся последним в карточку — выше картинки он и так по порядку */
     var light = document.createElement("div"); light.className = "hfx-light";
     var pat = document.createElement("div"); pat.className = "hfx-pat";
     var glare = document.createElement("div"); glare.className = "hfx-glare";
@@ -39461,7 +39465,9 @@ function ivAutoOpen(){
       st.setProperty("--hfx-x", cur.x.toFixed(4));
       st.setProperty("--hfx-gx", (50 + cur.x*45).toFixed(2) + "%"); st.setProperty("--hfx-gy", (45 + cur.y*45).toFixed(2) + "%");
       // Полоса бежит НАВСТРЕЧУ наклону — как отражение лампы в настоящей карточке
-      var pos = (-cw - cur.x*S.travel*cw).toFixed(1) + "px " + (-ch - cur.y*S.travel*ch).toFixed(1) + "px";
+      // bandRest — где полоса, когда карточку не наклоняют (в ширинах карты от
+      // центра): 0 — через середину, 1 — за правым краем, карта в покое чистая
+      var pos = (-cw + (S.bandRest - cur.x*S.travel)*cw).toFixed(1) + "px " + (-ch - cur.y*S.travel*ch).toFixed(1) + "px";
       light.style.webkitMaskPosition = pos; light.style.maskPosition = pos;
       if (tiltEl && S.tilt) tiltEl.style.transform = "rotateX(" + (-cur.y*S.tilt).toFixed(2) + "deg) rotateY(" + (cur.x*S.tilt).toFixed(2) + "deg)";
     }

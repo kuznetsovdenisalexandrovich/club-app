@@ -1,6 +1,6 @@
 <title>Голо-лаборатория карточек</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<!-- FILE_VERSION: holo-lab-v4 -->
+<!-- FILE_VERSION: holo-lab-v5 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -190,7 +190,7 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
   if (root.HoloFX) return;
 
   var CSS = ''
-    + '.hfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit;z-index:var(--hfx-z,5)}'
+    + '.hfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}'
     + '.hfx-light{position:absolute;inset:0;mix-blend-mode:var(--hfx-blend,color-dodge);opacity:var(--hfx-intensity,.5);'
     +   '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}'
     + '.hfx-pat{position:absolute;inset:-35%;transform:rotate(var(--hfx-angle,45deg));'
@@ -239,7 +239,7 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
   var RANGES = {
     scale:[8,3,60], density:[0.45,0.05,0.95], angle:[45,0,180],
     intensity:[0.5,0,1], glare:[0.45,0,1], sat:[1.1,0,2], shift:[45,5,100],
-    band:[16,4,45], bandAngle:[115,0,180], soft:[0.18,0.02,0.5], travel:[1.2,0.2,3],
+    band:[16,4,45], bandAngle:[115,0,180], bandRest:[1,-1.5,1.5], soft:[0.18,0.02,0.5], travel:[1.2,0.2,3],
     range:[18,4,45], smooth:[0.18,0.03,1], tilt:[8,0,20]
   };
   var BLENDS = ["color-dodge","overlay","screen","soft-light","hard-light"];
@@ -390,7 +390,11 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
     injectCss(); opts = opts || {};
     var S = normalize(settings);
     var root = document.createElement("div"); root.className = "hfx"; root.setAttribute("aria-hidden", "true");
-    if (opts.z != null) root.style.setProperty("--hfx-z", opts.z);
+    /* ⚠️ У СЛОЯ НЕТ z-index И НЕ ДОЛЖНО БЫТЬ. z-index делает его отдельной
+       «группой наложения», и режимы смешивания (осветление, перекрытие)
+       смешивают радугу с ПУСТОТОЙ этой группы, а не с картинкой карты: узор
+       ложится тёмной радугой поверх арта ([stated] Denis 16.10, v4). Слой
+       кладётся последним в карточку — выше картинки он и так по порядку */
     var light = document.createElement("div"); light.className = "hfx-light";
     var pat = document.createElement("div"); pat.className = "hfx-pat";
     var glare = document.createElement("div"); glare.className = "hfx-glare";
@@ -429,7 +433,9 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
       st.setProperty("--hfx-x", cur.x.toFixed(4));
       st.setProperty("--hfx-gx", (50 + cur.x*45).toFixed(2) + "%"); st.setProperty("--hfx-gy", (45 + cur.y*45).toFixed(2) + "%");
       // Полоса бежит НАВСТРЕЧУ наклону — как отражение лампы в настоящей карточке
-      var pos = (-cw - cur.x*S.travel*cw).toFixed(1) + "px " + (-ch - cur.y*S.travel*ch).toFixed(1) + "px";
+      // bandRest — где полоса, когда карточку не наклоняют (в ширинах карты от
+      // центра): 0 — через середину, 1 — за правым краем, карта в покое чистая
+      var pos = (-cw + (S.bandRest - cur.x*S.travel)*cw).toFixed(1) + "px " + (-ch - cur.y*S.travel*ch).toFixed(1) + "px";
       light.style.webkitMaskPosition = pos; light.style.maskPosition = pos;
       if (tiltEl && S.tilt) tiltEl.style.transform = "rotateX(" + (-cur.y*S.tilt).toFixed(2) + "deg) rotateY(" + (cur.x*S.tilt).toFixed(2) + "deg)";
     }
@@ -558,6 +564,7 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
     ["Полоса света", [
       ["band", "Ширина полосы", function(v){ return v + "%"; }],
       ["bandAngle", "Наклон полосы", function(v){ return v + "°"; }],
+      ["bandRest", "Полоса в покое", function(v){ v=+v; return v >= 0.75 ? "за краем" : v <= -0.75 ? "за левым краем" : (v === 0 ? "по центру" : (v > 0 ? "правее на " : "левее на ") + Math.round(Math.abs(v)*100) + "%"); }, "Где полоса, пока карточку не наклоняют. За краем — карточка в покое чистая, перелив проходит только при наклоне."],
       ["soft", "Мягкость края", pct],
       ["travel", "Скорость пробега", function(v){ return "×" + (+v).toFixed(2); }, "Как быстро полоса бежит по карточке при наклоне. На крайних углах она уходит за край, и карточка гаснет."]]],
     ["Сила эффекта", [
@@ -570,7 +577,7 @@ textarea{width:100%;min-height:150px;resize:vertical;background:#0f0c0b;color:va
       ["smooth", "Скорость реакции", pct, "Слева — плавно и с запаздыванием, справа — мгновенно."],
       ["tilt", "Наклон самой карточки", function(v){ return v + "°"; }, "Только для песочницы и дашборда: в приложении карточка покачивается сама."]]]
   ];
-  var STEP = {scale:1, density:.01, angle:1, band:1, bandAngle:1, soft:.01, travel:.05, intensity:.01, glare:.01, sat:.05, shift:1, range:1, smooth:.01, tilt:1};
+  var STEP = {scale:1, density:.01, angle:1, band:1, bandAngle:1, bandRest:.05, soft:.01, travel:.05, intensity:.01, glare:.01, sat:.05, shift:1, range:1, smooth:.01, tilt:1};
   var FMT = {};
   var box = $("sliders"), html = "";
   GROUPS.forEach(function(g, gi){
