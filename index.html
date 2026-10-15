@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v483 -->
+<!-- FILE_VERSION: index-v484 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11579,9 +11579,13 @@ async function foSuspect(){
         location.reload();
         return;
       }
+      /* v484: сообщаем запасному «не достучался ни по домену, ни по техническому
+         адресу». Два разных устройства + его собственная неудачная проверка —
+         и он признаёт сбой сразу, без пяти минут ожидания */
+      try { await window.__foFetch(API_STANDBY + '/standby/unreachable', { method: 'POST' }); } catch (e) {}
       const v = await foGet(API_STANDBY + '/standby/verdict');
       if (v && v.accept){ techForget(); foSwitch(); return; }
-      await foSleep(60000);
+      await foSleep(20000);
     }
   } finally { FO.checking = false; }
 }
@@ -11791,7 +11795,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v483 · 15.10.2026 технический адрес Timeweb, когда домен api не открывается';
+const APP_BUILD = 'v484 · 15.10.2026 быстрый переход на запасной: сообщаем ему о недоступности';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
