@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v483 -->
+<!-- FILE_VERSION: index-v485 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11540,9 +11540,9 @@ const FO = { checking: false, okStreak: 0, timer: null, back: false };
   };
 })();
 
-async function foGet(url){
+async function foGet(url, ms){
   const ctl = new AbortController();
-  const tm = setTimeout(function(){ ctl.abort(); }, 8000);
+  const tm = setTimeout(function(){ ctl.abort(); }, ms || 8000);
   try {
     const r = await window.__foFetch(url, { signal: ctl.signal, cache: 'no-store' });
     if (!r.ok) return null;
@@ -11568,20 +11568,33 @@ async function foSuspect(){
   FO.checking = true;
   try {
     while (true){
+      /* v485: домен и технический адрес — ОДНОВРЕМЕННО, по 3,5 с, дважды с
+         паузой в секунду. Ответ засчитываем, только если это наш сервер
+         (`status: ok`), пустой 200 прокси — не ответ */
+      let pa = false, ta = false;
+      for (let i = 0; i < 2 && !pa && !ta; i++){
+        if (i) await foSleep(1000);
+        const r = await Promise.all([foGet(API_PROD + '/', 3500), foGet(API_TECH + '/', 3500)]);
+        pa = !!(r[0] && r[0].status === 'ok'); ta = !!(r[1] && r[1].status === 'ok');
+      }
       // основной по домену ответил — ложная тревога (а с технического вернёмся при следующем открытии)
-      if (await foPrimaryAlive()){ if (techActive) techForget(); return; }
-      await foSleep(3000);
-      if (await foPrimaryAlive()){ if (techActive) techForget(); return; }
+      if (pa){ if (techActive) techForget(); return; }
       // v483: домен молчит, а сервер жив по техническому адресу — тихо уходим на него
-      if (await foTechAlive()){
+      if (ta){
         if (techActive) return;
         try { localStorage.setItem('club_api_tech', '1'); } catch (e) { return; }
         location.reload();
         return;
       }
-      const v = await foGet(API_STANDBY + '/standby/verdict');
+      /* v484: сообщаем запасному «не достучался ни по домену, ни по техническому
+         адресу». Два разных устройства + его собственная неудачная проверка —
+         и он признаёт сбой сразу, без пяти минут ожидания */
+      try { await window.__foFetch(API_STANDBY + '/standby/unreachable', { method: 'POST' }); } catch (e) {}
+      // запасной сам перепроверяет оба адреса (5–10 с) и готовит копию — спрашиваем чаще
+      await foSleep(6000);
+      const v = await foGet(API_STANDBY + '/standby/verdict', 5000);
       if (v && v.accept){ techForget(); foSwitch(); return; }
-      await foSleep(60000);
+      await foSleep(v && v.preparing ? 10000 : 20000);
     }
   } finally { FO.checking = false; }
 }
@@ -11648,7 +11661,8 @@ async function foStart(){
      сообщаем «я переключился» — иначе ложная тревога ставила там паузу копии */
   if (await foPrimaryAlive()){
     await foSleep(1500);
-    if (await foPrimaryAlive()){
+    const vb = await foGet(API_STANDBY + '/standby/verdict', 5000);   // v485: записи уже перенесены?
+    if (await foPrimaryAlive() && (!vb || vb.return_ok !== false)){
       try { localStorage.removeItem('club_failover'); localStorage.removeItem('club_failover_at'); } catch (e) {}
       location.reload();
       return;
@@ -11678,7 +11692,13 @@ async function foStart(){
     if (FO.back || document.visibilityState !== 'visible') return;
     if (await foPrimaryAlive()){
       FO.okStreak++;
-      if (FO.okStreak >= 2) foBack();      // v482: двух ответов подряд достаточно
+      if (FO.okStreak >= 2){
+        /* v485: возвращаемся, только когда запасной перенёс записанное здесь на
+           основной (return_ok) — иначе вернулись бы без своих оплат и действий.
+           Запасной не отвечает — возвращаемся: основной жив, ждать некого */
+        const v = await foGet(API_STANDBY + '/standby/verdict', 5000);
+        if (!v || v.return_ok !== false) foBack();
+      }
     } else {
       FO.okStreak = 0;
     }
@@ -11791,7 +11811,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v483 · 15.10.2026 технический адрес Timeweb, когда домен api не открывается';
+const APP_BUILD = 'v485 · 15.10.2026 запасной за секунды; возврат только после переноса записей';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
