@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v482 -->
+<!-- FILE_VERSION: index-v483 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11452,7 +11452,15 @@ if (apiOverride) {
 // v464: на запасном ли мы сейчас — решение запомнено на устройстве (см. ниже)
 let foActive = false;
 try { foActive = !apiOverride && localStorage.getItem('club_failover') === '1'; } catch (e) {}
-const API_URL = apiOverride || (foActive ? API_STANDBY : API_PROD);
+/* v483 · ТЕХНИЧЕСКИЙ АДРЕС TIMEWEB. 15.10 у Timeweb слетел сертификат домена
+   api, сервер при этом был жив. Технический адрес — тот же сервер и та же
+   база со своим сертификатом Timeweb: переход на него не требует копии и не
+   ставит её на паузу. Порядок: домен → технический адрес (сразу) → запасной
+   Railway (только если молчат оба и запасной подтверждает) */
+const API_TECH = 'https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net';
+let techActive = false;
+try { techActive = !apiOverride && !foActive && localStorage.getItem('club_api_tech') === '1'; } catch (e) {}
+const API_URL = apiOverride || (foActive ? API_STANDBY : (techActive ? API_TECH : API_PROD));
 
 /* ══ v478 · ПРОПУСК К КАЖДОМУ ЗАПРОСУ (аудит A02) ══════════════════════════
    Сервер выдаёт аппу подписанный «пропуск» на номер, который подтвердила
@@ -11522,7 +11530,7 @@ const FO = { checking: false, okStreak: 0, timer: null, back: false };
     const p = orig(input, init);
     try {
       const url = typeof input === 'string' ? input : ((input && input.url) || '');
-      if (!apiOverride && !foActive && url.indexOf(API_PROD) === 0){
+      if (!apiOverride && !foActive && url.indexOf(API_URL) === 0){
         p.then(function(r){
           if (r && (r.status === 502 || r.status === 503 || r.status === 504)) foSuspect();
         }, function(){ foSuspect(); });
@@ -11548,20 +11556,51 @@ async function foPrimaryAlive(){
 }
 function foSleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
+async function foTechAlive(){
+  const d = await foGet(API_TECH + '/');
+  return !!(d && d.status === 'ok');
+}
+function techForget(){ try { localStorage.removeItem('club_api_tech'); } catch (e) {} }
+
 async function foSuspect(){
   if (FO.checking || foActive || apiOverride) return;
   if (navigator.onLine === false) return;      // нет интернета у самого человека
   FO.checking = true;
   try {
     while (true){
-      if (await foPrimaryAlive()) return;       // основной ответил — ложная тревога
-      await foSleep(10000);
-      if (await foPrimaryAlive()) return;
+      // основной по домену ответил — ложная тревога (а с технического вернёмся при следующем открытии)
+      if (await foPrimaryAlive()){ if (techActive) techForget(); return; }
+      await foSleep(3000);
+      if (await foPrimaryAlive()){ if (techActive) techForget(); return; }
+      // v483: домен молчит, а сервер жив по техническому адресу — тихо уходим на него
+      if (await foTechAlive()){
+        if (techActive) return;
+        try { localStorage.setItem('club_api_tech', '1'); } catch (e) { return; }
+        location.reload();
+        return;
+      }
       const v = await foGet(API_STANDBY + '/standby/verdict');
-      if (v && v.accept){ foSwitch(); return; }
+      if (v && v.accept){ techForget(); foSwitch(); return; }
       await foSleep(60000);
     }
   } finally { FO.checking = false; }
+}
+
+/* v483: на техническом адресе полосы нет — это тот же сервер, участнику не о
+   чем беспокоиться. Домен ответил дважды — при открытии тихо возвращаемся,
+   в работе — забываем переход до следующего открытия */
+async function techStart(){
+  if (!techActive) return;
+  if (await foPrimaryAlive()){
+    await foSleep(1500);
+    if (await foPrimaryAlive()){ techForget(); location.reload(); return; }
+  }
+  let ok = 0;
+  const tm = setInterval(async function(){
+    if (document.visibilityState !== 'visible') return;
+    if (await foPrimaryAlive()){ ok++; if (ok >= 2){ clearInterval(tm); techForget(); } }
+    else ok = 0;
+  }, 60000);
 }
 
 function foOverlay(text){
@@ -11615,6 +11654,13 @@ async function foStart(){
       return;
     }
   }
+  // v483: домен лежит, но сервер жив по техническому адресу — с запасного на него
+  if (await foTechAlive()){
+    try { localStorage.removeItem('club_failover'); localStorage.removeItem('club_failover_at');
+          localStorage.setItem('club_api_tech', '1'); } catch (e) {}
+    location.reload();
+    return;
+  }
   document.body.classList.add('fo-on');
   const bar = document.getElementById('fo-bar');
   if (bar) bar.textContent = t('failover.banner');   // текст из реестра; правки Denis'а подставит applyAppTexts
@@ -11647,6 +11693,8 @@ document.addEventListener('visibilitychange', function(){
 // ⚠️ Не звать сразу: реестр текстов объявлен ниже по скрипту, t() до него упадёт
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', foStart);
 else setTimeout(foStart, 0);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', techStart);
+else setTimeout(techStart, 0);
 
 /* ══ БАННЕР НЕДОСТУПНОСТИ ХРАНИЛИЩА (14.08.2026) ══════════════════════════
    [stated] Denis: «у Таймвеба иногда s3 хранилище падает... надо мягко
@@ -11743,7 +11791,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v482 · 15.10.2026 запасной сервер: живой основной — сразу назад, без полосы';
+const APP_BUILD = 'v483 · 15.10.2026 технический адрес Timeweb, когда домен api не открывается';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
