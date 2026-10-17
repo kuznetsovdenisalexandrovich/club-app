@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v488 -->
+<!-- FILE_VERSION: index-v489 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -7833,6 +7833,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .bonus-item{display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:12px;
   border:1px solid var(--border);margin-bottom:8px}
 .bonus-item.locked{opacity:.5}
+/* v489: часть, на которую пришли по ссылке, — подсвечена */
+.bonus-item.focus{border-color:var(--lav);box-shadow:0 0 0 1px var(--lav) inset}
 /* Кнопки внутри строки позиции НЕ растягиваются: `.access-btn` объявлена как
    `width:100%;display:block` для отдельно стоящих кнопок, и в строке она
    выдавливала название в узкий столбик. Здесь она ведёт себя как обычная
@@ -10669,6 +10671,21 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   </div>
 </div>
 
+<!-- v489: экран одной площадки (place_<ключ>) — архив и любая другая -->
+<div class="sched-popup-overlay" id="place-popup-overlay" onclick="if(event.target===this) closePlacePopup()">
+  <div class="sched-popup">
+    <div class="sched-popup-handle"></div>
+    <div class="sched-popup-header">
+      <div class="sched-popup-title" id="place-popup-title"></div>
+      <button class="icon-btn" onclick="closePlacePopup()">✕</button>
+    </div>
+    <div class="sched-popup-body">
+      <div id="place-popup-sub" class="mag-sub" style="margin-bottom:14px;font-size:13px"></div>
+      <button class="lec-link-btn" id="place-popup-btn" style="width:100%;display:none"></button>
+    </div>
+  </div>
+</div>
+
 <!-- Плеер бонусной позиции. Отдельный от продающего видео: там код вшит в
      разметку, а здесь он приходит с сервера и меняется на каждой позиции -->
 <div class="fullscreen-popup-overlay" id="bonus-video-overlay" onclick="if(event.target===this) closeBonusVideo()">
@@ -11811,7 +11828,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v488 · 16.10.2026 в истории баллов видны траты и сгорание';
+const APP_BUILD = 'v489 · 17.10.2026 ссылки на часть набора и на площадку';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16116,6 +16133,20 @@ const APP_TEXTS = {
 
   'tg.access_wait': { c:'Доступы', l:'Пока делаем персональную ссылку', w:'Канал и чат', i:false,
     t:'Готовлю ссылку…' },
+  /* v489: экран одной площадки (ссылка place_<ключ>, например архив) */
+  'place.title': { c:'Доступы', l:'Заголовок экрана площадки, пока не пришло название', w:'Экран площадки', i:false, t:'Закрытая площадка' },
+  'place.checking': { c:'Доступы', l:'Пока проверяем право', w:'Экран площадки', i:false, t:'Проверяю доступ…' },
+  'place.ready': { c:'Доступы', l:'Право есть, можно войти', w:'Экран площадки', i:false, t:'Доступ открыт. Нажми «Войти» — приглашение сработает один раз.' },
+  'place.inside': { c:'Доступы', l:'Человек уже внутри', w:'Экран площадки', i:false, t:'Ты уже внутри. Если потерялся — войди по новой ссылке.' },
+  'place.enter': { c:'Доступы', l:'Кнопка входа', w:'Экран площадки', i:false, t:'Войти' },
+  'place.need_tg': { c:'Доступы', l:'Право есть, но нет Telegram', w:'Экран площадки', i:false, t:'Эта площадка в Telegram — сначала свяжи аккаунт.' },
+  'place.link_tg': { c:'Доступы', l:'Кнопка «связать Telegram»', w:'Экран площадки', i:false, t:'Связать Telegram' },
+  'place.members': { c:'Доступы', l:'Нужно участие', w:'Экран площадки', i:false, t:'Откроется участникам клуба' },
+  'place.join': { c:'Доступы', l:'Кнопка вступления', w:'Экран площадки', i:false, t:'Вступить' },
+  'place.closed': { c:'Доступы', l:'Закрыто по другой причине', w:'Экран площадки', i:false, t:'Пока закрыто' },
+  'place.not_found': { c:'Доступы', l:'Площадки нет', w:'Экран площадки', i:false, t:'Такой площадки нет' },
+  'place.fail': { c:'Доступы', l:'Сервер не ответил', w:'Экран площадки', i:false, t:'Не получилось проверить доступ. Попробуй ещё раз.' },
+  'bonus.link_missing': { c:'Бонусы', l:'Ссылка на часть набора устарела', w:'Тост', i:false, t:'Этого материала уже нет — открыл, что есть' },
   'tg.access_members': { c:'Доступы', l:'Канал и чат только участникам', w:'Канал и чат', i:false,
     t:'Канал и чат — для участников клуба' },
   'tg.access_fail': { c:'Доступы', l:'Ссылка не выдалась', w:'Канал и чат', i:false,
@@ -21095,6 +21126,7 @@ function applyTagFilter() {
 
 let bonusesData = [];
 let bonusOpenKey = null;
+let bonusFocusKey = null;   // v489: часть, на которую пришли по ссылке bi_
 
 async function loadBonuses(){
   try {
@@ -21180,6 +21212,138 @@ function refreshBonusShareBtn(b){
 function closeBonusPopup(){
   document.getElementById('bonus-popup-overlay').classList.remove('open');
   bonusOpenKey = null;
+  bonusFocusKey = null;
+}
+
+/* ══ v489 · ССЫЛКИ НА ЧАСТЬ НАБОРА И НА СПИСОК ══════════════════════════════
+   bi_<набор>__<часть> — открыть набор и ИМЕННО эту часть: видео играет оно,
+   а не первое незапертое (старый bonus_<набор> запускал первое — у съёмок
+   это был сам фильм). Закрытую часть не играем: строка подсвечена, рядом её
+   причина и кнопка. Доступ перепроверяется — список берётся с сервера заново.
+   bset_<набор> — открыть список без автозапуска.
+   Старый bonus_<набор> не трогаем: он живёт в постах и рассылках */
+function bonusRouteFromUrl(){
+  const param = appStartParam();
+  let set = '', item = '';
+  if (param.indexOf('bi_') === 0){
+    const rest = param.slice(3);
+    const k = rest.lastIndexOf('__');
+    if (k <= 0) return false;
+    set = rest.slice(0, k); item = rest.slice(k + 2);
+  } else if (param.indexOf('bset_') === 0){
+    set = param.slice(5);
+  } else return false;
+  if (!set) return false;
+
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+
+  loadBonuses().then(function(){
+    const b = findBonus(set);
+    if (!b){ showToast(t('bonus.link_missing')); return; }
+    bonusFocusKey = item || null;
+    openBonusPopup(set);
+    if (!item) return;
+    const it = (b.items || []).find(function(x){ return x.key === item; });
+    if (!it){ showToast(t('bonus.link_missing')); return; }
+    setTimeout(function(){
+      const row = document.querySelector('#bonus-popup-items .bonus-item[data-key="' + String(item).replace(/"/g, '') + '"]');
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center' });
+    }, 80);
+    if (it.locked) return;
+    if (it.boomstream) playBonusVideo(set, item);
+  });
+  return true;
+}
+
+/* ══ v489 · ЭКРАН ОДНОЙ ПЛОЩАДКИ — ссылка place_<ключ> (архив и любая другая) ═
+   Сервер решает, положено ли (ручное открытие — и без подписки), и только по
+   нажатию «Войти» выдаёт приглашение на ЭТУ площадку. Без Telegram — связать */
+let placeOpenKey = null;
+function placeIdent(){
+  const body = {};
+  if (hasRealTg()) body.telegram_id = Number(telegramId);
+  else if (typeof vkUserId === 'function' && vkUserId()) body.vk_id = Number(vkUserId());
+  else if (telegramId) body.telegram_id = Number(telegramId);
+  return body;
+}
+function placeFromUrl(){
+  const param = appStartParam();
+  if (param.indexOf('place_') !== 0) return false;
+  const key = param.slice(6);
+  if (!key) return false;
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  (async function(){
+    try { await waitProfile(4000); } catch(e){}
+    openPlacePopup(key);
+  })();
+  return true;
+}
+async function openPlacePopup(key){
+  placeOpenKey = key;
+  const title = document.getElementById('place-popup-title');
+  const sub = document.getElementById('place-popup-sub');
+  const btn = document.getElementById('place-popup-btn');
+  title.textContent = t('place.title');
+  sub.textContent = t('place.checking');
+  btn.style.display = 'none';
+  document.getElementById('place-popup-overlay').classList.add('open');
+  let d = null;
+  try {
+    const r = await fetch(`${API_URL}/access/place/state`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ place_key: key }, placeIdent()))
+    });
+    if (r.status === 404){ sub.textContent = t('place.not_found'); return; }
+    d = await r.json();
+  } catch(e){ sub.textContent = t('place.fail'); return; }
+  if (placeOpenKey !== key) return;
+  title.textContent = d.title || t('place.title');
+  btn.style.display = '';
+  if (d.can_enter){
+    sub.textContent = d.joined ? t('place.inside') : t('place.ready');
+    btn.textContent = t('place.enter');
+    btn.onclick = function(){ placeEnter(key); };
+  } else if (d.need_tg_link){
+    sub.textContent = d.reason_text || t('place.need_tg');
+    btn.textContent = t('place.link_tg');
+    btn.onclick = function(){ closePlacePopup(); if (typeof linkTelegramFromVk === 'function') linkTelegramFromVk(); };
+  } else if (d.need_membership){
+    sub.textContent = d.reason_text || t('place.members');
+    btn.textContent = t('place.join');
+    btn.onclick = function(){ closePlacePopup(); openPaywall(); };
+  } else {
+    sub.textContent = d.reason_text || t('place.closed');
+    btn.style.display = 'none';
+  }
+}
+/* Приглашение — ТОЛЬКО по нажатию: сервер перепроверяет право и делает ссылку
+   на один вход именно в эту площадку */
+async function placeEnter(key){
+  const btn = document.getElementById('place-popup-btn');
+  if (btn) btn.disabled = true;
+  showToast(t('tg.access_wait'));
+  try {
+    const r = await fetch(`${API_URL}/access/place/link`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ place_key: key }, placeIdent()))
+    });
+    const d = await r.json().catch(function(){ return {}; });
+    if (r.ok && d.link){ track('place_enter', key); openUrl(d.link); closePlacePopup(); return; }
+    if (r.status === 403){ openPlacePopup(key); return; }
+    showToast(t('tg.access_fail'));
+  } catch(e){
+    showToast(t('tg.access_fail'));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+function closePlacePopup(){
+  document.getElementById('place-popup-overlay').classList.remove('open');
+  placeOpenKey = null;
 }
 
 /* Точка входа для диплинков вида bonus_<ключ> — рассылки, посты в канале.
@@ -21927,6 +22091,9 @@ const PARAM_LINKS = {
 const ROUTE_PREFIXES = [
   ['magpay_', 'magpay'],   // ⚠️ ДО `mag_`: подстрочная проверка увела бы его туда
   ['bonus_',  'bonus'],
+  ['bi_',     'bonus-item'],   // v489: часть набора
+  ['bset_',   'bonus'],        // v489: список набора без автозапуска
+  ['place_',  'place'],        // v489: экран площадки
   ['pay_',    'pay'],
   ['mag_',    'magazine'],
   ['dg_',     'digest'],
@@ -22041,7 +22208,7 @@ function renderBonusItems(){
       action = links.join(' ') || '<span style="font-size:11px;color:var(--text-faint)">скоро</span>';
     }
     return `
-      <div class="bonus-item ${it.locked ? 'locked' : ''}">
+      <div class="bonus-item ${it.locked ? 'locked' : ''}${it.key === bonusFocusKey ? ' focus' : ''}" data-key="${escapeHtml(it.key)}">
         <div class="bonus-item-num">${it.opened ? '✓' : (i + 1)}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13.5px">${escapeHtml(it.title || '')}</div>
@@ -31194,6 +31361,15 @@ async function init(){
       }
       // Диплинк на конкретный бонус, напр. bonus_masterclass — для рассылок и
       // постов в канале, чтобы вести не в апп вообще, а сразу к делу
+      // v489: часть набора (bi_), список набора (bset_), площадка (place_)
+      if (typeof bonusRouteFromUrl === 'function' && /^(bi_|bset_)/.test(appStartParam())){
+        setTimeout(function(){ bonusRouteFromUrl(); }, 60);
+        return;
+      }
+      if (typeof placeFromUrl === 'function' && appStartParam().indexOf('place_') === 0){
+        placeFromUrl();
+        return;
+      }
       if (typeof bonusFromUrl === 'function' && appStartParam().indexOf('bonus_') === 0){
         setTimeout(function(){ bonusFromUrl(); }, 60);
         return;
