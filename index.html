@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v489 -->
+<!-- FILE_VERSION: index-v490 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11828,7 +11828,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v489 · 17.10.2026 ссылки на часть набора и на площадку';
+const APP_BUILD = 'v490 · 17.10.2026 экран площадки по подписанным данным запуска';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16145,6 +16145,7 @@ const APP_TEXTS = {
   'place.join': { c:'Доступы', l:'Кнопка вступления', w:'Экран площадки', i:false, t:'Вступить' },
   'place.closed': { c:'Доступы', l:'Закрыто по другой причине', w:'Экран площадки', i:false, t:'Пока закрыто' },
   'place.not_found': { c:'Доступы', l:'Площадки нет', w:'Экран площадки', i:false, t:'Такой площадки нет' },
+  'place.no_identity': { c:'Доступы', l:'Не удалось подтвердить, кто открыл', w:'Экран площадки', i:false, t:'Открой эту ссылку из приложения клуба в Telegram или ВКонтакте.' },
   'place.fail': { c:'Доступы', l:'Сервер не ответил', w:'Экран площадки', i:false, t:'Не получилось проверить доступ. Попробуй ещё раз.' },
   'bonus.link_missing': { c:'Бонусы', l:'Ссылка на часть набора устарела', w:'Тост', i:false, t:'Этого материала уже нет — открыл, что есть' },
   'tg.access_members': { c:'Доступы', l:'Канал и чат только участникам', w:'Канал и чат', i:false,
@@ -21261,12 +21262,16 @@ function bonusRouteFromUrl(){
    Сервер решает, положено ли (ручное открытие — и без подписки), и только по
    нажатию «Войти» выдаёт приглашение на ЭТУ площадку. Без Telegram — связать */
 let placeOpenKey = null;
+/* v490: личность — ПОДПИСАННЫЕ данные запуска (Telegram / ВК) или веб-сессия.
+   Голый номер сервер больше не принимает: по чужому номеру нельзя ни узнать
+   чужой доступ, ни запросить приглашение за другого */
 function placeIdent(){
-  const body = {};
-  if (hasRealTg()) body.telegram_id = Number(telegramId);
-  else if (typeof vkUserId === 'function' && vkUserId()) body.vk_id = Number(vkUserId());
-  else if (telegramId) body.telegram_id = Number(telegramId);
-  return body;
+  const id = (typeof ivIdent === 'function') ? ivIdent() : {};
+  return { tg_init: id.tg_init || '', vk_query: id.vk_query || '' };
+}
+function placeHeaders(){
+  return Object.assign({ 'Content-Type': 'application/json' },
+                       (typeof sessionHeaders === 'function') ? sessionHeaders() : {});
 }
 function placeFromUrl(){
   const param = appStartParam();
@@ -21294,10 +21299,11 @@ async function openPlacePopup(key){
   let d = null;
   try {
     const r = await fetch(`${API_URL}/access/place/state`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: placeHeaders(),
       body: JSON.stringify(Object.assign({ place_key: key }, placeIdent()))
     });
     if (r.status === 404){ sub.textContent = t('place.not_found'); return; }
+    if (r.status === 401 || r.status === 403){ sub.textContent = t('place.no_identity'); return; }
     d = await r.json();
   } catch(e){ sub.textContent = t('place.fail'); return; }
   if (placeOpenKey !== key) return;
@@ -21328,7 +21334,7 @@ async function placeEnter(key){
   showToast(t('tg.access_wait'));
   try {
     const r = await fetch(`${API_URL}/access/place/link`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: placeHeaders(),
       body: JSON.stringify(Object.assign({ place_key: key }, placeIdent()))
     });
     const d = await r.json().catch(function(){ return {}; });
