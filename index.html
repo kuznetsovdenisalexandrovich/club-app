@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v491 -->
+<!-- FILE_VERSION: index-v492 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11834,7 +11834,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v490 · 17.10.2026 экран площадки по подписанным данным запуска';
+const APP_BUILD = 'v492 · 19.10.2026 промо-акции «месяц за 1 ₽» по ссылке promo_<код>';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16633,6 +16633,21 @@ const APP_TEXTS = {
   'promo.t1r.fail': {
     c:'Оплата', l:'Оффер тестировщикам: бот не ответил', w:'Окно оффера (тост)', i:false,
     t:'Бот не прислал ссылку — открываю обычную оплату' },
+  'promo.c.closed': {
+    c:'Оплата', l:'Промо-акция: закончилась или выключена', w:'Окно промо-акции', i:false,
+    t:'Эта акция уже закончилась. Вступить в клуб можно на обычных условиях.' },
+  'promo.c.used': {
+    c:'Оплата', l:'Промо-акция: месяц за 1 ₽ уже был', w:'Окно промо-акции', i:false,
+    t:'Месяц за 1 ₽ у тебя уже был — дальше клуб по обычной подписке.' },
+  'promo.c.member': {
+    c:'Оплата', l:'Промо-акция: открыл участник', w:'Тост', i:false,
+    t:'Ты уже в клубе — акция для тех, кто только вступает.' },
+  'promo.c.to_pay': {
+    c:'Оплата', l:'Промо-акция: кнопка, когда акция недоступна', w:'Окно промо-акции', i:false,
+    t:'К обычной оплате' },
+  'promo.c.fail': {
+    c:'Оплата', l:'Промо-акция: ссылку не получили', w:'Тост', i:false,
+    t:'Не получилось подготовить ссылку на 1 ₽ — открываю обычную оплату' },
   'live.wait_stream': {
     c:'Эфир', l:'Картинки ещё нет', w:'Плеер эфира на главной', i:false,
     t:'Трансляция вот-вот начнётся — картинка появится сама.' },
@@ -21573,6 +21588,134 @@ function closePromoTester(){
   if (box) box.classList.remove('open');
 }
 
+/* ══ v492: ПРОМО-АКЦИИ «МЕСЯЦ ЗА 1 ₽» — ссылка promo_<код> ═══════════════════
+   [stated] Denis 19.10: вариант оплаты месяца за 1 ₽ для промо-акций, с прямой
+   ссылкой. Акции и тексты окна заводятся в дашборде и помощницей; сервер
+   говорит, можно ли этому человеку купить (не участник, промо ещё не было).
+   Ссылка на оплату — [stated] «сначала у Salebot, если он недоступен — делать
+   сами»: блок бота `get_referral_promo_link` (тот же, что у оффера тестерам),
+   не ответил — личный заказ сервера plan=promo по подписи запуска.
+   Окно — то же, что у оффера тестировщикам (promo-t1r-*): одно окно на оффер. */
+let promoCode = '';
+function promoFromUrl(){
+  const param = appStartParam();
+  if (param.indexOf('promo_') !== 0) return false;
+  promoCode = param.slice('promo_'.length).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+  const shell = document.getElementById('app-shell');
+  const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
+  if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+  rememberEntrySource('promo_' + promoCode);
+  setTimeout(async function(){
+    await waitProfile();   // та же гонка, что у pay_: участнику окно акции не нужно
+    if (isMember){ showToast(t('promo.c.member')); switchView('portal'); return; }
+    promoOpen();
+  }, 80);
+  return true;
+}
+async function promoOpen(){
+  if (!promoCode) return;
+  let d = {};
+  try {
+    const r = await fetch(`${API_URL}/promo/${encodeURIComponent(promoCode)}/claim`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(actionIdent())
+    });
+    d = await r.json().catch(() => ({}));
+  } catch(e){ d = {}; }
+  if (d.reason === 'member'){ showToast(t('promo.c.member')); switchView('portal'); return; }
+  const box = document.getElementById('promo-t1r-overlay');
+  if (!box) return;
+  const ok = !!d.ok;
+  const title = document.getElementById('promo-t1r-title');
+  title.textContent = ok ? (d.headline || '') : '';
+  title.style.display = ok && d.headline ? '' : 'none';
+  document.getElementById('promo-t1r-body').textContent = ok ? (d.body || '')
+    : t(d.reason === 'used' ? 'promo.c.used' : 'promo.c.closed');
+  const btn = document.getElementById('promo-t1r-btn');
+  btn.textContent = ok ? (d.button || '') : t('promo.c.to_pay');
+  btn.disabled = false;
+  btn.onclick = ok ? promoGo : function(){ closePromoTester(); openBuyRoute(); };
+  box.classList.add('open');
+  track('promo', promoCode + ':' + (ok ? 'shown' : String(d.reason || 'fail')));
+}
+/* Стабильный номер заказа на акцию: повтор нажатия — тот же заказ на сервере,
+   а не второй (сервер отдаёт уже выданную ссылку) */
+function promoRequestId(){
+  const key = 'club_promo_rid_' + promoCode;
+  let rid = '';
+  try { rid = localStorage.getItem(key) || ''; } catch(e){}
+  if (!/^[A-Za-z0-9-]{8,80}$/.test(rid)){
+    rid = 'pr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    try { localStorage.setItem(key, rid); } catch(e){}
+  }
+  return rid;
+}
+/* Ссылка от сервера: { link } — готово; { code } — сервер отказал по делу
+   (акция закончилась, промо уже было, уже участник); пусто — не вышло */
+async function promoServerLink(){
+  const iv = ivIdent();
+  if (!iv.tg_init && !iv.vk_query) return {};
+  const rid = promoRequestId();
+  try {
+    const r = await fetch(`${API_URL}/payments/checkouts`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': rid },
+      body: JSON.stringify({ request_id: rid, plan: 'promo', source: 'app', promo: promoCode,
+                             tg_init: iv.tg_init, vk_query: iv.vk_query })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.payment_url) return { link: d.payment_url };
+    if (d.code === 'idempotency_conflict'){
+      try { localStorage.removeItem('club_promo_rid_' + promoCode); } catch(e){}
+    }
+    return { code: d.code || '' };
+  } catch(e){ return {}; }
+}
+async function promoGo(){
+  const btn = document.getElementById('promo-t1r-btn');
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = t('promo.t1r.wait');
+  let link = '', via = '';
+  try {
+    const id = actionIdent();
+    if (id.telegram_id || id.vk_id) link = await botLinkFor('get_referral_promo_link');
+    if (link) via = 'salebot';
+  } catch(e){ link = ''; }
+  let refusal = '';
+  if (!link){
+    const s = await promoServerLink();
+    if (s.link){ link = s.link; via = 'server'; }
+    else refusal = s.code || '';
+  }
+  btn.disabled = false;
+  btn.textContent = label;
+  closePromoTester();
+  if (link){
+    if (via === 'salebot'){
+      fetch(`${API_URL}/promo/${encodeURIComponent(promoCode)}/link-note`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(actionIdent())
+      }).catch(() => {});
+    }
+    // Как у оффера тестировщикам: намерение оплатить, окно ожидания и опрос —
+    // чтобы после оплаты апп сам открыл клуб
+    fetch(`${API_URL}/payments/intent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId })
+    }).catch(() => {});
+    if (typeof noteAccessLeave === 'function') noteAccessLeave();
+    openUrl(link);
+    if (typeof openPostPay === 'function') openPostPay();
+    if (typeof startPaymentWatch === 'function') startPaymentWatch();
+    track('promo', promoCode + ':' + via);
+    return;
+  }
+  track('promo', promoCode + ':' + (refusal || 'fail'));
+  if (refusal === 'already_member'){ showToast(t('promo.c.member')); switchView('portal'); return; }
+  showToast(t(refusal === 'promo_used' ? 'promo.c.used' : refusal === 'promo_closed' ? 'promo.c.closed' : 'promo.c.fail'));
+  openBuyRoute();
+}
+
 /* Готовая ссылка на оплату с меткой источника — её вставляют в кнопку в конце
    выпуска журнала, в описание рилса и т.п. */
 function payShareUrl(src){
@@ -22087,7 +22230,8 @@ const PARAM_LINKS = {
   'later':   { param: '',            label: 'Когда напомнить про фильм',        guests: true  },
   'u':       { param: 'код единицы', label: 'Мягкая метка источника',          guests: true  },
   'r':       { param: 'айди игрока', label: 'Приглашение друга',               guests: true  },
-  'c':       { param: 'ключ карточки', label: 'Расшаренная карточка',          guests: true  }
+  'c':       { param: 'ключ карточки', label: 'Расшаренная карточка',          guests: true  },
+  'promo':   { param: 'код акции',   label: 'Промо-акция — месяц за 1 ₽',      guests: true  }
 };
 
 /* ── УЧЁТ ТОЧКИ ВХОДА ДЛЯ ЛЮБОЙ ССЫЛКИ ───────────────────────────────────────
@@ -22107,6 +22251,7 @@ const ROUTE_PREFIXES = [
   ['bset_',   'bonus'],        // v489: список набора без автозапуска
   ['place_',  'place'],        // v489: экран площадки
   ['pay_',    'pay'],
+  ['promo_',  'promo'],        // v492: промо-акция «месяц за 1 ₽»
   ['mag_',    'magazine'],
   ['dg_',     'digest'],
   ['la_',     'audio'],
@@ -31384,6 +31529,11 @@ async function init(){
       }
       if (typeof bonusFromUrl === 'function' && appStartParam().indexOf('bonus_') === 0){
         setTimeout(function(){ bonusFromUrl(); }, 60);
+        return;
+      }
+      // v492: промо-акция «месяц за 1 ₽» — `promo_<код акции>`
+      if (typeof promoFromUrl === 'function' && appStartParam().indexOf('promo_') === 0){
+        promoFromUrl();
         return;
       }
       // Диплинк на оплату с меткой источника, напр. pay_magazine_pilot
