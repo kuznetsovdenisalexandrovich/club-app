@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v492 -->
+<!-- FILE_VERSION: index-v493 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11834,7 +11834,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v492 · 19.10.2026 промо-акции «месяц за 1 ₽» по ссылке promo_<код>';
+const APP_BUILD = 'v493 · 19.10.2026 персональная оплата: подготовка переключения';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -21677,10 +21677,11 @@ async function promoGo(){
   btn.textContent = t('promo.t1r.wait');
   let link = '', via = '';
   try {
+    const provider = await paymentProviderConfig();
     const id = actionIdent();
-    if (id.telegram_id || id.vk_id) link = await botLinkFor('get_referral_promo_link');
+    if (provider.campaign === 'salebot' && (id.telegram_id || id.vk_id)) link = await botLinkFor('get_referral_promo_link');
     if (link) via = 'salebot';
-  } catch(e){ link = ''; }
+  } catch(e){ btn.disabled = false; btn.textContent = label; showToast(t('promo.c.fail')); return; }
   let refusal = '';
   if (!link){
     const s = await promoServerLink();
@@ -29171,6 +29172,72 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && paymentWatchUntil) pollPaymentOnce();
 });
 
+/* index-v493: переключатели только оплаты; Salebot остальных функций не затронут.
+   При неизвестном состоянии не создаём заказ у другого провайдера. */
+async function paymentProviderConfig(){
+  const response = await fetch(`${API_URL}/payments/config`, {cache:'no-store'});
+  if (!response.ok) throw new Error('Не удалось получить настройки оплаты');
+  const config = await response.json();
+  if (config.version !== 1 || !['server','salebot'].includes(config.regular)
+      || !['server','salebot'].includes(config.campaign)) throw new Error('Неизвестные настройки оплаты');
+  return config;
+}
+function personalPaymentIdentity(){
+  const iv = ivIdent();
+  const platform = iv.tg_init ? 'telegram' : iv.vk_query ? 'vk' : '';
+  const id = platform === 'vk' ? String(vkUserId() || '') : String(telegramId || '');
+  if (!platform || !/^[1-9][0-9]*$/.test(id)) throw new Error('Открой оплату в приложении Telegram или ВК');
+  return {platform,id};
+}
+const personalPaymentMemory = new Map();
+function personalPaymentRecord(plan){
+  const identity = personalPaymentIdentity();
+  const person = identity.platform + ':' + identity.id;
+  const key = 'club_personal_order_v1:' + person + ':' + plan;
+  let record = personalPaymentMemory.get(key);
+  if (!record) {
+    try { record = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e){}
+  }
+  if (!record || !/^[A-Za-z0-9-]{8,80}$/.test(record.request_id || '')
+      || (record.expires_at && Number.isFinite(Date.parse(record.expires_at)) && Date.parse(record.expires_at) <= Date.now())) {
+    record = {request_id: 'app-' + crypto.randomUUID()};
+  }
+  personalPaymentMemory.set(key, record);
+  try { localStorage.setItem(key, JSON.stringify(record)); } catch(e){}
+  return {key, record};
+}
+async function personalPaymentLinks(){
+  const iv = ivIdent();
+  if (!iv.tg_init && !iv.vk_query) throw new Error('Открой оплату в приложении Telegram или ВК');
+  const identity = personalPaymentIdentity();
+  const expectedPlatform = identity.platform;
+  const expectedId = identity.id;
+  const links = {};
+  for (const plan of ['monthly','lifetime','trial']) {
+    const saved = personalPaymentRecord(plan);
+    const response = await fetch(`${API_URL}/payments/checkouts`, {
+      method:'POST', headers:{'Content-Type':'application/json','Idempotency-Key':saved.record.request_id},
+      body:JSON.stringify({request_id:saved.record.request_id,plan,source:'app',tg_init:iv.tg_init,vk_query:iv.vk_query})
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      if (plan === 'trial' && response.status === 409 && ['trial_unavailable','trial_not_eligible'].includes(data.code)) continue;
+      throw new Error(data.detail || 'Не удалось подготовить оплату');
+    }
+    const url = new URL(data.payment_url);
+    if (data.platform !== expectedPlatform || String(data.platform_user_id) !== expectedId
+        || data.request_id !== saved.record.request_id || data.plan !== plan || data.source !== 'app'
+        || data.status !== 'pending' || !data.checkout_id || url.protocol !== 'https:' || url.username || url.password
+        || (url.hostname !== 'payform.ru' && !url.hostname.endsWith('.payform.ru'))
+        || !Number.isFinite(Date.parse(data.expires_at)) || Date.parse(data.expires_at) <= Date.now()) throw new Error('Не удалось проверить заказ');
+    saved.record.expires_at = data.expires_at;
+    personalPaymentMemory.set(saved.key, saved.record);
+    try { localStorage.setItem(saved.key, JSON.stringify(saved.record)); } catch(e){}
+    links[plan + '_link'] = data.payment_url;
+  }
+  return links;
+}
+
 async function openAccessPage(direct){
   if (isPaused){ openPauseSheet(); return; }   // v427
   if (!ensureBotAccess(function(){ openAccessPage(direct); })) return;
@@ -29189,6 +29256,18 @@ async function openAccessPage(direct){
   if (!telegramId && !hasVkIdent) {
     el.innerHTML = '<div class="empty" style="line-height:1.5">Оплата проходит в боте — так платёж сразу свяжется с твоим аккаунтом.</div>'
       + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openUrl(botLinkForAccess())">Открыть бота</button>';
+    return;
+  }
+
+  try {
+    const provider = await paymentProviderConfig();
+    if (provider.regular === 'server') {
+      renderAccessButtons(await personalPaymentLinks());
+      // access_open уже записан до выбора провайдера.
+      return;
+    }
+  } catch(e) {
+    el.innerHTML = accessLinksErrorHtml();
     return;
   }
 
