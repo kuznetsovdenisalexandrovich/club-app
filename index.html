@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v490 -->
+<!-- FILE_VERSION: index-v491 -->
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11447,6 +11447,12 @@ const API_STANDBY = 'https://club-backend-production-fc7f.up.railway.app';
 
 let apiOverride = '';
 try { apiOverride = localStorage.getItem('club_api_override') || ''; } catch (e) {}
+// Убираем только сохранённый адрес прежнего Timeweb; пользовательские стенды сохраняем.
+if (apiOverride.replace(/\/+$/, '') === 'https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net') {
+  apiOverride = '';
+  try { localStorage.removeItem('club_api_override'); } catch (e) {}
+}
+try { localStorage.removeItem('club_api_tech'); } catch (e) {}
 
 // ⚠️ ВРЕМЕННОЕ: теперь это путь ОТКАТА, а не проверки. Переключатель уводит на
 // СТАРЫЙ Railway — на случай, если с новым сервером что-то пойдёт не так и нужно
@@ -11474,7 +11480,7 @@ try { foActive = !apiOverride && localStorage.getItem('club_failover') === '1'; 
    база со своим сертификатом Timeweb: переход на него не требует копии и не
    ставит её на паузу. Порядок: домен → технический адрес (сразу) → запасной
    Railway (только если молчат оба и запасной подтверждает) */
-const API_TECH = 'https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net';
+const API_TECH = API_PROD; // Selectel: старый технический адрес Timeweb больше не используется.
 let techActive = false;
 try { techActive = !apiOverride && !foActive && localStorage.getItem('club_api_tech') === '1'; } catch (e) {}
 const API_URL = apiOverride || (foActive ? API_STANDBY : (techActive ? API_TECH : API_PROD));
