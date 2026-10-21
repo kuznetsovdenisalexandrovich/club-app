@@ -2,7 +2,22 @@
 <!-- FILE_VERSION: index-v494 -->
 <html lang="ru" data-theme="light">
 <head>
+
 <meta charset="UTF-8">
+<script>
+/* Register an authenticated intent before the large application script runs.
+   If HTML itself never arrives, only a prior bot entry can identify the content. */
+(function(){
+ try{
+  const outer=new URLSearchParams(location.hash.slice(1));const raw=outer.get('tgWebAppData')||'';
+  const inner=new URLSearchParams(raw);const code=outer.get('tgWebAppStartParam')||inner.get('start_param')||new URLSearchParams(location.search).get('startapp')||'';
+  if(!raw||!/^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,60}$/.test(code))return;
+  const attempt=crypto.randomUUID();window.__leadMaterialBoot={code,attempt};
+  fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch:raw,event:'requested'}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(function(){});
+ }catch(e){}
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Ты Боженька Продаж</title>
 <!-- Название на иконке "Домой" — Safari/Chrome иногда игнорируют <title> и берут из URL,
@@ -11942,7 +11957,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v494 · 20.10.2026 автоматическое переключение РФ';
+const APP_BUILD = 'v495 · 21.10.2026 материалы по читаемым ссылкам';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22326,6 +22341,53 @@ function openFilmRoute(){
    param  — что подставляется вместо <...>; пусто = параметр необязателен
    label  — как это называется человеческим языком, для выпадашки в дашборде
    guests — пускаем ли не-участника */
+/* Free lead magnets share one immutable source-code lookup with the bot. */
+Object.assign(APP_TEXTS, {
+ 'lead.close':{c:'Материалы',l:'Закрыть',w:'Материал',i:false,t:'Закрыть'},
+ 'lead.loading':{c:'Материалы',l:'Загрузка',w:'Материал',i:false,t:'Загружаю материал…'},
+ 'lead.vk':{c:'Материалы',l:'Видео ВК',w:'Материал',i:false,t:'Смотреть ВКонтакте'},
+ 'lead.bot':{c:'Материалы',l:'Видео в боте',w:'Материал',i:false,t:'Получить видео в Telegram'},
+ 'lead.error':{c:'Материалы',l:'Сбой плеера',w:'Материал',i:false,t:'Не удалось загрузить видео. Его можно получить в боте по кнопке ниже.'},
+ 'lead.missing':{c:'Материалы',l:'Нет материала',w:'Материал',i:false,t:'Материал по этой ссылке пока недоступен.'}
+});
+let leadMaterialPlayer=null;
+let leadMaterialClose=null;
+function leadMaterialFromUrl(){
+ const code=appStartParam();
+ if(!/^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,60}$/.test(code))return false;
+ openLeadMaterial(code);return true;
+}
+async function openLeadMaterial(code){
+ if(leadMaterialClose)leadMaterialClose();
+ const root=document.createElement('dialog');root.style.cssText='width:min(900px,94vw);max-height:90dvh;overflow:auto;border:1px solid var(--border,#777);border-radius:20px;background:var(--bg,#202020);color:var(--text,#eee);padding:24px';
+ const close=document.createElement('button');close.className='lec-link-btn';close.textContent=t('lead.close');close.style.marginBottom='20px';
+ const title=document.createElement('h2');title.textContent=t('lead.loading');const note=document.createElement('p');
+ const box=document.createElement('div');box.id='lead-material-player';box.style.cssText='width:100%;aspect-ratio:16/9';
+ const links=document.createElement('div');links.style.cssText='display:flex;flex-wrap:wrap;gap:12px;margin-top:20px';
+ root.append(close,title,note,box,links);document.body.appendChild(root);root.showModal();
+ let closed=false,player=null,launch='',attempt=window.__leadMaterialBoot&&window.__leadMaterialBoot.code===code?window.__leadMaterialBoot.attempt:crypto.randomUUID();
+ try{launch=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')||''}catch(e){}
+ let signalChain=Promise.resolve();
+ const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(()=>{}):Promise.resolve());
+ leadMaterialClose=()=>{if(closed)return;closed=true;signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
+ close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
+ signal('requested');
+ try{
+  const response=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code),{signal:AbortSignal.timeout(12000)});
+  if(!response.ok)throw new Error('material');const data=await response.json();if(closed)return;
+  title.textContent=data.title;note.textContent=data.note;
+  for(const [bot,url] of Object.entries(data.bot_urls||{})){const a=document.createElement('a');a.className='lec-link-btn';a.href=url;a.textContent=t('lead.bot')+' · @'+bot;links.appendChild(a)}
+  if(typeof isInsideVk==='function'&&isInsideVk()&&data.vk_url){const a=document.createElement('a');a.className='lec-link-btn';a.href=data.vk_url;a.textContent=t('lead.vk');links.prepend(a)}
+  try{
+   const factory=await kinescopeApi();if(closed)return;
+   player=await factory.create(box.id,{url:'https://kinescope.io/'+data.kinescope_id,size:{width:'100%',height:'100%'},behavior:{autoPlay:false,preload:'metadata'}});
+   if(closed){player.destroy();return}leadMaterialPlayer=player;signal('ready');
+   if(player.Events.Playing)player.on(player.Events.Playing,()=>signal('playing'));
+   if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');signal('error')});
+  }catch(e){if(!closed){note.textContent=t('lead.error');signal('error')}}
+ }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;signal('error')}}
+}
+
 const PARAM_LINKS = {
   'quiz':    { param: '',            label: 'Тест «кто ты из боженек»',       guests: true  },
   'bonus':   { param: 'ключ бонуса', label: 'Бонус или мастер-класс',          guests: true  },
@@ -31705,6 +31767,7 @@ async function init(){
         if (typeof loadGods === 'function') loadGods();
         return;
       }
+      if (leadMaterialFromUrl()) return;
       // Диплинк на конкретный бонус, напр. bonus_masterclass — для рассылок и
       // постов в канале, чтобы вести не в апп вообще, а сразу к делу
       // v489: часть набора (bi_), список набора (bset_), площадка (place_)
