@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v494 -->
+<!-- FILE_VERSION: index-v496 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -11957,7 +11957,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v495 · 21.10.2026 материалы по читаемым ссылкам';
+const APP_BUILD = 'v496 · 21.10.2026 личные промо-заказы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -21766,31 +21766,36 @@ async function promoOpen(){
 /* Стабильный номер заказа на акцию: повтор нажатия — тот же заказ на сервере,
    а не второй (сервер отдаёт уже выданную ссылку) */
 function promoRequestId(){
-  const key = 'club_promo_rid_' + promoCode;
-  let rid = '';
-  try { rid = localStorage.getItem(key) || ''; } catch(e){}
-  if (!/^[A-Za-z0-9-]{8,80}$/.test(rid)){
-    rid = 'pr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
-    try { localStorage.setItem(key, rid); } catch(e){}
-  }
-  return rid;
+  return personalPaymentRecord('promo:' + promoCode).record.request_id;
 }
-/* Ссылка от сервера: { link } — готово; { code } — сервер отказал по делу
-   (акция закончилась, промо уже было, уже участник); пусто — не вышло */
 async function promoServerLink(){
   const iv = ivIdent();
   if (!iv.tg_init && !iv.vk_query) return {};
-  const rid = promoRequestId();
   try {
+    const identity = personalPaymentIdentity();
+    const saved = personalPaymentRecord('promo:' + promoCode);
+    const rid = saved.record.request_id;
     const r = await fetch(`${API_URL}/payments/checkouts`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': rid },
       body: JSON.stringify({ request_id: rid, plan: 'promo', source: 'app', promo: promoCode,
                              tg_init: iv.tg_init, vk_query: iv.vk_query })
     });
     const d = await r.json().catch(() => ({}));
-    if (r.ok && d.payment_url) return { link: d.payment_url };
-    if (d.code === 'idempotency_conflict'){
-      try { localStorage.removeItem('club_promo_rid_' + promoCode); } catch(e){}
+    if (r.ok && d.payment_url){
+      const url = new URL(d.payment_url);
+      if (d.platform !== identity.platform || String(d.platform_user_id) !== identity.id
+          || d.request_id !== rid || d.plan !== 'promo' || d.source !== 'app' || d.status !== 'pending'
+          || !d.checkout_id || url.protocol !== 'https:' || url.username || url.password
+          || (url.hostname !== 'payform.ru' && !url.hostname.endsWith('.payform.ru'))
+          || !Number.isFinite(Date.parse(d.expires_at)) || Date.parse(d.expires_at) <= Date.now()) return {};
+      saved.record.expires_at = d.expires_at;
+      personalPaymentMemory.set(saved.key, saved.record);
+      try { localStorage.setItem(saved.key, JSON.stringify(saved.record)); } catch(e){}
+      return { link: d.payment_url };
+    }
+    if (['idempotency_conflict', 'checkout_expired'].includes(d.code)){
+      personalPaymentMemory.delete(saved.key);
+      try { localStorage.removeItem(saved.key); } catch(e){}
     }
     return { code: d.code || '' };
   } catch(e){ return {}; }
