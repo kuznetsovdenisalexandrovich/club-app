@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v496 -->
+<!-- FILE_VERSION: index-v497 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -3774,6 +3774,15 @@ html[data-lite] #funnel-screen .access-btn,html[data-lite] #funnel-after .access
     transform-style:preserve-3d;will-change:transform}
   .qr-stack.is-live .qr-sigil img{animation:cvSpin 90s linear infinite}
 }
+/* v497: карта с переливом наклоняется ВСЛЕД ЗА ТЕЛЕФОНОМ (как в песочнице) —
+   наклон ставит движок HoloFX прямо в transform карты, поэтому самопокачивание
+   на это время снимается: анимация перебила бы его */
+.qr-stack.hfx-tilting{perspective:1000px}
+.qr-stack.hfx-tilting .qr-card{animation:none !important;transform-style:preserve-3d}
+/* v497: обёртка наклона на вскрытии пака. Сама карта двигается своим
+   transform (раскладка), переворот — у .pr-flip; наклон живёт между ними,
+   чтобы не перебить ни то, ни другое */
+.pr-tilt{position:absolute;inset:0;transform-style:preserve-3d}
 @keyframes cvRock{
   0%,100%{transform:translate3d(0,0,0) rotateX(1.8deg) rotateY(-4.3deg) rotateZ(-.5deg)}
   26%{transform:translate3d(0,-4px,14px) rotateX(-1.2deg) rotateY(3.8deg) rotateZ(.34deg)}
@@ -11957,7 +11966,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v496 · 21.10.2026 личные промо-заказы';
+const APP_BUILD = 'v497 · 21.10.2026 карта с переливом наклоняется вслед за телефоном, перелив на вскрытии пака';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -33444,6 +33453,7 @@ async function prWaitAssets(){
 }
 
 function openPackReveal(demoCards){
+  prHoloStop();   // v497: разметка сцены сейчас пересоберётся — старый перелив снять
   let ids;
   if (demoCards && demoCards.length){
     // Отладочный прогон: идентификаторы отрицательные, чтобы никогда не совпасть
@@ -33484,10 +33494,10 @@ function openPackReveal(demoCards){
                     + '" alt="" decoding="async" data-nofade>') : '';
     }).join('');
     return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
-      + '<span class="pr-flip">'
+      + '<span class="pr-tilt"><span class="pr-flip">'
       + '<span class="pr-face pr-back">' + backs + '</span>'
       + '<span class="pr-face pr-front"><img alt="" decoding="async"></span>'
-      + '</span></button>';
+      + '</span></span></button>';
   }).join('');
 
   /* ⚠️ ДВЕРЬ ДЛЯ НОВЫХ АНИМАЦИЙ. Текущая хореография — база, она НЕ обёрнута
@@ -33537,6 +33547,7 @@ function openPackReveal(demoCards){
 }
 
 function closePackReveal(){
+  prHoloStop();   // v497: движок слушает датчик — не оставлять его после закрытия
   if (PR_SIGIL_TIMER){ clearTimeout(PR_SIGIL_TIMER); PR_SIGIL_TIMER = null; }
   prHideLoading();              // иначе останется висеть до следующего открытия
   const stage = prEl('pr-stage');
@@ -33550,6 +33561,32 @@ function closePackReveal(){
   if (PR.demo){ PR.demo = false; return; }
   loadCards();                         // пак ушёл из закрытых, баллы могли начислиться
   loadProfile();
+}
+
+/* v497 · ПЕРЕЛИВ НА ВСКРЫТИИ ПАКА. Тот же движок и те же настройки серии, что
+   у открытой карты в коллекции; вешается на раскрытую карту-героя ПОСЛЕ
+   переворота и снимается, как только открывают следующую или закрывают экран.
+   Наклон — у обёртки .pr-tilt; перспектива ставится карте инлайном, потому что
+   её класс раскладка переписывает целиком */
+var prHoloFx = null, prHoloCard = null;   // var: автовскрытие может позвать раньше этой строки
+function prHoloStop(){
+  if (prHoloFx){ try { prHoloFx.destroy(); } catch(e){} prHoloFx = null; }
+  if (prHoloCard){ prHoloCard.style.perspective = ''; prHoloCard = null; }
+}
+function prHoloStart(el, card){
+  prHoloStop();
+  if (!el || !window.HoloFX) return;
+  const holo = cardHoloOf(card);
+  if (!holo) return;
+  const face = el.querySelector('.pr-face.pr-front');
+  if (!face) return;
+  const tilt = el.querySelector('.pr-tilt');
+  try {
+    if (tilt) el.style.perspective = '900px';
+    prHoloCard = el;
+    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: true, touch: false,
+                                                          tiltEl: tilt || null });
+  } catch(e){ prHoloStop(); }
 }
 
 function prClearPhase(){
@@ -33724,6 +33761,7 @@ async function prOpenCard(id){
   }
   if (PR.busy) return;
   PR.busy = true;
+  prHoloStop();   // v497: перелив был у прошлой раскрытой карты
 
   let data = null;
   if (PR.demo){
@@ -33795,6 +33833,7 @@ async function prOpenCard(id){
     prEl('pr-cta').textContent = left ? t('pack.cta_next') : t('pack.cta_done');
     prApplyPlate();
     prLayout();
+    prHoloStart(el, card);   // v497: перелив, когда переворот закончился
     PR.busy = false;
   }, 1380);
 }
@@ -34065,22 +34104,43 @@ function cardArtSrc(card){
    палец НЕ ведёт — им здесь листают карточки. В коллекции перелива нет:
    он только на одной открытой карте, чтобы не грузить телефон */
 let cardHoloFx = null;
+let cardHoloStack = null;
 function cardHoloStop(){
   if (cardHoloFx){ try { cardHoloFx.destroy(); } catch(e){} cardHoloFx = null; }
+  if (cardHoloStack){ cardHoloStack.classList.remove('hfx-tilting'); cardHoloStack = null; }
 }
-function cardHoloStart(card, big){
-  cardHoloStop();
-  if (!card || !big || !window.HoloFX) return;
+/* v497: настройки перелива для приложения. Наклон самой карты в дашборде
+   подписан «только для песочницы» и мог быть сохранён нулём — в приложении
+   карта теперь наклоняется вслед за телефоном, поэтому ноль заменяем на 8° */
+function cardHoloSettings(holo){
+  const out = Object.assign({}, holo);
+  if (!(Number(out.tilt) > 0)) out.tilt = 8;
+  return out;
+}
+/* Набор перелива карты: в ответе сервера, иначе из каталога (у ответа
+   «открыть карту» поля holo нет) */
+function cardHoloOf(card){
+  if (!card) return null;
   let holo = card.holo;
   if (holo === undefined){
     const c2 = (cardCatalog || []).find(function(c){ return c.key === card.key; });
     holo = c2 ? c2.holo : null;
   }
-  if (!holo || !holo.on) return;
+  return (holo && holo.on) ? holo : null;
+}
+function cardHoloStart(card, big){
+  cardHoloStop();
+  if (!card || !big || !window.HoloFX) return;
+  const holo = cardHoloOf(card);
+  if (!holo) return;
   const art = big.querySelector('.qr-card-art');
   if (!art) return;
+  const stack = big.querySelector('.qr-stack');
+  const tilt = big.querySelector('.qr-card');
   try {
-    cardHoloFx = HoloFX.mount(art, holo, { z: 2, input: big.querySelector('.qr-stack') || art, gyro: true, touch: false });
+    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: true, touch: false,
+                                                          tiltEl: tilt || null });
+    if (stack && tilt){ stack.classList.add('hfx-tilting'); cardHoloStack = stack; }
   } catch(e){ cardHoloFx = null; }
 }
 
