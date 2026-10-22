@@ -11966,7 +11966,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v497 · 21.10.2026 карта с переливом наклоняется вслед за телефоном, перелив на вскрытии пака';
+const APP_BUILD = 'v497 · 21.10.2026 карта с переливом наклоняется вслед за телефоном, перелив на вскрытии пака guest-flow-20261023';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13134,7 +13134,7 @@ function track(event, ref, value){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign(
-        { telegram_id: telegramId || 0, vk_query: vkq,
+        { telegram_id: telegramId || 0, vk_query: vkq, tg_init: ivIdent().tg_init,
           event: event, ref: ref || '', value: value || 0 },
         tgContactFields()))
     }).catch(function(){});
@@ -28121,7 +28121,7 @@ async function bwOnFilmDone(byRipe){
     try {
       const d = await apiRequest(`${API_URL}/funnel/film-done`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ telegram_id: telegramId, ripe: !!byRipe })
+        body: JSON.stringify({ telegram_id: telegramId, ripe: !!byRipe, tg_init: ivIdent().tg_init })
       }, 8000);
       if (d && d.known && typeof d.seconds_left === 'number') left = d.seconds_left;
     } catch(e){ /* сеть молчит — считаем по своей отметке, окно важнее точности */ }
