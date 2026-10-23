@@ -53,13 +53,18 @@
       this.exhausted=false;
       if(!same)this.index=(this.index+1)%this.sources.length;
       const generation=++this.generation;
+      // Keep the same element: WebKit grants playback permission per element.
+      if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}
+      this.mediaListeners=[];
       if(this.hls){this.hls.destroy();this.hls=null;}
-      if(this.video){this.video.pause();this.video.removeAttribute('src');this.video.load();this.video.remove();}
-      const v=this.video=document.createElement('video');v.controls=this.started;v.playsInline=true;v.preload='metadata';
+      const fresh=!this.video;
+      const v=this.video||(this.video=document.createElement('video'));
+      if(!fresh){v.pause();v.removeAttribute('src');v.load();}
+      v.controls=this.started;v.playsInline=true;v.preload='metadata';
       v.poster=this.options.poster||'';v.setAttribute('playsinline','');v.setAttribute('aria-label',this.options.text('funnel.title'));
-      this.wrapper.prepend(v);
+      if(fresh)this.wrapper.prepend(v);
       const active=()=>!this.destroyed&&generation===this.generation;
-      const on=(name,fn)=>v.addEventListener(name,()=>{if(active())fn();});
+      const on=(name,fn)=>{const listener=()=>{if(active())fn();};this.mediaListeners.push([name,listener]);v.addEventListener(name,listener);};
       on('loadedmetadata',()=>{
         if(this.position>0&&Number.isFinite(v.duration))v.currentTime=Math.min(this.position,Math.max(0,v.duration-.1));
         this.emit('loaded');if(!this.wantsPlay)this.status('');
@@ -77,7 +82,7 @@
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
       on('seeking',()=>{this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
       on('pause',()=>{this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
-      on('ended',()=>{this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.emit('stop');});
+      on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.emit('stop');});
       on('error',()=>this.switchSource(false));
       const source=this.sources[this.index];const url=this.quality==='360'&&source.lowUrl?source.lowUrl:source.url;
       if(source.type==='hls'&&!v.canPlayType('application/vnd.apple.mpegurl')){

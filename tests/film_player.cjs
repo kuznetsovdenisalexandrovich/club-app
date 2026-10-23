@@ -7,6 +7,7 @@ class Element {
  setAttribute(){} removeAttribute(){} load(){} remove(){} canPlayType(){return '';}
  append(...children){this.children.push(...children);}prepend(c){this.children.unshift(c);}replaceChildren(...c){this.children=c;}
  addEventListener(n,fn){(this.listeners[n] ||= []).push(fn);}
+ removeEventListener(n,fn){this.listeners[n]=(this.listeners[n]||[]).filter(x=>x!==fn);}
  fire(n){for(const fn of this.listeners[n]||[])fn();}
  play(){this.paused=false;this.fire('play');return Promise.resolve();}
  pause(){if(!this.paused){this.paused=true;this.fire('pause');}}
@@ -27,7 +28,7 @@ player.start.onclick();assert(player.wantsPlay);assert(player.start.disabled);
 advance(9999);assert(player.retry.hidden);advance(1);assert(!player.retry.hidden);
 player.retry.onclick();assert(!player.panel.hidden);
 advance(4000);assert.equal(player.index,1);assert.equal(player.position,25);assert(player.wantsPlay);
-const old=v;v=player.video;v.fire('loadedmetadata');assert.equal(v.currentTime,25);
+const old=v;v=player.video;assert.strictEqual(v,old,'Keep the playback-authorized media element');v.fire('loadedmetadata');assert.equal(v.currentTime,25);
 v.fire('playing');assert(player.start.hidden);assert(player.retry.hidden);
 v.currentTime=30;v.fire('timeupdate');assert(events.some(e=>e.method==='time'&&e.time===30));
 old.fire('ended');assert.notEqual(events.at(-1).method,'stop');
