@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v504 -->
+<!-- FILE_VERSION: index-v505 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -11987,7 +11987,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v504 · 23.10.2026 · HLS и резерв видео';
+const APP_BUILD = 'v505 · 24.10.2026 · Именные фильмы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28501,7 +28501,21 @@ function filmEngineReady(){
 }
 
 function filmEdition(){ const id=new URLSearchParams(location.search).get('film_edition')||''; return /^[a-f0-9]{32}$/.test(id)?id:''; }
-function filmPositionKey(){ return 'club_app_film_pos'+(filmEdition()?'_'+filmEdition():''); }
+var filmResolvedEdition='';
+function filmNameKey(){
+  const raw=appStartParamRaw();const key=raw.match(/(?:^|-)namedfilm_(v[0-9]{1,30})$/);
+  return key?key[1]:'';
+}
+function filmManifestQuery(){
+  if(filmEdition())return '?edition='+filmEdition();
+  if(filmNameKey())return '?video_key='+filmNameKey();
+  const name=tgContactFields().tg_first_name||'';
+  return name?'?name='+encodeURIComponent(name.slice(0,200)):'';
+}
+function filmPositionKey(){
+  const id=filmResolvedEdition||filmEdition();
+  return 'club_app_film_pos'+(id?'_'+id:'');
+}
 
 function filmNativeDispose(){
   ++filmNativeGeneration;
@@ -28523,10 +28537,11 @@ function startFunnelFilm(){
   const controller = new AbortController();
   // Allow the API to try both storage copies before abandoning the manifest.
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
-  Promise.all([filmEngineReady(), fetch(`${API_URL}/media/film${filmEdition()?'?edition='+filmEdition():''}`, {signal:controller.signal, cache:'no-cache'})
+  Promise.all([filmEngineReady(), fetch(`${API_URL}/media/film${filmManifestQuery()}`, {signal:controller.signal, cache:'no-cache'})
     .then(function(r){ if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
     .then(function(manifest){
       if (generation !== filmNativeGeneration) return;
+      filmResolvedEdition=manifest.film||filmEdition();
       let saved = 0;
       try { saved = Number(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
       funnelPlayerReady = true; filmMountedAt = Date.now();
@@ -36528,10 +36543,12 @@ var sellerTouch = null;   // var, не let: appStartParam зовут и выше
 function appStartParam(){
   if (window.__nativeMaterialTarget) return window.__nativeMaterialTarget;
   const raw = appStartParamRaw();
+  if (/^namedfilm_v[0-9]{1,30}$/.test(raw)) return 'film';
   if (raw.indexOf('sb-') !== 0) return raw;
   const parts = raw.split('-');
   if (!sellerTouch) sellerTouch = { bot: parts[1] || '', step: parts[2] || '', sent: false };
-  return parts.slice(3).join('-');
+  const target=parts.slice(3).join('-');
+  return /^namedfilm_v[0-9]{1,30}$/.test(target)?'film':target;
 }
 function sendSellerTouch(){
   try { appStartParam(); } catch(e){ return; }
