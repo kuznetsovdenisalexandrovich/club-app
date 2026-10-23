@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v497 -->
+<!-- FILE_VERSION: index-v501 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -3296,7 +3296,27 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
 }
 .funnel-film-slot{position:relative;margin:14px auto 0;height:min(58vh,480px);aspect-ratio:9/16;max-width:100%}
-.funnel-film-slot iframe{width:100%;height:100%;border:0;border-radius:16px;display:block;background:#000}
+
+.native-film{position:relative;width:100%;height:100%;border-radius:16px;background:#000}
+.native-film-start{position:absolute;z-index:2;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;width:max-content;max-width:calc(100% - 32px);padding:16px 24px;border:1px solid rgba(255,255,255,.8);border-radius:20px;background:#f8f4ed;color:#302b29;box-shadow:0 8px 28px rgba(0,0,0,.3);font:inherit;font-size:18px;font-weight:600;cursor:pointer}
+.native-film-start::before{content:"";width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:12px solid currentColor;flex-shrink:0}
+.native-film-start[hidden]{display:none}
+.native-film-start:disabled{opacity:.75;cursor:wait}
+.native-film-start:focus-visible{outline:3px solid #8d73b0;outline-offset:4px}
+#funnel-screen.pip-mode .native-film-start{min-height:44px;padding:10px;font-size:0;gap:0;border-radius:14px}
+.native-film-notice{position:absolute;left:8px;right:8px;top:8px;color:#fff;background:rgba(0,0,0,.72);border-radius:8px;padding:8px;font-size:13px;pointer-events:none}
+.native-film-notice:empty{display:none}
+.native-film-help{position:relative;z-index:4;text-align:center;padding:4px 0;color:#746d69}
+.native-film-retry{min-height:44px;padding:8px 12px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.native-film-help-panel{position:absolute;top:44px;left:0;right:0;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:#f8f4ed;box-shadow:0 8px 25px #0002}
+.native-film-help [hidden]{display:none}
+.native-film-option{min-height:44px;border:1px solid #ded6ce;border-radius:10px;background:#fff9;color:#302b29;font:inherit;font-size:14px;cursor:pointer}
+#funnel-film-slot:has(.native-film){margin-bottom:48px}
+#funnel-screen.pip-mode .native-film-help{display:none}
+
+#funnel-screen.pip-mode .native-film-retry{display:none}
+
+.funnel-film-slot iframe,.funnel-film-slot video{width:100%;height:100%;border:0;border-radius:16px;display:block;background:#000}
 .funnel-secondary{
   background:transparent!important;
   border:1px solid var(--line, rgba(255,255,255,.16))!important;
@@ -3472,7 +3492,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   box-shadow:0 12px 30px -10px rgba(0,0,0,.6);
 }
 #funnel-screen.pip-mode .funnel-film-slot{width:112px;height:198px;aspect-ratio:auto;max-width:none;margin:0;border-radius:14px}
-#funnel-screen.pip-mode .funnel-film-slot iframe{border-radius:14px}
+#funnel-screen.pip-mode .funnel-film-slot iframe,#funnel-screen.pip-mode .funnel-film-slot video{border-radius:14px}
 #funnel-screen.pip-mode .funnel-film{width:112px;height:198px;margin:0;border-radius:14px}
 #funnel-screen.pip-mode .film-dock-cover{display:block;position:absolute;inset:0;cursor:pointer;z-index:2}
 #funnel-screen.pip-mode .film-dock-x{
@@ -11267,6 +11287,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
+<script src="film-player.js?v=501"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -11966,7 +11987,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v498 · 23.10.2026 · каталог материалов';
+const APP_BUILD = 'v501 · 23.10.2026 · HLS и резерв видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16524,6 +16545,18 @@ const APP_TEXTS = {
   'bw.empty': {
     c:'Первый экран', l:'Если список бонусов пуст', w:'Попап по нажатию на бар', i:true,
     t:'Бонусы откроются вместе с доступом.' },
+  'film.help': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Не грузится видео?'},
+  'film.other_server': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Попробовать другой сервер'},
+  'film.low': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Включить 360p'},
+  'film.auto': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Автоматическое качество'},
+  'film.try_again': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Попробовать ещё раз'},
+  'film.start': {c:'Первый экран',l:'Запуск фильма',w:'Свой плеер',i:true,t:'Смотреть фильм'},
+  'film.resume': {c:'Первый экран',l:'Продолжение фильма',w:'Свой плеер',i:true,t:'Продолжить'},
+  'film.retry': {c:'Первый экран',l:'Свой плеер',w:'Окно фильма',i:true,t:'Другой источник'},
+  'film.buffering': {c:'Первый экран',l:'Свой плеер',w:'Окно фильма',i:true,t:'Загружаем видео…'},
+  'film.switching': {c:'Первый экран',l:'Свой плеер',w:'Окно фильма',i:true,t:'Пробуем другой источник…'},
+  'film.unavailable': {c:'Первый экран',l:'Свой плеер',w:'Окно фильма',i:true,t:'Видео пока не загрузилось. Попробуйте другой источник.'},
+  'film.tap_play': {c:'Первый экран',l:'Свой плеер',w:'Окно фильма',i:true,t:'Нажмите кнопку воспроизведения, чтобы продолжить.'},
   'film.boot': {
     c:'Первый экран', l:'Подпись, пока грузится плеер', w:'Окно фильма', i:true,
     t:'Включаем фильм…' },
@@ -27972,6 +28005,9 @@ let filmLastMethod = '';
 let filmLastMsgAt = 0;
 let filmMountedAt = 0;    // когда вставили плеер — для замера времени загрузки
 let filmFirstMsgMs = 0;   // сколько прошло до первого ответа плеера
+let filmNative = null;
+let filmNativeLoading = false;
+let filmNativeGeneration = 0;
 let filmSdk = null;       //официальный канал по документации Boomstream
 
 /* Заглушка уходит по ПЕРВОМУ признаку жизни плеера — любое его сообщение
@@ -28070,6 +28106,7 @@ function filmTakeMediaSession(){
 }
 
 function filmSendAction(action, data){
+  if (filmNative){ filmNative.action(action, data); return; }
   /* Сначала официальный канал SDK, потом прежний ручной — второй остаётся
      на случай, если скрипт SDK не загрузился */
   try {
@@ -28093,7 +28130,7 @@ function filmSavePos(){
   const now = Date.now();
   if (now - filmPosSavedAt < 5000) return;   // событие `time` идёт часто
   filmPosSavedAt = now;
-  try { localStorage.setItem('club_app_film_pos', String(Math.floor(filmLastPos))); } catch(e){}
+  try { localStorage.setItem(filmPositionKey(), String(Math.floor(filmLastPos))); } catch(e){}
 }
 
 /* «Место помнит тебя»: при первом событии `time` после запуска — прыжок на
@@ -28102,7 +28139,7 @@ function filmMaybeResume(d){
   if (filmSeekDone) return;
   filmSeekDone = true;
   let saved = 0;
-  try { saved = parseFloat(localStorage.getItem('club_app_film_pos')) || 0; } catch(e){}
+  try { saved = parseFloat(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
   if (saved > 60 && d.duration > 0 && saved < d.duration - 30 && d.time < saved - 5){
     filmSendAction('seek', Math.round(saved / d.duration * 1000) / 10);
     track('funnel_film_resume', '', Math.floor(saved));
@@ -28380,6 +28417,7 @@ function filmPipPause(){
 /* Полная остановка фильма: плеер выгружен, слой воронки спрятан, состояние
    сброшено. Постер возвращается — если воронку покажут снова, всё соберётся */
 function filmHardStop(){
+  filmNativeDispose();
   clearTimeout(funnelAfterTimer);
   clearTimeout(filmBootTimer);
   if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
@@ -28449,7 +28487,66 @@ function showFunnelScreen(){
    не смотрит, — а это первый экран, ему положено открываться мгновенно.
    Ифреймом, а не спаном с data-boomstream-*: их скрипт сканирует страницу при
    загрузке, наш блок появляется позже (те же грабли, что были с бонусами). */
+let filmEnginePromise=null;
+function filmEngineReady(){
+  if(document.createElement('video').canPlayType('application/vnd.apple.mpegurl') || window.Hls) return Promise.resolve();
+  if(!filmEnginePromise)filmEnginePromise=new Promise(function(resolve,reject){
+    const script=document.createElement('script');script.src='vendor/hls-1.7.3.min.js';
+    const timer=setTimeout(function(){script.remove();filmEnginePromise=null;reject(new Error('Video engine timeout'));},6000);
+    script.onload=function(){clearTimeout(timer);resolve();};
+    script.onerror=function(){clearTimeout(timer);filmEnginePromise=null;reject(new Error('Video engine unavailable'));};
+    document.head.appendChild(script);
+  });
+  return filmEnginePromise;
+}
+
+function filmEdition(){ const id=new URLSearchParams(location.search).get('film_edition')||''; return /^[a-f0-9]{32}$/.test(id)?id:''; }
+function filmPositionKey(){ return 'club_app_film_pos'+(filmEdition()?'_'+filmEdition():''); }
+
+function filmNativeDispose(){
+  ++filmNativeGeneration;
+  filmNativeLoading = false;
+  if (filmNative){ filmNative.destroy(); filmNative = null; }
+}
+
 function startFunnelFilm(){
+  const enabled = appSettings.film_delivery_native !== false && appSettings.film_delivery_native !== '0';
+  if (!enabled || typeof ClubFilmPlayer === 'undefined'){ startBoomstreamFilm(); return; }
+  const slot = document.getElementById('funnel-film-slot');
+  const cover = document.getElementById('funnel-film');
+  if (!slot || !cover || filmNative || filmNativeLoading) return;
+  if (slot.querySelector('iframe')) return;
+  cover.style.display = 'none'; slot.style.display = 'block';
+  filmNativeLoading = true;
+  const generation = ++filmNativeGeneration;
+  slot.textContent = t('film.boot');
+  const controller = new AbortController();
+  const timeout = setTimeout(function(){ controller.abort(); }, 4000);
+  Promise.all([filmEngineReady(), fetch(`${API_URL}/media/film${filmEdition()?'?edition='+filmEdition():''}`, {signal:controller.signal, cache:'no-cache'})
+    .then(function(r){ if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
+    .then(function(manifest){
+      if (generation !== filmNativeGeneration) return;
+      let saved = 0;
+      try { saved = Number(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
+      funnelPlayerReady = true; filmMountedAt = Date.now();
+      filmNative = new ClubFilmPlayer(slot, {
+        sources:manifest.sources, position:filmSeekDone ? 0 : saved,
+        poster:'images/film-ya-podumayu.jpg', text:t,
+        onEvent:function(d){ filmHandlePlayback(d, true); }
+      });
+      filmSeekDone = true;
+      filmTakeMediaSession();
+    }).catch(function(){
+      if (generation !== filmNativeGeneration) return;
+      filmNativeDispose(); slot.innerHTML = '';
+      if (filmEdition()){
+        const retry=document.createElement('button'); retry.className='native-film-start'; retry.textContent=t('film.try_again');
+        retry.onclick=function(){slot.replaceChildren();startFunnelFilm();}; slot.appendChild(retry);
+      } else startBoomstreamFilm();
+    }).finally(function(){ clearTimeout(timeout); if (generation === filmNativeGeneration) filmNativeLoading = false; });
+}
+
+function startBoomstreamFilm(){
   const slot = document.getElementById('funnel-film-slot');
   const cover = document.getElementById('funnel-film');
   if (!slot || !cover) return;
@@ -28550,6 +28647,14 @@ window.addEventListener('message', function(ev){
   let d = ev.data;
   try { if (typeof d === 'string') d = JSON.parse(d); } catch(e){ return; }
   if (!d || d.code !== FUNNEL_FILM_CODE) return;
+  if (filmNative || filmNativeLoading) return;
+  const frame = document.querySelector('#funnel-film-slot iframe');
+  if (!frame || ev.source !== frame.contentWindow) return;
+  filmHandlePlayback(d, false);
+});
+
+function filmHandlePlayback(d, native){
+  if (!funnelPlayerReady || filmDone) return;
 
   /* ⚠️⚠️ АВТОЗАПУСК ЧЕРЕЗ `play` УБРАН — ОН И ОТНИМАЛ ЗВУК (14.08.2026).
      Я слал плееру `play`, как только он сообщал о готовности, чтобы избавить
@@ -28588,6 +28693,7 @@ window.addEventListener('message', function(ev){
       track('funnel_film_start');
       startVideoHeartbeat('funnel');
     }
+    if (native) startVideoHeartbeat('funnel');
     /* Фильм заиграл — глушим свой аудио-плеер, иначе два звука */
     try {
       if (typeof plAudio !== 'undefined' && plAudio && !plAudio.paused){
@@ -28595,17 +28701,18 @@ window.addEventListener('message', function(ev){
         if (typeof plSetPlayIcon === 'function') plSetPlayIcon(false);
       }
     } catch(e){}
-    filmPlayStartedAt = Date.now();
+    if (!filmPlayStartedAt) filmPlayStartedAt = Date.now();
     filmTakeMediaSession();   // подтверждаем владение и на каждом play
     clearTimeout(funnelAfterTimer);
     const rest = Math.max(FUNNEL_FILM_LENGTH_MS - filmPlayedAccum, 30000);
-    funnelAfterTimer = setTimeout(showFunnelAfter, rest);
+    if (!native) funnelAfterTimer = setTimeout(showFunnelAfter, rest);
     return;
   }
 
   /* Пауза: копим отыгранное и снимаем запасной таймер — на паузе фильм не
      «идёт», и настенные часы считать его не должны */
   if (d.method === 'pause'){
+    if (native) stopVideoHeartbeat();
     if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
     msState(false);
     clearTimeout(funnelAfterTimer);
@@ -28632,7 +28739,7 @@ window.addEventListener('message', function(ev){
     }
     if (d.time >= d.duration - 3) showFunnelAfter();
   }
-});
+}
 
 /* ⚠️ ВЫХОД С ФИЛЬМА ПОСЛЕ ПОРОГА ЗРЕЛОСТИ (04.09.2026). Свернул в PiP или
    закрыл окно, отдав фильму 90%, — это не «передумал», это готовое решение,
@@ -28651,9 +28758,10 @@ function showFunnelAfter(){
   stopVideoHeartbeat();
   if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
   filmDone = true;
+  filmNativeDispose();
   setFunnelStage('done');       // досмотрел — фильм больше не повторяем
   try {
-    localStorage.removeItem('club_app_film_pos');
+    localStorage.removeItem(filmPositionKey());
     // Точка отсчёта окна бонусов: следующий этап (сгорающий бар) читает её
     // отсюда, для узнанных она уедет и на сервер
     localStorage.setItem('club_app_film_done_at', String(Date.now()));
@@ -28688,6 +28796,7 @@ function showFunnelAfter(){
 }
 
 function funnelRewatch(){
+  filmNativeDispose();
   const box = document.getElementById('funnel-after');
   if (box) box.style.display = 'none';
   /* Пересмотр — с чистого листа: плеер выгружаем (иначе он встал бы на
@@ -28696,7 +28805,7 @@ function funnelRewatch(){
   if (slot){ slot.innerHTML = ''; slot.style.display = 'none'; }
   const cover = document.getElementById('funnel-film');
   if (cover) cover.style.display = 'block';
-  try { localStorage.removeItem('club_app_film_pos'); } catch(e){}
+  try { localStorage.removeItem(filmPositionKey()); } catch(e){}
   funnelFilmStarted = false;
   funnelPlayerReady = false;
   filmDone = false;
