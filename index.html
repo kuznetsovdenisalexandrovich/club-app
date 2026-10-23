@@ -11966,7 +11966,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v497 · 21.10.2026 карта с переливом наклоняется вслед за телефоном, перелив на вскрытии пака guest-flow-20261023';
+const APP_BUILD = 'v498 · 23.10.2026 · каталог материалов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22366,6 +22366,29 @@ Object.assign(APP_TEXTS, {
 });
 let leadMaterialPlayer=null;
 let leadMaterialClose=null;
+// Native links resolve to a whitelisted existing route. Access stays in its original handler.
+function nativeMaterialFromUrl(){
+ const raw=appStartParam();
+ if(!/^nl_(ig|tt|yt|tg|vk|web|email)_club_[a-f0-9]{16}(?:_[a-z0-9_-]{1,12})?$/.test(raw))return false;
+ openNativeMaterial(raw.slice(3));return true;
+}
+async function openNativeMaterial(code){
+ try{
+  const response=await fetch('https://bot.youselllikeagod-magazine.ru/content/native/'+encodeURIComponent(code),{signal:AbortSignal.timeout(15000)});
+  if(!response.ok)throw new Error('material');
+  const data=await response.json(),target=data.target;
+  if(!/^(?:film|about|games|g_[A-Za-z0-9_-]+|bi_[A-Za-z0-9_-]+__[A-Za-z0-9_-]+|la?_[A-Za-z0-9_-]+)$/.test(target)||data.source_code!==code)throw new Error('route');
+  try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}
+  sendAttributionTouch(code);
+  window.__nativeMaterialTarget=target;
+  trackRouteOpen();
+  if(target.indexOf('bi_')===0&&bonusRouteFromUrl())return;
+  if(/^la?_/.test(target)&&contentFromUrl())return;
+  if(target.indexOf('g_')===0&&gameFromUrl())return;
+  if(routeFromUrl())return;
+  throw new Error('route');
+ }catch(e){showToast(t('lead.missing'))}
+}
 function leadMaterialFromUrl(){
  const code=appStartParam();
  if(!/^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,60}$/.test(code))return false;
@@ -31781,6 +31804,7 @@ async function init(){
         if (typeof loadGods === 'function') loadGods();
         return;
       }
+      if (nativeMaterialFromUrl()) return;
       if (leadMaterialFromUrl()) return;
       // Диплинк на конкретный бонус, напр. bonus_masterclass — для рассылок и
       // постов в канале, чтобы вести не в апп вообще, а сразу к делу
@@ -36392,6 +36416,7 @@ async function attachReferralFromStart(){
    видят только хвост: `sb-hello_bot-s7-film` для них просто `film`. */
 var sellerTouch = null;   // var, не let: appStartParam зовут и выше по файлу, до этой строки
 function appStartParam(){
+  if (window.__nativeMaterialTarget) return window.__nativeMaterialTarget;
   const raw = appStartParamRaw();
   if (raw.indexOf('sb-') !== 0) return raw;
   const parts = raw.split('-');
