@@ -21,11 +21,12 @@ class Hls {
 const events=[];
 const ctx={Hls,document:{createElement:t=>new Element(t)},setTimeout:(fn,ms)=>{timers.set(++timerId,{fn,at:now+ms});return timerId;},clearTimeout:id=>timers.delete(id),globalThis:null};ctx.globalThis=ctx;
 vm.runInNewContext(fs.readFileSync(repo+'/film-player.js','utf8'),ctx);
-const player=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://ru.test/master',lowUrl:'https://ru.test/360',type:'hls'},{url:'https://other.test/master',lowUrl:'https://other.test/360',type:'hls'}],position:25,text:k=>k,onEvent:e=>events.push(e)});
+const player=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://ru.test/master',lowUrl:'https://ru.test/360',type:'hls'},{url:'https://other.test/master',lowUrl:'https://other.test/360',type:'hls'}],position:25,text:k=>k,onEvent:e=>events.push(e),onFault:e=>events.push({fault:e})});
 let v=player.video;v.fire('loadedmetadata');assert.equal(v.currentTime,25);
 assert.equal(player.start.textContent,'film.start');assert(!v.controls);assert(player.retry.hidden);
 player.start.onclick();assert(player.wantsPlay);assert(player.start.disabled);
 advance(9999);assert(player.retry.hidden);advance(1);assert(!player.retry.hidden);
+assert(events.some(e=>e.fault==='film_stall'));
 player.retry.onclick();assert(!player.panel.hidden);
 advance(4000);assert.equal(player.index,1);assert.equal(player.position,25);assert(player.wantsPlay);
 const old=v;v=player.video;assert.strictEqual(v,old,'Keep the playback-authorized media element');v.fire('loadedmetadata');assert.equal(v.currentTime,25);
@@ -37,6 +38,7 @@ player.setQuality('360');assert.equal(player.hls.url,'https://other.test/360');a
 player.video.fire('loadedmetadata');assert.equal(player.video.currentTime,30);
 player.setQuality('auto');assert.equal(player.hls.url,'https://other.test/master');
 player.action('play');player.hls.listeners.error(null,{fatal:true});assert(player.exhausted);assert.equal(timers.size,0);
+assert(events.some(e=>e.fault==='film_unavailable'));
 player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
 player.other.onclick();assert.equal(player.index,0);assert(!player.exhausted);assert.equal(player.position,30);
 player.destroy();assert.equal(timers.size,0);const count=events.length;player.video.fire('ended');assert.equal(events.length,count);

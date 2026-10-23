@@ -26,6 +26,7 @@
     }
     button(text,className,click){const b=document.createElement('button');b.type='button';b.className=className;b.textContent=text;b.onclick=click;return b;}
     emit(method){if(!this.destroyed)this.options.onEvent({method,time:this.position,duration:this.video?this.video.duration:0});}
+    fault(code){try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
     status(key){this.notice.textContent=key?this.options.text(key):'';}
     clearTimers(){clearTimeout(this.timer);clearTimeout(this.helpTimer);this.timer=null;this.helpTimer=null;}
     progress(){
@@ -36,7 +37,7 @@
       if(!this.wantsPlay||this.destroyed||this.exhausted)return;
       // Preserve these deadlines through source changes: continuous waiting counts.
       if(!this.helpTimer&&this.retry.hidden){
-        this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay)this.retry.hidden=false;},this.options.helpMs||10000);
+        this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay){this.retry.hidden=false;this.fault('film_stall');}},this.options.helpMs||10000);
       }
       if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.switchSource(false);},this.options.stallMs||14000);
     }
@@ -46,6 +47,7 @@
       if(this.video&&Number.isFinite(this.video.currentTime)&&this.video.currentTime>0)this.position=this.video.currentTime;
       this.emit('pause');
       if(!same&&this.index+1>=this.sources.length&&!manual){
+        this.fault('film_unavailable');
         this.exhausted=true;this.wantsPlay=false;this.clearTimers();
         ++this.generation;if(this.video)this.video.pause();
         this.status('film.unavailable');this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;

@@ -11287,7 +11287,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="film-player.js?v=504"></script>
+<script src="film-player.js?v=506"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -11987,7 +11987,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v505 · 24.10.2026 · Именные фильмы';
+const APP_BUILD = 'v506 · 24.10.2026 · Контроль ошибок';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12042,6 +12042,33 @@ if (VIEW_TOKEN){
     return realFetch(input, init);
   };
 }
+
+
+// Failure reporting is independent of the user's request; never retry a payment here.
+const clientIncidentSent = new Set();
+function reportClientIncident(event){
+  if(clientIncidentSent.has(event))return;
+  clientIncidentSent.add(event);
+  const base=API_URL;
+  fetch(base+'/client/incidents',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({event:event,build:typeof APP_BUILD==='undefined'?'':String(APP_BUILD).slice(0,40)}),keepalive:true})
+    .then(r=>{if(!r.ok)clientIncidentSent.delete(event);}).catch(()=>{clientIncidentSent.delete(event);});
+}
+(function(){
+  const underlying=window.fetch.bind(window);
+  window.fetch=function(input,init){
+    let payment=false;
+    try{const u=new URL(typeof input==='string'?input:input.url,location.href);
+      payment=[new URL(API_URL).origin,new URL(API_STANDBY).origin].includes(u.origin)&&
+        ['/payments/checkouts','/payments/intent'].includes(u.pathname);
+    }catch(e){}
+    const result=underlying(input,init);
+    if(!payment)return result;
+    return result.then(r=>{if(r.status>=500)reportClientIncident('payment_http');return r;},e=>{
+      if(e.name!=='AbortError')reportClientIncident('payment_network');throw e;
+    });
+  };
+})();
 
 function viewExit(){
   /* Выход из просмотра — просто адрес без параметра. Сессия на сервере
@@ -28548,12 +28575,14 @@ function startFunnelFilm(){
       filmNative = new ClubFilmPlayer(slot, {
         sources:manifest.sources, position:filmSeekDone ? 0 : saved,
         poster:'images/film-ya-podumayu.jpg', text:t,
-        onEvent:function(d){ filmHandlePlayback(d, true); }
+        onEvent:function(d){ filmHandlePlayback(d, true); },
+        onFault:reportClientIncident
       });
       filmSeekDone = true;
       filmTakeMediaSession();
     }).catch(function(){
       if (generation !== filmNativeGeneration) return;
+      reportClientIncident('film_manifest');
       filmNativeDispose(); slot.innerHTML = '';
       if (filmEdition()){
         const retry=document.createElement('button'); retry.className='native-film-start'; retry.textContent=t('film.try_again');
