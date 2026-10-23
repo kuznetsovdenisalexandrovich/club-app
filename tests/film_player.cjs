@@ -36,6 +36,7 @@ player.setQuality('360');assert.equal(player.hls.url,'https://other.test/360');a
 player.video.fire('loadedmetadata');assert.equal(player.video.currentTime,30);
 player.setQuality('auto');assert.equal(player.hls.url,'https://other.test/master');
 player.action('play');player.hls.listeners.error(null,{fatal:true});assert(player.exhausted);assert.equal(timers.size,0);
+player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
 player.other.onclick();assert.equal(player.index,0);assert(!player.exhausted);assert.equal(player.position,30);
 player.destroy();assert.equal(timers.size,0);const count=events.length;player.video.fire('ended');assert.equal(events.length,count);
 console.log('OK HLS auto/360, 10s help, source recovery, position, pause, bounded retries, teardown');

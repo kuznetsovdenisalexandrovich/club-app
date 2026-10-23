@@ -92,7 +92,7 @@
       if(this.wantsPlay)this.play();else this.showStart();
       this.arm();
     }
-    setQuality(quality){this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
+    setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
       this.wantsPlay=true;this.start.disabled=true;const generation=this.generation;
