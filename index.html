@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v502 -->
+<!-- FILE_VERSION: index-v503 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -11987,7 +11987,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v502 · 23.10.2026 · HLS и резерв видео';
+const APP_BUILD = 'v503 · 23.10.2026 · HLS и резерв видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28521,7 +28521,8 @@ function startFunnelFilm(){
   const generation = ++filmNativeGeneration;
   slot.textContent = t('film.boot');
   const controller = new AbortController();
-  const timeout = setTimeout(function(){ controller.abort(); }, 4000);
+  // Allow the API to try both storage copies before abandoning the manifest.
+  const timeout = setTimeout(function(){ controller.abort(); }, 12000);
   Promise.all([filmEngineReady(), fetch(`${API_URL}/media/film${filmEdition()?'?edition='+filmEdition():''}`, {signal:controller.signal, cache:'no-cache'})
     .then(function(r){ if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
     .then(function(manifest){
