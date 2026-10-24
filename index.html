@@ -5683,6 +5683,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
   background:rgba(30,24,40,.92);color:#fff;font-size:13px;transition:all .25s;pointer-events:none}
 .iv-toast.show{opacity:1;transform:translateX(-50%)}
 /* ═══ IV-CSS-END ═══ */
+#access-restricted{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;background:var(--bg,#f4f1ed);color:var(--text,#252329);overflow:auto}
+.restricted-card{width:min(100%,440px);padding:32px 24px;border:1px solid var(--border,#8885);border-radius:24px;background:var(--card-bg,var(--bg,#f4f1ed));box-sizing:border-box}
+.restricted-card h1{font-size:26px;line-height:1.2;margin:0 0 18px}
+.restricted-card p{font-size:16px;line-height:1.6;margin:0 0 24px}
+.restricted-card button{min-height:46px;width:100%;border-radius:12px}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -11535,9 +11540,11 @@ const API_URL = API_PROD;
    Сервер выдаёт аппу подписанный «пропуск» на номер, который подтвердила
    площадка (см. clubPassEnsure). Здесь — ОДНА обёртка над fetch: к каждому
    запросу на наш сервер дописывается `_cp=<пропуск>`. Остальной код о пропуске
-   не знает и не меняется. Сервер пока только считает, с пропуском ли пришли,
-   и ничего не отклоняет. Любая ошибка здесь — запрос уходит как раньше */
+   не знает и не меняется. Закрытый контент требует пропуск. Перед первым запросом ждём
+   подтверждения личности; бесплатный каталог остаётся доступен гостям */
 let clubPass = '', clubPassId = '';
+let clubPassPending = null;
+let accessRestricted = false;
 const CLUB_PASS_KEY = 'club_pass_v1';
 function clubPassUse(id){
   clubPass = ''; clubPassId = String(id || '');
@@ -11554,16 +11561,33 @@ function clubPassUse(id){
     if (!window.fetch || window.__clubPassFetch) return;
     window.__clubPassFetch = true;
     const origFetch = window.fetch.bind(window);
-    window.fetch = function(input, init){
+    window.fetch = async function(input, init){
+      let owned = false;
       try {
-        if (typeof input === 'string' && [API_PROD,API_STANDBY].some(base=>input.indexOf(base)===0) && telegramId){
+        owned = typeof input === 'string' && [API_PROD,API_STANDBY].some(base=>new URL(input,location.href).origin === new URL(base).origin);
+        if (owned && telegramId){
           if (clubPassId !== String(telegramId)) clubPassUse(telegramId);
-          if (clubPass && input.indexOf('_cp=') < 0 && input.indexOf('#') < 0){
-            input = input + (input.indexOf('?') >= 0 ? '&' : '?') + '_cp=' + encodeURIComponent(clubPass);
+          if (clubPass && Number(clubPass.split('.')[1]) <= Date.now()/1000+60) clubPass='';
+          if (!clubPass && !new URL(input,location.href).pathname.startsWith('/auth/')){
+            if (!clubPassPending) clubPassPending = clubPassEnsure().finally(()=>{clubPassPending=null;});
+            await clubPassPending;
           }
+          if (clubPass){
+            const url = new URL(input,location.href);
+            url.searchParams.set('_cp',clubPass);
+            input = url.href;
+          }
+          const headers = new Headers(init && init.headers || {});
+          Object.entries(sessionHeaders()).forEach(([key,value])=>{if (!headers.has(key)) headers.set(key,value);});
+          init = {...init, headers};
         }
       } catch(e){}
-      return origFetch(input, init);
+      const response = await origFetch(input, init);
+      if (owned && response.status === 403){
+        const body = await response.clone().json().catch(()=>null);
+        if (body && body.detail && body.detail.code === 'access_restricted') showAccessRestricted();
+      }
+      return response;
     };
   } catch(e){}
 })();
@@ -11987,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v506 · 24.10.2026 · Контроль ошибок';
+const APP_BUILD = 'v507 · 24.10.2026 · Защита доступа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16009,6 +16033,9 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'restricted.title': {c:'Доступ',l:'Заголовок ограничения',w:'Ограничение',i:false,t:'Доступ ограничен'},
+  'restricted.body': {c:'Доступ',l:'Пояснение ограничения',w:'Ограничение',i:false,t:'Сейчас доступ к приложению и материалам клуба ограничен. Если это произошло по ошибке, напиши в поддержку.'},
+  'restricted.support': {c:'Доступ',l:'Кнопка поддержки',w:'Ограничение',i:false,t:'Написать в поддержку'},
   'digest.title':        { c:'Дайджест', l:'Название выпуска по умолчанию', w:'Экран выпуска', i:true,  t:'Дайджест клуба' },
   'digest.card_sub':     { c:'Дайджест', l:'Подпись карточки на главной', w:'Главная', i:true,  t:'Весь месяц клуба за пару минут · {n} полос' },
   'digest.shelf_h':      { c:'Дайджест', l:'Заголовок полки выпусков', w:'Полка', i:false, t:'Выпуски' },
@@ -22249,7 +22276,7 @@ async function openLectureByKey(key, mode){
       return;
     }
     // Аудио гостю тоже даём: сервер отдаст урезанное превью, дальше пейвол
-    if (mode === 'audio' && (lec.audio_url || '').trim()){
+    if (mode === 'audio' && (lec.has_audio || (lec.audio_url || '').trim())){
       setTimeout(function(){ playLecture(0); }, 120);
       return;
     }
@@ -22257,7 +22284,7 @@ async function openLectureByKey(key, mode){
     return;
   }
 
-  if (mode === 'audio' && (lec.audio_url || '').trim()){
+  if (mode === 'audio' && (lec.has_audio || (lec.audio_url || '').trim())){
     setTimeout(function(){ playLecture(0); }, 120);
   } else if (mode === 'insights' && (lec.key_insights || []).length){
     setTimeout(function(){ openInsightsModal(0); }, 120);
@@ -23094,7 +23121,7 @@ function lecCardHtml(l, i, src, fopts){
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : (insightsLevelLocked ? `openInsightsLevelLockNotice()` : `openInsightsModal(${i},${jsArg(src)})`);
   // Аудиоверсия есть не у всех занятий — кнопки просто нет, если файла нет
-  const hasAudio = !!((l.audio_url || '').trim());
+  const hasAudio = !!(l.has_audio || (l.audio_url || '').trim());
   /* v454: [stated] Denis 09.10 — у гостя на «Слушать» висел замок, хотя первые
      минуты аудио ему открыты. Замок — только если превью выключено */
   const guestAudio = hasAudio && !isMember && audioPreviewMin() > 0;
@@ -23133,7 +23160,7 @@ function shareLecture(slug, mode){
   const lec = (allLectures || []).find(function(x){ return x.slug === slug; });
   if (!lec) return;
   const key = safeContentKey(slug);
-  let hasAudio = !!(lec.audio_url || '').trim();
+  let hasAudio = !!(lec.has_audio || (lec.audio_url || '').trim());
   const hasIdeas = (lec.key_insights || []).length > 0;
   /* v463: из выжимки делимся именно выжимкой, а не аудио */
   if (mode === 'insights' && hasIdeas) hasAudio = false;
@@ -30291,7 +30318,7 @@ function aiMomentHtml(l, i){
   const m = aiMoments[l.slug];
   if (!m) return '';
   const tm = plFmt(m.sec);
-  const hasAudio = !!((l.audio_url || '').trim());
+  const hasAudio = !!(l.has_audio || (l.audio_url || '').trim());
   return '<div class="ai-moment">' +
     '<div class="ai-moment-head">' + esc2(tf('lib.ai.moment', {'время': tm}) || ('Ответ — с ' + tm)) + '</div>' +
     (m.label ? '<div class="ai-moment-label">' + esc2(m.label) + '</div>' : '') +
@@ -30576,6 +30603,7 @@ function applyTelegramSafeAreaSoon(){
 }
 
 function startApp(){
+  startAccessWatch();
   try { clubPassEnsure(); } catch(e){}
   sendSellerTouch();
   track('app_open');
@@ -31366,8 +31394,7 @@ function launchIdentity(){
 }
 
 /* Получить пропуск: предъявляем серверу всё, чем площадка подтверждает
-   человека. Свежий пропуск есть — сервер не дёргаем. Не вышло — не беда:
-   запросы уходят как раньше, сервер только отметит, что без пропуска */
+   человека. Свежий пропуск есть — сервер не дёргаем. Без подтверждения личности сервер отдаёт только гостевое содержимое */
 function clubPassTgData(){
   let d = '';
   try { d = tgLaunchData(); } catch(e){}
@@ -31381,7 +31408,7 @@ function clubPassTgData(){
 }
 async function clubPassEnsure(){
   try {
-    if (!telegramId || clubPassUse(telegramId)) return;
+    if (!telegramId || clubPassId===String(telegramId) && clubPass && Number(clubPass.split('.')[1])>Date.now()/1000+60 || clubPassUse(telegramId)) return;
     const body = Object.assign({}, launchIdentity());
     const tgd = clubPassTgData();
     if (tgd) body.tg_launch = tgd;
@@ -31402,6 +31429,30 @@ async function clubPassEnsure(){
     /* В хранилище не записалось (приватный режим) — держим в памяти */
     if (!clubPass && got[String(telegramId)]){ clubPass = got[String(telegramId)]; clubPassId = String(telegramId); }
   } catch(e){}
+}
+
+function showAccessRestricted(){
+  accessRestricted = true;
+  document.querySelectorAll('audio,video').forEach(function(el){el.pause();el.removeAttribute('src');el.load();});
+  document.querySelectorAll('iframe').forEach(function(el){el.remove();});
+  if (document.getElementById('access-restricted')) return;
+  const box = document.createElement('section');
+  box.id = 'access-restricted';
+  box.setAttribute('role','dialog');
+  box.setAttribute('aria-modal','true');
+  box.setAttribute('aria-labelledby','access-restricted-title');
+  box.innerHTML = '<div class="restricted-card"><h1 id="access-restricted-title">'+escapeHtml(t('restricted.title'))+'</h1><p>'+escapeHtml(t('restricted.body'))+'</p><button type="button" class="lec-link-btn">'+escapeHtml(t('restricted.support'))+'</button></div>';
+  Array.from(document.body.children).forEach(function(el){if(el.tagName!=='SCRIPT')el.inert=true;});
+  document.body.appendChild(box);
+  box.querySelector('button').onclick = function(){openSupportDm();};
+  box.querySelector('button').focus();
+}
+function startAccessWatch(){
+  if (window.__accessWatch) return;
+  const check = function(){if (!accessRestricted && telegramId) fetch(API_URL+'/auth/access-status',{credentials:'include',headers:sessionHeaders()}).catch(function(){});};
+  check();
+  window.__accessWatch=setInterval(check,30000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});
 }
 
 function actionIdent(){
@@ -37064,7 +37115,7 @@ function plCoverHtml(lec){
 
 /* ── Запуск ─────────────────────────────────────────────────────────────── */
 
-function plHasAudio(lec){ return !!(lec && (lec.audio_url || '').trim()); }
+function plHasAudio(lec){ return !!(lec && (lec.has_audio || (lec.audio_url || '').trim())); }
 
 /* Главная точка входа: жмут «Слушать» на карточке. Очередь — весь список, где
    человек нажал, но только те занятия, у которых аудио есть */
