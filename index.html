@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v505 -->
+<!-- FILE_VERSION: index-v508 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v507 · 24.10.2026 · Защита доступа';
+const APP_BUILD = 'v508 · 24.10.2026 · Ссылки в новостях';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13443,6 +13443,30 @@ function supportLinkify(text){
 /* Выполнить маршрут по готовому payload — то же, что делает диплинк,
    но без перезапуска приложения. ⚠️ Порядок разбора тот же, что в
    `openFromStartParam`: сначала ключи с параметром, потом таблица */
+function internalNewsRoute(href){
+  try{
+    const url=new URL(href);
+    if(url.protocol!=='https:' || url.username || url.password) return '';
+    let route='';
+    if(url.hostname==='t.me' && /^\/youselllikeagod_bot(?:\/app)?$/.test(url.pathname)) route=url.searchParams.get('startapp')||'';
+    else if(['vk.ru','vk.com'].includes(url.hostname) && /^\/app54715238(?:_-232119632)?$/.test(url.pathname)) route=url.hash.slice(1);
+    return /^(?:games|digest|schedule|library|live|(?:l|la|li|dg|g|gs)_[A-Za-z0-9_-]+)$/.test(route)?route:'';
+  }catch(e){return '';}
+}
+
+document.addEventListener('click',function(event){
+  const link=event.target.closest && event.target.closest('a[href]');
+  if(!link) return;
+  const route=internalNewsRoute(link.getAttribute('href'));
+  if(!route) return;
+  event.preventDefault();event.stopPropagation();
+  Promise.resolve(waitProfile()).then(()=>{
+    const target=DEEPLINKS[route];
+    if(target && target.guests===false && !isMember){openAccessPage();return;}
+    runAppRoute(route);
+  });
+},true);
+
 function runAppRoute(payload){
   const p = String(payload || '');
   if (!p) return;
@@ -13450,6 +13474,9 @@ function runAppRoute(payload){
     if (p.indexOf('gs_') === 0 || p.indexOf('g_') === 0){
       const key = p.replace(/^gs?_/, '').replace(/_(\d+|u[0-9a-z]{8})$/, '');
       if (typeof ggOpenTo === 'function'){ ggOpenTo(key, p.indexOf('gs_') === 0 ? 'play' : 'rules'); return; }
+    }
+    if (/^l[ai]_/.test(p) && typeof openLectureByKey === 'function'){
+      openLectureByKey(contentKeyWithoutTail(p.slice(3)),p.startsWith('la_')?'audio':'insights'); return;
     }
     if (p.indexOf('l_') === 0 && typeof openLectureByKey === 'function'){
       openLectureByKey(contentKeyWithoutTail(p.slice(2)), ''); return;
