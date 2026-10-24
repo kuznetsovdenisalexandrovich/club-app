@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v508 -->
+<!-- FILE_VERSION: index-v509 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -7093,7 +7093,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px" id="pause-sheet-text"></div>
     <button class="lec-link-btn access-btn" onclick="closePauseSheet()" data-text="pause.ok">Понятно</button>
     <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePauseSheet();track('pause_extend_open');openSubManageAt('sm-pause-block')" data-text="pause.extend">Продлить паузу</button>
-    <div class="payment-help-link" style="margin-top:10px" onclick="closePauseSheet();openSupportPopup()" data-text="pause.back_early">Вернуться раньше — написать в поддержку</div>
+    <div class="payment-help-link" style="margin-top:10px" onclick="closePauseSheet();openSubManageAt('sm-pause-block')" data-text="pause.return_button">Вернуться из паузы</div>
   </div>
 </div>
 
@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v508 · 24.10.2026 · Ссылки в новостях';
+const APP_BUILD = 'v509 · 24.10.2026 · Пауза и возврат';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13981,6 +13981,7 @@ let formerMember = false;   // v418: был участником, сейчас �
    смотрит ещё и на isPaused: участнику на паузе нельзя предлагать вторую
    подписку — openPaywall/openAccessPage уводят в окно паузы */
 let isPaused = false;
+let pauseReturnPending = false;
 let pausedUntil = '';
 
 async function loadProfile() {
@@ -14024,6 +14025,7 @@ async function loadProfile() {
     document.getElementById('sub-meta').textContent = u.cost ? `${u.cost} ₽ / мес` : '—';
 
     isPaused = !!u.paused;
+    pauseReturnPending = !!u.pause_return_pending;
     pausedUntil = u.paused_until || '';
     isMember = !!u.is_member && !isPaused;
     formerMember = !!u.former_member;   // v418
@@ -14589,6 +14591,40 @@ function openSubManage(){
   loadSubStatus();
 }
 
+async function resumePause(btn){
+  if (btn) btn.disabled = true;
+  try {
+    await loadSubStatus();
+    const mode = (subStatus && subStatus.pause_return || {}).mode;
+    if (!['immediate','new_subscription'].includes(mode)) throw new Error(t('pause.return_error'));
+    if (mode === 'new_subscription' && !confirm(t('pause.return_confirm'))) return;
+    const result = await apiRequest(`${API_URL}/subscription/resume`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({telegram_id:telegramId})
+    }, 60000);
+    if (result.mode === 'immediate'){
+      allLectures = [];
+      await loadProfile();
+      await loadLibrary();
+      await loadSubStatus();
+      showToast(t('pause.return_done'));
+    } else if (result.mode === 'new_subscription'){
+      const url = new URL(result.payment_url);
+      if (url.protocol !== 'https:' || url.username || url.password ||
+          !(url.hostname === 'payform.ru' || url.hostname.endsWith('.payform.ru'))) throw new Error(t('pause.return_error'));
+      closeSubManage();
+      openUrl(url.href);
+      openPostPay();
+      startPaymentWatch();
+    } else throw new Error(t('pause.return_error'));
+  } catch(e){ showToast(e.message || t('pause.return_error')); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+function lectureRecordingAccess(lecture){
+  return isMember || !!(isPaused && lecture && lecture.recording_access);
+}
+
 async function extendPause(months, btn){
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
@@ -14637,15 +14673,15 @@ function renderSubManage(){
   /* v427: пауза — когда началась/начнётся, до какого числа, продление */
   let frozen = '';
   const pr = s.pause || {};
-  if (s.frozen_until && pr.extending){
-    const line = s.frozen_from ? tf('pause.sub_line', { from: s.frozen_from, to: s.frozen_until }) : `Пауза до ${s.frozen_until}`;
+  if (s.frozen_until && (pr.extending || s.paused)){
+    const line = (s.pause_return || {}).pending ? t('pause.await_payment') : (s.frozen_from ? tf('pause.sub_line', { from: s.frozen_from, to: s.frozen_until }) : `Пауза до ${s.frozen_until}`);
     const planned = (!s.paused && s.frozen_from) ? `<div class="sm-hint" style="margin-top:4px">${escapeHtml(tf('pause.sub_planned', { from: s.frozen_from }))}</div>` : '';
     const ext = pr.allowed && pr.months_left > 0
       ? `<div class="sm-hint" style="margin-top:8px">${escapeHtml(tf('pause.sub_extend', { n: pr.months_left }))}</div>
          <div class="sm-row">${[1, 2, 3].filter(m => m <= pr.months_left).map(m => `<button class="sm-btn" onclick="extendPause(${m}, this)">+${m} мес.</button>`).join('')}</div>`
       : (pr.reason ? `<div class="sm-hint" style="margin-top:8px">${escapeHtml(pr.reason)}</div>` : '');
     frozen = `<div id="sm-pause-block" style="margin-top:6px"><div class="sm-hint"><b>${escapeHtml(line)}</b></div>${planned}${ext}
-      <div class="payment-help-link" style="margin-top:8px" onclick="closeSubManage();openSupportPopup()">${escapeHtml(t('pause.back_early'))}</div></div>`;
+      ${s.paused && ['immediate','new_subscription'].includes((s.pause_return || {}).mode) ? `<div class="sm-hint" style="margin-top:12px">${escapeHtml(s.pause_return.mode === 'immediate' ? tf('pause.return_near',{d:s.next_payment}) : t('pause.return_far'))}</div><div class="sm-row"><button class="sm-btn" onclick="resumePause(this)">${escapeHtml(t(s.pause_return.mode === 'immediate' ? 'pause.return_button' : 'pause.return_pay'))}</button></div>` : ''}</div>`;
   }
 
   // Подписка остановлена, но доступ ещё действует — это то самое окно, в котором человека
@@ -14687,8 +14723,8 @@ function renderSubManage(){
   body.innerHTML = `
     ${cancelledBlock}
     <div class="sm-block">
-      <div class="sm-title">Следующее списание</div>
-      <div class="sm-hint">${s.next_payment || '—'}${s.cost ? ' · ' + s.cost + ' ₽' : ''}</div>
+      <div class="sm-title">${(s.pause_return || {}).pending ? escapeHtml(t(s.pause_return.billing_stopped ? 'pause.billing_stopped' : 'pause.billing_check')) : 'Следующее списание'}</div>
+      <div class="sm-hint">${(s.pause_return || {}).pending ? escapeHtml(t('pause.await_payment')) : (s.next_payment || '—') + (s.cost ? ' · ' + s.cost + ' ₽' : '')}</div>
       <div class="sm-hint">В клубе ${monthsSince(s.first_payment_date)} мес.</div>
       ${frozen}
     </div>
@@ -16127,12 +16163,24 @@ const APP_TEXTS = {
   'ai.profile_btn':   { c:'ИИ-помощник', l:'Кнопка в профиле', w:'Профиль → Помощь', i:false, t:'Спросить помощника' },
   /* v427: пауза-пейвол. На паузе человек остаётся участником (баллы, уровень,
      коллекция, подписка), но контент открыт как гостю */
+
+  'pause.billing_check': { c:'Пауза', l:'Проверка списания', w:'Управление подпиской', i:false, t:'Ждём подтверждения отключения списания' },
+  'pause.billing_stopped': { c:'Пауза', l:'Списание отключено', w:'Управление подпиской', i:false, t:'Старое автосписание отключено' },
+  'pause.await_payment': { c:'Пауза', l:'Ожидание оплаты', w:'Управление подпиской', i:false, t:'Пауза сохраняется до оплаты новой подписки' },
+  'pause.return_button': { c:'Пауза', l:'Вернуться', w:'Управление подпиской', i:false, t:'Вернуться из паузы' },
+  'pause.return_pay': { c:'Пауза', l:'Новая подписка', w:'Управление подпиской', i:false, t:'Оформить новую подписку' },
+  'pause.return_near': { c:'Пауза', l:'Близкое списание', w:'Управление подпиской', i:true, t:'Полный доступ откроется сразу, без оплаты сейчас. Следующее списание — {d}, дата не изменится.' },
+  'pause.return_far': { c:'Пауза', l:'Далёкое списание', w:'Управление подпиской', i:true, t:'Отключим старое автосписание и откроем оплату новой месячной подписки. Полный доступ вернётся после оплаты. Если не оплатить, пауза сохранится, старое автосписание не возобновится.' },
+  'pause.return_confirm': { c:'Пауза', l:'Подтверждение', w:'Управление подпиской', i:true, t:'Отключить старую подписку и перейти к оплате новой? Без оплаты останется доступ только к записям, доступным до паузы, и их аудиоверсиям.' },
+  'pause.return_done': { c:'Пауза', l:'Возврат завершён', w:'Управление подпиской', i:false, t:'Пауза снята, полный доступ открыт' },
+  'pause.return_error': { c:'Пауза', l:'Ошибка возврата', w:'Управление подпиской', i:false, t:'Не получилось завершить возврат. Обнови данные и попробуй ещё раз.' },
+  'pause.archive_text': { c:'Пауза', l:'Доступ на паузе', w:'Окно паузы', i:true, t:'На паузе доступны записи, открытые до её начала, и их аудиоверсии. Новые записи, эфиры, ссылки на встречи и остальные платные функции откроются после возврата. Каналы, группы, баллы и коллекция сохраняются.' },
   'pause.banner_title': { c:'Пауза', l:'Плашка на главной: заголовок', w:'Главная, у участника на паузе', i:false, t:'Ты на паузе до {d}' },
   'pause.banner_sub':   { c:'Пауза', l:'Плашка на главной: подпись', w:'Главная, у участника на паузе', i:false, t:'Баллы, уровень и коллекция ждут тебя →' },
   'pause.sheet_title':  { c:'Пауза', l:'Окно паузы: заголовок', w:'Нажал закрытое на паузе', i:false, t:'Это откроется после паузы' },
   'pause.sheet_text':   { c:'Пауза', l:'Окно паузы: текст', w:'Нажал закрытое на паузе', i:true, t:'Пауза до {d}. Пока она идёт, библиотека, игры, журналы и выжимки закрыты — открыты бесплатные кусочки занятий и дайджест. Баллы, уровень и коллекция никуда не денутся.' },
   'pause.extend':       { c:'Пауза', l:'Окно паузы: кнопка продлить', w:'Окно паузы', i:false, t:'Продлить паузу' },
-  'pause.back_early':   { c:'Пауза', l:'Окно паузы: вернуться раньше', w:'Окно паузы', i:false, t:'Вернуться раньше — написать в поддержку' },
+  'pause.back_early':   { c:'Пауза', l:'Окно паузы: вернуться раньше', w:'Окно паузы', i:false, t:'Вернуться из паузы' },
   'pause.ok':           { c:'Пауза', l:'Окно паузы: закрыть', w:'Окно паузы', i:false, t:'Понятно' },
   'pause.sub_line':     { c:'Пауза', l:'Подписка: строка о паузе', w:'Управление подпиской', i:false, t:'Пауза с {from} до {to}' },
   'pause.sub_planned':  { c:'Пауза', l:'Подписка: пауза ещё не началась', w:'Управление подпиской', i:false, t:'Пауза начнётся {from}: до этого дня всё открыто, оплаченный месяц твой.' },
@@ -22295,7 +22343,7 @@ async function openLectureByKey(key, mode){
   }
   showSingleLecture(lec);
 
-  if (!isMember){
+  if (!lectureRecordingAccess(lec)){
     // ⚠️ ВЫЖИМКУ ГОСТЮ ПОКАЗЫВАЕМ — так было задумано и до диплинков
     // (`openInsightsModal` пускает демо сознательно): именно ей и прогреваем
     if (mode === 'insights' && (lec.key_insights || []).length){
@@ -23129,7 +23177,7 @@ function lecCardHtml(l, i, src, fopts){
   src = src || 'lib';
   const isSaved = savedSlugs.has(l.slug);
   const tourLocked = isMember && tourActive;
-  const locked = !isMember || tourLocked;
+  const locked = !lectureRecordingAccess(l) || tourLocked;
   const lockCls = locked ? ' locked' : '';
   const lockIcon = locked ? '🔒 ' : '';
   const linkClick = tourLocked
@@ -23151,7 +23199,7 @@ function lecCardHtml(l, i, src, fopts){
   const hasAudio = !!(l.has_audio || (l.audio_url || '').trim());
   /* v454: [stated] Denis 09.10 — у гостя на «Слушать» висел замок, хотя первые
      минуты аудио ему открыты. Замок — только если превью выключено */
-  const guestAudio = hasAudio && !isMember && audioPreviewMin() > 0;
+  const guestAudio = hasAudio && !lectureRecordingAccess(l) && audioPreviewMin() > 0;
   const listenClick = tourLocked
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `playLecture(${i},${jsArg(src)})`;
@@ -26830,6 +26878,7 @@ async function openLiveEntry(){
     const r = await fetch(`${API_URL}/live/entry`);
     const d = await r.json();
 
+    if (d.state === 'paused'){ openPauseSheet(); return; }
     if (d.state === 'live'){
       /* v381: гость при закрытой бесплатной части не видит блока эфира —
          раньше его проматывало к пустому месту без единого слова */
@@ -26857,7 +26906,7 @@ async function openLiveEntry(){
       await waitProfile();
       /* v381: ссылка рассылается публично — гостю не голый пейвол, а окно
          «запись для участников» с кнопкой доступа */
-      if (!isMember) {
+      if (!isMember && !(isPaused && d.recording_access)) {
         /* v426 (d60): есть бесплатная часть — гость смотрит до неё, дальше окно доступа */
         if (d.free_sec && d.play_url){ openLiveRecordGuest(d); return; }
         showLiveGuest(d, 'record'); return;
@@ -27562,7 +27611,7 @@ function renderAccessRows(){
 }
 
 function openLectureLink(index, platform, src) {
-  if (!isMember) { openLectureAsGuest(cardList(src)[index]); return; }
+  if (!lectureRecordingAccess(cardList(src)[index])) { openLectureAsGuest(cardList(src)[index]); return; }
   /* v395: у своих в тесте стена притворяется вместе со знакомством */
   if (platform === 'vk' && (!vkAccessGranted || nbWallFake('vk'))) { openVkAccessGate(index, src); return; }
   if (platform !== 'vk' && hasRealTg() && (!channelJoined || nbWallFake('tg'))) { openTgAccessGate(index, src); return; }
@@ -27583,7 +27632,7 @@ function openLectureLink(index, platform, src) {
 }
 
 function openLecture(index) {
-  if (!isMember) { openLectureAsGuest(renderedItems[index]); return; }
+  if (!lectureRecordingAccess(renderedItems[index])) { openLectureAsGuest(renderedItems[index]); return; }
   const l = renderedItems[index];
   if (!l) return;
   rememberLastLecture(l);
@@ -29390,11 +29439,11 @@ function renderPauseBanner(){
   if (!el) return;
   el.style.display = isPaused ? 'flex' : 'none';
   const ttl = document.getElementById('pause-banner-title');
-  if (ttl) ttl.textContent = tf('pause.banner_title', { d: pauseDateText() });
+  if (ttl) ttl.textContent = pauseReturnPending ? t('pause.await_payment') : tf('pause.banner_title', { d: pauseDateText() });
 }
 function openPauseSheet(){
   const txt = document.getElementById('pause-sheet-text');
-  if (txt) txt.textContent = tf('pause.sheet_text', { d: pauseDateText() });
+  if (txt) txt.textContent = t('pause.archive_text');
   document.getElementById('pause-overlay').classList.add('open');
   track('pause_wall');
 }
@@ -29564,7 +29613,7 @@ async function pollPaymentOnce(){
   let paid = false;
   try {
     const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}`, {}, 8000);
-    paid = !!(u && u.found && u.is_member);
+    paid = !!(u && u.found && u.is_member && !u.paused);
   } catch (e) {}
 
   if (paid){
