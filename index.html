@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v510 · 31.10.2026 · Видео клуба';
+const APP_BUILD = 'v511 · 31.10.2026 · Скидки от 300 ₽';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -14350,7 +14350,7 @@ async function cfLessOpen(){
   }
   const pts = Math.min(s.points || 0, s.points_payment_max || 0);
   const free = s.free_discount_left || 0;
-  const minPay = free ? 1 : Math.max(1, cost - pts);
+  const minPay = Math.max(s.minimum_payment || 300, free ? 0 : cost - pts);
   if (!cost || minPay >= cost){
     body.innerHTML = `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_none'))}</div>`
       + `<button class="chargefail-btn" onclick="cfInviteOpen()">${escapeHtml(t('chargefail.btn_invite'))}</button>` + cfBack();
@@ -14358,7 +14358,7 @@ async function cfLessOpen(){
   }
   const start = Math.max(minPay, Math.min(cost - 10, Math.round(cost / 2 / 10) * 10));
   body.innerHTML =
-      `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_text'))}</div>`
+      `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_text'))} ${escapeHtml(t('discount.floor'))}</div>`
     + `<div class="sm-slider-value" id="cf-less-preview" style="font-size:15px"></div>`
     + `<div class="sm-slider-row"><input type="range" class="sm-slider" id="cf-less-slider" min="${minPay}" max="${cost - 1}" step="1" value="${start}" oninput="cfLessPreview()"></div>`
     + `<div class="sm-hint" id="cf-less-split" style="font-size:12.5px;opacity:.75;text-align:center;margin-top:4px"></div>`
@@ -14463,7 +14463,7 @@ function renderFreeDiscount(){
      а не крайность. Шаг 10 ₽, как у баллов */
   const start = Math.min(max, Math.max(min, Math.round((s.cost || 990) / 2 / 10) * 10));
   body.innerHTML =
-    `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('freediscount.text'))}</div>`
+    `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('freediscount.text'))} ${escapeHtml(t('discount.floor'))}</div>`
     + `<div class="sm-hint" style="margin-top:8px">${escapeHtml(t('freediscount.left_label'))} ${plural(left, 'скидка', 'скидки', 'скидок')}.</div>`
     + `<div class="sm-slider-value" id="fd-preview"></div>`
     + `<div class="sm-slider-row">`
@@ -14708,7 +14708,7 @@ function renderSubManage(){
     const capMark = cap < scaleMax
       ? `<div class="sm-slider-cap" style="left:${(cap / scaleMax) * 100}%"><span>${cap}</span></div>`
       : '';
-    pointsBlock = `<div class="sm-hint">Один балл = один рубль. Можно закрыть баллами часть платежа или почти весь.</div>
+    pointsBlock = `<div class="sm-hint">${escapeHtml(t('discount.points_floor'))}</div>
       <div class="sm-slider-value" id="sm-points-preview"></div>
       <div class="sm-slider-row">
         <input type="range" class="sm-slider" id="sm-points-slider" min="0" max="${scaleMax}" step="10"
@@ -16096,6 +16096,8 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'discount.points_floor': {c:'Подписка', l:'Минимум оплаты после баллов', w:'Управление подпиской', i:false, t:'Один балл = один рубль. После списания баллов к оплате останется не менее 300 ₽.'},
+  'discount.floor': {c:'Подписка', l:'Минимум оплаты после скидки', w:'Скидки', i:false, t:'После скидки к оплате останется не менее 300 ₽.'},
   'restricted.title': {c:'Доступ',l:'Заголовок ограничения',w:'Ограничение',i:false,t:'Доступ ограничен'},
   'restricted.body': {c:'Доступ',l:'Пояснение ограничения',w:'Ограничение',i:false,t:'Сейчас доступ к приложению и материалам клуба ограничен. Если это произошло по ошибке, напиши в поддержку.'},
   'restricted.support': {c:'Доступ',l:'Кнопка поддержки',w:'Ограничение',i:false,t:'Написать в поддержку'},
