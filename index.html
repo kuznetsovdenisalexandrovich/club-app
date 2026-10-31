@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v512 · 31.10.2026 · Бонусы и удержание';
+const APP_BUILD = 'v513 · 31.10.2026 · Задания тестеров';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22679,7 +22679,8 @@ function routeFromUrl(){
      уже забрал attachReferralFromStart */
   const жив = key.match(/^(live|efir|go|now|meet)_/);
   if (жив) key = жив[1];
-  const route = DEEPLINKS[key];
+  const qaMatch = key.match(/^qacheck_(\d+)$/);
+  const route = qaMatch ? {guests:true, go:()=>qaOpenAssigned(Number(qaMatch[1]))} : DEEPLINKS[key];
   if (!route) return false;
 
   const shell = document.getElementById('app-shell');
@@ -35259,6 +35260,7 @@ let qaOn = false;
 const qaLogBuf = [];
 let qaShots = [];            // адреса уже загруженных скриншотов
 let qaShotsBusy = 0;
+let qaAssignedItem = 0;
 let qaTask = null;           // последний ответ /tester/task
 let qaLinkedItem = null;     // пункт, на котором нажали «Не работает»
 let qaSkip = [];
@@ -35570,6 +35572,15 @@ function qaRender(){
 }
 function qaSwitch(tab){ qaTab = tab; qaRender(); if (tab === 'task') qaLoadTask(); }
 
+function qaOpenAssigned(id){
+  qaAssignedItem = id;
+  qaSetOn(true);
+}
+function qaGoFeature(){
+  const route = qaTask && qaTask.item && qaTask.item.route;
+  if (!route || !DEEPLINKS[route]) return;
+  qaClose(); DEEPLINKS[route].go();
+}
 function qaTaskHtml(){
   const d = qaTask;
   if (!d) return '<div class="qa-note">' + escapeHtml(t('digest.loading') || '…') + '</div>';
@@ -35590,6 +35601,7 @@ function qaTaskHtml(){
     h += '<div class="qa-kicker">' + escapeHtml(it.checked_in_round ? tf('qa.kicker_n', { n: it.checked_in_round }) : t('qa.kicker_new')) + '</div>'
       + '<div class="qa-item-t">' + escapeHtml(it.title) + '</div>'
       + '<div class="qa-item-x">' + escapeHtml(it.steps) + '</div>'
+      + (it.route && DEEPLINKS[it.route] ? '<button type="button" class="qa-btn qa-primary" onclick="qaGoFeature()">Открыть нужный экран</button>' : '')
       + '<div class="qa-two"><button type="button" class="qa-btn qa-ok" onclick="qaAnswer(true)">' + escapeHtml(t('qa.works')) + '</button>'
       + '<button type="button" class="qa-btn qa-bad" onclick="qaAnswer(false)">' + escapeHtml(t('qa.broken')) + '</button></div>'
       + '<button type="button" class="qa-btn" onclick="qaSkipTask()">' + escapeHtml(t('qa.skip')) + '</button>';
@@ -35601,7 +35613,7 @@ function qaTaskHtml(){
 }
 async function qaLoadTask(){
   try {
-    const d = await apiRequest(API_URL + '/tester/task?' + qaWhoQuery() + '&skip=' + qaSkip.join(','));
+    const d = await apiRequest(API_URL + '/tester/task?' + qaWhoQuery() + '&skip=' + qaSkip.join(',') + '&item_id=' + qaAssignedItem);
     qaTask = d;
     if (d && d.build) qaServerBuild = d.build;
   } catch(e){ qaTask = { error: true }; }
@@ -35619,7 +35631,7 @@ async function qaAnswer(ok){
     });
     if (ok){
       showToast(r && r.points ? tf('qa.ok_toast', { n: r.points }) : t('qa.ok_toast0'));
-      qaTask = null; qaRender(); qaLoadTask();
+      qaAssignedItem = 0; qaTask = null; qaRender(); qaLoadTask();
     } else {
       qaLinkedItem = { id: it.id, title: it.title };
       qaTab = 'bug'; qaRender();
@@ -35629,7 +35641,7 @@ async function qaAnswer(ok){
 }
 function qaSkipTask(){
   if (qaTask && qaTask.item) qaSkip.push(qaTask.item.id);
-  qaTask = null; qaRender(); qaLoadTask();
+  qaAssignedItem = 0; qaTask = null; qaRender(); qaLoadTask();
 }
 function qaGoPay(){ qaClose(); try { openPaywall(); } catch(e){} }
 function qaGoOnb(){ qaClose(); try { openFromBotMenu(); } catch(e){ switchView('portal'); } }
