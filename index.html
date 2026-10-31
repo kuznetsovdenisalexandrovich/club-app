@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v511 · 31.10.2026 · Скидки от 300 ₽';
+const APP_BUILD = 'v512 · 31.10.2026 · Бонусы и удержание';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -15681,7 +15681,7 @@ function winbackOpenDigest(key){
 
 const WINBACK_RENDERERS = {
   no_direction: () => `
-    <div class="sm-hint" style="margin-bottom:10px">Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 1₽, чтобы у тебя точно получилось посмотреть.</div>
+    <div class="sm-hint" style="margin-bottom:10px">${escapeHtml(t('retention.guide_offer'))}</div>
     <textarea class="ai-question-input" id="winback-free-text" rows="3" placeholder="Например: как настроить рекламу, как продавать дороже..."></textarea>
     <div class="sm-row" style="margin-top:10px">
       <button class="sm-btn" onclick="submitWinbackWithText('no_direction','guide_only')">Личный гайд</button>
@@ -15714,7 +15714,7 @@ const WINBACK_RENDERERS = {
     <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_time')">Нет, хочу уйти навсегда!!!</div>`,
 
   temp_money: (d) => `
-    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я${d && d.already_granted ? ' уже когда-то' : ' только что'} начислил тебе 1000 бонусов за честность${d && d.points ? ` (сейчас у тебя ${d.points})` : ''}. Вторая — теперь ты можешь оплатить этими бонусами следующий месяц, хоть целиком. Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
+    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я${d && d.already_granted ? ' уже когда-то' : ' только что'} начислил тебе 1000 бонусов за честность${d && d.points ? ` (сейчас у тебя ${d.points})` : ''}. Вторая — теперь ты можешь оплатить этими бонусами часть следующего месяца. ${escapeHtml(t('discount.floor'))} Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
     <div class="sm-row" style="margin-top:10px">
       <button class="sm-btn" onclick="closeWinbackFunnel();openSubManage()">Оплатить бонусами</button>
       <button class="sm-btn" onclick="submitWinbackSimple('temp_money','shift_payment')">Сдвинуть платёж</button>
@@ -15860,7 +15860,7 @@ function showPostCancelOffer(){
   closeWinbackFunnel();
   document.getElementById('postcancel-body').innerHTML = `
     <div class="sm-hint">Подписка остановлена. Будем благодарны узнать, чего не хватило клубу, чтобы тебя сохранить.</div>
-    <div class="sm-hint" style="margin-top:10px">А что скажешь, если мы тебе сейчас соберём самого классного контентика, откроем возможность скачать выжимки, и подарим месяц участия за 1₽ — просто в благодарность за то, что мне удалось тебя соблазнить остаться?</div>
+    <div class="sm-hint" style="margin-top:10px">${escapeHtml(t('retention.stay_offer'))}</div>
     <div class="sm-row" style="margin-top:10px">
       <button class="sm-btn" onclick="acceptPostCancelOffer(false)">А давай! Можно без скидки</button>
       <button class="sm-btn" onclick="acceptPostCancelOffer(true)">Супер! Давай со скидкой</button>
@@ -16096,6 +16096,8 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'retention.guide_offer': {c:'Подписка', l:'Подарок с гайдом', w:'Удержание', i:false, t:'Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 300 ₽, чтобы у тебя точно получилось посмотреть.'},
+  'retention.stay_offer': {c:'Подписка', l:'Подарок остаться', w:'Удержание', i:false, t:'А что скажешь, если мы тебе сейчас соберём самого классного контентика, откроем возможность скачать выжимки, и подарим месяц участия за 300 ₽ — просто в благодарность за то, что мне удалось тебя соблазнить остаться?'},
   'discount.points_floor': {c:'Подписка', l:'Минимум оплаты после баллов', w:'Управление подпиской', i:false, t:'Один балл = один рубль. После списания баллов к оплате останется не менее 300 ₽.'},
   'discount.floor': {c:'Подписка', l:'Минимум оплаты после скидки', w:'Скидки', i:false, t:'После скидки к оплате останется не менее 300 ₽.'},
   'restricted.title': {c:'Доступ',l:'Заголовок ограничения',w:'Ограничение',i:false,t:'Доступ ограничен'},
