@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v509 · 24.10.2026 · Пауза и возврат';
+const APP_BUILD = 'v510 · 31.10.2026 · Видео клуба';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -21570,7 +21570,7 @@ function bonusRouteFromUrl(){
       if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center' });
     }, 80);
     if (it.locked) return;
-    if (it.boomstream) playBonusVideo(set, item);
+    if (it.media_edition || it.boomstream) playBonusVideo(set, item);
   });
   return true;
 }
@@ -21686,7 +21686,7 @@ function bonusFromUrl(){
     const b = findBonus(key);
     if (!b) return;
     openBonusPopup(key);
-    const first = (b.items || []).find(function(it){ return it.boomstream; });
+    const first = (b.items || []).find(function(it){ return it.media_edition || it.boomstream; });
     if (first && !first.locked) playBonusVideo(key, first.key);
   });
   return true;
@@ -22728,7 +22728,7 @@ function renderBonusItems(){
       action = byOrder
         ? '<span style="font-size:11px;color:var(--text-faint)">откроется следующей</span>'
         : `<button class="lec-link-btn access-btn" onclick="closeBonusPopup();openPaywall()">Открыть</button>`;
-    } else if (it.boomstream){
+    } else if (it.media_edition || it.boomstream){
       action = `<button class="lec-link-btn" onclick="playBonusVideo(${jsArg(b.key)},${jsArg(it.key)})">Смотреть</button>`;
     } else {
       const links = [];
@@ -22794,7 +22794,9 @@ function playBonusVideo(bonusKey, itemKey){
   if (!ensureBotAccess(function(){ playBonusVideo(bonusKey, itemKey); })) return;
   const b = findBonus(bonusKey);
   const it = b && (b.items || []).find(x => x.key === itemKey);
-  if (!it || !it.boomstream) return;
+  if (!it || it.locked || (!it.media_edition && !it.boomstream)) return;
+  disposeBonusNative();
+  if (it.media_edition){ playNativeBonus(bonusKey, itemKey, it); return; }
   const slot = document.getElementById('bonus-video-slot');
   const code = String(it.boomstream).trim();
 
@@ -22883,7 +22885,58 @@ function playBonusVideo(bonusKey, itemKey){
   markBonusOpened(bonusKey, itemKey);
 }
 
+let bonusNativePlayer = null;
+let bonusNativeGeneration = 0;
+let bonusNativeRequest = null;
+function disposeBonusNative(){
+  ++bonusNativeGeneration;
+  if (bonusNativeRequest){ bonusNativeRequest.abort(); bonusNativeRequest = null; }
+  if (bonusNativePlayer){ bonusNativePlayer.destroy(); bonusNativePlayer = null; }
+}
+async function playNativeBonus(bonusKey, itemKey, it){
+  const generation = bonusNativeGeneration;
+  const slot = document.getElementById('bonus-video-slot');
+  const card = slot.closest('.fullscreen-popup-card');
+  slot.classList.toggle('wide', !it.vertical);
+  if (card) card.classList.toggle('wide', !it.vertical);
+  document.getElementById('bonus-video-title').textContent = it.title || '';
+  document.getElementById('bonus-video-overlay').classList.add('open');
+  slot.textContent = t('film.boot');
+  const controller = new AbortController();
+  bonusNativeRequest = controller;
+  const timeout = setTimeout(function(){ controller.abort(); }, 12000);
+  const positionKey = 'club_bonus_pos_' + bonusKey + '_' + itemKey + '_' + it.media_edition;
+  try {
+    const results = await Promise.all([filmEngineReady(), fetch(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}`, {signal:controller.signal, cache:'no-store'})
+      .then(function(r){ if (!r.ok) throw new Error('bonus_manifest'); return r.json(); })]);
+    if (generation !== bonusNativeGeneration) return;
+    let position = 0;
+    try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
+    bonusNativePlayer = new ClubFilmPlayer(slot, {
+      sources:results[1].sources, position:position, text:t,
+      onEvent:function(event){
+        if (Number.isFinite(event.time) && event.time > 0){
+          try { localStorage.setItem(positionKey, String(event.time)); } catch(e){}
+        }
+      },
+      onFault:reportClientIncident
+    });
+    markBonusOpened(bonusKey, itemKey);
+  } catch(e){
+    if (generation !== bonusNativeGeneration) return;
+    slot.textContent = t('film.unavailable');
+    const retry = document.createElement('button');
+    retry.className = 'native-film-start'; retry.textContent = t('film.try_again');
+    retry.onclick = function(){ playBonusVideo(bonusKey, itemKey); };
+    slot.appendChild(retry);
+  } finally {
+    clearTimeout(timeout);
+    if (bonusNativeRequest === controller) bonusNativeRequest = null;
+  }
+}
+
 function closeBonusVideo(){
+  disposeBonusNative();
   document.getElementById('bonus-video-overlay').classList.remove('open');
   // содержимое чистим ниже — сторож увидит пропажу подсказки и остановится сам
   // выгружаем ифрейм, иначе звук продолжает играть под закрытым попапом
