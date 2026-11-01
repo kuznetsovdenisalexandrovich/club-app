@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v516 · 02.11.2026 · Оплата баллами';
+const APP_BUILD = 'v517 · 02.11.2026 · Лид-магнит и PDF';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22569,6 +22569,8 @@ Object.assign(APP_TEXTS, {
  'lead.error':{c:'Материалы',l:'Сбой плеера',w:'Материал',i:false,t:'Не удалось загрузить видео. Его можно получить в боте по кнопке ниже.'},
  'lead.missing':{c:'Материалы',l:'Нет материала',w:'Материал',i:false,t:'Материал по этой ссылке пока недоступен.'}
 });
+Object.assign(APP_TEXTS, {"lead.full": {"c": "Материалы", "l": "Получить полный доступ", "w": "Материал", "i": false, "t": "Получить полный доступ"}, "lead.pdf": {"c": "Материалы", "l": "Получить PDF-выжимку", "w": "Материал", "i": false, "t": "Получить PDF-выжимку"}, "lead.film": {"c": "Материалы", "l": "Посмотреть фильм о клубе", "w": "Материал", "i": false, "t": "Посмотреть фильм о клубе"}, "lead.subscribe": {"c": "Материалы", "l": "Подписаться на бесплатный канал", "w": "Материал", "i": false, "t": "Подписаться на бесплатный канал"}, "lead.check": {"c": "Материалы", "l": "Проверить подписку и получить PDF", "w": "Материал", "i": false, "t": "Проверить подписку и получить PDF"}, "lead.gate": {"c": "Материалы", "l": "PDF-выжимка — за подписку на бесплатный канал. После подписки вернись сюда и нажми «Проверить подписку».", "w": "Материал", "i": false, "t": "PDF-выжимка — за подписку на бесплатный канал. После подписки вернись сюда и нажми «Проверить подписку»."}, "lead.checking": {"c": "Материалы", "l": "Проверяем подписку…", "w": "Материал", "i": false, "t": "Проверяем подписку…"}, "lead.download": {"c": "Материалы", "l": "Скачать PDF-выжимку", "w": "Материал", "i": false, "t": "Скачать PDF-выжимку"}, "lead.pdfError": {"c": "Материалы", "l": "Не получилось проверить подписку или собрать PDF. Попробуй ещё раз.", "w": "Материал", "i": false, "t": "Не получилось проверить подписку или собрать PDF. Попробуй ещё раз."}, "lead.end": {"c": "Материалы", "l": "Бесплатная часть закончилась. Продолжение — в клубе. Можно получить полный доступ или сначала посмотреть фильм о клубе.", "w": "Материал", "i": false, "t": "Бесплатная часть закончилась. Продолжение — в клубе. Можно получить полный доступ или сначала посмотреть фильм о клубе."}, "lead.allow": {"c": "Материалы", "l": "Чтобы получить материал и сохранить возможность просмотра в боте, запусти бота по кнопке ниже.", "w": "Материал", "i": false, "t": "Чтобы получить материал и сохранить возможность просмотра в боте, запусти бота по кнопке ниже."}, "lead.start": {"c": "Материалы", "l": "Запустить бота и получить лекцию", "w": "Материал", "i": false, "t": "Запустить бота и получить лекцию"}});
+Object.assign(APP_TEXTS, {'lead.notSubscribed':{c:'Материалы',l:'Нет подписки',w:'Материал',i:false,t:'Подписка пока не найдена. Подпишись на канал и повтори проверку.'}});
 let leadMaterialPlayer=null;
 let leadMaterialClose=null;
 // Native links resolve to a whitelisted existing route. Access stays in its original handler.
@@ -22601,33 +22603,67 @@ function leadMaterialFromUrl(){
 }
 async function openLeadMaterial(code){
  if(leadMaterialClose)leadMaterialClose();
- const root=document.createElement('dialog');root.style.cssText='width:min(900px,94vw);max-height:90dvh;overflow:auto;border:1px solid var(--border,#777);border-radius:20px;background:var(--bg,#202020);color:var(--text,#eee);padding:24px';
+ const root=document.createElement('dialog');root.style.cssText='margin:auto;width:min(900px,94vw);box-sizing:border-box;max-height:90dvh;overflow:auto;border:1px solid var(--border,#777);border-radius:20px;background:var(--bg,#202020);color:var(--text,#eee);padding:24px';
  const close=document.createElement('button');close.className='lec-link-btn';close.textContent=t('lead.close');close.style.marginBottom='20px';
- const title=document.createElement('h2');title.textContent=t('lead.loading');const note=document.createElement('p');
+ const title=document.createElement('h2');title.textContent=t('lead.loading');title.style.overflowWrap='anywhere';const note=document.createElement('p');
  const box=document.createElement('div');box.id='lead-material-player';box.style.cssText='width:100%;aspect-ratio:16/9';
- const links=document.createElement('div');links.style.cssText='display:flex;flex-wrap:wrap;gap:12px;margin-top:20px';
- root.append(close,title,note,box,links);document.body.appendChild(root);root.showModal();
+ const links=document.createElement('div');links.style.cssText='display:flex;flex-direction:column;gap:12px;margin-top:20px';
+ const gate=document.createElement('div');gate.hidden=true;gate.style.cssText='margin-top:20px;padding:16px;border:1px solid var(--border,#777);border-radius:12px';
+ root.append(close,title,note,box,links,gate);document.body.appendChild(root);root.showModal();
  let closed=false,player=null,launch='',attempt=window.__leadMaterialBoot&&window.__leadMaterialBoot.code===code?window.__leadMaterialBoot.attempt:crypto.randomUUID();
  try{launch=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')||''}catch(e){}
  let signalChain=Promise.resolve();
- const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(()=>{}):Promise.resolve());
+ const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(()=>null):Promise.resolve(null));
  leadMaterialClose=()=>{if(closed)return;closed=true;signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
  close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
- signal('requested');
+ const button=(label,action)=>{const b=document.createElement('button');b.className='lec-link-btn';b.textContent=label;b.style.cssText='white-space:normal;min-height:46px;width:100%;box-sizing:border-box';b.onclick=action;return b};
+ const anchor=(label,url)=>{const a=document.createElement('a');a.className='lec-link-btn';a.textContent=label;a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;min-height:46px;box-sizing:border-box;text-decoration:none';return a};
  try{
   const response=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code),{signal:AbortSignal.timeout(12000)});
   if(!response.ok)throw new Error('material');const data=await response.json();if(closed)return;
   title.textContent=data.title;note.textContent=data.note;
-  for(const [bot,url] of Object.entries(data.bot_urls||{})){const a=document.createElement('a');a.className='lec-link-btn';a.href=url;a.textContent=t('lead.bot')+' · @'+bot;links.appendChild(a)}
-  if(typeof isInsideVk==='function'&&isInsideVk()&&data.vk_url){const a=document.createElement('a');a.className='lec-link-btn';a.href=data.vk_url;a.textContent=t('lead.vk');links.prepend(a)}
+  const allowed=await signal('requested');if(closed)return;
+  if(!allowed||!allowed.ok){box.hidden=true;note.textContent=t('lead.allow');links.append(anchor(t('lead.start'),'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code)));return}
+  try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}sendAttributionTouch(code);
+  links.append(button(t('lead.full'),()=>{leadMaterialClose();openAccessPage()}));
+  const pdfGate=data.pdf_gate&&data.pdf_gate.tg;
+  if(pdfGate){
+   const explanation=document.createElement('p');explanation.textContent=t('lead.gate');explanation.style.cssText='margin-bottom:16px;line-height:1.5';
+   const status=document.createElement('p');status.setAttribute('role','status');status.style.cssText='margin-top:16px;line-height:1.5';
+   const check=button(t('lead.check'),async()=>{
+    check.disabled=true;status.textContent=t('lead.checking');
+    try{
+     const r=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code)+'/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({launch}),signal:AbortSignal.timeout(25000)});
+     if(!r.ok)throw new Error('pdf');const result=await r.json();if(closed)return;
+     status.replaceChildren();
+     if(result.subscribed){const u=new URL(result.url);if(u.origin!=='https://bot.youselllikeagod-magazine.ru'||!u.pathname.startsWith('/content/pdf/'))throw new Error('url');status.append(anchor(t('lead.download'),result.url))}
+     else status.textContent=t('lead.notSubscribed');
+    }catch(e){if(!closed)status.textContent=t('lead.pdfError')}finally{check.disabled=false}
+   });
+   check.style.marginTop='12px';gate.append(explanation,anchor(t('lead.subscribe'),pdfGate.url),check,status);
+   links.append(button(t('lead.pdf'),()=>{gate.hidden=false;gate.scrollIntoView({behavior:'smooth',block:'nearest'});check.click()}));
+  }
+  links.append(button(t('lead.film'),()=>{leadMaterialClose();openFilmRoute()}));
+  for(const [bot,url] of Object.entries(data.bot_urls||{}))links.append(anchor(t('lead.bot'),url));
   try{
+   if(data.video_url){
+    const u=new URL(data.video_url);if(u.origin!=='https://club-audio-725136.s3.ru-7.storage.selcloud.ru'||!/^\/lead-magnets\/[a-zA-Z0-9_-]+\.mp4$/.test(u.pathname))throw new Error('video');
+    const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.style.cssText='width:100%;height:100%;background:#15151a;border-radius:12px';
+    video.addEventListener('loadedmetadata',()=>signal('ready'));
+    video.addEventListener('playing',()=>signal('playing'));
+    video.addEventListener('error',()=>{note.textContent=t('lead.error');signal('error')});
+    video.addEventListener('ended',()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
+    player={destroy:()=>{video.pause();video.removeAttribute('src');video.load()}};leadMaterialPlayer=player;box.append(video);video.src=data.video_url;
+    return;
+   }
    const factory=await kinescopeApi();if(closed)return;
    player=await factory.create(box.id,{url:'https://kinescope.io/'+data.kinescope_id,size:{width:'100%',height:'100%'},behavior:{autoPlay:false,preload:'metadata'}});
    if(closed){player.destroy();return}leadMaterialPlayer=player;signal('ready');
    if(player.Events.Playing)player.on(player.Events.Playing,()=>signal('playing'));
+   if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
    if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');signal('error')});
   }catch(e){if(!closed){note.textContent=t('lead.error');signal('error')}}
- }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;signal('error')}}
+ }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;links.append(anchor(t('lead.start'),'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code)));signal('error')}}
 }
 
 const PARAM_LINKS = {
