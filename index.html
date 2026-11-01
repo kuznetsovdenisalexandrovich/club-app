@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v514 · 02.11.2026 · Материалы и дайджест';
+const APP_BUILD = 'v515 · 02.11.2026 · Оплата баллами';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -14329,6 +14329,10 @@ function chargeFailGo(where){
    баллов, а не хватит — одной из трёх скидок без баллов (/subscription/pay-less).
    Апп только показывает раскладку; решает и проверяет сервер */
 let cfLess = null, cfLessArmed = false;
+function pointsFloorText(s){
+  const floor = s.points_min_payment ?? s.minimum_payment ?? 300;
+  return floor === 0 ? t('discount.points_full') : t('discount.points_minimum').replace('{n}', String(floor));
+}
 function cfBack(){ return `<button class="chargefail-btn" style="text-align:center;opacity:.75" onclick="openChargeFail()">${escapeHtml(t('chargefail.back'))}</button>`; }
 async function cfLessOpen(){
   const body = document.getElementById('chargefail-body');
@@ -14350,7 +14354,7 @@ async function cfLessOpen(){
   }
   const pts = Math.min(s.points || 0, s.points_payment_max || 0);
   const free = s.free_discount_left || 0;
-  const minPay = Math.max(s.minimum_payment || 300, free ? 0 : cost - pts);
+  const minPay = s.pay_less_minimum ?? Math.max(s.minimum_payment ?? 300, free ? 0 : cost - pts);
   if (!cost || minPay >= cost){
     body.innerHTML = `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_none'))}</div>`
       + `<button class="chargefail-btn" onclick="cfInviteOpen()">${escapeHtml(t('chargefail.btn_invite'))}</button>` + cfBack();
@@ -14358,7 +14362,7 @@ async function cfLessOpen(){
   }
   const start = Math.max(minPay, Math.min(cost - 10, Math.round(cost / 2 / 10) * 10));
   body.innerHTML =
-      `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_text'))} ${escapeHtml(t('discount.floor'))}</div>`
+      `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_text'))} ${escapeHtml(pointsFloorText(s))} ${escapeHtml(t('discount.free_floor'))}</div>`
     + `<div class="sm-slider-value" id="cf-less-preview" style="font-size:15px"></div>`
     + `<div class="sm-slider-row"><input type="range" class="sm-slider" id="cf-less-slider" min="${minPay}" max="${cost - 1}" step="1" value="${start}" oninput="cfLessPreview()"></div>`
     + `<div class="sm-hint" id="cf-less-split" style="font-size:12.5px;opacity:.75;text-align:center;margin-top:4px"></div>`
@@ -14708,10 +14712,10 @@ function renderSubManage(){
     const capMark = cap < scaleMax
       ? `<div class="sm-slider-cap" style="left:${(cap / scaleMax) * 100}%"><span>${cap}</span></div>`
       : '';
-    pointsBlock = `<div class="sm-hint">${escapeHtml(t('discount.points_floor'))}</div>
+    pointsBlock = `<div class="sm-hint">${escapeHtml(pointsFloorText(s))}</div>
       <div class="sm-slider-value" id="sm-points-preview"></div>
       <div class="sm-slider-row">
-        <input type="range" class="sm-slider" id="sm-points-slider" min="0" max="${scaleMax}" step="10"
+        <input type="range" class="sm-slider" id="sm-points-slider" min="0" max="${scaleMax}" step="1"
                value="${usable ? startValue : 0}" ${usable ? '' : 'disabled'}
                data-cap="${cap}" oninput="clampPointsSlider()">
         ${capMark}
@@ -15714,7 +15718,7 @@ const WINBACK_RENDERERS = {
     <div class="payment-help-link" style="margin-top:10px" onclick="declineWinbackForever('no_time')">Нет, хочу уйти навсегда!!!</div>`,
 
   temp_money: (d) => `
-    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я${d && d.already_granted ? ' уже когда-то' : ' только что'} начислил тебе 1000 бонусов за честность${d && d.points ? ` (сейчас у тебя ${d.points})` : ''}. Вторая — теперь ты можешь оплатить этими бонусами часть следующего месяца. ${escapeHtml(t('discount.floor'))} Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
+    <div class="sm-hint">У меня две новости, одна хорошая, а вторая ещё лучше. Первая — я${d && d.already_granted ? ' уже когда-то' : ' только что'} начислил тебе 1000 бонусов за честность${d && d.points ? ` (сейчас у тебя ${d.points})` : ''}. ${escapeHtml(t('discount.honesty_points'))} ${escapeHtml(d && d.points_min_payment != null ? pointsFloorText(d) : t('discount.points_check'))} Мне абсолютно не жалко, просто хочется сохранить такого милого участника в нашем движе. Либо, если просто зарплата чуть задерживается — сдвинь дату платежа, а бонусы потратишь на всякие подарки.</div>
     <div class="sm-row" style="margin-top:10px">
       <button class="sm-btn" onclick="closeWinbackFunnel();openSubManage()">Оплатить бонусами</button>
       <button class="sm-btn" onclick="submitWinbackSimple('temp_money','shift_payment')">Сдвинуть платёж</button>
@@ -16124,6 +16128,11 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'discount.honesty_points': {c:'Подписка',l:'Баллы за честность',w:'Удержание',i:false,t:'Вторая — эти бонусы можно использовать для оплаты следующего месяца.'},
+  'discount.points_check': {c:'Подписка',l:'Условия оплаты баллами',w:'Удержание',i:false,t:'Доступную сумму покажу на экране оплаты баллами.'},
+  'discount.points_full': {c:'Подписка',l:'Месяц целиком баллами',w:'Управление подпиской',i:false,t:'Один балл = один рубль. Если баллов достаточно, ими можно оплатить месяц целиком.'},
+  'discount.points_minimum': {c:'Подписка',l:'Порог оплаты баллами',w:'Управление подпиской',i:false,t:'Один балл = один рубль. После списания баллов к оплате останется не менее {n} ₽.'},
+  'discount.free_floor': {c:'Подписка',l:'Порог подарочной скидки',w:'Скидки',i:false,t:'Если часть суммы покрывает скидка без баллов, к оплате останется не менее 300 ₽.'},
   'retention.materials_ready': {c:'Подписка', l:'Материалы готовы', w:'Удержание', i:false, t:'Материалы можно открыть по кнопке ниже.'},
   'retention.digest_offer': {c:'Подписка', l:'Обычный дайджест', w:'Удержание', i:false, t:'Открой готовый дайджест клуба: там собраны материалы и главные мысли занятий. Можно начать с того, что сейчас полезно тебе.'},
   'retention.guide_offer': {c:'Подписка', l:'Подарок с гайдом', w:'Удержание', i:false, t:'Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 300 ₽, чтобы у тебя точно получилось посмотреть.'},
