@@ -5,7 +5,7 @@ const ensure=html.slice(html.indexOf('function clubPassTgData(){'),html.indexOf(
 function setup(id=77){
  const calls=[],storage=new Map();let restricted=0;
  const pass=id+'.'+(Math.floor(Date.now()/1000)+86400*30)+'.signed';
- const context={URL,Headers,Date,JSON,Promise,encodeURIComponent,console,API_PROD:'https://api.example',API_STANDBY:'https://backup.example',API_URL:'https://api.example',telegramId:id,
+ const context={URL,Headers,AbortSignal,Date,JSON,Promise,encodeURIComponent,console,API_PROD:'https://api.example',API_STANDBY:'https://backup.example',API_URL:'https://api.example',telegramId:id,
   location:{href:'https://app.example/'},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},sessionHeaders:()=>({'X-Session-Token':'web-session'}),launchIdentity:()=>({vk_launch:'signed-vk'}),tgLaunchData:()=>'',showAccessRestricted:()=>restricted++,
   fetch:async(input,init)=>{calls.push({input,init});await new Promise(r=>setTimeout(r,1));return new Response(JSON.stringify(input.includes('/auth/pass')?{passes:{[id]:pass}}:input.includes('/restricted')?{detail:{code:'access_restricted'}}:{items:[]}),{status:input.includes('/restricted')?403:200});}};
  context.window=context;vm.createContext(context);vm.runInContext(wrapper+'\n'+ensure,context);
