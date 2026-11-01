@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v515 · 02.11.2026 · Оплата баллами';
+const APP_BUILD = 'v516 · 02.11.2026 · Оплата баллами';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -14373,7 +14373,7 @@ async function cfLessOpen(){
 function cfLessSplit(pay){
   const s = cfLess || {}, cost = Math.round(s.cost || 0);
   const discount = Math.max(0, cost - pay);
-  let fromPts = Math.min(s.points || 0, s.points_payment_max || 0, discount);
+  let fromPts = pay >= (s.points_min_payment ?? 0) ? Math.min(s.points || 0, s.points_payment_max || 0, discount) : 0;
   if (fromPts < (s.points_payment_min || 10)) fromPts = 0;
   return { cost: cost, fromPts: fromPts, free: discount - fromPts };
 }

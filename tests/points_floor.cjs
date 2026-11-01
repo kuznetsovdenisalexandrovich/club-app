@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+const ctx={t:k=>({'discount.points_full':'full','discount.points_minimum':'floor {n}'})[k],cfLess:{}};
+vm.createContext(ctx);
+vm.runInContext(html.slice(html.indexOf('function pointsFloorText('),html.indexOf('function cfBack('))+'\n'+html.slice(html.indexOf('function cfLessSplit('),html.indexOf('function cfLessPreview(')),ctx);
+assert.equal(ctx.pointsFloorText({points_min_payment:0}),'full');
+assert.equal(ctx.pointsFloorText({points_min_payment:300}),'floor 300');
+ctx.cfLess={cost:990,points:990,points_payment_max:990,points_min_payment:0};
+assert.equal(ctx.cfLessSplit(0).fromPts,990);assert.equal(ctx.cfLessSplit(0).free,0);
+ctx.cfLess={cost:990,points:990,points_payment_max:490,points_min_payment:500};
+assert.equal(ctx.cfLessSplit(300).fromPts,0);assert.equal(ctx.cfLessSplit(300).free,690);
+assert.equal(ctx.cfLessSplit(500).fromPts,490);assert.equal(ctx.cfLessSplit(500).free,0);
+console.log('PASS zero, 300, high floor and separate gift discount');
