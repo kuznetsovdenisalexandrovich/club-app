@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v517 · 02.11.2026 · Лид-магнит и PDF';
+const APP_BUILD = 'v518 · 02.11.2026 · Лид-магнит ВК и PDF';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22601,6 +22601,7 @@ function leadMaterialFromUrl(){
  if(!/^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,60}$/.test(code))return false;
  openLeadMaterial(code);return true;
 }
+Object.assign(APP_TEXTS, {"lead.vkNotSubscribed": {"c":"Материалы","l":"Подписка пока не найдена. Подпишись на сообщество и повтори проверку.","w":"Материал","i":false,"t":"Подписка пока не найдена. Подпишись на сообщество и повтори проверку."}, "lead.vkGate": {"c": "Материалы", "l": "PDF-выжимка — за подписку на моё бесплатное сообщество ВКонтакте. Подпишись и нажми «Проверить подписку».", "w": "Материал", "i": false, "t": "PDF-выжимка — за подписку на моё бесплатное сообщество ВКонтакте. Подпишись и нажми «Проверить подписку»."}, "lead.vkSubscribe": {"c": "Материалы", "l": "Подписаться на сообщество", "w": "Материал", "i": false, "t": "Подписаться на сообщество"}, "lead.vkAllow": {"c": "Материалы", "l": "Чтобы получить материал и сохранить возможность просмотра в сообщениях, разреши сообщения сообщества по кнопке ниже.", "w": "Материал", "i": false, "t": "Чтобы получить материал и сохранить возможность просмотра в сообщениях, разреши сообщения сообщества по кнопке ниже."}});
 async function openLeadMaterial(code){
  if(leadMaterialClose)leadMaterialClose();
  const root=document.createElement('dialog');root.style.cssText='margin:auto;width:min(900px,94vw);box-sizing:border-box;max-height:90dvh;overflow:auto;border:1px solid var(--border,#777);border-radius:20px;background:var(--bg,#202020);color:var(--text,#eee);padding:24px';
@@ -22612,8 +22613,10 @@ async function openLeadMaterial(code){
  root.append(close,title,note,box,links,gate);document.body.appendChild(root);root.showModal();
  let closed=false,player=null,launch='',attempt=window.__leadMaterialBoot&&window.__leadMaterialBoot.code===code?window.__leadMaterialBoot.attempt:crypto.randomUUID();
  try{launch=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')||''}catch(e){}
+ const platform=isInsideVk()?'vk':'tg';if(platform==='vk')launch=vkLaunchQuery();
+ const startUrl=platform==='vk'?'https://vk.ru/app54827669#'+encodeURIComponent(code):'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code);
  let signalChain=Promise.resolve();
- const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(()=>null):Promise.resolve(null));
+ const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event,platform}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(()=>null):Promise.resolve(null));
  leadMaterialClose=()=>{if(closed)return;closed=true;signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
  close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
  const button=(label,action)=>{const b=document.createElement('button');b.className='lec-link-btn';b.textContent=label;b.style.cssText='white-space:normal;min-height:46px;width:100%;box-sizing:border-box';b.onclick=action;return b};
@@ -22623,28 +22626,29 @@ async function openLeadMaterial(code){
   if(!response.ok)throw new Error('material');const data=await response.json();if(closed)return;
   title.textContent=data.title;note.textContent=data.note;
   const allowed=await signal('requested');if(closed)return;
-  if(!allowed||!allowed.ok){box.hidden=true;note.textContent=t('lead.allow');links.append(anchor(t('lead.start'),'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code)));return}
+  if(!allowed||!allowed.ok){box.hidden=true;note.textContent=t(platform==='vk'?'lead.vkAllow':'lead.allow');links.append(anchor(t('lead.start'),startUrl));return}
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}sendAttributionTouch(code);
   links.append(button(t('lead.full'),()=>{leadMaterialClose();openAccessPage()}));
-  const pdfGate=data.pdf_gate&&data.pdf_gate.tg;
+  const pdfGate=data.pdf_gate&&data.pdf_gate[platform];
   if(pdfGate){
-   const explanation=document.createElement('p');explanation.textContent=t('lead.gate');explanation.style.cssText='margin-bottom:16px;line-height:1.5';
+   const explanation=document.createElement('p');explanation.textContent=t(platform==='vk'?'lead.vkGate':'lead.gate');explanation.style.cssText='margin-bottom:16px;line-height:1.5';
    const status=document.createElement('p');status.setAttribute('role','status');status.style.cssText='margin-top:16px;line-height:1.5';
    const check=button(t('lead.check'),async()=>{
     check.disabled=true;status.textContent=t('lead.checking');
     try{
-     const r=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code)+'/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({launch}),signal:AbortSignal.timeout(25000)});
+     const r=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code)+'/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({launch,platform}),signal:AbortSignal.timeout(25000)});
      if(!r.ok)throw new Error('pdf');const result=await r.json();if(closed)return;
      status.replaceChildren();
      if(result.subscribed){const u=new URL(result.url);if(u.origin!=='https://bot.youselllikeagod-magazine.ru'||!u.pathname.startsWith('/content/pdf/'))throw new Error('url');status.append(anchor(t('lead.download'),result.url))}
-     else status.textContent=t('lead.notSubscribed');
+     else status.textContent=t(platform==='vk'?'lead.vkNotSubscribed':'lead.notSubscribed');
     }catch(e){if(!closed)status.textContent=t('lead.pdfError')}finally{check.disabled=false}
    });
-   check.style.marginTop='12px';gate.append(explanation,anchor(t('lead.subscribe'),pdfGate.url),check,status);
+   check.style.marginTop='12px';gate.append(explanation,anchor(t(platform==='vk'?'lead.vkSubscribe':'lead.subscribe'),pdfGate.url),check,status);
    links.append(button(t('lead.pdf'),()=>{gate.hidden=false;gate.scrollIntoView({behavior:'smooth',block:'nearest'});check.click()}));
   }
   links.append(button(t('lead.film'),()=>{leadMaterialClose();openFilmRoute()}));
-  for(const [bot,url] of Object.entries(data.bot_urls||{}))links.append(anchor(t('lead.bot'),url));
+  if(platform==='vk'){if(data.vk_bot_url)links.append(anchor(t('lead.bot'),data.vk_bot_url))}
+  else for(const [bot,url] of Object.entries(data.bot_urls||{}))links.append(anchor(t('lead.bot'),url));
   try{
    if(data.video_url){
     const u=new URL(data.video_url);if(u.origin!=='https://club-audio-725136.s3.ru-7.storage.selcloud.ru'||!/^\/lead-magnets\/[a-zA-Z0-9_-]+\.mp4$/.test(u.pathname))throw new Error('video');
@@ -22663,7 +22667,7 @@ async function openLeadMaterial(code){
    if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
    if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');signal('error')});
   }catch(e){if(!closed){note.textContent=t('lead.error');signal('error')}}
- }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;links.append(anchor(t('lead.start'),'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code)));signal('error')}}
+ }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;links.append(anchor(t('lead.start'),startUrl));signal('error')}}
 }
 
 const PARAM_LINKS = {
