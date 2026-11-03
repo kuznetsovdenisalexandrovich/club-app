@@ -11564,7 +11564,7 @@ function clubPassUse(id){
     window.fetch = async function(input, init){
       let owned = false;
       try {
-        owned = typeof input === 'string' && [API_PROD,API_STANDBY].some(base=>new URL(input,location.href).origin === new URL(base).origin);
+        owned = typeof input === 'string' && [API_PROD,API_STANDBY,'https://selectel-api.youselllikeagod-magazine.ru','https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net'].some(base=>new URL(input,location.href).origin === new URL(base).origin);
         if (owned && telegramId){
           if (clubPassId !== String(telegramId)) clubPassUse(telegramId);
           if (clubPass && Number(clubPass.split('.')[1]) <= Date.now()/1000+60) clubPass='';
@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v519 · 02.11.2026 · Проверка входа в лекцию';
+const APP_BUILD = 'v520 · 03.11.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

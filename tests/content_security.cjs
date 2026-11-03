@@ -19,6 +19,7 @@ function setup(id=77){
  await a.context.fetch('https://api.example/restricted');assert.equal(a.restricted(),1);
  const before=a.calls.length;await a.context.fetch('https://api.example.evil.test/lectures');
  assert.equal(a.calls.length,before+1);assert.equal(a.calls.at(-1).init,undefined);assert.ok(!a.calls.at(-1).input.includes('_cp'));
+ for(const origin of ['https://selectel-api.youselllikeagod-magazine.ru','https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net']){await a.context.fetch(origin+'/streams/texting_p01/lectures');assert.equal(new URL(a.calls.at(-1).input).searchParams.get('_cp'),a.pass);assert.equal(a.calls.at(-1).init.headers.get('X-Session-Token'),'web-session');}
  const guest=setup(null);await guest.context.fetch('https://api.example/lectures');assert.equal(guest.calls.length,1);assert.ok(!guest.calls[0].input.includes('_cp'));
  const audio=html.slice(html.indexOf('function plHasAudio('),html.indexOf('\n',html.indexOf('function plHasAudio(')));
  vm.runInContext(audio,a.context);assert.ok(a.context.plHasAudio({has_audio:true,audio_url:''}));assert.ok(a.context.plHasAudio({audio_url:'legacy'}));assert.ok(!a.context.plHasAudio({has_audio:false,audio_url:''}));
