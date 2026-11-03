@@ -12045,7 +12045,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v524 · 03.11.2026';
+const APP_BUILD = 'v525 · 03.11.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -14577,7 +14577,8 @@ function guestRouteRender(){
 }
 function guestRouteFilm(){
   gtHide(); gtCloseFin(); gtActive = false;
-  filmWidgetOpen();
+  if (filmDone) funnelRewatch();
+  else filmWidgetOpen();
 }
 function guestRouteOpen(where){
   gtHide(); gtActive = false;
@@ -20841,11 +20842,7 @@ function gtSkip(){
 function gtFinish(){
   gtHide();
   gtActive = false;
-  /* ⚠️ ДВА ФИНАЛА (23.08.2026). Тур из «о клубе» кончается развилкой
-     (рубль/остаться). Тур, поймавший закрывшего фильм, кончается САМОЙ
-     страницей «о клубе» — [stated] Denis: «закончить экраном с информацией
-     о клубе». Пропуск тура ведёт туда же — пропустивший остаётся
-     сомневающимся, и второй продавец ему нужнее всех */
+  // Завершённый тур предлагает выбор; закрытие шага оставляет текущий раздел.
   document.getElementById('gt-fin').classList.add('open');
   track('guest_tour_end');
 }
