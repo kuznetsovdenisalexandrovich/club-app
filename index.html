@@ -12011,7 +12011,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v520 · 03.11.2026';
+const APP_BUILD = 'v521 · 03.11.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12088,6 +12088,7 @@ function reportClientIncident(event){
     }catch(e){}
     const result=underlying(input,init);
     if(!payment)return result;
+    if(window.clubExitExternal)window.clubExitExternal();
     return result.then(r=>{if(r.status>=500)reportClientIncident('payment_http');return r;},e=>{
       if(e.name!=='AbortError')reportClientIncident('payment_network');throw e;
     });
@@ -26059,6 +26060,7 @@ function rememberLastLecture(l) {
    пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
    Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
 function openUrl(url) {
+  if(window.clubExitExternal)window.clubExitExternal();
   if (!url) return;
   const tg = window.Telegram && window.Telegram.WebApp;
   const inTg = (typeof isInsideTelegram === 'function' && isInsideTelegram())
@@ -40698,6 +40700,7 @@ function ivAutoOpen(){
   root.HoloFX = {PATTERNS: PATTERNS, RANGES: RANGES, BLENDS: BLENDS, defaults: defaults, normalize: normalize, thumb: thumb, mount: mount};
 })(window);
 </script>
+<script src="exit-presence.js?v=1"></script>
 </body>
 
 </html>
