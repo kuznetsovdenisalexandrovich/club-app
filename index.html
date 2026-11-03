@@ -3295,17 +3295,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
   border-bottom:12px solid transparent;
   filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
 }
-.funnel-film-slot{position:relative;margin:14px auto 0;height:min(58vh,480px);aspect-ratio:9/16;max-width:100%}
+.funnel-film-slot{position:relative;margin:14px auto 0;height:min(58vh,480px);margin-bottom:54px;aspect-ratio:9/16;max-width:100%}
 
 .native-film{position:relative;width:100%;height:100%;border-radius:16px;background:#000}
 .native-film video{position:absolute;inset:0;z-index:0}
-.native-film-fullscreen{position:absolute;right:10px;top:10px;z-index:5;min-height:44px;padding:10px 14px;border:1px solid #ffffff80;border-radius:14px;background:#18151bcc;color:#fff;font:inherit;font-size:14px;cursor:pointer}
+.native-film-fullscreen{display:flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;margin-left:auto;padding:0;border:1px solid var(--border,#d9d1c7);border-radius:12px;background:transparent;color:var(--text,#302b29);cursor:pointer}
 .native-film-fullscreen:focus-visible{outline:3px solid #c2a8ff;outline-offset:3px}
 .native-film:fullscreen{width:100vw!important;height:100vh!important;border-radius:0}
 .native-film:fullscreen video,.native-film-expanded video{width:100%!important;height:100%!important;object-fit:contain!important;border-radius:0!important}
 dialog.native-film-expanded{position:fixed;inset:0;box-sizing:border-box;width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:0;border:0;background:#000;overflow:hidden}
 .native-film-expanded .native-film{width:100%;height:100%;border-radius:0}
-.native-film-expanded .native-film-fullscreen{top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
+.native-film-expanded .native-film-fullscreen{position:absolute;z-index:5;color:#fff;background:#18151bcc;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
 #funnel-screen.pip-mode .native-film-fullscreen{display:none}
 .native-film-start{position:absolute;z-index:2;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;width:max-content;max-width:calc(100% - 32px);padding:16px 24px;border:1px solid rgba(255,255,255,.8);border-radius:20px;background:#f8f4ed;color:#302b29;box-shadow:0 8px 28px rgba(0,0,0,.3);font:inherit;font-size:18px;font-weight:600;cursor:pointer}
 .native-film-start::before{content:"";width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:12px solid currentColor;flex-shrink:0}
@@ -3315,7 +3315,7 @@ dialog.native-film-expanded{position:fixed;inset:0;box-sizing:border-box;width:1
 #funnel-screen.pip-mode .native-film-start{min-height:44px;padding:10px;font-size:0;gap:0;border-radius:14px}
 .native-film-notice{position:absolute;left:8px;right:8px;top:8px;color:#fff;background:rgba(0,0,0,.72);border-radius:8px;padding:8px;font-size:13px;pointer-events:none}
 .native-film-notice:empty{display:none}
-.native-film-help{position:relative;z-index:4;text-align:center;padding:4px 0;color:var(--text-dim,#746d69)}
+.native-film-help{display:flex;align-items:center;gap:8px;min-height:48px;position:relative;z-index:4;text-align:center;padding:4px 0;color:var(--text-dim,#746d69)}
 .native-film-retry{min-height:44px;padding:8px 12px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .native-film-help-panel{position:absolute;top:44px;left:0;right:0;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:var(--card,#f8f4ed);box-shadow:0 8px 25px #0002}
 .native-film-help [hidden]{display:none}
@@ -11326,7 +11326,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="film-player.js?v=522"></script>
+<script src="film-player.js?v=526"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -12045,7 +12045,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v525 · 03.11.2026';
+const APP_BUILD = 'v526 · 03.11.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -40776,7 +40776,7 @@ function ivAutoOpen(){
   root.HoloFX = {PATTERNS: PATTERNS, RANGES: RANGES, BLENDS: BLENDS, defaults: defaults, normalize: normalize, thumb: thumb, mount: mount};
 })(window);
 </script>
-<script src="exit-presence.js?v=2"></script>
+<script src="exit-presence.js?v=3"></script>
 </body>
 
 </html>

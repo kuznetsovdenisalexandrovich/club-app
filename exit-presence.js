@@ -2,7 +2,7 @@
 (function(){
  const session=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
  let externalUntil=0,lastSeq=0;
- window.clubExitExternal=function(){externalUntil=Date.now()+120000;};
+ window.clubExitExternal=function(){externalUntil=Date.now()+120000;send(true);};
  function send(forced){
   try{
    if(typeof telegramId==='undefined'||!telegramId||typeof ivIdent!=='function')return;
