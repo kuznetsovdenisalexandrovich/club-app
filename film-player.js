@@ -21,7 +21,8 @@
       this.low=this.button(options.text('film.low'),'native-film-option',()=>this.setQuality('360'));
       this.auto=this.button(options.text('film.auto'),'native-film-option',()=>this.setQuality('auto'));
       this.panel.append(this.other,this.low,this.auto);this.help.append(this.retry,this.panel);
-      this.wrapper.append(this.notice,this.start);slot.replaceChildren(this.wrapper,this.help);
+      this.fullscreen=this.button(options.text('film.fullscreen'),'native-film-fullscreen',()=>this.toggleFullscreen());
+      this.wrapper.append(this.notice,this.start,this.fullscreen);slot.replaceChildren(this.wrapper,this.help);
       this.switchSource(false);
     }
     button(text,className,click){const b=document.createElement('button');b.type='button';b.className=className;b.textContent=text;b.onclick=click;return b;}
@@ -99,6 +100,28 @@
       if(this.wantsPlay)this.play();else this.showStart();
       this.arm();
     }
+    async toggleFullscreen(){
+      if(this.expanded){this.closeExpanded();return;}
+      if(document.fullscreenElement===this.wrapper){await document.exitFullscreen();return;}
+      try{
+        if(this.video.webkitEnterFullscreen){this.video.webkitEnterFullscreen();return;}
+        if(this.wrapper.requestFullscreen){await this.wrapper.requestFullscreen();return;}
+      }catch(e){} // Embedded browsers may deny native fullscreen; expand inside the app.
+      const resume=!this.video.paused;
+      this.anchor=document.createComment('film-position');this.wrapper.before(this.anchor);
+      this.expanded=document.createElement('dialog');this.expanded.className='native-film-expanded';
+      this.expanded.addEventListener('cancel',e=>{e.preventDefault();this.closeExpanded();});
+      document.body.append(this.expanded);this.expanded.append(this.wrapper);this.expanded.showModal();
+      if(resume)this.play();
+      this.fullscreen.textContent=this.options.text('film.collapse');
+    }
+    closeExpanded(){
+      if(!this.expanded)return;
+      const resume=!this.video.paused;
+      this.anchor.replaceWith(this.wrapper);this.expanded.close();this.expanded.remove();this.expanded=null;
+      if(resume)this.play();
+      this.fullscreen.textContent=this.options.text('film.fullscreen');
+    }
     setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
@@ -115,7 +138,7 @@
       if(action==='pause'||action==='stop'){this.wantsPlay=false;this.clearTimers();this.video.pause();this.emit('pause');}
       if(action==='seek'&&Number.isFinite(this.video.duration))this.video.currentTime=this.video.duration*value/100;
     }
-    destroy(){if(this.destroyed)return;this.destroyed=true;++this.generation;this.clearTimers();if(this.hls)this.hls.destroy();this.video.pause();this.video.removeAttribute('src');this.video.load();this.wrapper.remove();this.help.remove();}
+    destroy(){if(this.destroyed)return;this.closeExpanded();this.destroyed=true;++this.generation;this.clearTimers();if(this.hls)this.hls.destroy();this.video.pause();this.video.removeAttribute('src');this.video.load();this.wrapper.remove();this.help.remove();}
   }
   root.ClubFilmPlayer=ClubFilmPlayer;
   if(typeof module!=='undefined')module.exports=ClubFilmPlayer;
