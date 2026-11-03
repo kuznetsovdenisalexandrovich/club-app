@@ -3627,6 +3627,15 @@ html[data-lite] #funnel-screen .access-btn,html[data-lite] #funnel-after .access
   #funnel-screen .access-btn,#funnel-after .access-btn{animation:none}
 }
 
+.guest-route{padding:22px;border-radius:24px;background:var(--card);border:1px solid var(--border,#92887940);margin:0 0 22px;box-shadow:var(--shadow-soft,0 8px 28px #0001)}
+.guest-route h2{margin:0 0 10px;font-size:24px;line-height:1.2;color:var(--text)}
+.guest-route p{margin:0 0 18px;color:var(--text-secondary,var(--muted));font-size:15px;line-height:1.5}
+.guest-route-film{padding:16px;border-radius:18px;background:var(--bg);display:grid;gap:12px;font-weight:600}
+.guest-route .lec-link-btn{width:100%;min-height:46px;white-space:normal;line-height:1.3;margin:0;padding:12px;font:inherit;cursor:pointer}
+.guest-route-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.guest-route-tour{display:block;min-height:46px;background:none;border:0;color:var(--warm);font:inherit;cursor:pointer;margin:10px auto 0;padding:10px;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:600px){.guest-route{padding:18px}.guest-route-links{grid-template-columns:1fr}.guest-route h2{font-size:22px}}
+
 .film-chip{
   position:fixed;right:14px;bottom:calc(104px + env(safe-area-inset-bottom));
   z-index:881;padding:9px 14px 9px 12px;border-radius:999px;
@@ -6185,6 +6194,20 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       </div>
     </div>
 
+    <section id="guest-route" class="guest-route" style="display:none" aria-labelledby="guest-route-title">
+      <h2 id="guest-route-title" data-text="guest.route_title">С чего начать</h2>
+      <p data-text="guest.route_intro">Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент.</p>
+      <div class="guest-route-film">
+        <div data-text="guest.route_film">Как закрывать «Я подумаю»</div>
+        <button class="lec-link-btn access-btn" id="guest-route-watch" onclick="guestRouteFilm()" data-text="guest.route_watch">Смотреть фильм</button>
+      </div>
+      <div class="guest-route-links">
+        <button class="lec-link-btn" onclick="guestRouteOpen('library')" data-text="guest.route_library">Библиотека лекций</button>
+        <button class="lec-link-btn" onclick="guestRouteOpen('games')" data-text="guest.route_games">Игры и тренажёры</button>
+        <button class="lec-link-btn" onclick="guestRouteOpen('quiz')" data-text="guest.route_quiz">Кто ты из богов продаж</button>
+      </div>
+      <button class="guest-route-tour" onclick="gtStart()" data-text="guest.route_tour">Показать, что здесь есть</button>
+    </section>
     <!-- Приглашение в тур — вместо тура «без спроса» после фильма
          ([stated] Denis 24.08). Тот же стиль, что у плашки демо -->
     <div class="demo-banner" id="guest-tour-banner" style="display:none;margin-top:-14px" onclick="gtStart('about')">
@@ -7716,6 +7739,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
     <h2 id="gt-title"></h2>
     <p id="gt-text"></p>
     <div class="onb-acts">
+      <button class="lec-link-btn" onclick="guestTourTry()" data-text="gt.route_open">Открыть этот раздел</button>
       <button class="lec-link-btn access-btn" id="gt-next" onclick="gtNext()" data-text="gt.next">Дальше</button>
     </div>
     <div class="payment-help-link" style="margin-top:12px" onclick="gtSkip()" data-text="gt.skip">Пропустить</div>
@@ -7725,10 +7749,11 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 <!-- Развилка в конце тура: рубль на три дня либо остаться в бесплатном -->
 <div class="onb-hi" id="gt-fin">
   <div class="onb-hi-card">
-    <h2 data-text="gt.fin_title">Ну что, как тебе?</h2>
-    <p data-text="gt.fin_text">Можно открыть всё сразу — три дня за рубль. А можно остаться и посмотреть, что открыто бесплатно.</p>
-    <button class="lec-link-btn access-btn" onclick="gtPay()" data-text="gt.fin_pay">Открыть доступ за 1 ₽</button>
-    <div class="payment-help-link" style="margin-top:14px" onclick="gtStay()" data-text="gt.fin_stay">Побыть тут, осмотреться</div>
+    <h2 data-text="gt.route_finish">Выбери следующий шаг</h2>
+    <p data-text="gt.route_finish_text">Посмотри фильм, открой полный доступ или продолжи знакомство с приложением.</p>
+    <button class="lec-link-btn access-btn" onclick="gtCloseFin();guestRouteFilm()" data-text="guest.route_watch">Смотреть фильм</button>
+    <button class="lec-link-btn access-btn" onclick="gtPay()" data-text="guest.route_access">Получить полный доступ</button>
+    <div class="payment-help-link" style="margin-top:14px" onclick="gtStay()" data-text="gt.route_stay">Продолжить знакомство</div>
   </div>
 </div>
 
@@ -12020,7 +12045,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v523 · 03.11.2026';
+const APP_BUILD = 'v524 · 03.11.2026';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -14538,19 +14563,48 @@ function openSubManageAt(id){
   })();
 }
 
+function guestRouteRender(){
+  const el = document.getElementById('guest-route');
+  if (!el) return;
+  el.style.display = (isMember || isPaused) ? 'none' : 'block';
+  const btn = document.getElementById('guest-route-watch');
+  let saved = 0;
+  try { saved = Number(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
+  const done = typeof filmDone !== 'undefined' && filmDone;
+  if (btn) btn.textContent = done ? t('guest.route_rewatch') : saved > 5
+    ? tf('guest.route_resume', {время:Math.floor(saved/60)+':'+String(Math.floor(saved%60)).padStart(2,'0')})
+    : t('guest.route_watch');
+}
+function guestRouteFilm(){
+  gtHide(); gtCloseFin(); gtActive = false;
+  filmWidgetOpen();
+}
+function guestRouteOpen(where){
+  gtHide(); gtActive = false;
+  if (where === 'quiz') openQuiz();
+  else if (where === 'library' || where === 'games') switchView(where);
+}
+function guestTourTry(){
+  const step = GT_STEPS[gtIdx];
+  if (!step) return;
+  if (step.key === 'film') guestRouteFilm();
+  else guestRouteOpen(step.key === 'lib' ? 'library' : step.key);
+}
+
 function renderDemoBanner(){
   const el = document.getElementById('demo-banner');
   // v427: участник на паузе — не гость: продающих плашек ему не надо, своя плашка
   const asMember = isMember || isPaused;
-  if (el) el.style.display = asMember ? 'none' : 'flex';
+  if (el) el.style.display = 'none';
   renderPauseBanner();
   const tourInvite = document.getElementById('guest-tour-banner');
-  if (tourInvite) tourInvite.style.display = asMember ? 'none' : 'flex';
+  if (tourInvite) tourInvite.style.display = 'none';
+  guestRouteRender();
   // Управление подпиской показываем только участникам: не-участнику нечем управлять
   const subManageBtn = document.getElementById('sub-manage-btn');
   if (subManageBtn) subManageBtn.style.display = asMember ? 'block' : 'none';
   const salesVideo = document.getElementById('sales-video-banner');
-  if (salesVideo) salesVideo.style.display = asMember ? 'none' : 'block';
+  if (salesVideo) salesVideo.style.display = 'none';
   // Карточка в профиле: оплатить или войти. Кнопку входа показываем только вне
   // Telegram — внутри ТГ человек уже опознан, входить ему некуда.
   const demoCard = document.getElementById('demo-profile-card');
@@ -16138,6 +16192,26 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  "guest.route_title": {c:"Гостевой маршрут",l:"С чего начать",w:"Демо",i:false,t:"С чего начать"},
+  "guest.route_intro": {c:"Гостевой маршрут",l:"Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент.",w:"Демо",i:false,t:"Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент."},
+  "guest.route_watch": {c:"Гостевой маршрут",l:"Смотреть фильм",w:"Демо",i:false,t:"Смотреть фильм"},
+  "guest.route_resume": {c:"Гостевой маршрут",l:"Продолжить с {время}",w:"Демо",i:false,t:"Продолжить с {время}"},
+  "guest.route_rewatch": {c:"Гостевой маршрут",l:"Пересмотреть фильм",w:"Демо",i:false,t:"Пересмотреть фильм"},
+  "guest.route_film": {c:"Гостевой маршрут",l:"Как закрывать «Я подумаю»",w:"Демо",i:false,t:"Как закрывать «Я подумаю»"},
+  "guest.route_library": {c:"Гостевой маршрут",l:"Библиотека лекций",w:"Демо",i:false,t:"Библиотека лекций"},
+  "guest.route_games": {c:"Гостевой маршрут",l:"Игры и тренажёры",w:"Демо",i:false,t:"Игры и тренажёры"},
+  "guest.route_quiz": {c:"Гостевой маршрут",l:"Кто ты из богов продаж",w:"Демо",i:false,t:"Кто ты из богов продаж"},
+  "guest.route_tour": {c:"Гостевой маршрут",l:"Показать, что здесь есть",w:"Демо",i:false,t:"Показать, что здесь есть"},
+  "guest.route_access": {c:"Гостевой маршрут",l:"Получить полный доступ",w:"Демо",i:false,t:"Получить полный доступ"},
+  "gt.film_t": {c:"Гостевой маршрут",l:"Начни с фильма",w:"Демо",i:false,t:"Начни с фильма"},
+  "gt.film_x": {c:"Гостевой маршрут",l:"«Я подумаю» — фильм о продажах и клубе. Его можно свернуть и продолжить с того же места.",w:"Демо",i:false,t:"«Я подумаю» — фильм о продажах и клубе. Его можно свернуть и продолжить с того же места."},
+  "gt.quiz_t": {c:"Гостевой маршрут",l:"Кто ты из богов продаж",w:"Демо",i:false,t:"Кто ты из богов продаж"},
+  "gt.quiz_x": {c:"Гостевой маршрут",l:"Пройди тест и узнай свой стиль продаж. Начать можно прямо из демо.",w:"Демо",i:false,t:"Пройди тест и узнай свой стиль продаж. Начать можно прямо из демо."},
+  "gt.route_open": {c:"Гостевой маршрут",l:"Открыть этот раздел",w:"Демо",i:false,t:"Открыть этот раздел"},
+  "gt.route_finish": {c:"Гостевой маршрут",l:"Выбери следующий шаг",w:"Демо",i:false,t:"Выбери следующий шаг"},
+  "gt.route_finish_text": {c:"Гостевой маршрут",l:"Посмотри фильм, открой полный доступ или продолжи знакомство с приложением.",w:"Демо",i:false,t:"Посмотри фильм, открой полный доступ или продолжи знакомство с приложением."},
+  "gt.route_stay": {c:"Гостевой маршрут",l:"Продолжить знакомство",w:"Демо",i:false,t:"Продолжить знакомство"},
+
   'discount.honesty_points': {c:'Подписка',l:'Баллы за честность',w:'Удержание',i:false,t:'Вторая — эти бонусы можно использовать для оплаты следующего месяца.'},
   'discount.points_check': {c:'Подписка',l:'Условия оплаты баллами',w:'Удержание',i:false,t:'Доступную сумму покажу на экране оплаты баллами.'},
   'discount.points_full': {c:'Подписка',l:'Месяц целиком баллами',w:'Управление подпиской',i:false,t:'Один балл = один рубль. Если баллов достаточно, ими можно оплатить месяц целиком.'},
@@ -20672,16 +20746,10 @@ let gtIdx = 0;
 let gtActive = false;
 
 const GT_STEPS = [
-  { key:'sched', view:'schedule', scrollTo:'schedule-calendar-card',
-    t:'gt.sched_t', build: gtSchedText },
-  { key:'live',  view:'schedule',
-    t:'gt.live_t',  build: gtLiveText },
-  { key:'lib',   view:'library',  scrollTo:'lib-list',
-    t:'gt.lib_t',   build: gtLibText },
-  { key:'games', view:'games',
-    t:'gt.games_t', build: function(){ return t('gt.games_x'); } },
-  { key:'about', view:'club-info',
-    t:'gt.about_t', build: function(){ return t('gt.about_x'); } },
+  {key:'film',view:'portal',scrollTo:'guest-route',t:'gt.film_t',build:function(){return t('gt.film_x');}},
+  {key:'lib',view:'library',scrollTo:'lib-list',t:'gt.lib_t',build:gtLibText},
+  {key:'games',view:'games',t:'gt.games_t',build:function(){return t('gt.games_x');}},
+  {key:'quiz',view:'portal',scrollTo:'guest-route',t:'gt.quiz_t',build:function(){return t('gt.quiz_x');}},
 ];
 
 /* ⚠️ ЖИВЫЕ СТРОКИ СОБИРАЕТ КОД, А НЕ РЕЕСТР: в реестре лежит ФРАЗА С
@@ -20715,7 +20783,10 @@ function gtLibText(){
 async function gtLoad(){
   if (gtData) return gtData;
   try {
-    const r = await fetch(`${API_URL}/tour/highlights`);
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(),3000);
+    let r;
+    try { r = await fetch(`${API_URL}/tour/highlights`, {signal:controller.signal}); } finally { clearTimeout(timer); }
     if (r.ok) gtData = await r.json();
   } catch (e) {
     console.warn('[гостевой тур] данные не приехали:', e && e.message || e);
@@ -20727,6 +20798,7 @@ async function gtLoad(){
    ⚠️ РУБИЛЬНИК НА СЕРВЕРЕ (`guest_tour_enabled`): выключен — ведём человека
    в демо ровно как раньше, без тура */
 async function gtStart(finale){
+  if (isMember || isPaused) return;
   gtFinale = (finale === 'about') ? 'about' : 'fork';
   track('guest_tour_start', gtFinale);
   await gtLoad();
@@ -20763,7 +20835,7 @@ function gtNext(){
 function gtSkip(){
   const st = GT_STEPS[gtIdx];
   track('guest_tour_skip', st ? st.key : '');
-  gtFinish();
+  gtHide(); gtActive = false;
 }
 
 function gtFinish(){
@@ -20774,12 +20846,6 @@ function gtFinish(){
      страницей «о клубе» — [stated] Denis: «закончить экраном с информацией
      о клубе». Пропуск тура ведёт туда же — пропустивший остаётся
      сомневающимся, и второй продавец ему нужнее всех */
-  if (gtFinale === 'about'){
-    track('guest_tour_end', 'about');
-    openClubInfoPage();
-    refreshClubInfoButtons();
-    return;
-  }
   document.getElementById('gt-fin').classList.add('open');
   track('guest_tour_end');
 }
@@ -28424,6 +28490,7 @@ function filmSavePos(){
   if (now - filmPosSavedAt < 5000) return;   // событие `time` идёт часто
   filmPosSavedAt = now;
   try { localStorage.setItem(filmPositionKey(), String(Math.floor(filmLastPos))); } catch(e){}
+  guestRouteRender();
 }
 
 /* «Место помнит тебя»: при первом событии `time` после запуска — прыжок на
@@ -29069,6 +29136,7 @@ function showFunnelAfter(){
   stopVideoHeartbeat();
   if (filmPlayStartedAt){ filmPlayedAccum += Date.now() - filmPlayStartedAt; filmPlayStartedAt = null; }
   filmDone = true;
+  guestRouteRender();
   filmNativeDispose();
   setFunnelStage('done');       // досмотрел — фильм больше не повторяем
   try {
