@@ -11185,8 +11185,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       <div class="center-modal-title" id="insights-modal-title">Главные идеи</div>
       <button class="icon-btn" onclick="closeInsightsModal()">✕</button>
     </div>
-    <div id="insights-modal-body" style="overflow-y:auto;flex:1"></div>
-    <div id="insights-modal-links" style="display:flex;gap:8px;margin-top:14px"></div>
+    <div id="insights-modal-body" style="overflow-y:auto;flex:1;min-height:0"></div>
+    <div id="insights-modal-links" style="display:flex;flex-wrap:wrap;flex-shrink:0;gap:8px;margin-top:14px"></div>
   <div id="insights-modal-pdf" style="margin-top:10px"></div>
   </div>
 </div>
@@ -12050,7 +12050,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v513 · 05.11.2026 источник и регистрация';
+const APP_BUILD = 'v514 · 05.11.2026 идеи и кнопки занятий';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -23600,6 +23600,12 @@ function listSignature(arr){
   if (!Array.isArray(arr)) return '';
   return arr.length + ':' + arr.map(x => x && (x.slug || x.key || x.id || '')).join(',');
 }
+// Материалы и доступ могут измениться при прежнем составе библиотеки.
+function lectureListSignature(arr){
+  if (!Array.isArray(arr)) return '';
+  return JSON.stringify([isMember, tourActive, rewardLevel, appSettings.insights_unlock_level,
+    arr.map(({transcript, ...card}) => card)]);
+}
 let libSignature = '';
 
 async function loadLibrary() {
@@ -23628,9 +23634,9 @@ async function loadLibrary() {
     // на вкладку одинаковый список пересобирается заново, и все обложки
     // проявляются повторно: механизм мягкого появления навешан на событие
     // `load` картинок, а они грузятся заново вместе с новой разметкой
-    const sameAsBefore = allLectures.length && libSignature === listSignature(data);
+    const sameAsBefore = allLectures.length && libSignature === lectureListSignature(data);
     allLectures = data;
-    libSignature = listSignature(data);
+    libSignature = lectureListSignature(data);
     renderFreeDemo();
     if (!sameAsBefore) {
       allTags = collectTags(data);
@@ -26248,7 +26254,7 @@ function openInsightsModal(index, src){
   }
   /* v463: поделиться выжимкой — та же ссылка `li_` с личным хвостом, что у
      «поделиться» в карточке; друг-гость сразу попадёт в главные мысли */
-  links.push('<button class="lec-link-btn" style="flex:1 1 100%" onclick="shareLecture(' + jsArg(l.slug) + ',\'insights\')">' + SHARE_ICON + ' ' + escapeHtml(t('share.ideas_btn')) + '</button>');
+  links.push('<button class="lec-link-btn lec-share-btn" style="flex:1 1 100%" onclick="shareLecture(' + jsArg(l.slug) + ',\'insights\')">' + SHARE_ICON + ' ' + escapeHtml(t('share.ideas_btn')) + '</button>');
   document.getElementById('insights-modal-links').innerHTML = links.join('');
 
   // Кнопка PDF — для демо всегда заблокирована
