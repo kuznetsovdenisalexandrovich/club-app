@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v512 -->
+<!-- FILE_VERSION: index-v513 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -6115,6 +6115,10 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          вне переключаемых экранов и позиционируется поверх этой заглушки:
          переносить iframe по документу нельзя, он перезагрузится.
          Настройке не подлежит сознательно: появляется по событию и сам исчезает -->
+    <div id="registration-next" class="guest-route" style="display:none;margin-bottom:18px;padding:22px" role="status">
+      <p id="registration-next-text" style="line-height:1.5;margin:0 0 14px"></p>
+      <button id="registration-next-button" class="lec-link-btn access-btn" style="min-height:46px;white-space:normal" onclick="continueClubRegistration()"></button>
+    </div>
     <div id="live-slot" style="display:none"></div>
     <div id="live-join-ended" class="guest-route" style="display:none;margin-bottom:16px"><p data-text="live.join.ended"></p><button class="lec-link-btn access-btn" onclick="liveGateBuy()" data-text="live.join.button"></button></div>
 
@@ -12046,7 +12050,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v512 · 05.11.2026 вход в канал';
+const APP_BUILD = 'v513 · 05.11.2026 источник и регистрация';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13243,6 +13247,7 @@ function track(event, ref, value){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign(
         { telegram_id: telegramId || 0, vk_query: vkq, tg_init: ivIdent().tg_init,
+          entry_source: (()=>{const p=appStartParam();return /^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,54}$/.test(p)?p:p.startsWith('u_')?p.slice(2):p.startsWith('film_')?p.slice(5):''})(),
           event: event, ref: ref || '', value: value || 0 },
         tgContactFields()))
     }).catch(function(){});
@@ -20015,7 +20020,29 @@ function levelBarMustHide(){
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 
+Object.assign(APP_TEXTS, {
+  'registration.next.tg': {c:'Регистрация',l:'Доступ оплачен. Вступи в закрытый канал клуба — там проходят эфиры и появляются объявления о занятиях.',w:'Главная',i:false,t:'Доступ оплачен. Вступи в закрытый канал клуба — там проходят эфиры и появляются объявления о занятиях.'},
+  'registration.next.vk': {c:'Регистрация',l:'Доступ оплачен. Вступи в закрытую группу клуба — там проходят эфиры и появляются объявления о занятиях.',w:'Главная',i:false,t:'Доступ оплачен. Вступи в закрытую группу клуба — там проходят эфиры и появляются объявления о занятиях.'},
+  'registration.next.button.tg': {c:'Регистрация',l:'Вступить в канал клуба',w:'Главная',i:false,t:'Вступить в канал клуба'},
+  'registration.next.button.vk': {c:'Регистрация',l:'Вступить в группу клуба',w:'Главная',i:false,t:'Вступить в группу клуба'}
+});
+function syncRegistrationNext(){
+  const el=document.getElementById('registration-next');if(!el)return;
+  const vk=isInsideVk() || Number(telegramId)<0;
+  const needed=isMember && (vk ? !vkAccessGranted : hasRealTg() && !channelJoined);
+  el.style.display=needed?'block':'none';
+  if(!needed)return;
+  document.getElementById('registration-next-text').textContent=t('registration.next.'+(vk?'vk':'tg'));
+  document.getElementById('registration-next-button').textContent=t('registration.next.button.'+(vk?'vk':'tg'));
+}
+function continueClubRegistration(){
+  if(!isMember)return;
+  if(isInsideVk() || Number(telegramId)<0)openVkAccessFlow();
+  else openTgAccess('channel');
+}
+
 function renderLevelCard(){
+  syncRegistrationNext();
   renderLevelCardInner();
   syncLevelGap();   // v404: бар мог сменить высоту (строка-предупреждение) или спрятаться
   renderReserveTiles();   // v406: к этому моменту площадка и telegramId известны
