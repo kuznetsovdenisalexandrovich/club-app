@@ -12046,7 +12046,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v510 · 05.11.2026 доступ под эфиром';
+const APP_BUILD = 'v511 · 05.11.2026 загрузка главной';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13894,18 +13894,27 @@ async function continueLiveState(){
 async function loadContinueWidget() {
   const kickerEl = document.getElementById('continue-kicker');
   const titleEl = document.getElementById('continue-title');
+  // Сразу доступная карточка; сеть лишь уточняет приоритетное продолжение.
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
+  const mag = lastMagazineRead();
+  kickerEl.textContent = mag && (!last || (mag.ts || 0) > (last.ts || 0))
+    ? 'Продолжить чтение' : last ? 'Продолжить просмотр' : 'Библиотека';
+  titleEl.textContent = mag && (!last || (mag.ts || 0) > (last.ts || 0))
+    ? mag.title : last ? last.title : 'Загляни в раздел «Библиотека»';
 
   if (welcomeLectureSlug){
     try {
-      const r = await fetch(`${API_URL}/lectures/${encodeURIComponent(welcomeLectureSlug)}`);
-      if (r.ok){
-        const l = await r.json();
+      const l = await apiRequest(`${API_URL}/lectures/${encodeURIComponent(welcomeLectureSlug)}`, {}, 5000);
+      if (l && l.title){
         welcomeLectureData = l;
         kickerEl.textContent = 'Твоя полная версия';
         titleEl.textContent = l.title;
         return;
       }
-    } catch(e){}
+    } catch(e){
+      if (e.status !== 404) return;
+    }
     // Лекция не нашлась (удалена/переименована) — стёртый slug молча не
     // повторяем каждый заход, гасим на сервере и падаем на обычный виджет
     welcomeLectureSlug = '';
@@ -13935,10 +13944,6 @@ async function loadContinueWidget() {
     return;
   }
 
-  let last = null;
-  try { last = JSON.parse(localStorage.getItem('club_app_last_lecture') || 'null'); } catch(e){}
-  const mag = lastMagazineRead();
-
   // Что человек трогал позже — то и предлагаем продолжить
   if (mag && (!last || (mag.ts || 0) > (last.ts || 0))) {
     kickerEl.textContent = 'Продолжить чтение';
@@ -13954,8 +13959,7 @@ async function loadContinueWidget() {
 
   // Своей истории просмотра ещё нет — показываем самую свежую лекцию из библиотеки
   try {
-    const r = await fetch(`${API_URL}/lectures?limit=1`);
-    const data = await r.json();
+    const data = await apiRequest(`${API_URL}/lectures?limit=1`, {}, 5000);
     if (data.length) {
       kickerEl.textContent = 'Новое в библиотеке';
       titleEl.textContent = data[0].title;
@@ -33328,31 +33332,26 @@ function cardWordApp(n){
 }
 
 async function loadCards(){
-  // Каталог публичный, мои карточки требуют telegram_id — в демо второго запроса нет
-  try {
-    // telegram_id нужен, чтобы сервер отдал секретные карточки — но только те,
-    // что уже есть у этого человека. Об остальных он знать не должен
-    const catUrl = telegramId
-      ? `${API_URL}/cards/catalog?telegram_id=${telegramId}`
-      : `${API_URL}/cards/catalog`;
-    cardCatalog = await apiRequest(catUrl, {}, 10000);
-    if (!Array.isArray(cardCatalog)) cardCatalog = [];
-  } catch(e){ cardCatalog = []; }
-
-  // Описания публичные — грузим и в демо, там колода тоже видна силуэтами
-  await loadGods();
-
-  myCards = null;
-  if (telegramId) {
-    try {
-      myCards = await apiRequest(`${API_URL}/cards/my?telegram_id=${telegramId}`, {}, 10000);
-    } catch(e){ myCards = null; }
+  // Независимые данные запрашиваем одновременно; справочник богов не
+  // задерживает карточки, которые пользователь видит на главной.
+  const catUrl = telegramId
+    ? `${API_URL}/cards/catalog?telegram_id=${telegramId}`
+    : `${API_URL}/cards/catalog`;
+  const godsReady = loadGods();
+  const [catalogResult, mineResult] = await Promise.allSettled([
+    apiRequest(catUrl, {}, 10000),
+    telegramId ? apiRequest(`${API_URL}/cards/my?telegram_id=${telegramId}`, {}, 10000) : Promise.resolve(null),
+  ]);
+  if (catalogResult.status === 'fulfilled' && Array.isArray(catalogResult.value)) {
+    cardCatalog = catalogResult.value;
   }
+  if (mineResult.status === 'fulfilled') myCards = mineResult.value;
   renderPackBanner();
   renderCardsBadge();
   renderCollectionStrip();
   updateAppBadge();
-  try { nbRenderStart(); } catch(e){}   // v395: картинка «Пролога» — из каталога
+  try { nbRenderStart(); } catch(e){}
+  await godsReady;
 }
 
 function ownedMap(){
