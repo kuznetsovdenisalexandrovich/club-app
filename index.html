@@ -12050,7 +12050,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v514 · 05.11.2026 идеи и кнопки занятий';
+const APP_BUILD = 'v514 · 05.11.2026 идеи, кнопки и отступы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -20371,7 +20371,7 @@ async function loadNextEventIntoSteps(){
    она открывает вход сразу */
 async function openTgAccess(what){
   const fallback = what === 'chat' ? CHAT_JOIN_LINK : CHANNEL_JOIN_LINK;
-  if (!hasRealTg()){ openUrl(fallback); return; }
+  if (!hasRealTg()){ await linkTelegramFromVk(); return; }
   showToast(t('tg.access_wait'));
   try {
     const r = await tgFetch(`${API_URL}/access/tg/links`, {
@@ -27857,7 +27857,7 @@ async function linkTelegramFromVk(){
   try {
     const r = await fetch(`${API_URL}/access/tg/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vk_id: vk || null, telegram_id: hasRealTg() ? telegramId : null })
+      body: JSON.stringify({ vk_id: vk || null, telegram_id: Number(telegramId) || null })
     });
     if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
     const d = await r.json();
@@ -30769,7 +30769,7 @@ function applyWebSafeArea(){
     const inTg = typeof isInsideTelegram === 'function' && isInsideTelegram();
     const scr = window.screen && window.screen.height;
     const tall = scr ? (window.innerHeight >= scr - 40) : false;
-    if (inTg && (measured >= 20 || tall)){
+    if (inTg && telegramMobileSafeAreaFallback() && (measured >= 20 || tall)){
       const need = (typeof TG_FULLSCREEN_TOP !== 'undefined') ? TG_FULLSCREEN_TOP : 92;
       if (measured < need){
         document.documentElement.style.setProperty('--safe-top', need + 'px');
@@ -30807,6 +30807,13 @@ let tgSafeWhy = '';
    Поэтому режим определяем ЕЩЁ И ПО ГЕОМЕТРИИ: в полноэкранном вебвью
    занимает весь экран устройства, в окне сверху остаётся полоса Telegram.
    Признак по геометрии срабатывает и там, где флага нет вовсе. */
+function telegramMobileSafeAreaFallback(){
+  const platform = window.Telegram?.WebApp?.platform || '';
+  if (['tdesktop', 'macos', 'weba', 'webk', 'web'].includes(platform)) return false;
+  if (['ios', 'android'].includes(platform)) return true;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+    || (/Macintosh/i.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1);
+}
 function tgIsFullscreen(){
   const tg = window.Telegram?.WebApp;
   if (!tg) return false;
@@ -30818,7 +30825,8 @@ function tgIsFullscreen(){
      `initData` либо данные запуска в адресе. */
   const real = !!(tg.initData || (typeof isInsideTelegram === 'function' && isInsideTelegram()));
   if (!real) return false;
-  if (tg.isFullscreen === true) return true;
+  if (typeof tg.isFullscreen === 'boolean') return tg.isFullscreen;
+  if (!telegramMobileSafeAreaFallback()) return false;
   try {
     const scr = window.screen && window.screen.height;
     const vh  = tg.viewportHeight || window.innerHeight;
@@ -30837,17 +30845,20 @@ function applyTelegramSafeArea(){
   const deviceTop = tg.safeAreaInset?.top || 0;
   const contentTop = tg.contentSafeAreaInset?.top || 0;
   let total = deviceTop + contentTop;
-  if (full) total = Math.max(total, TG_FULLSCREEN_TOP);
+  if (full && telegramMobileSafeAreaFallback()) total = Math.max(total, TG_FULLSCREEN_TOP);
   /* ⚠️ В ПОЛНОЭКРАННОМ ИНСЕТЫ МОГУТ ПРИЙТИ НУЛЯМИ. Тогда `total` остаётся
      нулём, прежнее правило «ставим только если больше нуля» ничего не делало,
      и отступ оставался от `env()` — то есть под кнопками Telegram */
-  if (full && total <= 0) total = TG_FULLSCREEN_TOP;
+  if (full && total <= 0 && telegramMobileSafeAreaFallback()) total = TG_FULLSCREEN_TOP;
   tgSafeWhy = (full ? 'полный экран' : 'окно')
     + ' · device ' + deviceTop + ' · content ' + contentTop
     + ' · флаг ' + (tg.isFullscreen === undefined ? 'нет в этом клиенте' : String(tg.isFullscreen))
     + ' → ' + total + 'px';
-  if (total > 0) {
+  if (tg.initData || (typeof isInsideTelegram === 'function' && isInsideTelegram())) {
+    // Нулевые инсеты тоже обновление: сбрасывают запас от прежнего режима.
     document.documentElement.style.setProperty('--safe-top', total + 'px');
+    syncLevelGap();
+    updateLevelBarScrollPosition();
   }
   if (typeof ggViewportSync === 'function') ggViewportSync();
 }
