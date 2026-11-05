@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v510 -->
+<!-- FILE_VERSION: index-v512 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -12046,7 +12046,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v511 · 05.11.2026 загрузка главной';
+const APP_BUILD = 'v512 · 05.11.2026 вход в канал';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -20349,7 +20349,7 @@ async function openTgAccess(what){
   try {
     const r = await tgFetch(`${API_URL}/access/tg/links`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: Number(telegramId) })
+      body: JSON.stringify({ telegram_id: Number(telegramId), target: what })
     }, 15000);
     if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
     const d = await r.json();
