@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v509 -->
+<!-- FILE_VERSION: index-v510 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -6116,6 +6116,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
          переносить iframe по документу нельзя, он перезагрузится.
          Настройке не подлежит сознательно: появляется по событию и сам исчезает -->
     <div id="live-slot" style="display:none"></div>
+    <div id="live-join-ended" class="guest-route" style="display:none;margin-bottom:16px"><p data-text="live.join.ended"></p><button class="lec-link-btn access-btn" onclick="liveGateBuy()" data-text="live.join.button"></button></div>
 
     <div class="pack-banner" id="pack-banner" style="display:none" onclick="openPackReveal()">
       <div class="pack-banner-dot"></div>
@@ -12045,7 +12046,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v526 · 03.11.2026';
+const APP_BUILD = 'v510 · 05.11.2026 доступ под эфиром';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17041,6 +17042,8 @@ const APP_TEXTS = {
   'access.vk_dm_note': {
     c:'Оплата', l:'Приписка над кнопкой в ВК (в личку ВК текст подставить нельзя)', w:'Экраны «проблема с оплатой» в ВК', i:false,
     t:'Напиши пожалуйста «проблемы с доступом» вот сюда:' },
+  'live.join.button': {c:'Эфир',l:'Покупка под эфиром',w:'Бесплатный эфир и его завершение',i:false,t:'Вступить в клуб и смотреть продолжение'},
+  'live.join.ended': {c:'Эфир',l:'Платная часть',w:'Главная после бесплатного эфира',i:false,t:'Бесплатная часть закончилась. Эфир продолжается для участников клуба.'},
   'live.gate.buy': {
     c:'Эфир', l:'Кнопка доступа в окошке поверх эфира', w:'Окошко на эфире', i:false,
     t:'Получить доступ' },
@@ -26566,6 +26569,7 @@ function closeLiveGate(){
 /* Здесь эфир свернуть ПРИДЁТСЯ: оплата открывается своим экраном, и оставлять
    плеер поверх неё нельзя — он перекроет кнопки */
 function liveGateBuy(){
+  if(isMember){closeLiveGate();openLiveEntry();return;}
   closeLiveGate();
   collapseLiveFull();
   openAccessPage();
@@ -26646,6 +26650,7 @@ function reloadLivePlayer(){
 }
 
 function expandLiveFull(){
+  syncLiveJoinButtons();
   const url = livePlayPageUrl();
   if (!url) return;
   liveFullOpen = true;
@@ -27014,7 +27019,19 @@ async function markLiveEnter(){
   }
 }
 
+function syncLiveJoinButtons(){
+  const guestLive = !!(liveNow && liveNow.found && liveNow.is_live && !isMember);
+  const ended = guestLive && liveNow.free_open === false;
+  for (const id of ['live-join-feed','live-join-full']){
+    const el=document.getElementById(id);
+    if(el){el.style.display=guestLive&&!ended?'':'none';el.textContent=t('live.join.button');}
+  }
+  const wall=document.getElementById('live-join-ended');
+  if(wall){wall.style.display=ended?'':'none';wall.querySelector('p').textContent=t('live.join.ended');wall.querySelector('button').textContent=t('live.join.button');}
+}
+
 function renderLiveBlock(){
+  syncLiveJoinButtons();
   const host = liveHostEl(), slot = liveSlotEl();
   if (!host || !slot) return;
 
@@ -39936,6 +39953,7 @@ function openDigestFromHome(){
   <!-- ЧАТ. Свой, а не встроенный у Kinescope: человек здесь уже опознан и
        входить повторно на каждом устройстве не надо -->
   <div class="live-chat" id="live-chat">
+    <button class="live-btn live-btn-main" id="live-join-full" style="display:none;width:100%;margin-bottom:12px" onclick="liveGateBuy()" data-text="live.join.button"></button>
     <!-- КНОПКА ДЕЙСТВИЯ — НАД ЧАТОМ, а не под ним. Нужна она ровно в тот
          момент, когда пора уходить на практику, и должна быть видна не
          прокручивая ленту сообщений -->
@@ -39997,6 +40015,7 @@ function openDigestFromHome(){
          нам не видны — без неё уголок было бы нечем развернуть -->
     <div class="live-tap-catch" id="live-tap-catch" onclick="expandLiveFull()"></div>
   </div>
+  <button class="live-btn live-btn-main" id="live-join-feed" style="display:none;width:calc(100% - 24px);margin:12px" onclick="liveGateBuy()" data-text="live.join.button"></button>
   <div class="live-reacts" id="live-reacts-feed"></div>
   <div class="live-actions" id="live-actions">
     <button class="live-btn live-btn-main" onclick="expandLiveFull()" data-text="live.open">Смотреть и обсуждать</button>
