@@ -28977,7 +28977,7 @@ function startFunnelFilm(){
     }).catch(function(e){
       if (generation !== filmNativeGeneration){diagnostic({event:'closed'});return;}
       diagnostic({event:'manifest_error',http:manifestStatus,server:manifestServer,reason:e.name==='AbortError'?'timeout':'manifest_failed'});
-      diagnostic({event:'closed'});
+      diagnostic({event:'closed',reason:filmEdition()?'retry_offered':'legacy_fallback'});
       filmNativeDispose(); slot.innerHTML = '';
       if (filmEdition()){
         const retry=document.createElement('button'); retry.className='native-film-start'; retry.textContent=t('film.try_again');
