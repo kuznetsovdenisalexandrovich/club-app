@@ -8,7 +8,7 @@
       if(!this.sources.length)throw Error('No film sources');
       this.index=-1;this.position=options.position||0;this.generation=0;
       this.wantsPlay=false;this.started=false;this.destroyed=false;this.exhausted=false;
-      this.quality='auto';this.timer=null;this.helpTimer=null;
+      this.quality='auto';this.failedSources=new Set();this.timer=null;this.helpTimer=null;
       this.wrapper=document.createElement('div');this.wrapper.className='native-film';
       this.notice=document.createElement('div');this.notice.className='native-film-notice';
       this.notice.setAttribute('role','status');this.notice.setAttribute('aria-live','polite');
@@ -53,14 +53,23 @@
       clearTimeout(this.timer);this.timer=null;
       if(this.video&&Number.isFinite(this.video.currentTime)&&this.video.currentTime>0)this.position=this.video.currentTime;
       this.emit('pause');
-      if(!same&&this.index+1>=this.sources.length&&!manual){
-        this.fault('film_unavailable');
+      if(manual)this.failedSources.clear();
+      if(!same&&this.index>=0&&!manual)this.failedSources.add(this.index);
+      let next=this.index;
+      if(!same){
+        for(let step=1;step<=this.sources.length;step++){
+          const candidate=(this.index+step)%this.sources.length;
+          if(!this.failedSources.has(candidate)){next=candidate;break;}
+        }
+      }
+      if(!same&&this.failedSources.size>=this.sources.length){
+        if(this.wantsPlay)this.fault('film_unavailable');
         this.exhausted=true;this.wantsPlay=false;this.clearTimers();
         ++this.generation;if(this.video)this.video.pause();
         this.status('film.unavailable');this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;
       }
       this.exhausted=false;
-      if(!same)this.index=(this.index+1)%this.sources.length;
+      if(!same)this.index=next;
       const generation=++this.generation;
       // Keep the same element: WebKit grants playback permission per element.
       if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}
@@ -86,7 +95,7 @@
       on('timeupdate',()=>{
         if(v.seeking)return;
         const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
-        if(advancing&&!v.paused){this.progress();this.emit('time');}
+        if(advancing&&!v.paused){this.failedSources.clear();this.progress();this.emit('time');}
       });
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
       on('seeking',()=>{this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
@@ -131,6 +140,7 @@
     setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
+      if(this.exhausted){this.wantsPlay=true;this.switchSource(true);return;}
       this.wantsPlay=true;this.start.disabled=true;const generation=this.generation;
       const p=this.video.play();
       if(p&&p.catch)p.catch(e=>{

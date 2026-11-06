@@ -42,11 +42,15 @@ player.action('pause');assert.equal(timers.size,0);assert(!player.wantsPlay);adv
 player.setQuality('360');assert.equal(player.hls.url,'https://other.test/360');assert(!player.wantsPlay);assert.equal(player.position,30);
 player.video.fire('loadedmetadata');assert.equal(player.video.currentTime,30);
 player.setQuality('auto');assert.equal(player.hls.url,'https://other.test/master');
-player.action('play');player.hls.listeners.error(null,{fatal:true});assert(player.exhausted);assert.equal(timers.size,0);
+player.action('play');player.hls.listeners.error(null,{fatal:true});assert.equal(player.index,0,'Later reserve failure retries primary after real playback');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);assert.equal(timers.size,0);
 assert(events.some(e=>e.fault==='film_unavailable'));
-player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
+player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
 player.other.onclick();assert.equal(player.index,0);assert(!player.exhausted);assert.equal(player.position,30);
 player.destroy();assert.equal(timers.size,0);const count=events.length;player.video.fire('ended');assert.equal(events.length,count);
+const preloadFaults=[];
+const preload=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],text:k=>k,onEvent:()=>{},onFault:c=>preloadFaults.push(c)});
+preload.video.fire('error');preload.video.fire('error');assert(preload.exhausted);assert.equal(preloadFaults.length,0,'Do not alarm about an unwatched preload');
+preload.play();assert(preload.wantsPlay);assert(!preload.exhausted);preload.video.fire('error');preload.video.fire('error');assert(preload.exhausted);assert.deepEqual(preloadFaults,['film_unavailable']);preload.destroy();
 console.log('OK HLS auto/360, 4s reserve before 10s help, background suspension, source recovery, position, pause, bounded retries, teardown');
 // Exercise actual shared funnel handler, not a duplicate implementation.
 const html=fs.readFileSync(repo+'/index.html','utf8');
