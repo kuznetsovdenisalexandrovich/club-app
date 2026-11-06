@@ -6,6 +6,7 @@
       this.options=options; this.slot=slot;
       this.sources=options.sources.filter(s=>/^https:\/\//.test(s.url));
       if(!this.sources.length)throw Error('No film sources');
+      this.diagStarted=false;this.diagWaiting=false;this.diagFrame=false;this.engine='unknown';
       this.index=-1;this.position=options.position||0;this.generation=0;
       this.wantsPlay=false;this.started=false;this.destroyed=false;this.exhausted=false;
       this.quality='auto';this.failedSources=new Set();this.timer=null;this.helpTimer=null;
@@ -33,7 +34,14 @@
     }
     button(text,className,click){const b=document.createElement('button');b.type='button';b.className=className;b.textContent=text;b.onclick=click;return b;}
     emit(method){if(!this.destroyed)this.options.onEvent({method,time:this.position,duration:this.video?this.video.duration:0});}
-    fault(code){try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
+    diagnostic(event,extra={}){
+      const v=this.video;
+      try{if(this.options.onDiagnostic)this.options.onDiagnostic({event,source:this.index,engine:this.engine,
+        server:root.clubMediaServer?root.clubMediaServer(this.sources[this.index]?.url):'unknown',position:Math.min(86400,Math.max(0,Math.round(this.position||0))),visible:!document.hidden,
+        ready:v&&v.readyState||0,network:v&&v.networkState||0,quality:this.quality,...extra});}catch(e){}
+    }
+    failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
+    fault(code){this.diagWaiting=true;this.diagnostic(code==='film_unavailable'?'unavailable':'stall');try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
     status(key){this.notice.textContent=key?this.options.text(key):'';}
     clearTimers(){clearTimeout(this.timer);clearTimeout(this.helpTimer);this.timer=null;this.helpTimer=null;}
     progress(){
@@ -46,7 +54,7 @@
       if(!this.helpTimer&&this.retry.hidden){
         this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay){this.retry.hidden=false;this.fault('film_stall');}},this.options.helpMs||10000);
       }
-      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.switchSource(false);},this.options.stallMs||(this.index===0&&this.sources.length>1?4000:14000));
+      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},this.options.stallMs||(this.index===0&&this.sources.length>1?4000:14000));
     }
     switchSource(manual,same=false){
       if(this.destroyed)return;
@@ -70,6 +78,7 @@
       }
       this.exhausted=false;
       if(!same)this.index=next;
+      this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
       // Keep the same element: WebKit grants playback permission per element.
       if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}
@@ -95,22 +104,30 @@
       on('timeupdate',()=>{
         if(v.seeking)return;
         const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
-        if(advancing&&!v.paused){this.failedSources.clear();this.progress();this.emit('time');}
+        if(advancing&&!v.paused){this.failedSources.clear();
+          if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
+          this.progress();this.emit('time');}
       });
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
       on('seeking',()=>{this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
       on('pause',()=>{if(!v.paused)return;this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
-      on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.emit('stop');});
-      on('error',()=>this.switchSource(false));
+      on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
+      on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
       const source=this.sources[this.index];const url=this.quality==='360'&&source.lowUrl?source.lowUrl:source.url;
       if(source.type==='hls'&&!v.canPlayType('application/vnd.apple.mpegurl')){
-        if(!root.Hls||!root.Hls.isSupported()){this.switchSource(false);return;}
+        this.engine='hls';
+        if(!root.Hls||!root.Hls.isSupported()){this.failure('unsupported');this.switchSource(false);return;}
         const hls=this.hls=new root.Hls({startLevel:0,maxBufferLength:20,maxMaxBufferLength:40,
           manifestLoadingTimeOut:8000,levelLoadingTimeOut:8000,fragLoadingTimeOut:10000});
-        hls.on(root.Hls.Events.ERROR,(_,data)=>{if(active()&&data.fatal)this.switchSource(false);});
+        hls.on(root.Hls.Events.ERROR,(_,data)=>{if(active()){
+          const reason=String(data.details||'hls_error');
+          // Never send loader URLs, response bodies, exception messages or signed tokens.
+          if((this.hlsReports[reason]||0)<3||data.fatal){this.hlsReports[reason]=(this.hlsReports[reason]||0)+1;this.diagnostic('hls_error',{reason:/^[a-zA-Z_]{1,60}$/.test(reason)?reason:'hls_error',http:Math.max(0,Math.min(599,Number(data.response&&data.response.code)||0)),fatal:!!data.fatal});}
+          if(data.fatal){this.diagWaiting=true;this.switchSource(false);}
+        }});
         hls.on(root.Hls.Events.MANIFEST_PARSED,()=>{if(active()&&this.wantsPlay)this.play();});
         hls.loadSource(url);hls.attachMedia(v);
-      }else{v.src=url;v.load();}
+      }else{this.engine='native';v.src=url;v.load();}
       this.status(this.wantsPlay?'film.switching':'');
       if(this.wantsPlay)this.play();else this.showStart();
       this.arm();
@@ -140,11 +157,13 @@
     setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
+      if(!this.diagStarted){this.diagStarted=true;this.diagnostic('play');}
       if(this.exhausted){this.wantsPlay=true;this.switchSource(true);return;}
       this.wantsPlay=true;this.start.disabled=true;const generation=this.generation;
       const p=this.video.play();
       if(p&&p.catch)p.catch(e=>{
         if(this.destroyed||generation!==this.generation)return;
+        this.diagnostic('play_rejected',{reason:e.name==='NotAllowedError'?'autoplay_denied':e.name==='AbortError'?'play_interrupted':'play_failed'});
         if(e.name==='NotAllowedError'){this.wantsPlay=false;this.clearTimers();this.status('film.tap_play');this.showStart();}
       });this.arm();
     }
@@ -154,7 +173,7 @@
       if(action==='pause'||action==='stop'){this.wantsPlay=false;this.clearTimers();this.video.pause();this.emit('pause');}
       if(action==='seek'&&Number.isFinite(this.video.duration))this.video.currentTime=this.video.duration*value/100;
     }
-    destroy(){if(this.destroyed)return;this.closeExpanded();this.destroyed=true;document.removeEventListener('visibilitychange',this.visibilityHandler);++this.generation;this.clearTimers();if(this.hls)this.hls.destroy();this.video.pause();this.video.removeAttribute('src');this.video.load();this.wrapper.remove();this.help.remove();}
+    destroy(){if(this.destroyed)return;this.diagnostic('closed');this.closeExpanded();this.destroyed=true;document.removeEventListener('visibilitychange',this.visibilityHandler);++this.generation;this.clearTimers();if(this.hls)this.hls.destroy();this.video.pause();this.video.removeAttribute('src');this.video.load();this.wrapper.remove();this.help.remove();}
   }
   root.ClubFilmPlayer=ClubFilmPlayer;
   if(typeof module!=='undefined')module.exports=ClubFilmPlayer;

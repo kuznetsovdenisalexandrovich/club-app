@@ -11331,7 +11331,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="film-player.js?v=516"></script>
+<script src="player-diagnostics.js?v=517"></script>
+<script src="film-player.js?v=517"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -12050,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v516 · 06.11.2026 повторное восстановление фильма';
+const APP_BUILD = 'v517 · 06.11.2026 диагностика плеера';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12107,6 +12108,9 @@ if (VIEW_TOKEN){
 }
 
 
+function filmDiagnostics(content){
+  try{return window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD);}catch(e){return function(){};}
+}
 // Failure reporting is independent of the user's request; never retry a payment here.
 const clientIncidentSent = new Set();
 function reportClientIncident(event){
@@ -23111,11 +23115,13 @@ async function playNativeBonus(bonusKey, itemKey, it){
   const controller = new AbortController();
   bonusNativeRequest = controller;
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
+  const diagnostic=filmDiagnostics('bonus');
+  let manifestStatus=0,manifestServer='unknown';
   const positionKey = 'club_bonus_pos_' + bonusKey + '_' + itemKey + '_' + it.media_edition;
   try {
     const results = await Promise.all([filmEngineReady(), fetch(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}`, {signal:controller.signal, cache:'no-store'})
-      .then(function(r){ if (!r.ok) throw new Error('bonus_manifest'); return r.json(); })]);
-    if (generation !== bonusNativeGeneration) return;
+      .then(function(r){ manifestStatus=r.status;manifestServer=window.clubMediaServer?clubMediaServer(r.url):'unknown';if (!r.ok) throw new Error('bonus_manifest'); return r.json(); })]);
+    if (generation !== bonusNativeGeneration){diagnostic({event:'closed'});return;}
     let position = 0;
     try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
     bonusNativePlayer = new ClubFilmPlayer(slot, {
@@ -23125,11 +23131,13 @@ async function playNativeBonus(bonusKey, itemKey, it){
           try { localStorage.setItem(positionKey, String(event.time)); } catch(e){}
         }
       },
-      onFault:reportClientIncident
+      onDiagnostic:diagnostic
     });
     markBonusOpened(bonusKey, itemKey);
   } catch(e){
-    if (generation !== bonusNativeGeneration) return;
+    if (generation !== bonusNativeGeneration){diagnostic({event:'closed'});return;}
+    diagnostic({event:'manifest_error',http:manifestStatus,server:manifestServer,reason:e.name==='AbortError'?'timeout':'manifest_failed'});
+    diagnostic({event:'closed'});
     slot.textContent = t('film.unavailable');
     const retry = document.createElement('button');
     retry.className = 'native-film-start'; retry.textContent = t('film.try_again');
@@ -28946,12 +28954,14 @@ function startFunnelFilm(){
   const generation = ++filmNativeGeneration;
   slot.textContent = t('film.boot');
   const controller = new AbortController();
+  const diagnostic=filmDiagnostics('film');
+  let manifestStatus=0,manifestServer='unknown';
   // Allow the API to try both storage copies before abandoning the manifest.
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
   Promise.all([filmEngineReady(), fetch(`${API_URL}/media/film${filmManifestQuery()}`, {signal:controller.signal, cache:'no-cache'})
-    .then(function(r){ if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
+    .then(function(r){ manifestStatus=r.status;manifestServer=window.clubMediaServer?clubMediaServer(r.url):'unknown';if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
     .then(function(manifest){
-      if (generation !== filmNativeGeneration) return;
+      if (generation !== filmNativeGeneration){diagnostic({event:'closed'});return;}
       filmResolvedEdition=manifest.film||filmEdition();
       let saved = 0;
       try { saved = Number(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
@@ -28960,13 +28970,14 @@ function startFunnelFilm(){
         sources:manifest.sources, position:filmSeekDone ? 0 : saved,
         poster:'images/film-ya-podumayu.jpg', text:t,
         onEvent:function(d){ filmHandlePlayback(d, true); },
-        onFault:reportClientIncident
+        onDiagnostic:diagnostic
       });
       filmSeekDone = true;
       filmTakeMediaSession();
-    }).catch(function(){
-      if (generation !== filmNativeGeneration) return;
-      reportClientIncident('film_manifest');
+    }).catch(function(e){
+      if (generation !== filmNativeGeneration){diagnostic({event:'closed'});return;}
+      diagnostic({event:'manifest_error',http:manifestStatus,server:manifestServer,reason:e.name==='AbortError'?'timeout':'manifest_failed'});
+      diagnostic({event:'closed'});
       filmNativeDispose(); slot.innerHTML = '';
       if (filmEdition()){
         const retry=document.createElement('button'); retry.className='native-film-start'; retry.textContent=t('film.try_again');

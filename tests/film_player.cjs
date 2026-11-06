@@ -18,10 +18,10 @@ class Hls {
  constructor(config){this.config=config;this.listeners={};}
  on(n,fn){this.listeners[n]=fn;}loadSource(url){this.url=url;}attachMedia(v){this.video=v;}destroy(){this.destroyed=true;}
 }
-const events=[];
+const events=[],diagnostics=[];
 const ctx={Hls,document:Object.assign(new Element('document'),{hidden:false,createElement:t=>new Element(t)}),setTimeout:(fn,ms)=>{timers.set(++timerId,{fn,at:now+ms});return timerId;},clearTimeout:id=>timers.delete(id),globalThis:null};ctx.globalThis=ctx;
 vm.runInNewContext(fs.readFileSync(repo+'/film-player.js','utf8'),ctx);
-const player=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://ru.test/master',lowUrl:'https://ru.test/360',type:'hls'},{url:'https://other.test/master',lowUrl:'https://other.test/360',type:'hls'}],position:25,text:k=>k,onEvent:e=>events.push(e),onFault:e=>events.push({fault:e})});
+const player=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://ru.test/master',lowUrl:'https://ru.test/360',type:'hls'},{url:'https://other.test/master',lowUrl:'https://other.test/360',type:'hls'}],position:25,text:k=>k,onEvent:e=>events.push(e),onFault:e=>events.push({fault:e}),onDiagnostic:e=>diagnostics.push(e)});
 let v=player.video;v.fire('loadedmetadata');assert.equal(v.currentTime,25);
 assert.equal(player.start.textContent,'film.start');assert(!v.controls);assert(player.retry.hidden);
 player.start.onclick();assert(player.wantsPlay);assert(player.start.disabled);
@@ -32,17 +32,17 @@ advance(5999);assert(player.retry.hidden);advance(1);assert(!player.retry.hidden
 assert(events.some(e=>e.fault==='film_stall'));
 player.retry.onclick();assert(!player.panel.hidden);
 const old=v;v=player.video;assert.strictEqual(v,old,'Keep the playback-authorized media element');v.fire('loadedmetadata');assert.equal(v.currentTime,25);
-v.fire('playing');assert(player.start.hidden);assert(player.retry.hidden);
+v.fire('playing');assert(!diagnostics.some(e=>e.event==='recovered'),'playing is not proof of recovery');assert(player.start.hidden);assert(player.retry.hidden);
 v.fire('pause');assert(player.wantsPlay,'Ignore delayed pause from previous source');
 ctx.document.hidden=true;ctx.document.fire('visibilitychange');advance(30000);assert.equal(player.index,1);assert(!player.exhausted);
 ctx.document.hidden=false;ctx.document.fire('visibilitychange');
-v.currentTime=30;v.fire('timeupdate');assert(events.some(e=>e.method==='time'&&e.time===30));
+v.currentTime=30;v.fire('timeupdate');assert(diagnostics.some(e=>e.event==='recovered'&&e.source===1),'Advancing video proves reserve recovery');assert(events.some(e=>e.method==='time'&&e.time===30));
 old.fire('ended');assert.notEqual(events.at(-1).method,'stop');
 player.action('pause');assert.equal(timers.size,0);assert(!player.wantsPlay);advance(20000);assert(player.retry.hidden);
 player.setQuality('360');assert.equal(player.hls.url,'https://other.test/360');assert(!player.wantsPlay);assert.equal(player.position,30);
 player.video.fire('loadedmetadata');assert.equal(player.video.currentTime,30);
 player.setQuality('auto');assert.equal(player.hls.url,'https://other.test/master');
-player.action('play');player.hls.listeners.error(null,{fatal:true});assert.equal(player.index,0,'Later reserve failure retries primary after real playback');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);assert.equal(timers.size,0);
+player.action('play');player.hls.listeners.error(null,{fatal:true,details:'fragLoadError',response:{code:503,url:'https://secret.test/?signature=secret'}});assert(diagnostics.some(e=>e.http===503&&e.reason==='fragLoadError'));assert(!JSON.stringify(diagnostics).includes('secret'));assert.equal(player.index,0,'Later reserve failure retries primary after real playback');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);assert.equal(timers.size,0);
 assert(events.some(e=>e.fault==='film_unavailable'));
 player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
 player.other.onclick();assert.equal(player.index,0);assert(!player.exhausted);assert.equal(player.position,30);
