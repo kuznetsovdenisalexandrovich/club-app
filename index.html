@@ -11331,7 +11331,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="player-diagnostics.js?v=517"></script>
+<script src="player-diagnostics.js?v=518"></script>
 <script src="film-player.js?v=517"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
@@ -12051,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v517 · 06.11.2026 диагностика плеера';
+const APP_BUILD = 'v518 · 06.11.2026 фильм в боте при сбое';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12109,7 +12109,7 @@ if (VIEW_TOKEN){
 
 
 function filmDiagnostics(content){
-  try{return window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD);}catch(e){return function(){};}
+  try{return window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>ivIdent().tg_init);}catch(e){return function(){};}
 }
 // Failure reporting is independent of the user's request; never retry a payment here.
 const clientIncidentSent = new Set();
