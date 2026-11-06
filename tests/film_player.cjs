@@ -19,18 +19,23 @@ class Hls {
  on(n,fn){this.listeners[n]=fn;}loadSource(url){this.url=url;}attachMedia(v){this.video=v;}destroy(){this.destroyed=true;}
 }
 const events=[];
-const ctx={Hls,document:{createElement:t=>new Element(t)},setTimeout:(fn,ms)=>{timers.set(++timerId,{fn,at:now+ms});return timerId;},clearTimeout:id=>timers.delete(id),globalThis:null};ctx.globalThis=ctx;
+const ctx={Hls,document:Object.assign(new Element('document'),{hidden:false,createElement:t=>new Element(t)}),setTimeout:(fn,ms)=>{timers.set(++timerId,{fn,at:now+ms});return timerId;},clearTimeout:id=>timers.delete(id),globalThis:null};ctx.globalThis=ctx;
 vm.runInNewContext(fs.readFileSync(repo+'/film-player.js','utf8'),ctx);
 const player=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://ru.test/master',lowUrl:'https://ru.test/360',type:'hls'},{url:'https://other.test/master',lowUrl:'https://other.test/360',type:'hls'}],position:25,text:k=>k,onEvent:e=>events.push(e),onFault:e=>events.push({fault:e})});
 let v=player.video;v.fire('loadedmetadata');assert.equal(v.currentTime,25);
 assert.equal(player.start.textContent,'film.start');assert(!v.controls);assert(player.retry.hidden);
 player.start.onclick();assert(player.wantsPlay);assert(player.start.disabled);
-advance(9999);assert(player.retry.hidden);advance(1);assert(!player.retry.hidden);
+advance(3999);assert.equal(player.index,0);assert(player.retry.hidden);
+advance(1);assert.equal(player.index,1);assert.equal(player.position,25);assert(player.wantsPlay);
+assert(!events.some(e=>e.fault==='film_stall'),'Try reserve before alarming');
+advance(5999);assert(player.retry.hidden);advance(1);assert(!player.retry.hidden);
 assert(events.some(e=>e.fault==='film_stall'));
 player.retry.onclick();assert(!player.panel.hidden);
-advance(4000);assert.equal(player.index,1);assert.equal(player.position,25);assert(player.wantsPlay);
 const old=v;v=player.video;assert.strictEqual(v,old,'Keep the playback-authorized media element');v.fire('loadedmetadata');assert.equal(v.currentTime,25);
 v.fire('playing');assert(player.start.hidden);assert(player.retry.hidden);
+v.fire('pause');assert(player.wantsPlay,'Ignore delayed pause from previous source');
+ctx.document.hidden=true;ctx.document.fire('visibilitychange');advance(30000);assert.equal(player.index,1);assert(!player.exhausted);
+ctx.document.hidden=false;ctx.document.fire('visibilitychange');
 v.currentTime=30;v.fire('timeupdate');assert(events.some(e=>e.method==='time'&&e.time===30));
 old.fire('ended');assert.notEqual(events.at(-1).method,'stop');
 player.action('pause');assert.equal(timers.size,0);assert(!player.wantsPlay);advance(20000);assert(player.retry.hidden);
@@ -42,7 +47,7 @@ assert(events.some(e=>e.fault==='film_unavailable'));
 player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
 player.other.onclick();assert.equal(player.index,0);assert(!player.exhausted);assert.equal(player.position,30);
 player.destroy();assert.equal(timers.size,0);const count=events.length;player.video.fire('ended');assert.equal(events.length,count);
-console.log('OK HLS auto/360, 10s help, source recovery, position, pause, bounded retries, teardown');
+console.log('OK HLS auto/360, 4s reserve before 10s help, background suspension, source recovery, position, pause, bounded retries, teardown');
 // Exercise actual shared funnel handler, not a duplicate implementation.
 const html=fs.readFileSync(repo+'/index.html','utf8');
 const handler=html.slice(html.indexOf('function filmHandlePlayback('),html.indexOf('function filmRipeOffer('));
