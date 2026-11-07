@@ -12051,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v519 · 07.11.2026 обновление ссылок фильма';
+const APP_BUILD = 'v520 · 07.11.2026 первые сутки и путь оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12513,6 +12513,7 @@ async function refreshScreenData(name, force){
 }
 
 function switchView(name) {
+  if (typeof isMember !== 'undefined' && isMember) track('member_section', name);
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   // Плеер эфира не переезжает по документу, но при смене экрана меняет вид:
@@ -13259,7 +13260,7 @@ function track(event, ref, value){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign(
         { telegram_id: telegramId || 0, vk_query: vkq, tg_init: ivIdent().tg_init,
-          entry_source: (()=>{const p=appStartParam();return /^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,54}$/.test(p)?p:p.startsWith('u_')?p.slice(2):p.startsWith('film_')?p.slice(5):''})(),
+          entry_source: (()=>{const p=appStartParam();return /^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,54}$/.test(p)?p:p.startsWith('u_')?p.slice(2):p.startsWith('film_')?p.slice(5):p.startsWith('pay_')?p.slice(4):''})(),
           event: event, ref: ref || '', value: value || 0 },
         tgContactFields()))
     }).catch(function(){});
@@ -30175,6 +30176,7 @@ function setAccessReturns(n){
 
 /* Человек ушёл платить — запоминаем, чтобы узнать его при возвращении */
 function noteAccessLeave(){
+  track('member_pay_click', 'payment');
   try { localStorage.setItem('club_app_pay_left_at', String(Date.now())); } catch(e){}
 }
 
