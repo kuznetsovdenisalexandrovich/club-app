@@ -11332,7 +11332,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 </div>
 
 <script src="player-diagnostics.js?v=518"></script>
-<script src="film-player.js?v=517"></script>
+<script src="film-player.js?v=519"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -12051,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v518 · 06.11.2026 фильм в боте при сбое';
+const APP_BUILD = 'v519 · 07.11.2026 обновление ссылок фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12108,6 +12108,14 @@ if (VIEW_TOKEN){
 }
 
 
+async function refreshFilmSources(url){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const r=await fetch(url,{signal:controller.signal,cache:'no-store'});
+    if(!r.ok)throw Object.assign(new Error('manifest'),{status:r.status});
+    return await r.json();
+  }finally{clearTimeout(timer);}
+}
 function filmDiagnostics(content){
   try{return window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>ivIdent().tg_init);}catch(e){return function(){};}
 }
@@ -23125,7 +23133,8 @@ async function playNativeBonus(bonusKey, itemKey, it){
     let position = 0;
     try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
     bonusNativePlayer = new ClubFilmPlayer(slot, {
-      sources:results[1].sources, position:position, text:t,
+      sources:results[1].sources, position:position, text:t, expiresIn:results[1].expires_in,
+      refreshSources:()=>refreshFilmSources(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}`),
       onEvent:function(event){
         if (Number.isFinite(event.time) && event.time > 0){
           try { localStorage.setItem(positionKey, String(event.time)); } catch(e){}
@@ -28967,7 +28976,8 @@ function startFunnelFilm(){
       try { saved = Number(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
       funnelPlayerReady = true; filmMountedAt = Date.now();
       filmNative = new ClubFilmPlayer(slot, {
-        sources:manifest.sources, position:filmSeekDone ? 0 : saved,
+        sources:manifest.sources, position:filmSeekDone ? 0 : saved, expiresIn:manifest.expires_in,
+        refreshSources:()=>refreshFilmSources(`${API_URL}/media/film?edition=${encodeURIComponent(manifest.film)}`),
         poster:'images/film-ya-podumayu.jpg', text:t,
         onEvent:function(d){ filmHandlePlayback(d, true); },
         onDiagnostic:diagnostic

@@ -4,6 +4,7 @@
   class ClubFilmPlayer {
     constructor(slot,options){
       this.options=options; this.slot=slot;
+      this.sourcesExpireAt=Date.now()+Math.max(60,Number(options.expiresIn)||14400)*1000-60000;this.refreshing=false;this.lastRefresh=0;
       this.sources=options.sources.filter(s=>/^https:\/\//.test(s.url));
       if(!this.sources.length)throw Error('No film sources');
       this.diagStarted=false;this.diagWaiting=false;this.diagFrame=false;this.engine='unknown';
@@ -56,8 +57,25 @@
       }
       if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},this.options.stallMs||(this.index===0&&this.sources.length>1?4000:14000));
     }
+    async refreshSources(){
+      if(this.refreshing||this.destroyed)return;
+      this.refreshing=true;this.lastRefresh=Date.now();this.clearTimers();this.diagWaiting=true;
+      if(this.video&&this.video.currentTime>0)this.position=this.video.currentTime;
+      this.diagnostic('refresh',{reason:'links_expired'});this.status('film.switching');
+      try{
+        const manifest=await this.options.refreshSources();
+        if(this.destroyed)return;
+        const sources=(manifest.sources||[]).filter(s=>/^https:\/\//.test(s.url));
+        if(!sources.length)throw Error('no_sources');
+        this.sources=sources;this.sourcesExpireAt=Date.now()+Math.max(60,Number(manifest.expires_in)||14400)*1000-60000;
+        this.failedSources.clear();this.index=-1;this.diagnostic('refreshed');
+      }catch(e){if(!this.destroyed)this.diagnostic('refresh_failed',{http:Number(e.status)||0,reason:'manifest_failed'});}
+      finally{this.refreshing=false;}
+      if(!this.destroyed)this.switchSource(false);
+    }
     switchSource(manual,same=false){
-      if(this.destroyed)return;
+      if(this.destroyed||this.refreshing)return;
+      if(this.options.refreshSources&&Date.now()>=this.sourcesExpireAt&&Date.now()-this.lastRefresh>60000){this.refreshSources();return;}
       clearTimeout(this.timer);this.timer=null;
       if(this.video&&Number.isFinite(this.video.currentTime)&&this.video.currentTime>0)this.position=this.video.currentTime;
       this.emit('pause');
@@ -102,7 +120,7 @@
         this.wantsPlay=true;this.status('');this.emit('play');this.progress();
       });
       on('timeupdate',()=>{
-        if(v.seeking)return;
+        if(v.seeking||v.readyState<2)return;
         const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
         if(advancing&&!v.paused){this.failedSources.clear();
           if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
@@ -158,6 +176,8 @@
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
       if(!this.diagStarted){this.diagStarted=true;this.diagnostic('play');}
+      if(this.refreshing){this.wantsPlay=true;return;}
+      if(this.options.refreshSources&&Date.now()>=this.sourcesExpireAt&&Date.now()-this.lastRefresh>60000){this.wantsPlay=true;this.refreshSources();return;}
       if(this.exhausted){this.wantsPlay=true;this.switchSource(true);return;}
       this.wantsPlay=true;this.start.disabled=true;const generation=this.generation;
       const p=this.video.play();

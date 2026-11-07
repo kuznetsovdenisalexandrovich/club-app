@@ -60,3 +60,17 @@ vm.createContext(funnel);vm.runInContext(handler,funnel);
 vm.runInContext("filmHandlePlayback({method:'play'},true);filmHandlePlayback({method:'pause'},true)",funnel);
 assert(funnel.funnelFilmStarted);assert.equal(funnel.filmPlayStartedAt,null);assert(!funnel.completed);
 console.log('OK native buffering cannot start the old wall-clock completion timer');
+(async()=>{
+ const trace=[];let refreshes=0;
+ const p=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/old',type:'hls'},{url:'https://b.test/old',type:'hls'}],text:k=>k,onEvent:()=>{},onDiagnostic:e=>trace.push(e),
+ refreshSources:async()=>{refreshes++;return {expires_in:14400,sources:[{url:'https://a.test/fresh',type:'hls'},{url:'https://b.test/fresh',type:'hls'}]};}});
+ p.video.duration=1000;p.position=412;p.video.currentTime=412;p.sourcesExpireAt=0;p.play();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(refreshes,1);assert.equal(p.hls.url,'https://a.test/fresh');assert.equal(p.position,412);
+ p.video.readyState=0;p.video.currentTime=0;p.video.fire('timeupdate');assert.equal(p.position,412,'A reset media element must not erase the resume position');
+ p.video.fire('loadedmetadata');assert.equal(p.video.currentTime,412);
+ assert(!trace.some(e=>e.event==='recovered'),'Refreshed links alone do not prove playback');
+ p.video.readyState=4;p.video.currentTime=414;p.video.fire('timeupdate');assert(trace.some(e=>e.event==='recovered'));
+ p.options.refreshSources=async()=>{refreshes++;throw Object.assign(Error('offline'),{status:503});};p.sourcesExpireAt=0;p.lastRefresh=0;p.play();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(refreshes,2);assert(trace.some(e=>e.event==='refresh_failed'&&e.http===503));p.video.fire('error');assert.equal(refreshes,2,'No unbounded manifest-refresh loop');p.destroy();
+ console.log('OK expired links renew once, preserve position, prove recovery by progress, and bound failed renewals');
+})().catch(e=>{console.error(e);process.exitCode=1;});
