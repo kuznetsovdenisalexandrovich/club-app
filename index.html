@@ -3740,7 +3740,7 @@ html[data-lite] #funnel-screen .access-btn,html[data-lite] #funnel-after .access
    ТЕМА ЭКРАНА — ОТ СТИЛЯ АРТА, как на результате теста: светлый → светлый,
    тёмный → тёмный, особый → легендарный. Признак `data-look` ставится только
    когда стиль карты известен; иначе витрина живёт в теме приложения. */
-.reveal-overlay.showcase{justify-content:flex-start;overflow-y:auto;
+.reveal-overlay.showcase{justify-content:flex-start;overflow-y:auto;overflow-x:hidden;
   /* ⚠️ ОТСТУПЫ РАЗДЕЛЬНО + ПРОСТЫЕ ЗНАЧЕНИЯ ЗАПАСНЫМИ. Браузеры читают `calc`
      в отступах прекрасно, а вот НАША ПРОВЕРКА В jsdom на них слепа: движок
      склеивает раздельные свойства обратно в сокращённое `padding` и роняет
@@ -4631,6 +4631,8 @@ html[data-tg-native-back] .cv-back{display:none!important}
   --qr-shadow-scale:.80;
   position:relative;width:var(--qr-w);height:var(--qr-h);
   margin:0 auto calc(var(--qr-w) * .13 + 12px);user-select:none}
+/* Larger collection viewer only; quiz scenes keep their original geometry. */
+.reveal-overlay.showcase .qr-stack{--qr-w:min(88vw,458px)}
 .qr-card{position:absolute;inset:0;z-index:3}
 /* ⚠️ ГЕОМЕТРИЯ СНЯТА С УТВЕРЖДЁННОГО МАКЕТА КАРТОЧКИ, а не придумана заново:
    круг 1.66 ширины карты, центр на 45.4% высоты, прозрачность .29. В прошлой
@@ -12051,7 +12053,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v524 · 09.11.2026 стартовые награды';
+const APP_BUILD = 'v525 · 09.11.2026 карточки и награды';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16270,8 +16272,8 @@ const APP_TEXTS = {
   'discount.free_floor': {c:'Подписка',l:'Порог подарочной скидки',w:'Скидки',i:false,t:'Если часть суммы покрывает скидка без баллов, к оплате останется не менее 300 ₽.'},
   'retention.materials_ready': {c:'Подписка', l:'Материалы готовы', w:'Удержание', i:false, t:'Материалы можно открыть по кнопке ниже.'},
   'retention.digest_offer': {c:'Подписка', l:'Обычный дайджест', w:'Удержание', i:false, t:'Открой готовый дайджест клуба: там собраны материалы и главные мысли занятий. Можно начать с того, что сейчас полезно тебе.'},
-  'retention.guide_offer': {c:'Подписка', l:'Подарок с гайдом', w:'Удержание', i:false, t:'Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс сверху — месяц за 300 ₽, чтобы у тебя точно получилось посмотреть.'},
-  'retention.stay_offer': {c:'Подписка', l:'Подарок остаться', w:'Удержание', i:false, t:'А что скажешь, если мы тебе сейчас соберём самого классного контентика, откроем возможность скачать выжимки, и подарим месяц участия за 300 ₽ — просто в благодарность за то, что мне удалось тебя соблазнить остаться?'},
+  'retention.guide_offer': {c:'Подписка', l:'Подарок с гайдом', w:'Удержание', i:false, t:'Расскажи, что тебе интересно узнать — подберу конкретные лекции под этот запрос и короткий гайд, в каких лекциях что лежит. Плюс подарю выжимку самых важных мыслей из них. Плюс подарю 1000 баллов, которые можно использовать для оплаты участия. Этот подарок можно получить один раз.'},
+  'retention.stay_offer': {c:'Подписка', l:'Подарок остаться', w:'Удержание', i:false, t:'А что скажешь, если мы тебе сейчас соберём самого классного контентика, откроем возможность скачать выжимки, и подарим 1000 баллов — просто в благодарность за то, что мне удалось тебя соблазнить остаться? Этот подарок можно получить один раз.'},
   'discount.points_floor': {c:'Подписка', l:'Минимум оплаты после баллов', w:'Управление подпиской', i:false, t:'Один балл = один рубль. После списания баллов к оплате останется не менее 300 ₽.'},
   'discount.floor': {c:'Подписка', l:'Минимум оплаты после скидки', w:'Скидки', i:false, t:'После скидки к оплате останется не менее 300 ₽.'},
   'restricted.title': {c:'Доступ',l:'Заголовок ограничения',w:'Ограничение',i:false,t:'Доступ ограничен'},
@@ -34099,7 +34101,9 @@ async function prWaitAssets(){
   await Promise.all(wanted.map(function(u){ return prLoadOne(u, PR_LOADING_CAP_MS); }));
 }
 
+var prSession = 0;
 function openPackReveal(demoCards){
+  const session = ++prSession;
   prHoloStop();   // v497: разметка сцены сейчас пересоберётся — старый перелив снять
   let ids;
   if (demoCards && demoCards.length){
@@ -34163,6 +34167,7 @@ function openPackReveal(demoCards){
   if (PR_SCREENS && Object.keys(PR_SCREENS).length && !PR_PICKED) prPickScreens();
   prApplyAssets(null);          // нейтральное состояние: тёмный набор
   prLoadScreens().then(async function(){
+    if (session !== prSession) return;
     prPickScreens();
     prRefreshBacks();           // рубашки уже нарисованы — перевесить адреса
     prApplyAssets(PR.themeCard || null);   // чья тема на экране, а не «кто герой»
@@ -34170,9 +34175,10 @@ function openPackReveal(demoCards){
        Порядок важен: сначала переодеваемся (иначе ждали бы запасные адреса),
        потом ждём, потом показываем. */
     try { await prWaitAssets(); } catch(e){}
+    if (session !== prSession) return;
     prHideLoading();
     prPrefetchAssets();
-  }).catch(function(){ prHideLoading(); });   // сеть отвалилась — экран всё равно отдаём
+  }).catch(function(){ if (session === prSession) prHideLoading(); });   // сеть отвалилась — экран всё равно отдаём
 
   prClearPhase();
   prLayout();
@@ -34190,10 +34196,13 @@ function openPackReveal(demoCards){
   stage.classList.add('pr-in');
   document.body.style.overflow = 'hidden';
   // Греем не в тот же кадр, что показ стопки: сначала человек должен увидеть карты
-  setTimeout(prPrefetchAssets, 400);
+  setTimeout(function(){ if (session === prSession) prPrefetchAssets(); }, 400);
 }
 
 function closePackReveal(){
+  const session = ++prSession;
+  PR.busy = false;
+  prClearPhase();
   prHoloStop();   // v497: движок слушает датчик — не оставлять его после закрытия
   if (PR_SIGIL_TIMER){ clearTimeout(PR_SIGIL_TIMER); PR_SIGIL_TIMER = null; }
   prHideLoading();              // иначе останется висеть до следующего открытия
@@ -34202,7 +34211,7 @@ function closePackReveal(){
   /* ⚠️ ВЫКЛЮЧАЕМ ПО ТАЙМЕРУ, А НЕ ПО `transitionend`: событие не придёт вовсе,
      если переходы отключены системной настройкой «меньше движения» — экран
      остался бы висеть поверх приложения. Длительность чуть больше перехода. */
-  setTimeout(function(){ stage.classList.remove('pr-shown'); }, 380);
+  setTimeout(function(){ if (session === prSession) stage.classList.remove('pr-shown'); }, 380);
   document.body.style.overflow = '';
   prSeedAmbient(null);                 // таймеры мерцания не должны жить после закрытия
   if (PR.demo){ PR.demo = false; return; }
@@ -34407,6 +34416,7 @@ async function prOpenCard(id){
     return;
   }
   if (PR.busy) return;
+  const session = prSession;
   PR.busy = true;
   prHoloStop();   // v497: перелив был у прошлой раскрытой карты
 
@@ -34423,6 +34433,7 @@ async function prOpenCard(id){
         body: JSON.stringify({ telegram_id: telegramId, card_id: id })
       }, 15000);
     } catch(e){
+      if (session !== prSession) return;
       PR.busy = false;
       const msg = e.message || 'Не получилось открыть карточку';
       showToast(msg);
@@ -34431,12 +34442,14 @@ async function prOpenCard(id){
     }
   }
 
+  if (session !== prSession) return;
   const card = (data && data.card) || {};
   PR.cards[id] = card;
   PR.extra[id] = data;
   prPrefetchFx(card);   // раньше всего остального: у файла всего 640 мс форы
 
   const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
+  if (!el) { PR.busy = false; return; }
   const front = el.querySelector('.pr-face.pr-front img');
   prApplyTheme(card);
   // Ждём готовности арта до начала хореографии, чтобы переворот не показал
@@ -34445,6 +34458,7 @@ async function prOpenCard(id){
   const artSrc = prCardImage(card);
   if (front && artSrc) await prPrepareFrontImage(front, artSrc);
 
+  if (session !== prSession) return;
   PR.hero = id;
   prLayout();
   prEl('pr-details').classList.remove('pr-on');
@@ -34457,12 +34471,14 @@ async function prOpenCard(id){
   prEl('pr-sub').textContent = name + ': энергия собирается…';
 
   setTimeout(function(){
+    if (session !== prSession) return;
     scene.classList.remove('pr-phase-anticipation'); scene.classList.add('pr-phase-charge');
     el.classList.remove('pr-phase-anticipation');    el.classList.add('pr-phase-charge');
     prEl('pr-sub').textContent = name + ': раскрытие начинается…';
   }, 180);
 
   setTimeout(function(){
+    if (session !== prSession) return;
     scene.classList.remove('pr-phase-charge'); scene.classList.add('pr-phase-impact');
     prPlayFxVideo();
     el.classList.remove('pr-phase-charge');    el.classList.add('pr-phase-impact','pr-open');
@@ -34470,6 +34486,7 @@ async function prOpenCard(id){
   }, 460);
 
   setTimeout(function(){
+    if (session !== prSession) return;
     scene.classList.remove('pr-phase-impact','pr-revealing'); scene.classList.add('pr-phase-signature');
     el.classList.remove('pr-phase-impact');
     PR.opened.push(id);
@@ -40797,7 +40814,7 @@ function ivAutoOpen(){
       render(); frames++;
       if (!fpsT) fpsT = now;
       if (now - fpsT >= 1000){ if (opts.onFps) opts.onFps(Math.round(frames*1000/(now-fpsT))); frames = 0; fpsT = now; }
-      if (Math.abs(target.x-cur.x) < .0008 && Math.abs(target.y-cur.y) < .0008 && mode === "pointer"){
+      if (Math.abs(target.x-cur.x) < .0008 && Math.abs(target.y-cur.y) < .0008){
         running = false; if (opts.onFps) opts.onFps(null); return;
       }
       requestAnimationFrame(frame);
@@ -40827,10 +40844,11 @@ function ivAutoOpen(){
     on(input, "click", function(e){ if (moved > 10){ e.stopPropagation(); e.preventDefault(); } moved = 0; }, true);
 
     function fromAngles(beta, gamma){
-      if (beta == null || gamma == null) return;
+      if (dead || !Number.isFinite(beta) || !Number.isFinite(gamma)) return;
       if (!base) base = {b:beta, g:gamma};
       target.x = clamp((gamma - base.g) / S.range);
       target.y = clamp((beta - base.b) / S.range);
+      if (Math.abs(target.x-cur.x) >= .0008 || Math.abs(target.y-cur.y) >= .0008) kick();
     }
     function useGyro(name){ mode = "gyro"; base = null; if (opts.onInput) opts.onInput(name); kick(); }
     var tgHandler = null, domHandler = null;
@@ -40844,12 +40862,14 @@ function ivAutoOpen(){
         tgHandler = function(){ var o = TG.DeviceOrientation; fromAngles(o.beta*180/Math.PI, o.gamma*180/Math.PI); };
         TG.onEvent("deviceOrientationChanged", tgHandler);
         TG.DeviceOrientation.start({refresh_rate:20, need_absolute:false}, function(ok){
+          if (dead) return;
           if (ok) { useGyro("tg"); cb(true, "tg"); } else cb(false, "tg_denied");
         });
         return;
       }
       if (typeof DeviceOrientationEvent === "undefined") { cb(false, "no_sensor"); return; }
       var go = function(){
+        if (dead) return;
         var got = false;
         domHandler = function(e){ if (e.beta == null) return; if (!got){ got = true; useGyro("gyro"); cb(true, "gyro"); } fromAngles(e.beta, e.gamma); };
         window.addEventListener("deviceorientation", domHandler);
