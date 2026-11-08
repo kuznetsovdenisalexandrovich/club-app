@@ -12051,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v520 · 07.11.2026 первые сутки и путь оплаты';
+const APP_BUILD = 'v521 · 08.11.2026 история дожимов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13245,6 +13245,33 @@ async function laterConfirm(){
   }
 }
 
+// Per-message attribution stays in this launch; ordinary entries never inherit it.
+async function resolveNurtureStart(){
+ const raw=appStartParamRaw(),m=/^nt_([a-f0-9]{32})_([0-2])$/.exec(raw);
+ if(!m||window.__nurtureResolved===raw)return true;
+ if(window.__nurtureResolving)return window.__nurtureResolving;
+ window.__nurtureResolving=(async()=>{
+  try{
+   const d=await apiRequest(`${API_URL}/nurture/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:m[1],index:Number(m[2]),tg_init:ivIdent().tg_init,vk_query:isInsideVk()?vkLaunchQuery():''})});
+   if(!/^[A-Za-z0-9_:-]{1,120}$/.test(d.target)||d.target.startsWith('nt_'))throw new Error('route');
+   window.__nurtureResolved=raw;window.__nurtureTarget=d.target;window.__nurtureToken=d.tracked?d.token:'';return true;
+  }catch(e){showToast('Не удалось открыть материал. Попробуй ещё раз по кнопке в сообщении.');return false;}
+  finally{window.__nurtureResolving=null;}
+ })();return window.__nurtureResolving;
+}
+function nurtureEventToken(event,ref){
+ const token=window.__nurtureToken||'',target=window.__nurtureContentTarget||window.__nurtureTarget||'';
+ if(!token)return '';
+ if(/(?:pay_click|window_buy|offer_pay|stop_buy|wall_pay)/.test(event))return token;
+ if(target==='film'&&(String(ref)==='funnel'||event.startsWith('funnel_film_')))return token;
+ const expected=target.replace(/^la?_/,'').replace(/^magazine_/, '');
+ return ref&&String(ref)===expected?token:'';
+}
+function nurtureProgress(event,ref,value=0){
+ const token=window.__nurtureToken;if(!token)return;
+ fetch(`${API_URL}/nurture/progress`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,event,ref,value:Math.max(0,Math.min(86400,Math.floor(value))),tg_init:ivIdent().tg_init,vk_query:isInsideVk()?vkLaunchQuery():''}),keepalive:true}).catch(()=>{});
+}
+
 function track(event, ref, value){
   /* ⚠️ ГОСТЬ ИЗ ВК ТОЖЕ ДОЛЖЕН БЫТЬ ВИДЕН. Раньше здесь стояло «нет телеграмного
      айди — не пишем», и вся ВК-половина воронки не существовала: человек мог
@@ -13261,7 +13288,7 @@ function track(event, ref, value){
       body: JSON.stringify(Object.assign(
         { telegram_id: telegramId || 0, vk_query: vkq, tg_init: ivIdent().tg_init,
           entry_source: (()=>{const p=appStartParam();return /^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,54}$/.test(p)?p:p.startsWith('u_')?p.slice(2):p.startsWith('film_')?p.slice(5):p.startsWith('pay_')?p.slice(4):''})(),
-          event: event, ref: ref || '', value: value || 0 },
+          event: event, ref: ref || '', value: value || 0, nurture_token:nurtureEventToken(event,ref) },
         tgContactFields()))
     }).catch(function(){});
   } catch(e){}
@@ -22710,6 +22737,7 @@ async function openNativeMaterial(code){
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}
   sendAttributionTouch(code);
   window.__nativeMaterialTarget=target;
+  if(window.__nurtureToken){window.__nurtureContentTarget=target;nurtureProgress('material_open',target);}
   trackRouteOpen();
   if(target.indexOf('bi_')===0&&bonusRouteFromUrl())return;
   if(/^la?_/.test(target)&&contentFromUrl())return;
@@ -22788,10 +22816,11 @@ async function openLeadMaterial(code){
    if(data.video_url){
     const u=new URL(data.video_url);if(u.origin!=='https://club-audio-725136.s3.ru-7.storage.selcloud.ru'||!/^\/lead-magnets\/[a-zA-Z0-9_-]+\.mp4$/.test(u.pathname))throw new Error('video');
     const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.style.cssText='width:100%;height:100%;background:#15151a;border-radius:12px';
-    video.addEventListener('loadedmetadata',()=>signal('ready'));
+    video.addEventListener('loadedmetadata',()=>{signal('ready');nurtureProgress('material_open',code)});
+    let nurtureLast=0;video.addEventListener('timeupdate',()=>{if(!video.paused&&!document.hidden&&video.currentTime>=nurtureLast+15){nurtureLast=video.currentTime;nurtureProgress('viewing',code,nurtureLast)}});
     video.addEventListener('playing',()=>signal('playing'));
     video.addEventListener('error',()=>{note.textContent=t('lead.error');signal('error')});
-    video.addEventListener('ended',()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
+    video.addEventListener('ended',()=>{nurtureProgress('completed',code,video.duration||0);note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
     player={destroy:()=>{video.pause();video.removeAttribute('src');video.load()}};leadMaterialPlayer=player;box.append(video);video.src=data.video_url;
     return;
    }
@@ -22806,6 +22835,7 @@ async function openLeadMaterial(code){
 }
 
 const PARAM_LINKS = {
+  'nt': {param:'токен сообщения и кнопка',label:'Материал из дожимного сообщения',guests:true},
   'quiz':    { param: '',            label: 'Тест «кто ты из боженек»',       guests: true  },
   'bonus':   { param: 'ключ бонуса', label: 'Бонус или мастер-класс',          guests: true  },
   'mag':     { param: 'ключ выпуска',label: 'Выпуск журнала',                  guests: true  },
@@ -32371,8 +32401,9 @@ async function init(){
   // из соцсетей, не будучи участником, и не должен упираться в логин.
   // ВАЖНО: проверку делаем ПОСЛЕ tg.ready() ниже — до неё initDataUnsafe
   // может быть ещё не заполнен, и start_param потеряется
-  function openFromStartParam(){
+  async function openFromStartParam(){
     try {
+      if(!await resolveNurtureStart())return;
       /* ⚠️ УЧЁТ — САМЫМ ПЕРВЫМ ДЕЛОМ И ОДИН РАЗ НА ВСЕ ВИДЫ ССЫЛОК. Ниже идут
          восемь веток разбора, каждая со своим `return`; учёт внутри любой из
          них означал бы, что остальные семь молчат — ровно так и было до
@@ -37020,6 +37051,7 @@ async function attachReferralFromStart(){
 var sellerTouch = null;   // var, не let: appStartParam зовут и выше по файлу, до этой строки
 function appStartParam(){
   if (window.__nativeMaterialTarget) return window.__nativeMaterialTarget;
+  if (window.__nurtureTarget) return window.__nurtureTarget;
   const raw = appStartParamRaw();
   if (/^namedfilm_v[0-9]{1,30}$/.test(raw)) return 'film';
   if (raw.indexOf('sb-') !== 0) return raw;
@@ -38007,7 +38039,10 @@ function plInit(){
     plEl('fp-dur').textContent = plFmt(plAudio.duration);
     plRenderMarkers();           // до метаданных длительности нет — ставить засечки некуда
   });
+  let nurtureAudioLast={};
   plAudio.addEventListener('timeupdate', function(){
+    const item=plQueue[plIndex];
+    if(item&&!plAudio.paused&&!document.hidden&&nurtureEventToken('lecture_view',item.slug)&&plAudio.currentTime>=(nurtureAudioLast[item.slug]||0)+15){nurtureAudioLast[item.slug]=plAudio.currentTime;nurtureProgress('viewing',item.slug,plAudio.currentTime);}
     var cur = plFmt(plAudio.currentTime);
     var pct = (plAudio.duration ? plAudio.currentTime / plAudio.duration * 100 : 0) + '%';
     plEl('mp-cur').textContent = cur;
@@ -38045,10 +38080,11 @@ function plInit(){
         localStorage.setItem(PL_POS_KEY, JSON.stringify(all));
       } catch(e){}
       plSetPlayIcon(false);
-      try { track('audio_preview_end', lec.slug); } catch(e){}   // v456
+      try { track('audio_preview_end', lec.slug);if(nurtureEventToken('lecture_view',lec.slug))nurtureProgress('viewing',lec.slug,plAudio.currentTime); } catch(e){}   // v456
       rsOffer({ k: 'audio', ref: lec.slug, pos: Math.floor(plAudio.currentTime || 0), title: lec.title || '' });   // v457
       return;
     }
+    if(lec&&nurtureEventToken('lecture_view',lec.slug))nurtureProgress('completed',lec.slug,plAudio.duration||0);
     if (lec) plSavePosition(lec.slug, 0);
     ivAskSoon('lecture');   // v458: дослушал занятие целиком
     if (plIndex < plQueue.length - 1) plNext();
