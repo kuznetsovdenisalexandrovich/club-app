@@ -12051,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v522 · 08.11.2026 история дожимов';
+const APP_BUILD = 'v523 · 08.11.2026 ограничения доступа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -31863,11 +31863,11 @@ function showAccessRestricted(){
   box.setAttribute('role','dialog');
   box.setAttribute('aria-modal','true');
   box.setAttribute('aria-labelledby','access-restricted-title');
-  box.innerHTML = '<div class="restricted-card"><h1 id="access-restricted-title">'+escapeHtml(t('restricted.title'))+'</h1><p>'+escapeHtml(t('restricted.body'))+'</p><button type="button" class="lec-link-btn">'+escapeHtml(t('restricted.support'))+'</button></div>';
+  box.tabIndex = -1;
+  box.innerHTML = '<div class="restricted-card"><h1 id="access-restricted-title">Ошибка загрузки</h1><p>Не удалось загрузить приложение.</p></div>';
   Array.from(document.body.children).forEach(function(el){if(el.tagName!=='SCRIPT')el.inert=true;});
   document.body.appendChild(box);
-  box.querySelector('button').onclick = function(){openSupportDm();};
-  box.querySelector('button').focus();
+  box.focus();
 }
 function startAccessWatch(){
   if (window.__accessWatch) return;
