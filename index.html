@@ -6878,7 +6878,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <div class="step-row"><span>Посмотреть лекцию</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></div>
       <div class="step-row"><span>Посетить живое занятие</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+200</span></div>
       <div class="step-row"><span>Быть участником</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+500 / мес</span></div>
-      <div class="step-row"><span data-text="plan.a2">Составить свою личную карту контента</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+100</span></div>
+      <div class="step-row"><span data-text="plan.a2">Составить свою личную карту контента</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+250</span></div>
       <div class="step-row"><span>Пройти карту</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+2000</span></div>
       <div class="step-row"><span data-text="points.a3">Активничать — иногда просто так, по решению Дениса</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">по случаю</span></div>
       <div class="step-row" style="cursor:pointer" onclick="document.getElementById('donate-section').scrollIntoView({behavior:'smooth'})"><span style="color:var(--warm)" data-text="points.a4">Или просто задонатить любую сумму ↓</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">1₽ = 1</span></div>
@@ -18033,7 +18033,7 @@ const APP_TEXTS = {
   'nb.pts.lectures': { c:'Онбординг', l:'Шторка после знакомства: строка «лекции»', w:'Шторка шагов', i:true, t:'Смотреть лекции' },
   'nb.pts.lectures_p': { c:'Онбординг', l:'Шторка после знакомства: баллы за лекцию', w:'Шторка шагов', i:true, t:'+50' },
   'nb.pts.plan': { c:'Онбординг', l:'Шторка после знакомства: строка «личный план»', w:'Шторка шагов', i:true, t:'Пройти свой личный план' },
-  'nb.pts.plan_p': { c:'Онбординг', l:'Шторка после знакомства: баллы за план', w:'Шторка шагов', i:true, t:'+100' },
+  'nb.pts.plan_p': { c:'Онбординг', l:'Шторка после знакомства: баллы за план', w:'Шторка шагов', i:true, t:'+250' },
   'nb.pts.live': { c:'Онбординг', l:'Шторка после знакомства: строка «живая встреча», пока не приехало ближайшее', w:'Шторка шагов', i:true, t:'Сходить на живую встречу' },
   'nb.chk.locked': { c:'Онбординг', l:'Шторка шагов: пометка у лекции, пока нет карты', w:'Шторка шагов', i:true, t:'после карты' },
   'nb.lecture.need_plan': { c:'Онбординг', l:'Всплывашка: лекция откроется после карты', w:'Всплывашка', i:true, t:'Сначала соберём карту — первая лекция будет с неё' },
@@ -20363,7 +20363,7 @@ function renderStepsPopup(){
         <div style="font-size:12px;color:var(--text-dim)">баллов на балансе · ${progressLine}</div>
       </div>
       <button class="step-row-btn" onclick="closeStepsPopup();switchView('library')"><span>Посмотреть лекции</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+50</span></button>
-      <button class="step-row-btn" onclick="closeStepsPopup();openPersonalPlan()"><span>Пройти свой личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+100</span></button>
+      <button class="step-row-btn" onclick="closeStepsPopup();openPersonalPlan()"><span>Пройти свой личный план</span><span style="margin-left:auto;color:var(--text-dim);font-weight:700">+250</span></button>
       <div class="step-row" id="steps-next-event"><span>Сходить на живую встречу</span></div>
     `;
     loadNextEventIntoSteps();
@@ -36766,7 +36766,7 @@ function quizCardSceneHtml(godName, gift, opts){
    лишь при известном telegram_id. Без него обещать нечего. */
 function quizGiftNoteHtml(gift){
   if (!gift || !telegramId) return '';
-  const n = gift.gift_points || 100;
+  const n = gift.gift_points || 250;
   const member = (typeof isMember !== 'undefined' && isMember);
   const txt = tf(member ? 'gift.note_member' : 'gift.note_guest', { n: n });
   return '<div class="qr-gift tap" onclick="openGiftPoints()">'
@@ -37282,7 +37282,7 @@ async function openGiftPoints(){
   const body = document.getElementById('giftpoints-body');
   if (!ov || !body) return;
   const gift = quizResult ? quizGiftOf(quizResult.code) : null;
-  const n = (gift && gift.gift_points) || 100;
+  const n = (gift && gift.gift_points) || 250;
   const member = (typeof isMember !== 'undefined' && isMember);
   track('gift_points_open', member ? 'member' : 'guest');
 
