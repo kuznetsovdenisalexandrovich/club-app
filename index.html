@@ -12051,7 +12051,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v521 · 08.11.2026 история дожимов';
+const APP_BUILD = 'v522 · 08.11.2026 история дожимов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -37051,8 +37051,7 @@ async function attachReferralFromStart(){
 var sellerTouch = null;   // var, не let: appStartParam зовут и выше по файлу, до этой строки
 function appStartParam(){
   if (window.__nativeMaterialTarget) return window.__nativeMaterialTarget;
-  if (window.__nurtureTarget) return window.__nurtureTarget;
-  const raw = appStartParamRaw();
+  const raw = window.__nurtureTarget || appStartParamRaw();
   if (/^namedfilm_v[0-9]{1,30}$/.test(raw)) return 'film';
   if (raw.indexOf('sb-') !== 0) return raw;
   const parts = raw.split('-');
