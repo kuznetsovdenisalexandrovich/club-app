@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v527 -->
+<!-- FILE_VERSION: index-v529 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -12095,7 +12095,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v528 · 09.11.2026 персональные акции';
+const APP_BUILD = 'v529 · 09.11.2026 ссылки в сториз';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12978,7 +12978,7 @@ function storyShow(){
   document.getElementById('story-kind').textContent = STORY_KIND_NAMES[s.kind] || '';
   document.getElementById('story-title').textContent = s.title || '';
   const cta = document.getElementById('story-cta');
-  if (s.cta_label && s.cta_target){ cta.textContent = s.cta_label; cta.style.display = ''; }
+  if (s.cta_label && storyActionTarget(s)){ cta.textContent = s.cta_label; cta.style.display = ''; }
   else cta.style.display = 'none';
   document.getElementById('story-bars').innerHTML = storiesFeed.map(function(x, i){
     return '<i><b style="width:' + (i < storyIdx ? 100 : 0) + '%"></b></i>';
@@ -13030,16 +13030,22 @@ function storyMark(s, done){
   track(done ? 'story_done' : 'story_view', String(s.id));
 }
 function storyDone(s){ storyMark(s, true); }
+function storyActionTarget(s){
+  const platform = typeof currentPlatform === 'function' ? currentPlatform() : 'tg';
+  return (platform === 'vk' ? s.cta_url_vk : s.cta_url_tg) || s.cta_target || '';
+}
 /* Кнопка действия: ключ диплинка аппа или `lecture:<slug>`. Неизвестное — просто закрываем */
 function storyCta(){
   const s = storyCurrent();
-  if (!s || !s.cta_target) return;
-  const target = s.cta_target;
-  storyDone(s);
+  if (!s || !storyActionTarget(s)) return;
+  const target = storyActionTarget(s);
+  if (!target) return;
   storyClose();
   track('story_cta', String(s.id));
   try {
+    if (/^https:\/\//i.test(target)){ const url=new URL(target); if(url.username || url.password)return; openUrl(url.href); return; }
     if (target.indexOf('lecture:') === 0 && typeof openLectureByKey === 'function'){ openLectureByKey(target.slice(8), ''); return; }
+    if (/^(l|la|li|dg|g|gs)_[a-z0-9_-]+$/i.test(target)){ runAppRoute(target); return; }
     const route = (typeof DEEPLINKS !== 'undefined') ? DEEPLINKS[target] : null;
     if (route && typeof route.go === 'function'){
       if (!route.guests && !isMember && typeof openPaywall === 'function'){ openPaywall(); return; }
@@ -19313,7 +19319,7 @@ function nbDoStep(key){
     /* v399: шаги старого чек-листа уровня 2 — теперь шаги знакомства ([stated]
        Denis 28.09). Механика та же: пуши сначала предлагают экран «Домой» и
        объясняют настройки браузера, внутри Телеграма — «Пропустить» */
-    case 'push':    enablePushNotifications(); break;
+    case 'push':    openNotificationsSection(); break;
     case 'denis':   openAskDenisPopup(); break;
     /* v395: лекция и аудио — один шаг. Ведём в библиотеку и показываем
        стрелкой, что занятие можно слушать */
@@ -32535,8 +32541,14 @@ async function init(){
   // может быть ещё не заполнен, и start_param потеряется
   async function openFromStartParam(){
     try {
+      // Personal access must not depend on marketing presence or attribution.
+      const accessStart = appStartParamRaw();
+      if (accessStart.indexOf('paid_') === 0){
+        await claimManualAccess(accessStart.slice(5));
+        return;
+      }
       if(!await resolveNurtureStart())return;
-      nurtureOfferPresence();
+      try { nurtureOfferPresence(); } catch(e){}
       /* ⚠️ УЧЁТ — САМЫМ ПЕРВЫМ ДЕЛОМ И ОДИН РАЗ НА ВСЕ ВИДЫ ССЫЛОК. Ниже идут
          восемь веток разбора, каждая со своим `return`; учёт внутри любой из
          них означал бы, что остальные семь молчат — ровно так и было до
@@ -37231,6 +37243,9 @@ function appStartParamRaw(){
   try {
     const p = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     if (p) return String(p);
+    const signed = window.Telegram?.WebApp?.initData;
+    const fallback = signed && new URLSearchParams(signed).get('start_param');
+    if (fallback) return String(fallback);
   } catch(e){}
   // Внутри MAX — свой мост `window.WebApp` с тем же именем поля
   try {
@@ -37259,6 +37274,10 @@ function appStartParamRaw(){
   try {
     const h = (location.hash || '').replace(/^#/, '');
     if (h.indexOf('=') >= 0){
+      const launchData = new URLSearchParams(h).get('tgWebAppData');
+      const signedStart = launchData && new URLSearchParams(launchData).get('start_param');
+      const directStart = new URLSearchParams(h).get('tgWebAppStartParam') || new URLSearchParams(h).get('startapp');
+      if (directStart || signedStart) return String(directStart || signedStart);
       const pairs = h.split('&');
       for (let i = 0; i < pairs.length; i++){
         const eq = pairs[i].indexOf('=');
