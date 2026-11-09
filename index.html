@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v513 -->
+<!-- FILE_VERSION: index-v527 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -12093,7 +12093,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v526 · 09.11.2026 кнопки открытия пака';
+const APP_BUILD = 'v527 · 09.11.2026 видео в справке';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -32771,6 +32771,7 @@ function openHelpDocs(){
 }
 
 function closeHelpDocs(){
+  helpDocsPauseVideos();
   helpDocsToggleSide(false);
   document.getElementById('hd-overlay').classList.remove('open');
 }
@@ -32805,6 +32806,14 @@ function helpDocsFindArticle(secKey, artKey){
 
 /* Узкий markdown: ## заголовок, - список, **жирный**, [текст](url), `код`.
    Экранирование обязательно — текст приходит с сервера */
+function helpDocsPauseVideos(except){
+  document.querySelectorAll('#hd-main video').forEach(v=>{if(v!==except)v.pause()});
+}
+function helpDocsVideoHtml(url){
+  try{if(new URL(url).protocol!=='https:')return '';}catch(e){return '';}
+  const safe=url.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
+  return '<video controls playsinline preload="none" onplay="helpDocsPauseVideos(this)" style="display:block;width:100%;max-height:70vh;object-fit:contain;background:#080910;border-radius:16px;margin:20px 0" src="'+safe+'">Видео недоступно в этом браузере.</video>';
+}
 function helpDocsRenderBody(src){
   const lines = (src || '').trim().split('\n');
   let html = '', inList = false, para = [];
@@ -32836,6 +32845,9 @@ function helpDocsRenderBody(src){
   function flushPara(){ if (para.length){ html += '<p>' + inline(para.join(' ').trim()) + '</p>'; para = []; } }
   for (const raw of lines){
     const line = raw.trim();
+    const video=line.match(/^!\[Видео\]\((https:\/\/[^\s<>]+)\)$/);
+    if(video){flushPara();if(inList){html+='</ul>';inList=false;}html+=helpDocsVideoHtml(video[1]);continue;}
+
     if (!line){ flushPara(); if (inList){ html += '</ul>'; inList = false; } continue; }
     if (line.startsWith('## ')){
       flushPara(); if (inList){ html += '</ul>'; inList = false; }
