@@ -3072,6 +3072,46 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 }
 
 
+/* v526: the decorated selector used to beat the fixed button height,
+   leaving a 17px text-only target. Match its specificity for both themes. */
+#pr-stage .pr-cta-inline,
+#pr-stage.pr-hasPlate .pr-cta-inline{
+  display:flex!important;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  height:auto!important;
+  min-height:56px!important;
+  aspect-ratio:auto!important;
+  padding:12px 24px!important;
+  font-size:16px!important;
+  line-height:1.35!important;
+  text-align:center;
+  touch-action:manipulation;
+}
+#pr-stage .pr-cta,
+#pr-stage.pr-hasPlate .pr-cta-inline{
+  border:1px solid rgba(224,194,133,.45)!important;
+  border-radius:14px!important;
+  background-color:rgba(12,14,25,.84)!important;
+}
+#pr-stage[data-pr-theme="light"] .pr-cta,
+#pr-stage.pr-hasPlate[data-pr-theme="light"] .pr-cta-inline{
+  border-color:rgba(113,82,40,.40)!important;
+  background-color:rgba(255,247,229,.9)!important;
+  color:#4a3720!important;
+  text-shadow:none!important;
+}
+#pr-stage #pr-actions{
+  display:grid;
+  gap:8px;
+}
+#pr-stage .pr-cta:focus-visible,
+#pr-stage .pr-close:focus-visible{
+  outline:2px solid currentColor;
+  outline-offset:3px;
+}
+
 /* ── ЗАСТАВКА ЗАГРУЗКИ ЭКРАНА ПАКА (14.08.2026) ────────────────────────────
    Появляется вместе с экраном и гаснет, когда доехали ключевые картинки
    набора. ⚠️ НЕ КРУТИЛКА, А БУДУЩАЯ СТОПКА: три силуэта стоят там же и под
@@ -12053,7 +12093,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v525 · 09.11.2026 карточки и награды';
+const APP_BUILD = 'v526 · 09.11.2026 кнопки открытия пака';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
