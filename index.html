@@ -5748,6 +5748,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .restricted-card h1{font-size:26px;line-height:1.2;margin:0 0 18px}
 .restricted-card p{font-size:16px;line-height:1.6;margin:0 0 24px}
 .restricted-card button{min-height:46px;width:100%;border-radius:12px}
+
+.nurture-offer-modal{width:min(92vw,600px);height:78dvh;max-height:calc(100dvh - 40px - env(safe-area-inset-top));box-sizing:border-box;margin:auto;padding:0;border:1px solid var(--border,#888);border-radius:24px;background:var(--bg,#f1efeb);color:var(--text,#292729);box-shadow:0 16px 70px #0005}.nurture-offer-modal::backdrop{background:#0008;backdrop-filter:blur(6px)}.nurture-offer-inner{display:flex;flex-direction:column;gap:18px;padding:24px;min-height:100%;box-sizing:border-box;overflow-wrap:anywhere}.nurture-offer-inner h2,.nurture-offer-inner p{margin:0}.nurture-offer-inner button{min-height:46px;height:auto;white-space:normal;flex:0 0 auto;padding:12px 18px}.nurture-offer-terms{padding:16px;border:1px solid var(--border,#888);border-radius:12px;line-height:1.5}.nurture-offer-consent{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.5}.nurture-offer-consent input{flex:0 0 20px;width:20px;height:20px;margin-top:2px}.nurture-offer-consent[hidden]{display:none}.nurture-offer-clock{font-variant-numeric:tabular-nums;font-weight:700}.nurture-offer-modal button:focus-visible,.nurture-offer-modal input:focus-visible{outline:2px solid var(--text);outline-offset:3px}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -12093,7 +12095,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v527 · 09.11.2026 видео в справке';
+const APP_BUILD = 'v528 · 09.11.2026 персональные акции';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13289,6 +13291,8 @@ async function laterConfirm(){
 
 // Per-message attribution stays in this launch; ordinary entries never inherit it.
 async function resolveNurtureStart(){
+ const offerStart=/^no_([a-f0-9]{32})$/.exec(appStartParamRaw());
+ if(offerStart){window.__nurtureToken=offerStart[1];window.__nurtureTarget='about';if(window.__nurtureOfferStart!==offerStart[1]){window.__nurtureOfferStart=offerStart[1];try{const d=await nurtureOfferSignal('show');if(!d?.offer)showToast(t('nurture.expired'));}catch(e){showToast(e.message)}}return true;}
  const raw=appStartParamRaw(),m=/^nt_([a-f0-9]{32})_([0-2])$/.exec(raw);
  if(!m||window.__nurtureResolved===raw)return true;
  if(window.__nurtureResolving)return window.__nurtureResolving;
@@ -13296,7 +13300,7 @@ async function resolveNurtureStart(){
   try{
    const d=await apiRequest(`${API_URL}/nurture/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:m[1],index:Number(m[2]),tg_init:ivIdent().tg_init,vk_query:isInsideVk()?vkLaunchQuery():''})});
    if(!/^[A-Za-z0-9_:-]{1,120}$/.test(d.target)||d.target.startsWith('nt_'))throw new Error('route');
-   window.__nurtureResolved=raw;window.__nurtureTarget=d.target;window.__nurtureToken=d.tracked?d.token:'';return true;
+   window.__nurtureResolved=raw;window.__nurtureTarget=d.target;window.__nurtureToken=d.tracked?d.token:'';nurtureOfferSignal('presence').catch(()=>{});return true;
   }catch(e){showToast('Не удалось открыть материал. Попробуй ещё раз по кнопке в сообщении.');return false;}
   finally{window.__nurtureResolving=null;}
  })();return window.__nurtureResolving;
@@ -13306,7 +13310,7 @@ function nurtureEventToken(event,ref){
  if(!token)return '';
  if(/(?:pay_click|window_buy|offer_pay|stop_buy|wall_pay)/.test(event))return token;
  if(target==='film'&&(String(ref)==='funnel'||event.startsWith('funnel_film_')))return token;
- const expected=target.replace(/^la?_/,'').replace(/^magazine_/, '');
+ const expected=target.replace(/^l[ai]?_/,'').replace(/^magazine_/, '');
  return ref&&String(ref)===expected?token:'';
 }
 function nurtureProgress(event,ref,value=0){
@@ -22762,6 +22766,87 @@ Object.assign(APP_TEXTS, {
 });
 Object.assign(APP_TEXTS, {"lead.full": {"c": "Материалы", "l": "Получить полный доступ", "w": "Материал", "i": false, "t": "Получить полный доступ"}, "lead.pdf": {"c": "Материалы", "l": "Получить PDF-выжимку", "w": "Материал", "i": false, "t": "Получить PDF-выжимку"}, "lead.film": {"c": "Материалы", "l": "Посмотреть фильм о клубе", "w": "Материал", "i": false, "t": "Посмотреть фильм о клубе"}, "lead.subscribe": {"c": "Материалы", "l": "Подписаться на бесплатный канал", "w": "Материал", "i": false, "t": "Подписаться на бесплатный канал"}, "lead.check": {"c": "Материалы", "l": "Проверить подписку и получить PDF", "w": "Материал", "i": false, "t": "Проверить подписку и получить PDF"}, "lead.gate": {"c": "Материалы", "l": "PDF-выжимка — за подписку на бесплатный канал. После подписки вернись сюда и нажми «Проверить подписку».", "w": "Материал", "i": false, "t": "PDF-выжимка — за подписку на бесплатный канал. После подписки вернись сюда и нажми «Проверить подписку»."}, "lead.checking": {"c": "Материалы", "l": "Проверяем подписку…", "w": "Материал", "i": false, "t": "Проверяем подписку…"}, "lead.download": {"c": "Материалы", "l": "Скачать PDF-выжимку", "w": "Материал", "i": false, "t": "Скачать PDF-выжимку"}, "lead.pdfError": {"c": "Материалы", "l": "Не получилось проверить подписку или собрать PDF. Попробуй ещё раз.", "w": "Материал", "i": false, "t": "Не получилось проверить подписку или собрать PDF. Попробуй ещё раз."}, "lead.end": {"c": "Материалы", "l": "Бесплатная часть закончилась. Продолжение — в клубе. Можно получить полный доступ или сначала посмотреть фильм о клубе.", "w": "Материал", "i": false, "t": "Бесплатная часть закончилась. Продолжение — в клубе. Можно получить полный доступ или сначала посмотреть фильм о клубе."}, "lead.allow": {"c": "Материалы", "l": "Чтобы получить материал и сохранить возможность просмотра в боте, запусти бота по кнопке ниже.", "w": "Материал", "i": false, "t": "Чтобы получить материал и сохранить возможность просмотра в боте, запусти бота по кнопке ниже."}, "lead.start": {"c": "Материалы", "l": "Запустить бота и получить лекцию", "w": "Материал", "i": false, "t": "Запустить бота и получить лекцию"}});
 Object.assign(APP_TEXTS, {'lead.notSubscribed':{c:'Материалы',l:'Нет подписки',w:'Материал',i:false,t:'Подписка пока не найдена. Подпишись на канал и повтори проверку.'}});
+// Personal offers use server deadlines and actual player positions, never clicks or seeks.
+Object.assign(APP_TEXTS, {
+ 'nurture.full':{c:'Акции',l:'Полный доступ',w:'Материал',i:false,t:'Разблокировать полную версию'},
+ 'nurture.close':{c:'Акции',l:'Закрыть',w:'Акция',i:false,t:'Закрыть'},
+ 'nurture.accept':{c:'Акции',l:'Согласие',w:'Акция',i:false,t:'Подтверждаю условия подписки и автоматического продления'},
+ 'nurture.expired':{c:'Акции',l:'Срок истёк',w:'Акция',i:false,t:'Время акции истекло'},
+ 'nurture.remaining':{c:'Акции',l:'Осталось',w:'Акция',i:false,t:'До конца акции: '},
+ 'nurture.invite':{c:'Акции',l:'Пригласить',w:'Акция',i:false,t:'Пригласить друга'},
+ 'nurture.wait':{c:'Акции',l:'Ждём оплату',w:'Акция',i:false,t:'После первой оплаты приглашённого участника здесь откроется подписка на 30 дней за 1 ₽.'},
+ 'nurture.check':{c:'Акции',l:'Проверить',w:'Акция',i:false,t:'Проверить оплату друга'},
+ 'nurture.error':{c:'Акции',l:'Ошибка',w:'Акция',i:false,t:'Не удалось загрузить предложение. Попробуй ещё раз.'}
+});
+const nurtureOfferState={session:crypto.randomUUID(),last:new Map(),enabled:false,policy:null,offer:null,dialog:null,busy:false};
+async function nurtureOfferSignal(event='presence',kind='audio',ref='',position=0){
+ const token=window.__nurtureToken;if(!token)return null;
+ const ident=ivIdent();
+ const r=await fetch(`${API_URL}/nurture/offers/signal`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,event,kind,ref,position:Number(position)||0,session:nurtureOfferState.session,tg_init:ident.tg_init,vk_query:ident.vk_query}),keepalive:true,signal:AbortSignal.timeout(12000)});
+ const d=await r.json();if(!r.ok)throw new Error(d.detail||t('nurture.error'));
+ if(window.__nurtureToken!==token)return null;
+ nurtureOfferState.enabled=!!d.enabled;nurtureOfferState.policy=d.policy||null;nurtureOfferState.offer=d.offer||null;
+ nurtureOfferCtas();if(d.show&&d.offer)nurtureOfferModal(d.offer);return d;
+}
+function nurtureOfferSample(kind,ref,position,playing=true){
+ if(!window.__nurtureToken||!ref||!Number.isFinite(Number(position)))return;
+ if(kind==='video'&&document.hidden)playing=false;
+ const key=kind+':'+ref,at=performance.now(),last=nurtureOfferState.last.get(key);
+ if(last&&last.playing===playing&&at-last.at<10000)return;
+ nurtureOfferState.last.set(key,{at,playing});
+ nurtureOfferSignal(playing?'playing':'pause',kind,ref,position).catch(()=>{});
+}
+function nurtureOfferCollapsed(){
+ if(window.__nurtureToken&&!document.hidden)nurtureOfferSignal('collapse').catch(()=>{});
+}
+function nurtureOfferCtas(){
+ for(const id of ['fp-sheet','insights-modal']){
+  const holder=document.getElementById(id);if(!holder)continue;
+  let b=holder.querySelector('[data-nurture-unlock]');
+  if(!b&&nurtureOfferState.enabled){b=document.createElement('button');b.type='button';b.className='lec-link-btn access-btn';b.dataset.nurtureUnlock='1';b.style.cssText='display:block;width:100%;min-height:46px;white-space:normal;margin:12px 0;position:relative;z-index:2';b.onclick=async()=>{try{const d=await nurtureOfferSignal('show');if(!d?.show)openAccessPage();}catch(e){showToast(e.message)}};const before=holder.querySelector('#fp-preview-note');if(before)holder.insertBefore(b,before);else holder.append(b);}
+  if(b){b.textContent=t('nurture.full');b.hidden=!nurtureOfferState.enabled;}
+ }
+}
+function nurtureOfferModal(o){
+ if(nurtureOfferState.dialog){if(nurtureOfferState.dialog.dataset.offer===o.id)return;nurtureOfferState.dialog.close();nurtureOfferState.dialog.remove();}
+ const box=document.createElement('dialog');box.dataset.offer=o.id;box.className='nurture-offer-modal';
+ const close=document.createElement('button');close.className='lec-link-btn';close.textContent=t('nurture.close');close.style.alignSelf='flex-end';
+ const title=document.createElement('h2');title.textContent=o.title;
+ const body=document.createElement('p');body.textContent=o.text;body.style.whiteSpace='pre-wrap';
+ const clock=document.createElement('p');clock.className='nurture-offer-clock';clock.setAttribute('role','timer');
+ const terms=document.createElement('p');terms.textContent=o.terms;terms.className='nurture-offer-terms';
+ const consent=document.createElement('label');consent.className='nurture-offer-consent';const checkbox=document.createElement('input');checkbox.type='checkbox';consent.append(checkbox,document.createTextNode(t('nurture.accept')));
+ const status=document.createElement('p');status.setAttribute('role','status');
+ const buy=document.createElement('button');buy.className='lec-link-btn access-btn';buy.textContent=o.eligible?o.button:t('nurture.invite');buy.disabled=o.eligible;
+ const check=document.createElement('button');check.className='lec-link-btn';check.textContent=t('nurture.check');check.hidden=o.eligible;
+ if(!o.eligible){consent.hidden=true;status.textContent=t('nurture.wait');}
+ const content=document.createElement('div');content.className='nurture-offer-inner';content.append(close,title,body,clock,terms,consent,status,buy,check);box.append(content);document.body.append(box);nurtureOfferState.dialog=box;
+ const end=new Date(o.expires_at).getTime(),offset=new Date(o.server_now).getTime()-Date.now();let sending=false;
+ const remaining=()=>Math.max(0,Math.ceil((end-Date.now()-offset)/1000));
+ const redraw=()=>{const left=remaining();clock.textContent=left?t('nurture.remaining')+Math.floor(left/60)+':'+String(left%60).padStart(2,'0'):t('nurture.expired');buy.disabled=sending||!left||o.eligible&&!checkbox.checked;check.disabled=sending||!left;};
+ checkbox.onchange=redraw;
+ const timer=setInterval(redraw,1000);redraw();
+ const dismiss=()=>{clearInterval(timer);box.close();box.remove();if(nurtureOfferState.dialog===box)nurtureOfferState.dialog=null;nurtureOfferSignal('dismiss').catch(()=>{});};
+ close.onclick=dismiss;box.addEventListener('cancel',e=>{e.preventDefault();dismiss()});box.addEventListener('close',()=>clearInterval(timer));
+ check.onclick=async()=>{check.disabled=true;try{const d=await nurtureOfferSignal('presence');if(d?.offer?.eligible){box.close();box.remove();nurtureOfferState.dialog=null;nurtureOfferModal(d.offer);}else status.textContent=t('nurture.wait');}catch(e){status.textContent=e.message}finally{check.disabled=false}};
+ buy.onclick=async()=>{
+  if(!remaining()||sending)return;
+  if(!o.eligible){dismiss();openInvitePopup();return;}
+  if(!checkbox.checked)return;sending=true;redraw();
+  try{const ident=ivIdent();const r=await fetch(`${API_URL}/nurture/offers/checkout`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:window.__nurtureToken,offer_id:o.id,accept_terms:true,tg_init:ident.tg_init,vk_query:ident.vk_query})});const d=await r.json();if(!r.ok)throw new Error(d.detail||t('nurture.error'));if(!/^https:\/\//.test(d.payment_url||''))throw new Error(t('nurture.error'));openUrl(d.payment_url);}catch(e){status.textContent=e.message}finally{sending=false;redraw();}
+ };
+ box.showModal();
+}
+function nurtureOfferPresence(){if(document.hidden)return;if(window.__nurtureToken){nurtureOfferSignal('presence').catch(()=>{});return;}const a=ivIdent();if(a.tg_init||a.vk_query)fetch(`${API_URL}/nurture/offers/presence`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tg_init:a.tg_init,vk_query:a.vk_query}),keepalive:true}).catch(()=>{});}
+setInterval(nurtureOfferPresence,15000);
+document.addEventListener('visibilitychange',nurtureOfferPresence);
+function nurtureOfferWatchKinescope(player,ref){
+ if(!window.__nurtureToken||!player.Events)return;let playing=false;
+ if(player.Events.Playing)player.on(player.Events.Playing,()=>{playing=true;Promise.resolve(player.getCurrentTime()).then(p=>nurtureOfferSample('video',ref,p,true)).catch(()=>{});});
+ if(player.Events.Pause)player.on(player.Events.Pause,()=>{playing=false;Promise.resolve(player.getCurrentTime()).then(p=>nurtureOfferSample('video',ref,p,false)).catch(()=>{});});
+ if(player.Events.TimeUpdate)player.on(player.Events.TimeUpdate,e=>nurtureOfferSample('video',ref,Number(e?.data?.currentTime)||0,playing));
+}
+
 let leadMaterialPlayer=null;
 let leadMaterialClose=null;
 // Native links resolve to a whitelisted existing route. Access stays in its original handler.
@@ -22775,14 +22860,14 @@ async function openNativeMaterial(code){
   const response=await fetch('https://bot.youselllikeagod-magazine.ru/content/native/'+encodeURIComponent(code),{signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw new Error('material');
   const data=await response.json(),target=data.target;
-  if(!/^(?:film|about|games|g_[A-Za-z0-9_-]+|bi_[A-Za-z0-9_-]+__[A-Za-z0-9_-]+|la?_[A-Za-z0-9_-]+)$/.test(target)||data.source_code!==code)throw new Error('route');
+  if(!/^(?:film|about|games|g_[A-Za-z0-9_-]+|bi_[A-Za-z0-9_-]+__[A-Za-z0-9_-]+|l[ai]?_[A-Za-z0-9_-]+)$/.test(target)||data.source_code!==code)throw new Error('route');
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}
   sendAttributionTouch(code);
   window.__nativeMaterialTarget=target;
   if(window.__nurtureToken){window.__nurtureContentTarget=target;nurtureProgress('material_open',target);}
   trackRouteOpen();
   if(target.indexOf('bi_')===0&&bonusRouteFromUrl())return;
-  if(/^la?_/.test(target)&&contentFromUrl())return;
+  if(/^l[ai]?_/.test(target)&&contentFromUrl())return;
   if(target.indexOf('g_')===0&&gameFromUrl())return;
   if(routeFromUrl())return;
   throw new Error('route');
@@ -22810,7 +22895,7 @@ async function openLeadMaterial(code){
  const startUrl=platform==='vk'?'https://vk.ru/app54827669#'+encodeURIComponent(code):'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code);
  let signalChain=Promise.resolve();
  const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event,platform}),keepalive:true,signal:AbortSignal.timeout(15000)}).catch(()=>null):Promise.resolve(null));
- leadMaterialClose=()=>{if(closed)return;closed=true;signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
+ leadMaterialClose=()=>{if(closed)return;closed=true;nurtureOfferCollapsed();signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
  close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
  const button=(label,action)=>{const b=document.createElement('button');b.className='lec-link-btn';b.textContent=label;b.style.cssText='white-space:normal;min-height:46px;width:100%;box-sizing:border-box';b.onclick=action;return b};
  const anchor=(label,url)=>{const a=document.createElement('a');a.className='lec-link-btn';a.textContent=label;a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;min-height:46px;box-sizing:border-box;text-decoration:none';return a};
@@ -22841,7 +22926,7 @@ async function openLeadMaterial(code){
    const check=button(t('lead.check'),async()=>{
     check.disabled=true;status.textContent=t('lead.checking');
     try{
-     const r=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code)+'/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({launch,platform}),signal:AbortSignal.timeout(25000)});
+     const r=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code)+'/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({launch,platform,nurture_token:window.__nurtureToken||''}),signal:AbortSignal.timeout(25000)});
      if(!r.ok)throw new Error('pdf');const result=await r.json();if(closed)return;
      status.replaceChildren();
      if(result.subscribed){const u=new URL(result.url);if(u.origin!=='https://bot.youselllikeagod-magazine.ru'||!u.pathname.startsWith('/content/pdf/'))throw new Error('url');status.append(anchor(t('lead.download'),result.url))}
@@ -22859,7 +22944,8 @@ async function openLeadMaterial(code){
     const u=new URL(data.video_url);if(u.origin!=='https://club-audio-725136.s3.ru-7.storage.selcloud.ru'||!/^\/lead-magnets\/[a-zA-Z0-9_-]+\.mp4$/.test(u.pathname))throw new Error('video');
     const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.style.cssText='width:100%;height:100%;background:#15151a;border-radius:12px';
     video.addEventListener('loadedmetadata',()=>{signal('ready');nurtureProgress('material_open',code)});
-    let nurtureLast=0;video.addEventListener('timeupdate',()=>{if(!video.paused&&!document.hidden&&video.currentTime>=nurtureLast+15){nurtureLast=video.currentTime;nurtureProgress('viewing',code,nurtureLast)}});
+    video.addEventListener('playing',()=>nurtureOfferSample('video',data.id,video.currentTime,true));video.addEventListener('pause',()=>nurtureOfferSample('video',data.id,video.currentTime,false));
+    let nurtureLast=0;video.addEventListener('timeupdate',()=>{nurtureOfferSample('video',data.id,video.currentTime,!video.paused);if(!video.paused&&!document.hidden&&video.currentTime>=nurtureLast+15){nurtureLast=video.currentTime;nurtureProgress('viewing',code,nurtureLast)}});
     video.addEventListener('playing',()=>signal('playing'));
     video.addEventListener('error',()=>{note.textContent=t('lead.error');signal('error')});
     video.addEventListener('ended',()=>{nurtureProgress('completed',code,video.duration||0);note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
@@ -22868,7 +22954,7 @@ async function openLeadMaterial(code){
    }
    const factory=await kinescopeApi();if(closed)return;
    player=await factory.create(box.id,{url:'https://kinescope.io/'+data.kinescope_id,size:{width:'100%',height:'100%'},behavior:{autoPlay:false,preload:'metadata'}});
-   if(closed){player.destroy();return}leadMaterialPlayer=player;signal('ready');
+   if(closed){player.destroy();return}leadMaterialPlayer=player;nurtureOfferWatchKinescope(player,data.id);signal('ready');
    if(player.Events.Playing)player.on(player.Events.Playing,()=>signal('playing'));
    if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
    if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');signal('error')});
@@ -22877,6 +22963,7 @@ async function openLeadMaterial(code){
 }
 
 const PARAM_LINKS = {
+  'no': {param:'токен предложения',label:'Персональная акция',guests:true},
   'nt': {param:'токен сообщения и кнопка',label:'Материал из дожимного сообщения',guests:true},
   'quiz':    { param: '',            label: 'Тест «кто ты из боженек»',       guests: true  },
   'bonus':   { param: 'ключ бонуса', label: 'Бонус или мастер-класс',          guests: true  },
@@ -26368,6 +26455,7 @@ function _renderPdfBtn(slug) {
 }
 
 function closeInsightsModal(){
+  nurtureOfferCollapsed();
   document.getElementById('insights-modal-overlay').classList.remove('open');
 }
 
@@ -26394,7 +26482,7 @@ async function downloadPdf(slug, btn){
   btn.disabled = true;
   try {
     // Используем fetch напрямую чтобы поймать статус-код
-    const url = `${API_URL}/lectures/${slug}/pdf?telegram_id=${telegramId}` + (viaLink ? '&deliver=link' : '');
+    const url = `${API_URL}/lectures/${slug}/pdf?telegram_id=${telegramId}` + (viaLink ? '&deliver=link' : '') + (window.__nurtureToken?'&nt='+encodeURIComponent(window.__nurtureToken):'');
     const r = await fetch(url);
     const data = await r.json().catch(() => ({}));
     if (r.status === 403) {
@@ -27293,6 +27381,7 @@ async function openLiveEntry(){
 }
 
 function closeLiveEntryPopup(){
+  nurtureOfferCollapsed();
   document.getElementById('live-entry-overlay').classList.remove('open');
   /* v426: плеер записи для гостя (IFrame API) — снимаем целиком, иначе звук останется */
   try { if (liveGuestPlayer && liveGuestPlayer.destroy) liveGuestPlayer.destroy(); } catch(e){}
@@ -27435,6 +27524,7 @@ async function openLiveRecordGuest(d){
       url: d.play_url, size: { width: '100%', height: '100%' },
       behavior: { autoPlay: false, preload: 'metadata' } });
     liveGuestPlayer = player;
+    nurtureOfferWatchKinescope(player,'live');
     { const ld = document.getElementById('live-record-api-inner-ld'); if (ld && ld._done) ld._done(); }
     if (lim > 0){
       /* v455: [stated] Denis 09.10 — перемотал гостем на 50-ю минуту: видео
@@ -32446,6 +32536,7 @@ async function init(){
   async function openFromStartParam(){
     try {
       if(!await resolveNurtureStart())return;
+      nurtureOfferPresence();
       /* ⚠️ УЧЁТ — САМЫМ ПЕРВЫМ ДЕЛОМ И ОДИН РАЗ НА ВСЕ ВИДЫ ССЫЛОК. Ниже идут
          восемь веток разбора, каждая со своим `return`; учёт внутри любой из
          них означал бы, что остальные семь молчат — ровно так и было до
@@ -37732,7 +37823,7 @@ function plPreviewPay(){
   try { track('player_preview_pay', lec ? lec.slug : ''); } catch(e){}
   /* v457: человек сам нажал «к оплате» — окно не нужно, место запоминаем и сразу к оплате */
   if (lec) rsSave({ k: 'audio', ref: lec.slug, pos: Math.floor((plAudio && plAudio.currentTime) || 0), title: lec.title || '' });
-  openPaywall();
+  if(nurtureOfferState.enabled){nurtureOfferSignal('show').then(d=>{if(!d?.show)openPaywall()}).catch(()=>openPaywall());}else openPaywall();
 }
 
 function plRenderPreviewNote(){
@@ -37892,6 +37983,7 @@ function plCycleSpeed(){
 }
 
 function plClose(){
+  nurtureOfferCollapsed();
   if (plAudio){
     var lec = plQueue[plIndex];
     if (lec) plSavePosition(lec.slug, plAudio.currentTime);
@@ -37925,6 +38017,8 @@ function plShareCurrent(){
   if (lec && lec.slug && typeof shareLecture === 'function') shareLecture(lec.slug);
 }
 function plCloseFull(){
+  const wasOpen=document.getElementById('fp-overlay')?.classList.contains('open');
+  if(wasOpen)nurtureOfferCollapsed();
   var ov = plEl('fp-overlay');
   if (ov) ov.classList.remove('open');
   if (typeof renderLevelCard === 'function') renderLevelCard();   // вернуть бар
@@ -38110,6 +38204,7 @@ function plInit(){
   let nurtureAudioLast={};
   plAudio.addEventListener('timeupdate', function(){
     const item=plQueue[plIndex];
+    if(item)nurtureOfferSample('audio',item.slug,plAudio.currentTime,!plAudio.paused&&!plAudio.seeking);
     if(item&&!plAudio.paused&&!document.hidden&&nurtureEventToken('lecture_view',item.slug)&&plAudio.currentTime>=(nurtureAudioLast[item.slug]||0)+15){nurtureAudioLast[item.slug]=plAudio.currentTime;nurtureProgress('viewing',item.slug,plAudio.currentTime);}
     var cur = plFmt(plAudio.currentTime);
     var pct = (plAudio.duration ? plAudio.currentTime / plAudio.duration * 100 : 0) + '%';
@@ -38127,9 +38222,10 @@ function plInit(){
     if (a) a.style.width = pct;
     if (b) b.style.width = pct;
   });
-  plAudio.addEventListener('play',  function(){ plSetPlayIcon(true); });
+  plAudio.addEventListener('play',  function(){ plSetPlayIcon(true);const item=plQueue[plIndex];if(item)nurtureOfferSample('audio',item.slug,plAudio.currentTime,true); });
   plAudio.addEventListener('playing', function(){ plSetPlayIcon(true); });   // v395: звук пошёл — значит «пауза»
   plAudio.addEventListener('pause', function(){
+    const item=plQueue[plIndex];if(item)nurtureOfferSample('audio',item.slug,plAudio.currentTime,false);
     plSetPlayIcon(false);
     var lec = plQueue[plIndex];
     if (lec) plSavePosition(lec.slug, plAudio.currentTime);
