@@ -12146,7 +12146,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v531 · 11.11.2026 гостевой вход и оплата';
+const APP_BUILD = 'v532 · 11.11.2026 гостевой вход и оплата';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -32425,6 +32425,15 @@ async function proceedToWebLogin(){
   } catch (e) {}
   // Настройки нужны ДО показа экрана: от них зависит, спрашивать код или пускать по номеру
   await loadAppSettings();
+
+  // An explicit purchase link owns this first screen. The asynchronous web
+  // login check must not cover its offer with the default film afterwards.
+  // Suppress only this entry; a later explicit login still opens its form.
+  if (!funnelSuppressed && /^(promo_|pay_)/.test(appStartParam())){
+    funnelSuppressed = true;
+    enterDemoMode();
+    return;
+  }
 
   /* ⚠️ ЧЕЛОВЕКА НЕ УЗНАЛИ — ЗНАЧИТ ЭТО ПЕРВОЕ КАСАНИЕ, И ЕМУ ПОЛОЖЕНА ВОРОНКА,
      А НЕ ФОРМА ВХОДА (14.08.2026). [stated] Denis: приложение при первом
