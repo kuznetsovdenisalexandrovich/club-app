@@ -11376,7 +11376,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 </div>
 
 <script src="player-diagnostics.js?v=518"></script>
-<script src="film-player.js?v=519"></script>
+<script src="film-player.js?v=531"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -11652,7 +11652,7 @@ function clubPassUse(id){
         if (owned && telegramId){
           if (clubPassId !== String(telegramId)) clubPassUse(telegramId);
           if (clubPass && Number(clubPass.split('.')[1]) <= Date.now()/1000+60) clubPass='';
-          if (!clubPass && !new URL(input,location.href).pathname.startsWith('/auth/')){
+          if (!clubPass && !/^\/(?:auth\/|media\/(?:film|onboarding)(?:$|\/)|settings$|app-texts$)/.test(new URL(input,location.href).pathname)){
             if (!clubPassPending) clubPassPending = clubPassEnsure().finally(()=>{clubPassPending=null;});
             await clubPassPending;
           }
@@ -11743,6 +11743,51 @@ function createRFParallelTransport(config){
     const seq=Number(response.headers.get('x-rf-own-seq'));
     if(index===1 && Number.isSafeInteger(seq)&&seq>=0){returnBarrier=Math.max(returnBarrier,seq);persist();}
   }
+  // Race only catalogue/bootstrap reads. Writes keep the serial idempotent path.
+  function fastRead(path,method){
+    return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding))(?:\?|$)/.test(path));
+  }
+  async function hedgedRead(path,options,headers){
+    const origin=active,target=1-origin;
+    const controller=new AbortController(),parent=options.signal;
+    if(parent&&parent.aborted)throw new DOMException('Aborted','AbortError');
+    let timer,deadline,finished=false,otherStarted=false,completed=0,lastResponse,lastError;
+    return await new Promise((resolve,reject)=>{
+      const finish=(response,error,index)=>{
+        if(finished)return;finished=true;clearTimeout(timer);clearTimeout(deadline);
+        if(parent)parent.removeEventListener('abort',abort);controller.abort();
+        if(response){remember(response,index);if(![425,502,503,504].includes(response.status)&&active!==index){active=index;streak=0;persist();if(config.onSwitch)config.onSwitch(active);}resolve(response);}
+        else reject(error||new Error('Both API nodes unavailable'));
+      };
+      const abort=()=>finish(null,new DOMException('Aborted','AbortError'));
+      if(parent)parent.addEventListener('abort',abort,{once:true});
+      const fail=()=>{if(++completed===2)finish(lastResponse,lastError,lastResponse?lastResponse.__rfIndex:origin);};
+      const send=async index=>{
+        try{
+          const h=new Headers(headers);
+          if(index===0&&returnBarrier)h.set('x-rf-min-timeweb',String(returnBarrier));else h.delete('x-rf-min-timeweb');
+          const raw=await fetcher(endpoints[index]+path,{...options,headers:h,redirect:'error',signal:controller.signal});
+          const bytes=await raw.arrayBuffer();
+          const r=new Response([204,205].includes(raw.status)||(options.method||'GET')==='HEAD'?null:bytes,{status:raw.status,statusText:raw.statusText,headers:raw.headers});
+          Object.defineProperty(r,'url',{value:raw.url});
+          if(finished)return;
+          if(![425,502,503,504].includes(r.status))return finish(r,null,index);
+          lastResponse=r;lastResponse.__rfIndex=index;
+        }catch(e){lastError=e;}
+        if(!finished){fail();startOther();}
+      };
+      const startOther=async()=>{
+        if(otherStarted||finished)return;otherStarted=true;
+        const ready=await readiness(target);
+        if(finished)return;
+        if(!ready||(target===0&&ready.peer_seq<returnBarrier)){fail();return;}
+        send(target);
+      };
+      deadline=setTimeout(abort,config.readTimeoutMs||7000);
+      timer=setTimeout(startOther,config.hedgeMs||900);
+      send(origin);
+    });
+  }
   async function request(input,options={}){
     if(input instanceof URL)input=input.href;
     if(typeof Request!=='undefined' && input instanceof Request){
@@ -11768,6 +11813,7 @@ function createRFParallelTransport(config){
     const retry=true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
+    if(fastRead(path,method))return hedgedRead(path,options,headers);
     const original=active;
 
     let response,error;
@@ -11782,7 +11828,11 @@ function createRFParallelTransport(config){
     if(![425,502,503,504].includes(next.status)){active=target;streak=0;persist();if(config.onSwitch)config.onSwitch(active);}
     return next;
   }
+  let returning=false;
   async function considerReturn(){
+    if(returning)return false;
+    returning=true;
+    try{
     if(active!==1)return false;
     const reserve=await readiness(1);
     if(reserve){returnBarrier=Math.max(returnBarrier,reserve.own_seq);persist();}
@@ -11790,6 +11840,7 @@ function createRFParallelTransport(config){
     if(!primary||primary.peer_seq<returnBarrier){streak=0;return false;}
     if(++streak<3)return false;
     active=0;streak=0;persist();if(config.onSwitch)config.onSwitch(active);return true;
+    }finally{returning=false;}
   }
   return {request,considerReturn,state:()=>({active:['selectel','timeweb'][active],returnBarrier})};
 }
@@ -11797,7 +11848,7 @@ if(typeof module==='object'&&module.exports)module.exports={createRFParallelTran
 else root.createRFParallelTransport=createRFParallelTransport;
 })(typeof globalThis==='object'?globalThis:this);
 
-window.__rfTransport=createRFParallelTransport({endpoints:["https://selectel-api.youselllikeagod-magazine.ru", "https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net"],aliases:["https://api.youselllikeagod-magazine.ru", "https://reserve-api.youselllikeagod-magazine.ru", "https://club-backend-production-fc7f.up.railway.app"],fetch:window.fetch.bind(window),storage:(()=>{try{return localStorage;}catch(e){return null;}})(),onSwitch:index=>{document.body.classList.toggle('fo-on',index===1);const b=document.getElementById('fo-bar');if(b){b.classList.remove('fo-back');b.onclick=null;b.textContent=index===1?'Работаем на запасном сервере':'Основной сервер восстановлен';}}});
+window.__rfTransport=createRFParallelTransport({endpoints:["https://selectel-api.youselllikeagod-magazine.ru", "https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net"],aliases:["https://api.youselllikeagod-magazine.ru", "https://reserve-api.youselllikeagod-magazine.ru", "https://club-backend-production-fc7f.up.railway.app"],fetch:window.fetch.bind(window),storage:(()=>{try{return localStorage;}catch(e){return null;}})(),onSwitch:index=>{document.body.classList.remove('fo-on');}});
 setInterval(()=>window.__rfTransport.considerReturn().catch(()=>{}),5000);
 
 const FO = { checking: false, okStreak: 0, timer: null, back: false };
@@ -12095,7 +12146,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v530 · 10.11.2026 запуск из дожимов';
+const APP_BUILD = 'v531 · 11.11.2026 гостевой вход и оплата';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17180,8 +17231,8 @@ const APP_TEXTS = {
     c:'Оплата', l:'Промо-акция: закончилась или выключена', w:'Окно промо-акции', i:false,
     t:'Эта акция уже закончилась. Вступить в клуб можно на обычных условиях.' },
   'promo.c.used': {
-    c:'Оплата', l:'Промо-акция: месяц за 1 ₽ уже был', w:'Окно промо-акции', i:false,
-    t:'Месяц за 1 ₽ у тебя уже был — дальше клуб по обычной подписке.' },
+    c:'Оплата', l:'Промо-акция: пробный доступ уже был', w:'Окно промо-акции', i:false,
+    t:'Пробный доступ за 1 ₽ у тебя уже был — дальше клуб по обычной подписке.' },
   'promo.c.member': {
     c:'Оплата', l:'Промо-акция: открыл участник', w:'Тост', i:false,
     t:'Ты уже в клубе — акция для тех, кто только вступает.' },
@@ -18229,7 +18280,10 @@ async function loadAppTexts(){
     if (data && typeof data === 'object') appTextOverrides = data;
   } catch (e) { /* нет связи — покажем исходники из кода */ }
   applyAppTexts();
-  syncAppTexts();
+  try {
+    if(localStorage.getItem('club_texts_synced_build')!==APP_BUILD)
+      setTimeout(()=>syncAppTexts(),30000);
+  } catch(e){}
 }
 
 /* Отправляем серверу перечень своих ключей с исходниками. Дашборд показывает
@@ -18241,10 +18295,11 @@ async function syncAppTexts(){
       return { key, base_text: r.t, category: r.c || '', label: r.l || '',
                place: r.w || '', important: !!r.i, spintax: /\{[^{}]*\|/.test(r.t) };
     });
-    await fetch(`${API_URL}/app-texts/sync`, {
+    const synced = await fetch(`${API_URL}/app-texts/sync`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items })
     });
+    if(synced.ok)try{localStorage.setItem('club_texts_synced_build',APP_BUILD);}catch(e){}
   } catch (e) { /* не критично: без синхронизации дашборд покажет прошлый список */ }
 }
 
@@ -22150,14 +22205,16 @@ function closePromoTester(){
    не ответил — личный заказ сервера plan=promo по подписи запуска.
    Окно — то же, что у оффера тестировщикам (promo-t1r-*): одно окно на оффер. */
 let promoCode = '';
+let promoServerOnly = false;
 function promoFromUrl(){
   const param = appStartParam();
   if (param.indexOf('promo_') !== 0) return false;
-  promoCode = param.slice('promo_'.length).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+  const tagged = param.slice('promo_'.length).match(/^([a-z0-9][a-z0-9_-]{1,39})__src_(ig|tt|yt|tg|vk|web|email)$/);
+  promoCode = (tagged ? tagged[1] : param.slice('promo_'.length)).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
   const shell = document.getElementById('app-shell');
   const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
   if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
-  rememberEntrySource('promo_' + promoCode);
+  rememberEntrySource(tagged ? tagged[2] + '_promo_' + promoCode : 'promo_' + promoCode);
   setTimeout(async function(){
     await waitProfile();   // та же гонка, что у pay_: участнику окно акции не нужно
     if (isMember){ showToast(t('promo.c.member')); switchView('portal'); return; }
@@ -22179,6 +22236,7 @@ async function promoOpen(){
   const box = document.getElementById('promo-t1r-overlay');
   if (!box) return;
   const ok = !!d.ok;
+  promoServerOnly = !!d.server_checkout;
   const title = document.getElementById('promo-t1r-title');
   title.textContent = ok ? (d.headline || '') : '';
   title.style.display = ok && d.headline ? '' : 'none';
@@ -22235,9 +22293,9 @@ async function promoGo(){
   btn.textContent = t('promo.t1r.wait');
   let link = '', via = '';
   try {
-    const provider = await paymentProviderConfig();
+    const provider = promoServerOnly ? {} : await paymentProviderConfig();
     const id = actionIdent();
-    if (provider.campaign === 'salebot' && (id.telegram_id || id.vk_id)) link = await botLinkFor('get_referral_promo_link');
+    if (!promoServerOnly && provider.campaign === 'salebot' && (id.telegram_id || id.vk_id)) link = await botLinkFor('get_referral_promo_link');
     if (link) via = 'salebot';
   } catch(e){ btn.disabled = false; btn.textContent = label; showToast(t('promo.c.fail')); return; }
   let refusal = '';
@@ -23674,8 +23732,8 @@ function lecCardHtml(l, i, src, fopts){
       <div class="lec-links">
         ${hasAudio ? `<button class="lec-link-btn listen-btn${guestAudio ? '' : lockCls}" onclick="event.stopPropagation();${listenClick}">${guestAudio ? '' : lockIcon}${LISTEN_ICON} ${guestAudio ? escapeHtml(tf('lib.listen_preview', { n: audioPreviewMin() })) : 'Слушать'}</button>` : ''}
         ${(l.key_insights||[]).length ? `<button class="lec-link-btn insights-btn${insightsLockCls}" onclick="event.stopPropagation();${insightsClick}">${insightsLockIcon}Главные идеи</button>` : ''}
-        ${l.link ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
-        ${l.link_vk ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
+        ${(l.has_video_tg || l.link) ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${linkClick}">${lockIcon}Смотреть в ТГ</button>` : ''}
+        ${(l.has_video_vk || l.link_vk) ? `<button class="lec-link-btn${lockCls}" onclick="event.stopPropagation();${vkClick}">${lockIcon}Смотреть в VK</button>` : ''}
       </div>
     </div>`;
 }
@@ -29133,6 +29191,12 @@ function filmNativeDispose(){
   if (filmNative){ filmNative.destroy(); filmNative = null; }
 }
 
+function preferredFilmSources(sources){
+  const active=window.__rfTransport && window.__rfTransport.state().active;
+  if(active!=='timeweb')return sources;
+  return sources.slice().sort((a,b)=>Number(String(b.url).includes('twc1.net'))-Number(String(a.url).includes('twc1.net')));
+}
+
 function startFunnelFilm(){
   const enabled = appSettings.film_delivery_native !== false && appSettings.film_delivery_native !== '0';
   if (!enabled || typeof ClubFilmPlayer === 'undefined'){ startBoomstreamFilm(); return; }
@@ -29158,11 +29222,20 @@ function startFunnelFilm(){
       try { saved = Number(localStorage.getItem(filmPositionKey())) || 0; } catch(e){}
       funnelPlayerReady = true; filmMountedAt = Date.now();
       filmNative = new ClubFilmPlayer(slot, {
-        sources:manifest.sources, position:filmSeekDone ? 0 : saved, expiresIn:manifest.expires_in,
+        sources:preferredFilmSources(manifest.sources), position:filmSeekDone ? 0 : saved, expiresIn:manifest.expires_in,
         refreshSources:()=>refreshFilmSources(`${API_URL}/media/film?edition=${encodeURIComponent(manifest.film)}`),
         poster:'images/film-ya-podumayu.jpg', text:t,
         onEvent:function(d){ filmHandlePlayback(d, true); },
-        onDiagnostic:diagnostic
+        onDiagnostic:diagnostic,
+        onFault:function(code){
+          if(code!=='film_unavailable'||filmEdition())return;
+          // Both own sources were exhausted. Keep Boomstream as the last resort.
+          setTimeout(function(){
+            if(generation!==filmNativeGeneration)return;
+            diagnostic({event:'closed',reason:'legacy_fallback'});
+            filmNativeDispose();filmSeekDone=false;slot.replaceChildren();startBoomstreamFilm();
+          },0);
+        }
       });
       filmSeekDone = true;
       filmTakeMediaSession();
@@ -29627,9 +29700,28 @@ function funnelToLogin(){
 /* ⚠️ КАЖДЫЙ РОЛИК — СВОИМ IFRAME, вставленным в момент открытия. Так плееры
    не делят общий конфиг (см. комментарий у предзагрузки), а заодно не грузят
    чужое окружение, пока их никто не смотрит */
-const VIDEO_POPUP_CODES = { sales: 'd9uzmOdM', onboarding: 'i6QVY0Lg' };
+const VIDEO_POPUP_CODES = { sales: 'd9uzmOdM' };
+let onboardingPopupPlayer=null, onboardingPopupGeneration=0;
 
-function videoPopupMount(which){
+async function videoPopupMount(which){
+  if(which==='onboarding'){
+    if(onboardingPopupPlayer)return;
+    const slot=document.getElementById('video-slot-onboarding');
+    const generation=++onboardingPopupGeneration;
+    slot.textContent=t('film.boot');
+    try{
+      const manifest=await apiRequest(`${API_URL}/media/onboarding`,{},7000);
+      if(generation!==onboardingPopupGeneration)return;
+      onboardingPopupPlayer=new ClubFilmPlayer(slot,{sources:manifest.sources,expiresIn:manifest.expires_in,text:t,
+        refreshSources:()=>apiRequest(`${API_URL}/media/onboarding`,{},7000),onEvent:()=>{}});
+    }catch(e){
+      if(generation!==onboardingPopupGeneration)return;
+      slot.textContent=t('film.unavailable');
+      const retry=document.createElement('button');retry.className='native-film-start';retry.textContent=t('film.try_again');
+      retry.onclick=()=>videoPopupMount('onboarding');slot.appendChild(retry);
+    }
+    return;
+  }
   const slot = document.getElementById('video-slot-' + which);
   const code = VIDEO_POPUP_CODES[which];
   if (!slot || !code || slot.querySelector('iframe')) return;
@@ -29639,6 +29731,10 @@ function videoPopupMount(which){
 }
 
 function videoPopupUnmount(which){
+  if(which==='onboarding'){
+    ++onboardingPopupGeneration;
+    if(onboardingPopupPlayer){onboardingPopupPlayer.destroy();onboardingPopupPlayer=null;}
+  }
   const slot = document.getElementById('video-slot-' + which);
   if (slot) slot.innerHTML = '';   // иначе ролик продолжает звучать под закрытым окном
 }

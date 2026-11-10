@@ -55,7 +55,7 @@
       if(!this.helpTimer&&this.retry.hidden){
         this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay){this.retry.hidden=false;this.fault('film_stall');}},this.options.helpMs||10000);
       }
-      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},this.options.stallMs||(this.index===0&&this.sources.length>1?4000:14000));
+      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},this.options.stallMs||(this.index===0&&this.sources.length>1?4000:8000));
     }
     async refreshSources(){
       if(this.refreshing||this.destroyed)return;
