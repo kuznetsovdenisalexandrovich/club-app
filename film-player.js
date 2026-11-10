@@ -131,7 +131,10 @@
       on('pause',()=>{if(!v.paused)return;this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
       on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
-      const source=this.sources[this.index];const url=this.quality==='360'&&source.lowUrl?source.lowUrl:source.url;
+      const source=this.sources[this.index];
+      // Native HLS must request cross-origin signed segments in CORS mode.
+      if(source.type==='hls')v.crossOrigin='anonymous';else v.removeAttribute('crossorigin');
+      const url=this.quality==='360'&&source.lowUrl?source.lowUrl:source.url;
       if(source.type==='hls'&&!v.canPlayType('application/vnd.apple.mpegurl')){
         this.engine='hls';
         if(!root.Hls||!root.Hls.isSupported()){this.failure('unsupported');this.switchSource(false);return;}
