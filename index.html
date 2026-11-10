@@ -12095,7 +12095,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v529 · 09.11.2026 ссылки в сториз';
+const APP_BUILD = 'v530 · 10.11.2026 запуск из дожимов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13296,6 +13296,19 @@ async function laterConfirm(){
 }
 
 // Per-message attribution stays in this launch; ordinary entries never inherit it.
+// Shared launch identity must exist in the main script before startup and offer timers.
+function ivIdent(){
+  let tgInit = '';
+  try { tgInit = (typeof tgLaunchData === 'function') ? tgLaunchData() : ''; } catch(e){}
+  try {
+    const raw = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData;
+    if (!tgInit && raw) tgInit = 'tgWebAppData=' + encodeURIComponent(raw);
+  } catch(e){}
+  let vk = '';
+  try { vk = (typeof isInsideVk === 'function' && isInsideVk()) ? vkLaunchQuery() : ''; } catch(e){}
+  const tid = Number(telegramId || 0) || null;
+  return { tg_init: tgInit, vk_query: vk, telegram_id: tid };
+}
 async function resolveNurtureStart(){
  const offerStart=/^no_([a-f0-9]{32})$/.exec(appStartParamRaw());
  if(offerStart){window.__nurtureToken=offerStart[1];window.__nurtureTarget='about';if(window.__nurtureOfferStart!==offerStart[1]){window.__nurtureOfferStart=offerStart[1];try{const d=await nurtureOfferSignal('show');if(!d?.offer)showToast(t('nurture.expired'));}catch(e){showToast(e.message)}}return true;}
@@ -40392,18 +40405,6 @@ let ivData = null;
 let ivVariants = [];
 let ivIdx = 0;
 
-function ivIdent(){
-  let tgInit = '';
-  try { tgInit = (typeof tgLaunchData === 'function') ? tgLaunchData() : ''; } catch(e){}
-  try {
-    const raw = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData;
-    if (!tgInit && raw) tgInit = 'tgWebAppData=' + encodeURIComponent(raw);
-  } catch(e){}
-  let vk = '';
-  try { vk = (typeof isInsideVk === 'function' && isInsideVk()) ? vkLaunchQuery() : ''; } catch(e){}
-  const tid = Number(telegramId || 0) || null;
-  return { tg_init: tgInit, vk_query: vk, telegram_id: tid };
-}
 async function ivApi(path, body){
   const r = await fetch(`${API_URL}${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
