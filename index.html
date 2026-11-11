@@ -12200,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v561 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v562 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -35327,6 +35327,7 @@ async function claimCard(cardId){
 /* ── Альбом ─────────────────────────────────────────────────────────────── */
 
 let albumRarity='all';
+function albumMatchesRarity(c,owned){return albumRarity==='all'||(!!owned[c.key]&&c.rarity===albumRarity)}
 function setAlbumRarity(value){albumRarity=value;renderCardsAlbum();}
 function renderCardsAlbum(){
   const el = document.getElementById('cards-album');
@@ -35373,7 +35374,7 @@ function renderCardsAlbum(){
     return true;
   });
   const lockedGods=new Set();
-  const shownCards = inDeck.concat(extras).filter(c=>albumRarity==='all'||c.rarity===albumRarity).filter(c=>{if(owned[c.key])return true;const key=c.god||c.title||c.key;if(lockedGods.has(key))return false;lockedGods.add(key);return true;});
+  const shownCards = inDeck.concat(extras).filter(c=>albumMatchesRarity(c,owned)).filter(c=>{if(owned[c.key])return true;const key=c.god||c.title||c.key;if(lockedGods.has(key))return false;lockedGods.add(key);return true;});
 
   const ownedInDeck = inDeck.filter(function(c){ return owned[c.key]; }).length;
   if (prog) prog.textContent = 'Собрано ' + ownedInDeck + ' из ' + inDeck.length
@@ -35386,13 +35387,16 @@ function renderCardsAlbum(){
   // богов. Иначе Геракл и медуза вставали по алфавиту между Гермесом и Дионисом
   // и выглядели ещё одним богом пантеона
   const OUTSIDE = '\u0000outside';
+  const LOCKED = '\u0000locked';
   const byGod = {};
   shownCards.forEach(function(c){
-    const k = c.unique_card ? OUTSIDE : (c.god || 'Пантеон');
+    const k = !owned[c.key] ? LOCKED : (c.unique_card ? OUTSIDE : (c.god || 'Пантеон'));
     (byGod[k] = byGod[k] || []).push(c);
   });
 
   el.innerHTML = '<div class="album-tabs" role="group" aria-label="Редкость карт">'+[['all','Все'],['legendary','Легендарные'],['rare','Редкие'],['uncommon','Нечастые'],['common','Частые']].map(([key,label])=>'<button type="button" aria-pressed="'+(albumRarity===key)+'" onclick="setAlbumRarity('+jsArg(key)+')">'+label+'</button>').join('')+'</div>'+Object.keys(byGod).sort(function(a,b){
+    if(a===LOCKED)return 1;
+    if(b===LOCKED)return -1;
     if (a === OUTSIDE) return 1;
     if (b === OUTSIDE) return -1;
     return a.localeCompare(b,'ru');
@@ -35402,7 +35406,7 @@ function renderCardsAlbum(){
       return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
     });
     const gotHere = list.filter(function(c){ return owned[c.key]; }).length;
-    return '<div class="album-god-title">' + (god === OUTSIDE ? escapeHtml(t('cards.outside_title')) : godNameHtml(god)) + ' · ' + gotHere + ' открыто' + '</div>'
+    return '<div class="album-god-title">' + (god===LOCKED ? 'Ещё не открыты' : (god === OUTSIDE ? escapeHtml(t('cards.outside_title')) : godNameHtml(god)) + ' · ' + gotHere + ' открыто') + '</div>'
       + '<div class="album-grid">' + list.map(function(c){
         const n = owned[c.key] || 0;
         const art = (n && c.image_url)
@@ -35420,10 +35424,11 @@ function renderCardsAlbum(){
           + '<div class="album-art' + (tileFrame ? ' framed' : '') + '">' + art + tileFrame + '</div>'
           + (n > 1 ? '<div class="album-count">×' + n + '</div>' : '')
           + mark
-          + '<div class="album-name">' + (c.title || c.key) + '</div>'
+          + '<div class="album-name">' + escapeHtml(n ? (c.title || c.key) : (c.god || c.title || c.key)) + '</div>'
           + '</div>';
       }).join('') + '</div>';
   }).join('') + badgeShelfHtml(owned, newKeys) + specialShelfHtml(owned, newKeys);
+  if(!el.querySelector('.album-card'))el.insertAdjacentHTML('beforeend','<div class="sm-hint" style="padding:24px 0;text-align:center">У тебя пока нет открытых карт этой редкости.</div>');
 }
 
 function isRegularCard(c){ return (c.card_class || 'regular') === 'regular'; }
@@ -35446,7 +35451,7 @@ function badgeConditionText(c){
 
 function badgeShelfHtml(owned, newKeys){
   const list = cardCatalog.filter(function(c){
-    return (c.card_class || '') === 'badge' && (c.active || owned[c.key]) && !c.secret;
+    return (c.card_class || '') === 'badge' && (c.active || owned[c.key]) && !c.secret && albumMatchesRarity(c,owned);
   });
   if (!list.length) return '';
   const got = list.filter(function(c){ return owned[c.key]; }).length;
@@ -35474,7 +35479,7 @@ function badgeShelfHtml(owned, newKeys){
 function specialShelfHtml(owned, newKeys){
   const list = cardCatalog.filter(function(c){
     const k = c.card_class || 'regular';
-    return (k === 'prologue' || k === 'raffle') && owned[c.key];
+    return (k === 'prologue' || k === 'raffle') && owned[c.key] && albumMatchesRarity(c,owned);
   });
   if (!list.length) return '';
 
