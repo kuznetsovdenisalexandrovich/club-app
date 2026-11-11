@@ -26480,6 +26480,7 @@ function closeInsightsLevelLockNotice(){
 }
 
 function openInsightsModal(index, src){
+ if(typeof pdFeatureOpened==='function')pdFeatureOpened('insights');
   // Демо-пользователя пускаем: выжимка — это как раз то, чем он прогревается.
   // Видео и PDF внутри попапа для него закрыты.
   const l = cardList(src)[index];
@@ -37855,6 +37856,7 @@ function playLecture(index, src){
   /* v381: заслон `!isMember → пейвол` снят. Сервер сам отдаёт гостю урезанное
      превью (настройка «минут превью»), а при нуле отвечает 402 — и тогда
      пейвол показывает plResolveAudioUrl. Раньше вся механика превью была мёртвой */
+  if(typeof pdFeatureOpened==='function')pdFeatureOpened('audio');
   // Первое «Слушать» — рассказываем про подкаст-режим, дальше молчим
   showOnbTip('onb.tip_listen', '#mini-player', 900);
   var list = cardList(src) || [];

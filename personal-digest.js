@@ -65,7 +65,7 @@ function pdPeriodControls(initial){
 }
 
 const pdFeatureSeen=new Set();
-function pdFeatureOpened(name){const feature=({ai:'search',search:'search',plan:'plan',games:'games',cards:'cards',library:'library',magazine:'magazine',live:'live',invite:'invite',notifications:'notifications',digest:'digest',install:'install'})[name];if(!feature||pdFeatureSeen.has(feature))return;pdFeatureSeen.add(feature);if(feature!=='install'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone))pdFeatureOpened('install');apiRequest(API_URL+'/digest/personal/feature-open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feature})}).catch(()=>pdFeatureSeen.delete(feature));}
+function pdFeatureOpened(name){const feature=({ai:'search',search:'search',plan:'plan',games:'games',cards:'cards',library:'library',magazine:'magazine',live:'live',invite:'invite',notifications:'notifications',digest:'digest',install:'install',audio:'audio',insights:'insights',card_share:'card_share'})[name];if(!feature||pdFeatureSeen.has(feature))return;pdFeatureSeen.add(feature);if(feature!=='install'&&(matchMedia('(display-mode: standalone)').matches||navigator.standalone))pdFeatureOpened('install');apiRequest(API_URL+'/digest/personal/feature-open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feature})}).catch(()=>pdFeatureSeen.delete(feature));}
 
 let pdPdfBusy=false;
 async function pdDownload(){
