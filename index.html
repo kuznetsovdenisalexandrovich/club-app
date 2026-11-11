@@ -12148,7 +12148,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v535 · 11.11.2026 вход в персональную выжимку';
+const APP_BUILD = 'v536 · 11.11.2026 PDF и возможности выжимки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12610,6 +12610,7 @@ async function refreshScreenData(name, force){
 }
 
 function switchView(name) {
+  if(typeof pdFeatureOpened==='function')pdFeatureOpened(name);
   if (typeof isMember !== 'undefined' && isMember) track('member_section', name);
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -12657,6 +12658,7 @@ function switchView(name) {
 }
 
 function openNotificationsSection(){
+ if(typeof pdFeatureOpened==='function')pdFeatureOpened('notifications');
   switchView('schedule');
   setTimeout(() => {
     const el = document.getElementById('notif-section');
@@ -15913,6 +15915,7 @@ function winbackDigestGift(key){
 }
 function winbackOpenDigest(key){
   track('cancel_digest_open', String(key || ''));
+  const overlay=document.getElementById('winback-overlay');if(overlay)overlay.classList.remove('open');window.pdReturnToWinback=true;
   openDigestMissed();
 }
 
@@ -30541,6 +30544,7 @@ function goToPayment(i){
 /* ── ИИ-помощник по библиотеке (через Salebot ai_context_answer) ── */
 
 function openAiPopup(from){
+  if(typeof pdFeatureOpened==='function')pdFeatureOpened('search');
   /* v428: разговор. Окно открыто всем — участнику, гостю, на паузе; что
      кому можно, решает сервер. Начатый разговор живёт, пока открыт апп */
   track('assistant_open', String(from || ''));
@@ -37771,7 +37775,7 @@ var PL_POS_KEY = 'club_audio_pos';
 
 function plEl(id){ return document.getElementById(id); }
 
-let plPendingSeek = null;   // v400: {slug, sec} — начать с этой минуты один раз
+let plPendingSeek = (()=>{const q=new URLSearchParams(location.search),slug=q.get('pd_audio'),sec=Number(q.get('pd_seek'));return slug&&/^[a-zA-Z0-9_-]+$/.test(slug)&&Number.isFinite(sec)&&sec>=0&&sec<=86400?{slug,sec}:null})();   // v400: {slug, sec} — начать с этой минуты один раз
 function plPositions(){
   try { return JSON.parse(localStorage.getItem(PL_POS_KEY) || '{}'); }
   catch(e){ return {}; }
@@ -39686,6 +39690,7 @@ function dgsOpenLayer(){
   return ov;
 }
 function closeDigest(){
+  if(window.pdReturnToWinback){window.pdReturnToWinback=false;document.getElementById("winback-overlay")?.classList.add("open");}
   if (typeof destroyPersonalDigest === "function") destroyPersonalDigest();
   const ov = document.getElementById('dgs');
   if (ov) ov.classList.remove('open');
@@ -39835,6 +39840,7 @@ async function openDigestShelf(){
 }
 
 async function openDigest(slug){
+ if(typeof pdFeatureOpened==='function')pdFeatureOpened('digest');
   dgsMode = 'issue';
   dgsSlug = slug;
   dgsLoading(t('digest.loading'));
@@ -41194,7 +41200,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=2"></script>
+<script src="personal-digest.js?v=3"></script>
 </body>
 
 </html>
