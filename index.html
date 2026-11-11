@@ -12200,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v565 · 11.11.2026 Карточки результатов';
+const APP_BUILD = 'v566 · 11.11.2026 Карточки результатов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -32466,7 +32466,7 @@ async function proceedToWebLogin(){
   // An explicit purchase link owns this first screen. The asynchronous web
   // login check must not cover its offer with the default film afterwards.
   // Suppress only this entry; a later explicit login still opens its form.
-  if (!funnelSuppressed && /^(promo_|pay_)/.test(appStartParam())){
+  if (!funnelSuppressed && /^(promo_|pay_|play_)/.test(appStartParam())){
     funnelSuppressed = true;
     enterDemoMode();
     return;
@@ -32698,7 +32698,7 @@ async function init(){
     try {
       // Personal access must not depend on marketing presence or attribution.
       const accessStart = appStartParamRaw();
-      if(/^play_[a-f0-9]{24}$/.test(accessStart)){await openGameInvitation(accessStart.slice(5));return;}
+      if(/^play_[a-f0-9]{24}$/.test(accessStart)){if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));await openGameInvitation(accessStart.slice(5));return;}
       if(/^games_(ai|gods|quizzes)$/.test(accessStart)){await waitProfile(8000);switchView('games');kqCategory(accessStart==='games_gods'?'god':accessStart.slice(6));return;}
       if(/^kq_[a-f0-9]{32}$/.test(accessStart)){await openKnowledgeQuiz(accessStart.slice(3));return;}
       if (accessStart.indexOf('paid_') === 0){
