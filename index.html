@@ -12197,7 +12197,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v547 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v548 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -41250,7 +41250,7 @@ html[data-gg] #app-level-slot,html[data-app-layer] #app-level-slot{display:none}
 .lec-links .lec-link-btn{min-width:0;white-space:normal;display:flex;align-items:center;justify-content:center;min-height:42px}
 .lec-links .lec-link-btn:only-child{grid-column:1/-1}
 #qa-fab{width:44px;height:44px}
-html[data-app-layer] #qa-fab,html[data-kq-playing] #qa-fab,html[data-gg-play] #qa-fab{display:none!important}
+html[data-kq-screen="intro"] #qa-fab,html[data-app-layer] #qa-fab,html[data-kq-playing] #qa-fab,html[data-gg-play] #qa-fab{display:none!important}
 html[data-kq-playing] #tabbar,html[data-kq-playing] .scroll-fade{display:none!important}
 html[data-kq-playing] #gg-root #kq-panel h2{font:600 19px/1.4 var(--gg-font-body)}
 html[data-kq-playing] #gg-root #kq-panel{padding-bottom:24px}
@@ -41276,6 +41276,7 @@ html[data-kq-screen="intro"] #gg-root #kq-panel h2{font-size:21px;line-height:1.
 #dgs.issue-mode>.dgs-close,#dgs.issue-mode>.dgs-share-btn,#dgs.issue-mode>.dgs-count{z-index:4}
 #dgs.issue-mode>.dgs-pdf-sheet{z-index:5}
 </style><style>
+html[data-lite][data-theme="dark"]{--bg2:#0b0c1b}
 html[data-tg-native-back] .app-native-close-handle{display:none!important}
 html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-lite] #gg-root .kq-categories>.card,html[data-lite] #gg-root .kq-options button{background:var(--gg-solid-panel)!important}
 </style><script src="knowledge-quizzes.js?v=7"></script></body>
