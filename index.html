@@ -12200,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v571 · 11.11.2026 Карточки результатов';
+const APP_BUILD = 'v572 · 11.11.2026 Карточки результатов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -37239,13 +37239,6 @@ function renderQuizResult(){
     + godLink
     + '<div class="qr-actions">'
       + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
-      + '<div class="qr-actions-row">'
-        // Отправка в бот только для тех, кто вошёл — анониму слать некуда
-        + (telegramId
-            ? '<button class="lec-link-btn" id="quiz-bot-btn" onclick="sendQuizCardToBot()">В бот</button>'
-            : '')
-        + '<button class="lec-link-btn" onclick="shareQuizResult()">Ссылка</button>'
-      + '</div>'
       + '<div class="qr-tertiary">'
         // Действующему участнику рассказывать, что за клуб, незачем — он внутри
         + ((typeof isMember !== 'undefined' && isMember)
