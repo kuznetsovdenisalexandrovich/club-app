@@ -4,19 +4,19 @@ const gsText=(key)=>t('resultshare.'+key);
 async function gameShareAPI(path,body){return apiRequest(API_URL+'/game-sharing'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:undefined,45000)}
 function closeGameShare(){document.getElementById('game-share-overlay')?.classList.remove('open');appSyncNavigation()}
 async function openGameShare(kind){
- if(gameShareBusy)return;gameShareBusy=true;
+ if(gameShareBusy)return;
+ if(!telegramId){showToast(gsText('telegramRequired'));return}
+ gameShareBusy=true;
  try{
   const payload={kind,guest_key:ggGuestKey()};
   if(kind==='ai')payload.result_id=ggS?.session_id||'';
   if(kind==='quiz')payload.result_id=kqAttempt?.attempt_id||'';
   if(kind==='gods')payload.code=quizResult?.code||'';
   gameShareData=await gameShareAPI('',payload);gameShareFile=null;
-  let overlay=document.getElementById('game-share-overlay');
-  if(!overlay){overlay=document.createElement('div');overlay.id='game-share-overlay';overlay.className='gg-overlay';overlay.setAttribute('onclick','if(event.target===this)closeGameShare()');document.body.append(overlay)}
-  overlay.innerHTML='<div class="game-share-dialog"><button class="gg-modal-close" aria-label="Закрыть" onclick="closeGameShare()">×</button><h2>'+escapeHtml(gsText('title'))+'</h2><img class="game-share-preview" src="'+API_URL+'/game-sharing/'+gameShareData.id+'/card.jpg?layout=4" alt="'+escapeHtml(gsText('preview'))+'"><p>'+escapeHtml(gsText(kind==='gods'?'godHint':'hint'))+'</p><div class="kq-options"><button id="game-share-file" disabled onclick="gameShareImage()">'+escapeHtml(gsText('preparing'))+'</button><button onclick="gameShareLink()">'+escapeHtml(gsText('link'))+'</button>'+(telegramId?'<button onclick="gameShareBot(this)">'+escapeHtml(gsText('bot'))+'</button>':'')+'</div></div>';
-  overlay.classList.add('open');appSyncNavigation();
-  try{const response=await fetch(API_URL+'/game-sharing/'+gameShareData.id+'/card.jpg?layout=4');if(!response.ok)throw Error(gsText('error'));gameShareFile=new File([await response.blob()],'game-result.jpg',{type:'image/jpeg'});const b=document.getElementById('game-share-file');b.disabled=false;b.textContent=gsText('image')}
-  catch(e){const b=document.getElementById('game-share-file');b.textContent=gsText('retry');b.disabled=false;b.onclick=()=>openGameShare(kind);showToast(e.message||gsText('error'))}
+  closeGameShare();
+  showToast(gsText('sending'));
+  await gameShareAPI('/'+gameShareData.id+'/send',{});
+  showToast(gsText('sent'));
  }catch(e){showToast(e.message||gsText('error'))}finally{gameShareBusy=false}
 }
 async function gameShareImage(){
