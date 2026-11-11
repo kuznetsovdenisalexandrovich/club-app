@@ -6548,7 +6548,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
         <div class="gg-head">
           <div>
             <div class="gg-head-title" data-text="games.title">Игры</div>
-            <div class="gg-head-sub" data-text="games.sub">Тренировка на живом собеседнике</div>
+            <div class="gg-head-sub" data-text="games.sub">Практика и проверка знаний</div>
           </div>
           <div class="gg-head-acts">
             <button class="gg-round" onclick="toggleTheme()" aria-label="Тема">◐</button>
@@ -12514,7 +12514,6 @@ function tgBackHandler(){
   if (now - tgBackLast < 400) return;   // одно нажатие пришло обоими путями
   tgBackLast = now;
   tgBackFired++;
-  if(typeof kqBack==='function'&&kqBack())return;
   if(document.getElementById("dgs")?.classList.contains("open")){closeDigest();return;}
   try {
     /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
@@ -12544,6 +12543,7 @@ function tgBackHandler(){
     if (live && live.style.display === 'flex'){ collapseLiveFull(); return; }
     const reader = document.getElementById('view-magazine-read');
     if (reader && reader.classList.contains('active')){ closeMagazineReader(); return; }
+    if(typeof kqBack==='function'&&kqBack())return;
     switchView('portal');
   } catch(e){
     /* ⚠️ МОЛЧА ПРОГЛОЧЕННАЯ ОШИБКА ЗДЕСЬ НЕОТЛИЧИМА ОТ «СОБЫТИЕ НЕ ПРИШЛО».
@@ -16475,7 +16475,7 @@ const APP_TEXTS = {
   'games.note_locked': { c:'Игры', l:'Кнопка разбора у гостя', w:'Экран партии', i:false, t:'Разбор — участникам' },
 
   'games.title': { c:'Игры', l:'Заголовок вкладки', w:'Вкладка «Игры»', i:false, t:'Игры' },
-  'games.sub': { c:'Игры', l:'Подпись под заголовком', w:'Вкладка «Игры»', i:false, t:'Тренировка на живом собеседнике' },
+  'games.sub': { c:'Игры', l:'Подпись под заголовком', w:'Вкладка «Игры»', i:false, t:'Практика и проверка знаний' },
   'games.exit': { c:'Игры', l:'Кнопка выхода из партии', w:'Экран партии', i:false, t:'← Выйти' },
   'games.arbiter': { c:'Игры', l:'Подпись арбитра', w:'Экран партии', i:false, t:'Арбитр' },
   'games.rules_btn': { c:'Игры', l:'Кнопка правил у арбитра', w:'Экран партии', i:false, t:'Правила игры' },
@@ -38424,7 +38424,6 @@ function ggMode(on){
 }
 
 async function ggOpen(){
-  if(typeof kqLoad==='function')kqLoad();
   ggMode(true);
   /* ⚠️⚠️ СНАЧАЛА ЖДЁМ ПРОФИЛЬ, ПОТОМ СПРАШИВАЕМ СЕРВЕР. Профиль грузится
      асинхронно, и до его прихода `telegramId` равен null — запрос уходил бы с
@@ -38433,6 +38432,7 @@ async function ggOpen(){
      решение по флагу, который ещё не загружен. Ждём ГОТОВНОСТИ, не паузы. */
   ggBackToList();
   await waitProfile(4000);
+  if(typeof kqLoad==='function')kqLoad();
   /* ⚠️ ПРЕДЛОЖЕНИЕ — ПОСЛЕ ЗАГРУЗКИ СПИСКА: без него нечем взять
      название игры, число ходов и шкалу */
   /* ⚠️ СПИСОК ПЕРЕЧИТЫВАЕМ ПРИ КАЖДОМ ЗАХОДЕ: уровень мог вырасти, ступень —
