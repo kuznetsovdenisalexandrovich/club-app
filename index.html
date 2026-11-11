@@ -6586,7 +6586,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
             <button class="gg-round" onclick="ggPop('gg-m-howto')" aria-label="Как устроено">?</button>
           </div>
         </div>
-        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')">Потренироваться с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
+        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')" data-text="games.ai_category">Тренировка с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
       </div>
 
       <!-- Партия. ⚠️ Мастер-бар и пилюля на этом экране скрыты -->
@@ -12196,7 +12196,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v544 · 11.11.2026 Навигация и экраны';
+const APP_BUILD = 'v545 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16362,6 +16362,7 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'games.ai_category':'Тренировка с ИИ',
   "guest.route_title": {c:"Гостевой маршрут",l:"С чего начать",w:"Демо",i:false,t:"С чего начать"},
   "guest.route_intro": {c:"Гостевой маршрут",l:"Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент.",w:"Демо",i:false,t:"Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент."},
   "guest.route_watch": {c:"Гостевой маршрут",l:"Смотреть фильм",w:"Демо",i:false,t:"Смотреть фильм"},
@@ -41259,6 +41260,10 @@ html[data-gg="1"] .level-card,html[data-gg="1"][data-theme="dark"] .level-card,h
 .dgs-issue-cover>span{font:22px/1.2 Georgia,serif;padding:14px}
 .dgs-issue-title{display:block;font-size:15px;line-height:1.35;margin-top:12px}
 .dgs-issue-card .dgs-sub{display:block;font-size:12px;margin-top:6px}
-</style><script src="knowledge-quizzes.js?v=6"></script></body>
+</style><style>
+html[data-kq-screen="intro"][data-games-category="quizzes"] #gg-root .gg-head,html[data-kq-playing] #gg-root .gg-head{display:none}
+html[data-kq-screen="intro"] #gg-root #kq-panel h2{font-size:21px;line-height:1.35}
+#gg-root #kq-panel{scroll-margin-top:16px}
+</style><script src="knowledge-quizzes.js?v=7"></script></body>
 
 </html>
