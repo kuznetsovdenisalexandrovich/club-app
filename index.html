@@ -5763,6 +5763,13 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 #digest-top-notice[hidden]{display:none}
 
 .kq-categories[hidden]{display:none}#tab-games.kq-new::after{top:8px;right:20%}.kq-access-lock{display:inline-flex;vertical-align:middle;margin-right:8px}#kq-panel .access-btn{min-height:48px;font-size:16px}.kq-categories,.kq-shelf,.kq-options{display:grid;gap:14px;margin:20px 0}.kq-categories button,.kq-tile{font:inherit;text-align:left;min-height:64px;width:100%;color:var(--text);position:relative;cursor:pointer}.kq-tile-title{display:flex;align-items:center;gap:12px;font-weight:650}.kq-tile .kq-muted{display:block;margin-top:10px}.kq-muted{color:var(--text-dim);font-size:14px;line-height:1.6}.kq-new::after{content:'';position:absolute;right:12px;top:12px;width:7px;height:7px;border-radius:50%;background:var(--accent,#d78c56)}.kq-pending{outline:1px solid #c8976244;box-shadow:0 0 16px #c8976214}.kq-options button{min-height:52px;padding:14px 18px;border:1px solid var(--line);border-radius:14px;color:var(--text);background:transparent;font:inherit;text-align:left;cursor:pointer}.kq-options button[aria-pressed=true]{border-color:var(--warm);background:#b89b7620}.kq-options button.kq-correct{border:2px solid var(--warm)}.kq-progress{height:6px;background:var(--line);border-radius:12px;margin:24px 0}.kq-progress span{display:block;height:100%;background:var(--warm);border-radius:12px}.kq-rules{white-space:pre-wrap}.kq-image{width:100%;max-height:320px;object-fit:contain;border-radius:16px;margin:16px 0}#kq-panel{padding-bottom:30px}#kq-panel h2{font-size:24px;line-height:1.35}.kq-gate p{line-height:1.6}.kq-options button:focus-visible,.kq-categories button:focus-visible{outline:2px solid var(--warm);outline-offset:3px}
+.quiz-advice{margin:20px 0;border:1px solid var(--line);border-radius:20px;background:var(--card-bg);text-align:left;overflow:hidden}
+.quiz-advice summary{padding:18px 20px;cursor:pointer;font-size:17px;font-weight:600;color:var(--text);min-height:48px;box-sizing:border-box}
+.quiz-advice summary:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
+.quiz-advice-content{padding:0 20px 20px;font-size:16px;line-height:1.6;color:var(--text)}
+.quiz-advice-content h3{font-size:18px;line-height:1.4;margin:4px 0 12px}
+.quiz-advice-content p{margin:0 0 16px}.quiz-advice-bridge{color:var(--text-dim)}
+.quiz-advice-content button{width:100%;white-space:normal;font:inherit;min-height:48px}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -12200,7 +12207,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v572 · 11.11.2026 Карточки результатов';
+const APP_BUILD = 'v573 · 11.11.2026 Совет после игры';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16370,6 +16377,26 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  "quiz.advice.ETFI": {"c": "Боги продаж — совет после игры", "l": "Артемида", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Тщательная подготовка полезна, пока не откладывает сам разговор. Начни с короткого вопроса клиенту: «Эта задача ещё актуальна? Что изменилось с прошлого обсуждения?» Обнови предложение по его ответу, вместо того чтобы заранее продумывать все возможные варианты."},
+  "quiz.advice.ETFS": {"c": "Боги продаж — совет после игры", "l": "Гера", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Квалификация помогает понять, подходите ли вы друг другу, но не требует отсеивать человека по первому впечатлению. Спроси: «Какую задачу вы решаете, к какому сроку и что важно учесть?» Сравни ответы с возможностями продукта и честно объясни, где можешь помочь."},
+  "quiz.advice.ETMI": {"c": "Боги продаж — совет после игры", "l": "Афродита", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Красивая подача работает лучше, когда за ней виден конкретный результат. Возьми одно обещание из своей презентации и поясни: что именно получит клиент, за счёт каких действий и при каких условиях. Не обещай то, что зависит не только от тебя."},
+  "quiz.advice.ETMS": {"c": "Боги продаж — совет после игры", "l": "Деметра", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Забота о клиенте не мешает прямо обсуждать решение. После презентации спроси: «Вам подходит такой вариант? Если да, давайте обсудим, как начать; если нет — что осталось неясным?» Это приглашение определиться, а не требование купить."},
+  "quiz.advice.ENFI": {"c": "Боги продаж — совет после игры", "l": "Арес", "w": "Результат игры → Что с этим делать?", "i": true, "t": "В споре можно доказать правоту и потерять интерес клиента. Услышав возражение, сначала уточни: «Что именно вызывает сомнение?» Перескажи ответ своими словами и проверь, правильно ли понял. Только потом предлагай аргумент или решение."},
+  "quiz.advice.ENFS": {"c": "Боги продаж — совет после игры", "l": "Гермес", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Много знакомств ещё не означает много подходящих клиентов. В начале разговора уточни: «Вам сейчас нужно решить эту задачу или вы пока присматриваетесь?» Так ты сможешь предложить следующий шаг по готовности человека, а не одинаковую презентацию всем подряд."},
+  "quiz.advice.ENMI": {"c": "Боги продаж — совет после игры", "l": "Дионис", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Увлекательный разговор не всегда заканчивается продажей. Перед презентацией спроси: «Что вам сейчас важнее всего изменить?» Свяжи предложение с ответом, а в конце согласуй конкретный следующий шаг: например, что клиент посмотрит и когда вы вернётесь к обсуждению."},
+  "quiz.advice.ENMS": {"c": "Боги продаж — совет после игры", "l": "Зевс", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Когда хочется быстрее закрыть сделку, можно принять уступку за согласие. Перед следующим шагом спроси: «Насколько это решение вам подходит? Что ещё нужно прояснить?» Дай человеку назвать сомнения до оплаты, а не после неё."},
+  "quiz.advice.LTFI": {"c": "Боги продаж — совет после игры", "l": "Гефест", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Необязательно доводить презентацию до совершенства, чтобы проверить предложение. Сформулируй, кому ты помогаешь и какую задачу решаешь, и обсуди это с подходящим клиентом. Спроси: «Для вас это сейчас актуально?» Его ответ полезнее очередной правки слайда."},
+  "quiz.advice.LTFS": {"c": "Боги продаж — совет после игры", "l": "Афина", "w": "Результат игры → Что с этим делать?", "i": true, "t": "На сомнения клиента легко ответить ещё пятью аргументами. Но сначала уточни: «Что именно останавливает вас от решения?» Ответ про цену, недоверие или сроки требует разных действий. Не убеждай, пока не понял причину сомнения."},
+  "quiz.advice.LTMI": {"c": "Боги продаж — совет после игры", "l": "Аполлон", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Подробное объяснение может закончиться благодарностью вместо покупки. Перед тем как делиться знаниями, спроси: «Какую задачу вы хотите решить?» Затем покажи, какую часть этой задачи решает твой продукт и что нужно сделать, чтобы начать."},
+  "quiz.advice.LTMS": {"c": "Боги продаж — совет после игры", "l": "Плутос", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Цифры убеждают лучше, когда связаны с задачей клиента. Прежде чем считать выгоду, спроси: «Какие потери для вас сейчас самые ощутимые — деньги, время или упущенные возможности?» Покажи расчёт для того, что человек действительно хочет изменить."},
+  "quiz.advice.LNFI": {"c": "Боги продаж — совет после игры", "l": "Мом", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Замечать недостатки — полезный навык, но начинать продажу с критики бывает рискованно. Сначала спроси: «Что в вашем нынешнем решении важно сохранить, а что хочется улучшить?» Строй предложение вокруг ответа, а не вокруг списка чужих ошибок."},
+  "quiz.advice.LNFS": {"c": "Боги продаж — совет после игры", "l": "Аид", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Прямота полезна, пока не превращает разговор в спор. Вместо «Вы делаете неправильно» спроси: «Какой результат вы получаете сейчас? Он вас устраивает?» Так клиент сможет сам назвать проблему, которую ты предлагаешь решить."},
+  "quiz.advice.LNMI": {"c": "Боги продаж — совет после игры", "l": "Прометей", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Новый инструмент может увлечь сильнее, чем задача покупателя. Прежде чем рассказывать о технологии, спроси: «Как вы решаете эту задачу сейчас и что вас в этом не устраивает?» Покажи, что изменится для человека, а не только как устроен инструмент."},
+  "quiz.advice.LNMS": {"c": "Боги продаж — совет после игры", "l": "Посейдон", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Когда видишь большую цель, легко перескочить через задачу конкретного клиента. Перед презентацией спроси: «Что у вас сейчас не получается и что вы хотите изменить?» Затем выбери один результат, который важен именно ему, и начни с него."},
+  "quiz.advice.film": {"c": "Боги продаж — совет после игры", "l": "Смотреть фильм", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Смотреть фильм"},
+  "quiz.advice.bridge": {"c": "Боги продаж — совет после игры", "l": "Подробнее о том, как выяснить задачу клиента и представить своё предложение, я рассказал в фильме.", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Подробнее о том, как выяснить задачу клиента и представить своё предложение, я рассказал в фильме."},
+  "quiz.advice.title": {"c": "Боги продаж — совет после игры", "l": "Попробуй в следующем разговоре с клиентом", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Попробуй в следующем разговоре с клиентом"},
+  "quiz.advice.open": {"c": "Боги продаж — совет после игры", "l": "Что с этим делать?", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Что с этим делать?"},
   'resultshare.title': {c:'Игры',l:'Поделиться результатом',w:'Результат игры',i:false,t:'Поделиться результатом'},
   'resultshare.preview': {c:'Игры',l:'Карточка результата',w:'Результат игры',i:false,t:'Карточка результата'},
   'resultshare.godHint': {c:'Игры',l:'Отправь карточку вместе со ссылкой: друзья смогут бесплатно пройти тест, а приглашение учтётся в реферальной программе.',w:'Результат игры',i:false,t:'Отправь карточку вместе со ссылкой: друзья смогут бесплатно пройти тест, а приглашение учтётся в реферальной программе.'},
@@ -37234,6 +37261,7 @@ function renderQuizResult(){
       + '</div>'
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
+    + quizAdviceHtml(r.code)
     + '<div class="quiz-axes">' + axesHtml + '</div>'
     + allyHtml
     + godLink
@@ -37501,6 +37529,25 @@ async function shareQuizResult(){ return openGameShare('gods'); }
    Три случая, и третий легко упустить: холодный посетитель приходит по ссылке
    на тест поверх ЭКРАНА ВХОДА — оболочка приложения ещё не запущена, и один
    switchView не покажет ему ничего */
+function quizAdviceHtml(code){
+  if (!QUIZ_RESULTS[code] || !t('quiz.advice.' + code)) return '';
+  return '<details class="quiz-advice" ontoggle="quizAdviceOpened(this)">'
+    + '<summary>' + escapeHtml(t('quiz.advice.open')) + '</summary>'
+    + '<div class="quiz-advice-content"><h3>' + escapeHtml(t('quiz.advice.title')) + '</h3>'
+    + '<p>' + escapeHtml(t('quiz.advice.' + code)) + '</p>'
+    + (!isMember ? '<p class="quiz-advice-bridge">' + escapeHtml(t('quiz.advice.bridge')) + '</p>'
+      + '<button class="lec-link-btn access-btn" onclick="quizAdviceFilm()">' + escapeHtml(t('quiz.advice.film')) + '</button>' : '')
+    + '</div></details>';
+}
+function quizAdviceOpened(el){
+  if (el.open && !el.dataset.tracked){ el.dataset.tracked='1'; track('quiz_advice_open', quizResult ? quizResult.code : ''); }
+}
+function quizAdviceFilm(){
+  track('quiz_advice_film', quizResult ? quizResult.code : '');
+  closeQuiz();
+  openFilmRoute();
+}
+
 function openQuizAfterCta(){
   closeQuiz();
   const shell = document.getElementById('app-shell');
