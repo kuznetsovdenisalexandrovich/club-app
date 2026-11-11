@@ -5751,6 +5751,13 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .restricted-card button{min-height:46px;width:100%;border-radius:12px}
 
 .nurture-offer-modal{width:min(92vw,600px);height:78dvh;max-height:calc(100dvh - 40px - env(safe-area-inset-top));box-sizing:border-box;margin:auto;padding:0;border:1px solid var(--border,#888);border-radius:24px;background:var(--bg,#f1efeb);color:var(--text,#292729);box-shadow:0 16px 70px #0005}.nurture-offer-modal::backdrop{background:#0008;backdrop-filter:blur(6px)}.nurture-offer-inner{display:flex;flex-direction:column;gap:18px;padding:24px;min-height:100%;box-sizing:border-box;overflow-wrap:anywhere}.nurture-offer-inner h2,.nurture-offer-inner p{margin:0}.nurture-offer-inner button{min-height:46px;height:auto;white-space:normal;flex:0 0 auto;padding:12px 18px}.nurture-offer-terms{padding:16px;border:1px solid var(--border,#888);border-radius:12px;line-height:1.5}.nurture-offer-consent{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.5}.nurture-offer-consent input{flex:0 0 20px;width:20px;height:20px;margin-top:2px}.nurture-offer-consent[hidden]{display:none}.nurture-offer-clock{font-variant-numeric:tabular-nums;font-weight:700}.nurture-offer-modal button:focus-visible,.nurture-offer-modal input:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+
+.dgs-overlay.native-back .dgs-close:not(.dgs-pdf-btn){display:none}
+html[data-digest-open] .level-card,html[data-digest-open] #bug-report-btn{visibility:hidden}
+.dgs-overlay:has(#dgs-pages iframe){padding-top:calc(var(--safe-top,0px) + 54px);box-sizing:border-box;overflow:hidden}
+.album-tabs{display:flex;gap:8px;overflow:auto;padding:12px 0;grid-column:1/-1}.album-tabs button{flex-shrink:0;min-height:46px;border:1px solid var(--warm);border-radius:12px;background:transparent;color:var(--text);padding:8px 14px;font:inherit}.album-tabs button[aria-pressed=true]{background:var(--warm);color:var(--bg)}
+html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[data-lite] .pr-fx{display:none!important}
+#digest-top-notice[hidden]{display:none}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -6164,6 +6171,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
       <p id="registration-next-text" style="line-height:1.5;margin:0 0 14px"></p>
       <button id="registration-next-button" class="lec-link-btn access-btn" style="min-height:46px;white-space:normal" onclick="continueClubRegistration()"></button>
     </div>
+    <button id="digest-top-notice" hidden class="card personal-digest-entry" onclick="openDigestFromHome()">Новый выпуск дайджеста <span aria-hidden="true">→</span></button>
     <div id="live-slot" style="display:none"></div>
     <div id="live-join-ended" class="guest-route" style="display:none;margin-bottom:16px"><p data-text="live.join.ended"></p><button class="lec-link-btn access-btn" onclick="liveGateBuy()" data-text="live.join.button"></button></div>
 
@@ -12148,7 +12156,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v537 · 11.11.2026 PDF и возможности выжимки';
+const APP_BUILD = 'v538 · 11.11.2026 Навигация и коллекция';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12504,6 +12512,7 @@ function tgBackHandler(){
   if (now - tgBackLast < 400) return;   // одно нажатие пришло обоими путями
   tgBackLast = now;
   tgBackFired++;
+  if(document.getElementById("dgs")?.classList.contains("open")){closeDigest();return;}
   try {
     /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
     if (document.documentElement.hasAttribute('data-gg-play')){
@@ -14554,7 +14563,7 @@ async function cfLessOpen(){
   const s = cfLess || {};
   const cost = Math.round(s.cost || 0);
   if (s.discount_pending){
-    body.innerHTML = `<div class="sm-hint" style="line-height:1.55">${escapeHtml(t('chargefail.less_pending'))}</div>` + cfBack();
+    body.innerHTML = `<div class="sm-hint" style="line-height:1.55">${escapeHtml(s.discount_unknown?'Результат запроса ещё не подтверждён. Баллы зарезервированы, повторять не нужно. Обратись в поддержку для проверки.':t('chargefail.less_pending'))}</div>` + cfBack();
     return;
   }
   const pts = Math.min(s.points || 0, s.points_payment_max || 0);
@@ -14607,7 +14616,7 @@ async function cfLessApply(btn){
     const d = await apiRequest(`${API_URL}/subscription/pay-less`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, pay: parseInt(sl.value, 10) })
-    }, 20000);
+    }, 45000);
     track('charge_fail_less', String(d.new_price));
     const body = document.getElementById('chargefail-body');
     if (body) body.innerHTML = `<div class="sm-hint" style="font-size:13.5px;line-height:1.55">`
@@ -14661,7 +14670,7 @@ function renderFreeDiscount(){
   const min  = s.free_discount_min  || 50;
 
   if (s.discount_pending){
-    body.innerHTML = `<div class="sm-hint">${escapeHtml(t('freediscount.pending'))}</div>`;
+    body.innerHTML = `<div class="sm-hint">${escapeHtml(s.discount_unknown?'Результат запроса ещё не подтверждён. Баллы зарезервированы, повторять не нужно. Обратись в поддержку для проверки.':t('freediscount.pending'))}</div>`;
     return;
   }
   if (!left){
@@ -14707,7 +14716,7 @@ async function applyFreeDiscount(btn){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, amount })
-    }, 20000);
+    }, 45000);
     showToast(`Готово — следующий платёж ${d.new_price} ₽`);
     freeDiscountArmed = false;
     await loadFreeDiscount();
@@ -14940,7 +14949,7 @@ function renderSubManage(){
   const cap = s.points_payment_max;
   let pointsBlock;
   if (s.discount_pending){
-    pointsBlock = `<div class="sm-hint">Баллы на ближайший платёж уже потрачены.</div>`;
+    pointsBlock = `<div class="sm-hint">${s.discount_unknown?'Результат запроса ещё не подтверждён. Баллы зарезервированы, повторять не нужно. Обратись в поддержку для проверки.':'Баллы на ближайший платёж уже потрачены.'}</div>`;
   } else {
     const usable = cap >= s.points_payment_min;
     const startValue = Math.min(100, cap);
@@ -15046,8 +15055,8 @@ async function applyDiscount(btn){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegram_id: telegramId, points: spend })
-    }, 20000);
-    showToast(`Готово — следующий платёж ${d.new_price} ₽`);
+    }, 45000);
+    showToast(`${d.spent} баллов использованы. Следующий платёж — ${d.new_price} ₽. Этот запрос не списывает деньги.`);
     points = d.points_left;
     discountArmed = false;
     renderLevelCard();
@@ -15056,7 +15065,8 @@ async function applyDiscount(btn){
     showToast(e.message || 'Не получилось');
     discountArmed = false;
     btn.disabled = false;
-    btn.textContent = 'Попробовать ещё раз';
+    btn.textContent = 'Проверить состояние';
+    btn.onclick = ()=>loadSubStatus();
   }
 }
 
@@ -18935,6 +18945,8 @@ function liteOn(){
 }
 function liteApply(){
   document.documentElement.toggleAttribute('data-lite', liteOn());
+  if(liteOn()){if(typeof prHoloStop==='function')prHoloStop();if(typeof cardHoloStop==='function')cardHoloStop();}
+  window.dispatchEvent(new Event('club-motion-change'));
   const card = document.getElementById('lite-profile-card');
   if (card) card.style.display = liteOn() ? 'block' : 'none';
 }
@@ -32855,7 +32867,7 @@ function digestTileHtml(){
   const cover = digestLatest.cover_url || '';
   if (cover){
     return `
-    <div class="stream-tile" onclick="openDigestFromHome()" style="position:relative">
+    <div class="stream-tile" onclick="openDigestShelf()" style="position:relative">
       ${dgIsNew() ? `<div class="dg-new-badge dg-new-tile">${escapeHtml(t('digest.new_badge'))}</div>` : ''}
       <img class="stream-tile-img" src="${escapeHtml(cover)}" alt=""
            onerror="this.style.visibility='hidden'">
@@ -32863,7 +32875,7 @@ function digestTileHtml(){
     </div>`;
   }
   return `
-    <div class="stream-tile watch-later-tile" onclick="openDigestFromHome()" style="position:relative">
+    <div class="stream-tile watch-later-tile" onclick="openDigestShelf()" style="position:relative">
       ${dgIsNew() ? `<div class="dg-new-badge dg-new-tile">${escapeHtml(t('digest.new_badge'))}</div>` : ''}
       <svg class="watch-later-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"></path><path d="M8 9h8"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>
       <div class="stream-tile-title">Дайджест</div>
@@ -34420,7 +34432,7 @@ function prHoloStop(){
 }
 function prHoloStart(el, card){
   prHoloStop();
-  if (!el || !window.HoloFX) return;
+  if (liteOn() || !el || !window.HoloFX) return;
   const holo = cardHoloOf(card);
   if (!holo) return;
   const face = el.querySelector('.pr-face.pr-front');
@@ -34765,7 +34777,7 @@ function prPrefetchFx(card){
 function prPlayFxVideo(){
   const el = prEl('pr-fx-video');
   if (!el || !PR_FX.fxVideo) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
   const card  = PR.cards[PR.hero] || null;
   const theme = prFxTheme(card);
   const god   = prFxGodSrc(card, theme);
@@ -34807,7 +34819,7 @@ function prCta(){
    это» (в мини-аппе всегда телефон), а что железо о себе сообщает. Чего нет —
    то не учитываем: Safari, например, не отдаёт deviceMemory вовсе. */
 function prHeavyEffectsAllowed(){
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return false;
   const mem = navigator.deviceMemory || 0;
   const cpu = navigator.hardwareConcurrency || 0;
   if (mem && mem < 4) return false;
@@ -34819,7 +34831,7 @@ function prHeavyEffectsAllowed(){
    в разметке остаётся полторы сотни мёртвых элементов */
 function prImpact(el, mood){
   if (!PR_FX.particles) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
   const scene = prEl('pr-scene');
   const sr = scene.getBoundingClientRect(), cr = el.getBoundingClientRect();
   const cx = cr.left - sr.left + cr.width / 2, cy = cr.top - sr.top + cr.height / 2;
@@ -34848,7 +34860,7 @@ function prSeedAmbient(a, b){
   if (!scene) return;
   scene.querySelectorAll('.pr-ambient').forEach(function(x){ x.remove(); });
   if (!a || !PR_FX.ambient) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
   for (let i = 0; i < 18; i++){
     const s = document.createElement('span');
     s.className = 'pr-ambient';
@@ -34973,6 +34985,7 @@ function cardHoloSettings(holo){
 /* Набор перелива карты: в ответе сервера, иначе из каталога (у ответа
    «открыть карту» поля holo нет) */
 function cardHoloOf(card){
+  if(liteOn())return null;
   if (!card) return null;
   let holo = card.holo;
   if (holo === undefined){
@@ -35220,6 +35233,8 @@ async function claimCard(cardId){
 
 /* ── Альбом ─────────────────────────────────────────────────────────────── */
 
+let albumRarity='all';
+function setAlbumRarity(value){albumRarity=value;renderCardsAlbum();}
 function renderCardsAlbum(){
   const el = document.getElementById('cards-album');
   const prog = document.getElementById('cards-collection-progress');
@@ -35264,7 +35279,8 @@ function renderCardsAlbum(){
     if (c.secret && !showSecret) return false;
     return true;
   });
-  const shownCards = inDeck.concat(extras);
+  const lockedGods=new Set();
+  const shownCards = inDeck.concat(extras).filter(c=>albumRarity==='all'||c.rarity===albumRarity).filter(c=>{if(owned[c.key])return true;const key=c.god||c.title||c.key;if(lockedGods.has(key))return false;lockedGods.add(key);return true;});
 
   const ownedInDeck = inDeck.filter(function(c){ return owned[c.key]; }).length;
   if (prog) prog.textContent = 'Собрано ' + ownedInDeck + ' из ' + inDeck.length
@@ -35283,7 +35299,7 @@ function renderCardsAlbum(){
     (byGod[k] = byGod[k] || []).push(c);
   });
 
-  el.innerHTML = Object.keys(byGod).sort(function(a,b){
+  el.innerHTML = '<div class="album-tabs" role="group" aria-label="Редкость карт">'+[['all','Все'],['legendary','Легендарные'],['rare','Редкие'],['uncommon','Нечастые'],['common','Частые']].map(([key,label])=>'<button type="button" aria-pressed="'+(albumRarity===key)+'" onclick="setAlbumRarity('+jsArg(key)+')">'+label+'</button>').join('')+'</div>'+Object.keys(byGod).sort(function(a,b){
     if (a === OUTSIDE) return 1;
     if (b === OUTSIDE) return -1;
     return a.localeCompare(b,'ru');
@@ -35293,7 +35309,7 @@ function renderCardsAlbum(){
       return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
     });
     const gotHere = list.filter(function(c){ return owned[c.key]; }).length;
-    return '<div class="album-god-title">' + (god === OUTSIDE ? escapeHtml(t('cards.outside_title')) : godNameHtml(god)) + ' · ' + gotHere + '/' + list.length + '</div>'
+    return '<div class="album-god-title">' + (god === OUTSIDE ? escapeHtml(t('cards.outside_title')) : godNameHtml(god)) + ' · ' + gotHere + ' открыто' + '</div>'
       + '<div class="album-grid">' + list.map(function(c){
         const n = owned[c.key] || 0;
         const art = (n && c.image_url)
@@ -39596,11 +39612,15 @@ function dgsOpenLayer(){
   if (!ov) return null;
   hideSplash();            // человек мог прийти по ссылке, минуя оболочку
   ov.classList.add('open');
+  document.documentElement.setAttribute('data-digest-open','');
+  if(hasRealTg()) { ov.classList.add('native-back'); Telegram.WebApp.BackButton.show(); }
   ov.scrollTop = 0;
   document.body.style.overflow = 'hidden';
   return ov;
 }
 function closeDigest(){
+  document.documentElement.removeAttribute("data-digest-open");
+  syncTgBackButton(document.querySelector(".view.active")?.id.replace("view-","")||"portal");
   if(window.pdReturnToWinback){window.pdReturnToWinback=false;document.getElementById("winback-overlay")?.classList.add("open");}
   if (typeof destroyPersonalDigest === "function") destroyPersonalDigest();
   const ov = document.getElementById('dgs');
@@ -39732,7 +39752,7 @@ async function openDigestShelf(){
   try {
     const rows = await apiRequest(API_URL + '/digest/issues' + dgsWho());
     if (!rows || !rows.length){ dgsEmpty(t('digest.empty')); return; }
-    if (rows.length === 1){ openDigest(rows[0].slug); return; }
+
     document.getElementById('dgs-count').textContent = '';
     document.getElementById('dgs-pages').innerHTML =
         '<div class="dgs-shelf">'
@@ -40218,6 +40238,7 @@ function dgIsNew(){
 }
 function dgPaintNew(){
   const el = document.getElementById('digest-card-new');
+  const notice=document.getElementById('digest-top-notice');if(notice)notice.hidden=!dgIsNew();
   if (!el) return;
   if (dgIsNew()){ el.textContent = t('digest.new_badge'); el.style.display = ''; }
   else el.style.display = 'none';
@@ -41111,7 +41132,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=3"></script>
+<script src="personal-digest.js?v=4"></script>
 </body>
 
 </html>
