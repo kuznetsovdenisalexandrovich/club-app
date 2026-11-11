@@ -5771,6 +5771,11 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 .quiz-advice-content p{margin:0 0 16px}.quiz-advice-bridge{color:var(--text-dim)}
 .quiz-advice-content button{width:100%;white-space:normal;font:inherit;min-height:48px}
 .qr-share-top{width:100%;margin:0 0 14px;flex-shrink:0}.qr-share-top .access-btn{min-height:48px;margin:0;font-size:16px}
+.qr-plus{margin:24px 0;padding:24px 0 0;border-top:1px solid var(--line);text-align:center;color:var(--text)}
+.qr-plus-title{font-size:18px;line-height:1.4;margin:0 0 10px;color:var(--text)}
+.qr-plus-sub{font-size:15px;line-height:1.55;margin:0 0 18px;color:var(--text-dim)}
+.qr-plus-scene{pointer-events:none;position:relative;isolation:isolate;overflow:hidden;max-width:380px;margin:0 auto 20px;padding:24px 0}
+.qr-plus-scene .qr-stack{width:min(280px,100%);margin:0 auto}.quiz-overlay .qr-plus-scene .qr-sigil{opacity:.12;mask-image:radial-gradient(ellipse,#000 30%,transparent 68%)}.qr-plus .access-btn{font:inherit;min-height:48px;white-space:normal;margin:0}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -12208,7 +12213,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v574 · 11.11.2026 Поделиться результатом';
+const APP_BUILD = 'v575 · 11.11.2026 Цельный экран результата';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16378,6 +16383,7 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'quiz.member_login': {c:'Боги продаж — совет после игры',l:'Вход участника из браузера',w:'Результат игры',i:true,t:'Уже в клубе? Открыть в Telegram'},
   "quiz.advice.ETFI": {"c": "Боги продаж — совет после игры", "l": "Артемида", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Тщательная подготовка полезна, пока не откладывает сам разговор. Начни с короткого вопроса клиенту: «Эта задача ещё актуальна? Что изменилось с прошлого обсуждения?» Обнови предложение по его ответу, вместо того чтобы заранее продумывать все возможные варианты."},
   "quiz.advice.ETFS": {"c": "Боги продаж — совет после игры", "l": "Гера", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Квалификация помогает понять, подходите ли вы друг другу, но не требует отсеивать человека по первому впечатлению. Спроси: «Какую задачу вы решаете, к какому сроку и что важно учесть?» Сравни ответы с возможностями продукта и честно объясни, где можешь помочь."},
   "quiz.advice.ETMI": {"c": "Боги продаж — совет после игры", "l": "Афродита", "w": "Результат игры → Что с этим делать?", "i": true, "t": "Красивая подача работает лучше, когда за ней виден конкретный результат. Возьми одно обещание из своей презентации и поясни: что именно получит клиент, за счёт каких действий и при каких условиях. Не обещай то, что зависит не только от тебя."},
@@ -37167,15 +37173,20 @@ function quizPlusOfferHtml(godName, gift){
   if (typeof isMember !== 'undefined' && isMember) return '';
   var p = gift.plus;
   if (!qzPlusSeen[p.key]){ qzPlusSeen[p.key] = 1; try { track('prologue_plus_seen', p.key); } catch(e){} }
-  return '<div class="qr-plus" onclick="quizPlusTake(' + jsArg(p.key) + ')" style="margin:18px 0 6px;padding:16px 14px;border-radius:22px;border:1px solid var(--border);background:var(--card2);text-align:center;cursor:pointer">'
-    + '<div style="font-weight:800;font-size:15px;line-height:1.3;margin-bottom:4px">' + escapeHtml(t('prologue.plus_title')) + '</div>'
-    + '<div style="font-size:12.5px;opacity:.72;line-height:1.45;margin-bottom:10px">' + escapeHtml(tf('prologue.plus_sub', { god: godName })) + '</div>'
-    + '<div style="zoom:.58;pointer-events:none">'
-    +   cardSceneHtml({ art: p.art_url || '', frame: p.frame_url || '', sigil: p.sigil_url || p.sigil_url_soft || '',
-                        sign: godSignFor(godName, 0), god: godName, role: '' , live: true })
+  return '<section class="qr-plus">'
+    + '<h3 class="qr-plus-title">' + escapeHtml(t('prologue.plus_title')) + '</h3>'
+    + '<p class="qr-plus-sub">' + escapeHtml(tf('prologue.plus_sub', { god: godName })) + '</p>'
+    + (!telegramId ? '<button class="lec-link-btn access-btn qr-member-login" onclick="quizMemberLogin()">' + escapeHtml(t('quiz.member_login')) + '</button>' : '')
+    + '<div class="qr-plus-scene" aria-hidden="true">'
+    + cardSceneHtml({ art: p.art_url || '', frame: p.frame_url || '',
+        sigil: p.sigil_url || p.sigil_url_soft || '', god: godName, role: '' })
     + '</div>'
-    + '<button class="lec-link-btn access-btn" style="width:100%;margin-top:12px">' + escapeHtml(t('prologue.plus_btn')) + '</button>'
-    + '</div>';
+    + '<button class="lec-link-btn access-btn" onclick="quizPlusTake(' + jsArg(p.key) + ')">' + escapeHtml(t('prologue.plus_btn')) + '</button>'
+    + '</section>';
+}
+function quizMemberLogin(){
+  const payload = (typeof gameInvite !== 'undefined' && gameInvite) ? gameInvite.payload : appStartParam();
+  openUrl(BOT_LINK + '/app?startapp=' + encodeURIComponent(payload || 'quiz'));
 }
 function quizPlusTake(key){
   try { track('prologue_plus_tap', key || ''); } catch(e){}
@@ -37260,11 +37271,11 @@ function renderQuizResult(){
                   + 'Нажми на теневую карточку, чтобы увидеть вторую натуру</div>' : '')
       + quizGiftNoteHtml(gift)
       + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
-      + quizPlusOfferHtml(me.god, gift)
       + '</div>'
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
     + quizAdviceHtml(r.code)
+    + quizPlusOfferHtml(me.god, gift)
     + '<div class="quiz-axes">' + axesHtml + '</div>'
     + allyHtml
     + godLink
