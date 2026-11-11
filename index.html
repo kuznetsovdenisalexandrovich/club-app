@@ -37499,25 +37499,7 @@ function quizShareUrl(){
   return shareLink('quiz_' + code + shareTail());
 }
 
-async function shareQuizResult(){
-  return openGameShare('gods');
-  const me = quizResult && QUIZ_RESULTS[quizResult.code];
-  if (!me) return;
-  const text = 'Я — ' + me.god + ', ' + me.role.toLowerCase() + '. А ты кто из боженек продаж?';
-  const url = quizShareUrl();
-  try {
-    if (navigator.share){
-      await navigator.share({ title: 'Кто ты из боженек продаж', text: text, url: url });
-      return;
-    }
-  } catch(e){ /* человек отменил — это не ошибка */ return; }
-  try {
-    await navigator.clipboard.writeText(text + ' ' + url);
-    showToast('Ссылка скопирована');
-  } catch(e){
-    showToast('Скопируй ссылку: ' + url);
-  }
-}
+async function shareQuizResult(){ return openGameShare('gods'); }
 
 /* «Что за клуб?» должна вести на страницу описания, а не в пейволл.
    Три случая, и третий легко упустить: холодный посетитель приходит по ссылке
@@ -37731,74 +37713,17 @@ function quizCardUrl(){
   return `${API_URL}/quiz/card?` + q;
 }
 
-async function shareQuizImage(){
-  return openGameShare('gods');
-/* legacy image export kept for reference */
-  const me = quizResult && QUIZ_RESULTS[quizResult.code];
-  if (!me) return;
-  const btn = document.getElementById('quiz-img-btn');
-  const restore = btn ? btn.textContent : '';
-  if (btn){ btn.disabled = true; btn.textContent = 'Готовлю картинку…'; }
-
-  try {
-    const resp = await fetch(quizCardUrl());
-    if (!resp.ok) throw new Error('сервер ответил ' + resp.status);
-    const blob = await resp.blob();
-    const type = (blob.type && blob.type.indexOf('image/') === 0) ? blob.type : 'image/png';
-    const ext = (type === 'image/jpeg') ? 'jpg' : 'png';
-    const file = new File([blob], 'bozhenka-' + quizResult.code + '.' + ext, { type: type });
-    const text = 'Я — ' + me.god + ', ' + me.role.toLowerCase() + '. А ты кто из боженек продаж?';
-
-    // Системное меню с ФАЙЛОМ — то, что нужно для сторис. Поддержка есть не
-    // везде, поэтому сначала спрашиваем canShare именно про файлы
-    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share){
-      try {
-        await navigator.share({ files: [file], text: text, title: 'Кто ты из боженек продаж' });
-      } catch(e){ /* человек передумал — это не ошибка */ }
-      return;
-    }
-
-    // Иначе просто скачиваем: человек опубликует сам
-    const href = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = href;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(href); }, 4000);
-    showToast('Картинка сохранена');
-  } catch(e){
-    showToast('Не получилось собрать картинку: ' + (e.message || e));
-  } finally {
-    if (btn){ btn.disabled = false; btn.textContent = restore; }
-  }
-}
+async function shareQuizImage(){ return openGameShare('gods'); }
 
 /* Второй путь: бот присылает картинку в чат. Так удобнее тем, кто уже в
    Telegram — переслать фото оттуда проще, чем скачивать и заливать заново */
 async function sendQuizCardToBot(){
-  if (!telegramId || !quizResult) return;
-  const btn = document.getElementById('quiz-bot-btn');
-  const restore = btn ? btn.textContent : '';
-  if (btn){ btn.disabled = true; btn.textContent = 'Отправляю…'; }
-  try {
-    await apiRequest(`${API_URL}/quiz/card/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        telegram_id: telegramId,
-        code: quizResult.code,
-        second: quizResult.secondCode || '',
-      })
-    }, 30000);
-    showToast('Отправил в бот — оттуда пересылай');
-  } catch(e){
-    showToast(e.message || 'Не получилось отправить');
-  } finally {
-    if (btn){ btn.disabled = false; btn.textContent = restore; }
-  }
+  if(!telegramId||!quizResult)return;
+  const button=document.getElementById('quiz-bot-btn');if(button)button.disabled=true;
+  try{const data=await gameShareAPI('',{kind:'gods',code:quizResult.code,guest_key:ggGuestKey()});await gameShareAPI('/'+data.id+'/send',{});showToast(gsText('sent'))}
+  catch(e){showToast(e.message||gsText('error'))}finally{if(button)button.disabled=false}
 }
+
 
 
 
