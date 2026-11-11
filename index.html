@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v529 -->
+<!-- FILE_VERSION: index-v539 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -5758,6 +5758,8 @@ html[data-digest-open] .level-card,html[data-digest-open] #bug-report-btn{visibi
 .album-tabs{display:flex;gap:8px;overflow:auto;padding:12px 0;grid-column:1/-1}.album-tabs button{flex-shrink:0;min-height:46px;border:1px solid var(--warm);border-radius:12px;background:transparent;color:var(--text);padding:8px 14px;font:inherit}.album-tabs button[aria-pressed=true]{background:var(--warm);color:var(--bg)}
 html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[data-lite] .pr-fx{display:none!important}
 #digest-top-notice[hidden]{display:none}
+
+.kq-categories[hidden]{display:none}#tab-games.kq-new::after{top:8px;right:20%}.kq-access-lock{display:inline-flex;vertical-align:middle;margin-right:8px}#kq-panel .access-btn{min-height:48px;font-size:16px}.kq-categories,.kq-shelf,.kq-options{display:grid;gap:14px;margin:20px 0}.kq-categories button,.kq-tile{font:inherit;text-align:left;min-height:64px;width:100%;color:var(--text);position:relative;cursor:pointer}.kq-tile-title{display:flex;align-items:center;gap:12px;font-weight:650}.kq-tile .kq-muted{display:block;margin-top:10px}.kq-muted{color:var(--text-dim);font-size:14px;line-height:1.6}.kq-new::after{content:'';position:absolute;right:12px;top:12px;width:7px;height:7px;border-radius:50%;background:var(--accent,#d78c56)}.kq-pending{outline:1px solid #c8976244;box-shadow:0 0 16px #c8976214}.kq-options button{min-height:52px;padding:14px 18px;border:1px solid var(--line);border-radius:14px;color:var(--text);background:transparent;font:inherit;text-align:left;cursor:pointer}.kq-options button[aria-pressed=true]{border-color:var(--warm);background:#b89b7620}.kq-options button.kq-correct{border:2px solid var(--warm)}.kq-progress{height:6px;background:var(--line);border-radius:12px;margin:24px 0}.kq-progress span{display:block;height:100%;background:var(--warm);border-radius:12px}.kq-rules{white-space:pre-wrap}.kq-image{width:100%;max-height:320px;object-fit:contain;border-radius:16px;margin:16px 0}#kq-panel{padding-bottom:30px}#kq-panel h2{font-size:24px;line-height:1.35}.kq-gate p{line-height:1.6}.kq-options button:focus-visible,.kq-categories button:focus-visible{outline:2px solid var(--warm);outline-offset:3px}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -6553,7 +6555,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
             <button class="gg-round" onclick="ggPop('gg-m-howto')" aria-label="Как устроено">?</button>
           </div>
         </div>
-        <div id="gg-list"></div>
+        <div class="kq-categories"><button class="card" onclick="kqCategory('ai')">Потренироваться с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list"></div>
       </div>
 
       <!-- Партия. ⚠️ Мастер-бар и пилюля на этом экране скрыты -->
@@ -12156,7 +12158,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v538 · 11.11.2026 Навигация и коллекция';
+const APP_BUILD = 'v539 · 11.11.2026 Квизы по занятиям';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12512,6 +12514,7 @@ function tgBackHandler(){
   if (now - tgBackLast < 400) return;   // одно нажатие пришло обоими путями
   tgBackLast = now;
   tgBackFired++;
+  if(typeof kqBack==='function'&&kqBack())return;
   if(document.getElementById("dgs")?.classList.contains("open")){closeDigest();return;}
   try {
     /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
@@ -20128,6 +20131,7 @@ function continueClubRegistration(){
 }
 
 function renderLevelCard(){
+  if(typeof kqRefreshLocks==='function')kqRefreshLocks();
   syncRegistrationNext();
   renderLevelCardInner();
   syncLevelGap();   // v404: бар мог сменить высоту (строка-предупреждение) или спрятаться
@@ -20225,7 +20229,7 @@ function showLevelUpPopup(newLevel, levelConfig){
   // Формируем список открытий с читаемыми названиями
   const rewardTitles = (levelConfig && levelConfig.rewards) || [];
   const unlockKeys   = (levelConfig && levelConfig.unlock_keys) || [];
-  const UNLOCK_NAMES = { insights: 'Главные идеи в карточке лекции', pdf: 'Скачивание PDF-выжимок' };
+  const UNLOCK_NAMES = { quizzes:'Квизы по занятиям', personal_digest:'Твоя персональная выжимка', insights: 'Главные идеи в карточке лекции', pdf: 'Скачивание PDF-выжимок' };
   const allItems = [...rewardTitles, ...unlockKeys.map(k => UNLOCK_NAMES[k] || k)];
   const items = allItems.map(t =>
     `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px"><span style="color:var(--warm);font-size:16px">★</span><span>${t}</span></div>`);
@@ -23649,6 +23653,7 @@ function lecCardHtml(l, i, src, fopts){
       <div class="lec-card-top">
         <div class="lec-title">${l.title}</div>
         <div class="lec-side-btns">
+          ${l.quiz_id ? `<button class="save-btn" aria-label="Пройти квиз по занятию" title="Квиз" onclick="event.stopPropagation();openKnowledgeQuiz(${jsArg(l.quiz_id)})"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h14v18H5zM8 8l2 2 5-4M8 15h8" stroke="currentColor" stroke-width="1.5"/></svg></button>` : ''}
           <button class="save-btn${isSaved ? ' saved' : ''}" data-slug="${l.slug}" onclick="event.stopPropagation();toggleSaved('${l.slug}')" aria-label="Смотреть позже">${SAVE_ICON}</button>
           <button class="save-btn lec-share-ico" aria-label="${escapeHtml(t('share.lecture_btn'))}" title="${escapeHtml(t('share.lecture_btn'))}" onclick="event.stopPropagation();shareLecture('${l.slug}')">${SHARE_ICON}</button>
         </div>
@@ -32589,6 +32594,7 @@ async function init(){
     try {
       // Personal access must not depend on marketing presence or attribution.
       const accessStart = appStartParamRaw();
+      if(/^kq_[a-f0-9]{32}$/.test(accessStart)){await openKnowledgeQuiz(accessStart.slice(3));return;}
       if (accessStart.indexOf('paid_') === 0){
         await claimManualAccess(accessStart.slice(5));
         return;
@@ -38418,6 +38424,7 @@ function ggMode(on){
 }
 
 async function ggOpen(){
+  if(typeof kqLoad==='function')kqLoad();
   ggMode(true);
   /* ⚠️⚠️ СНАЧАЛА ЖДЁМ ПРОФИЛЬ, ПОТОМ СПРАШИВАЕМ СЕРВЕР. Профиль грузится
      асинхронно, и до его прихода `telegramId` равен null — запрос уходил бы с
@@ -39788,7 +39795,7 @@ async function openDigest(slug){
 }
 
 /* Возвращаем готовый опубликованный выпуск вместо автоматической ленты событий. */
-async function openDigestMissed(since){ return openPersonalDigest(); }
+async function openDigestMissed(since){ return openPersonalDigestOffer(); }
 async function legacyOpenDigestMissed(since){
   dgsLoading(t('digest.loading'));
   try {
@@ -41132,7 +41139,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=4"></script>
-</body>
+<script src="personal-digest.js?v=5"></script>
+<script src="knowledge-quizzes.js?v=1"></script></body>
 
 </html>
