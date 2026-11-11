@@ -27,7 +27,7 @@ function pdDocument(d){
   return sheet('<p class="eyebrow">Возможно, ты ещё не пробовал</p><h2>'+E(p.title)+'</h2><p class="feature-intro">Познакомься с возможностями клуба.</p>'+button('Посмотреть, как это работает','feature',i),'feature-page',i+2);
  }).join('');
  const js=`document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(!a)return;e.preventDefault();parent.postMessage({personalDigest:true,action:a.dataset.action,index:Number(a.dataset.i)},'*')});document.querySelector('#period').onsubmit=e=>{e.preventDefault();const f=e.target;parent.postMessage({personalDigest:true,action:'period',start:f.start.value,end:f.end.value},'*')};window.addEventListener('message',e=>{if(e.source!==parent||!e.data.audio)return;const slot=document.getElementById('audio-'+e.data.index);if(!slot)return;document.querySelectorAll('audio').forEach(a=>a.pause());const a=document.createElement('audio');a.controls=true;a.src=e.data.audio;slot.replaceChildren(a);a.onloadedmetadata=()=>{a.currentTime=e.data.seconds;a.play().catch(()=>{})}});`;
- return '<!doctype html><html lang="ru"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+PD_CSS+'form{display:grid;gap:12px}input{font:inherit;max-width:100%}a,a:hover,a:active{background:transparent!important}button{cursor:pointer}</style><body><main id="digest-scroll">'+sheet(intro,'cover',1)+pages+'</main><script>'+PD_HOLO+';'+js+';('+String(pdHoloMount)+')('+JSON.stringify(configs).replace(/</g,'\u003c')+');<\/script></body></html>';
+ return '<!doctype html><html lang="ru"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+PD_CSS+'form{display:grid;gap:12px}input{font:inherit;max-width:100%}a,a:hover,a:active{background:transparent!important}button{cursor:pointer}</style><body><main id="digest-scroll">'+sheet(intro,'cover',1)+pages+'</main><script>'+PD_HOLO+';'+js+';('+String(pdHoloMount)+')('+JSON.stringify(configs).replace(/</g,'\\u003c')+');<\/script></body></html>';
 }
 window.addEventListener('message',async e=>{
  if(!pdFrame||e.source!==pdFrame.contentWindow||!e.data?.personalDigest||dgsMode!=='personal')return;
@@ -45,3 +45,5 @@ window.addEventListener('message',async e=>{
 });
 
 function pdHoloMount(configs){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const mounts=new Map();const cards=[...document.querySelectorAll('.card-page')];const io=new IntersectionObserver(entries=>entries.forEach(e=>{const el=e.target,cfg=configs[cards.indexOf(el)];if(e.isIntersecting&&!mounts.has(el)&&cfg?.on){const scene=el.querySelector('.card-scene');mounts.set(el,HoloFX.mount(el.querySelector('.card-art'),cfg,{input:scene,tiltEl:scene,gyro:false,touch:false,z:2}))}else if(!e.isIntersecting&&mounts.has(el)){mounts.get(el).destroy();mounts.delete(el)}}));cards.forEach(el=>io.observe(el));}
+
+function destroyPersonalDigest(){if(pdFrame){pdFrame.remove();pdFrame=null;}pdEdition=null;}

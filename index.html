@@ -39684,6 +39684,7 @@ function dgsOpenLayer(){
   return ov;
 }
 function closeDigest(){
+  if (typeof destroyPersonalDigest === "function") destroyPersonalDigest();
   const ov = document.getElementById('dgs');
   if (ov) ov.classList.remove('open');
   document.body.style.overflow = '';
