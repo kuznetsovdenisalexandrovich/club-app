@@ -4,7 +4,7 @@ const PD_CSS="*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;
 let pdEdition=null,pdFrame=null,pdActiveOffer="";
 async function openPersonalDigestOffer(){try{const d=await apiRequest(API_URL+"/digest/personal/offer-access",{method:"POST"});await openPersonalDigest(undefined,undefined,d.token)}catch(e){showToast(e.message||"Не удалось открыть предложение")}}
 async function openPersonalDigest(start,end,offer=""){
- pdActiveOffer=offer;
+ pdActiveOffer=offer;document.getElementById('dgs')?.classList.remove('issue-mode');
  if(!offer&&typeof kqDigestAccess==='function'&&!await kqDigestAccess())return;
  pdFeatureOpened('digest');
   dgsLoading('Собираем твою выжимку…');dgsPdfBtn(false);dgsShareBtnShow(false);dgsMode='personal';

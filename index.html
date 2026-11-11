@@ -5755,6 +5755,8 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .dgs-overlay.native-back .dgs-close:not(.dgs-pdf-btn){display:none}
 html[data-digest-open] .level-card,html[data-digest-open] #bug-report-btn{visibility:hidden}
 .dgs-overlay:has(#dgs-pages iframe){padding-top:calc(var(--safe-top,0px) + 54px);box-sizing:border-box;overflow:hidden}
+.dgs-overlay.native-back:has(#dgs-pages iframe){padding-top:var(--safe-top,0px)}
+.dgs-overlay.native-back #dgs-pages iframe{height:calc(100dvh - var(--safe-top,0px))!important}
 .album-tabs{display:flex;gap:8px;overflow:auto;padding:12px 0;grid-column:1/-1}.album-tabs button{flex-shrink:0;min-height:46px;border:1px solid var(--warm);border-radius:12px;background:transparent;color:var(--text);padding:8px 14px;font:inherit}.album-tabs button[aria-pressed=true]{background:var(--warm);color:var(--bg)}
 html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[data-lite] .pr-fx{display:none!important}
 #digest-top-notice[hidden]{display:none}
@@ -12197,7 +12199,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v549 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v550 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -41237,7 +41239,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=5"></script>
+<script src="personal-digest.js?v=6"></script>
 <style>
 /* Shared flow layout: the level bar must never cover scrollable content. */
 body.onboarding-bar-visible #app-shell>header{margin-bottom:0!important}
