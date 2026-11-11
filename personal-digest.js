@@ -59,7 +59,7 @@ function pdHoloMount(configs){
  const mounts=new Map(),cards=[...document.querySelectorAll('.card-page')];
  const quiet=()=>{try{return parent.liteOn()||matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return true}};
  const sync=()=>{const off=quiet();document.documentElement.toggleAttribute('data-lite',off);if(off){mounts.forEach(f=>f.destroy());mounts.clear();}else cards.forEach(el=>{const r=el.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight)mount(el)})};
- function mount(el){const cfg=configs[cards.indexOf(el)];if(quiet()||mounts.has(el)||!cfg?.on)return;const scene=el.querySelector('.card-scene');mounts.set(el,HoloFX.mount(el.querySelector('.card-art'),cfg,{input:scene,tiltEl:scene,gyro:true,touch:false,z:2}));}
+ function mount(el){const cfg=configs[cards.indexOf(el)];if(quiet()||mounts.has(el)||!cfg?.on)return;const scene=el.querySelector('.card-scene');mounts.set(el,HoloFX.mount(el.querySelector('.card-art'),parent.cardHoloSettings(cfg),{input:scene,tiltEl:scene,gyro:true,touch:false,z:2}));}
  const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)mount(e.target);else if(mounts.has(e.target)){mounts.get(e.target).destroy();mounts.delete(e.target)}}));cards.forEach(el=>io.observe(el));
  parent.addEventListener('club-motion-change',sync);window.addEventListener('pagehide',()=>{io.disconnect();mounts.forEach(f=>f.destroy());parent.removeEventListener('club-motion-change',sync)});sync();
 }

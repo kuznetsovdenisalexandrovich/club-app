@@ -2,6 +2,7 @@
 <!-- FILE_VERSION: index-v543 -->
 <html lang="ru" data-theme="light">
 <head>
+<script src="card-motion.js?v=1"></script>
 
 <meta charset="UTF-8">
 <script>
@@ -12199,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v559 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v560 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -35072,9 +35073,7 @@ function cardHoloStop(){
    подписан «только для песочницы» и мог быть сохранён нулём — в приложении
    карта теперь наклоняется вслед за телефоном, поэтому ноль заменяем на 8° */
 function cardHoloSettings(holo){
-  const out = Object.assign({}, holo);
-  if (!(Number(out.tilt) > 0)) out.tilt = 8;
-  return out;
+  return withClubCardMotion(holo);
 }
 /* Набор перелива карты: в ответе сервера, иначе из каталога (у ответа
    «открыть карту» поля holo нет) */
@@ -41263,7 +41262,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=9"></script>
+<script src="personal-digest.js?v=10"></script>
 <style>
 /* Shared flow layout: the level bar must never cover scrollable content. */
 body.onboarding-bar-visible #app-shell>header{margin-bottom:0!important}
