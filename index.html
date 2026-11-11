@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v542 -->
+<!-- FILE_VERSION: index-v543 -->
 <html lang="ru" data-theme="light">
 <head>
 
@@ -6091,7 +6091,36 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
   .plan-empty-cta::before{animation:none}
 }
 </style>
-</head>
+<style>
+/* Games navigation and portal thumbnails, v543. */
+#tab-games{position:relative}
+#tab-games.kq-new::after{right:calc(50% - 18px);top:5px}
+#gg-root .kq-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:24px 0}
+#gg-root .kq-categories[hidden]{display:none}
+#gg-root .kq-categories>.card,#gg-root .kq-tile,#gg-root .kq-gate{background:var(--gg-card);border:1px solid var(--gg-pill-brd);box-shadow:var(--gg-card-sh);color:var(--gg-ink);border-radius:20px}
+#gg-root .kq-categories>.card{margin:0;min-height:150px;padding:20px 16px;text-align:left;position:relative;font:600 16px/1.4 var(--gg-font-body);overflow-wrap:normal;hyphens:manual;display:flex;align-items:flex-end}
+#gg-root #kq-panel{color:var(--gg-ink);font-family:var(--gg-font-body);font-size:16px;line-height:1.55;padding-bottom:24px}
+#gg-root #kq-panel h2{font-family:var(--gg-font-disp);font-size:24px;line-height:1.25;margin:18px 0}
+#gg-root .kq-muted{color:var(--gg-muted)}
+#gg-root .kq-options button,#gg-root #kq-panel .lec-link-btn{background:var(--gg-card);border:1px solid var(--gg-pill-brd);color:var(--gg-ink);box-shadow:var(--gg-card-sh);border-radius:16px;padding:16px;font:inherit;margin:8px 0}
+#gg-root .kq-options button[aria-pressed=true]{border:2px solid #8b91ec;background:var(--gg-pill)}
+#gg-root .kq-options button.kq-correct{border:2px solid #47b895}
+#gg-root #kq-answer:disabled{opacity:.45}
+#gg-root .kq-progress span{background:var(--gg-fill)}
+#games-level-slot{position:relative;margin:16px 0 24px}
+#games-level-slot .level-card{padding-right:48px;position:relative;inset:auto;width:100%;max-width:none;z-index:1;margin:0}
+#games-level-slot .reward-level-badge{position:absolute;top:-12px;right:6px;z-index:2}
+.games-category-back{display:none!important}
+html[data-games-category] .games-category-back{display:grid!important;margin-bottom:16px}
+html[data-tg-native-back] .games-category-back{display:none!important}
+html[data-games-category] #games-level-slot,html[data-games-category][data-gg] #level-card,html[data-games-category][data-gg] #reward-level-badge,
+html[data-app-layer] #level-card,html[data-app-layer] #reward-level-badge{display:none!important}
+html[data-tg-native-back] .quiz-close,html[data-tg-native-back] .god-close{display:none}
+.coll-strip{align-items:flex-start}
+html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
+.coll-strip .coll-art{height:100%;width:100%}
+.portal-section-link{background:none;border:0;padding:8px 0;color:var(--warm);font:600 12px var(--body);cursor:pointer;text-decoration:underline}
+</style></head>
 <body>
 
 <!-- Экран загрузки. Лежит ПЕРВЫМ в body и стилизован инлайново: браузер рисует
@@ -6336,7 +6365,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
     <div id="coll-strip-block" style="display:none">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
         <span>Коллекция</span>
-        <span id="coll-strip-count" style="font-size:12px;color:var(--text-dim);font-weight:400"></span>
+        <button id="coll-strip-count" class="portal-section-link" onclick="switchView('cards')">Все карточки</button>
       </div>
       <div class="coll-strip" id="coll-strip"></div>
     </div>
@@ -6356,7 +6385,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
     <div class="hblock" data-block="schedule">
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
       <span>Расписание</span>
-      <span style="font-size:12px;font-weight:600;color:var(--warm);cursor:pointer" onclick="switchView('schedule')">Все →</span>
+      <span style="font-size:12px;font-weight:600;color:var(--warm);cursor:pointer" onclick="switchView('schedule')">Настроить расписание →</span>
     </div>
     <div class="card cal-widget-card">
       <div class="cal-widget-today" id="cal-widget-today">—</div>
@@ -6555,7 +6584,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
             <button class="gg-round" onclick="ggPop('gg-m-howto')" aria-label="Как устроено">?</button>
           </div>
         </div>
-        <div class="kq-categories"><button class="card" onclick="kqCategory('ai')">Потренироваться с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list"></div>
+        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')">Потрени&shy;роваться с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
       </div>
 
       <!-- Партия. ⚠️ Мастер-бар и пилюля на этом экране скрыты -->
@@ -12158,7 +12187,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v542 · 11.11.2026 Квизы по занятиям';
+const APP_BUILD = 'v543 · 11.11.2026 Квизы по занятиям';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12478,13 +12507,49 @@ function comingSoon() {
    и кнопка «назад» на ней обещала возврат, которого не бывает. В самой партии
    кнопку показываем отдельно — там ей есть куда вести (к списку игр) */
 const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
+/* Native Back follows the top dismissible layer, including dialogs above games. */
+function appBackLayer(){
+  const explicit={'dgs':()=>closeDigest(),'quiz-overlay':()=>closeQuiz(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
+  const layers=Array.from(document.querySelectorAll('[id].open,[id].gg-open')).filter(el=>el.offsetWidth&&el.offsetHeight);
+  const choices=layers.map((el,i)=>{
+    let dismiss=explicit[el.id];
+    if(el.id==='reveal-overlay'&&!el.classList.contains('showcase'))return null;
+    const close=el.querySelector('button[class*="close"][onclick],button[aria-label="Закрыть"][onclick]');
+    if(!dismiss&&close&&/^\s*(?:close\w*|\w*Close)\s*\(/.test(close.getAttribute('onclick')||''))dismiss=()=>close.click();
+    // Only existing backdrop-dismiss handlers; never click a purchase or confirmation.
+    if(!dismiss&&/event\.target\s*===\s*this/.test(el.getAttribute('onclick')||''))dismiss=()=>el.click();
+    return dismiss?{el,dismiss,z:Number(getComputedStyle(el).zIndex)||0,i}:null;
+  }).filter(Boolean);
+  choices.sort((a,b)=>b.z-a.z||b.i-a.i);return choices[0]||null;
+}
+function appSyncNavigation(){
+  const active=document.querySelector('.view.active');const name=active?.id.replace(/^view-/,'')||'portal';
+  const slot=document.getElementById('games-level-slot');
+  for(const id of ['level-card','reward-level-badge']){
+    const el=document.getElementById(id);if(!el)continue;
+    if(!el._homeAnchor){el._homeAnchor=document.createComment(id+' home');el.before(el._homeAnchor)}
+    if(name==='games'&&slot&&el.parentElement!==slot)slot.append(el);
+    else if(name!=='games'&&el.parentElement===slot)el._homeAnchor.after(el);
+  }
+  document.documentElement.toggleAttribute('data-app-layer',!!appBackLayer());
+  syncTgBackButton(name);
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  let queued=false;
+  new MutationObserver(records=>{
+    if(!records.some(r=>r.target instanceof Element&&(r.target.matches('.view,[id*="overlay"],.gg-overlay,#dgs,#card-share-sheet')||r.target===document.documentElement&&r.attributeName==='data-games-category')))return;
+    if(queued)return;queued=true;queueMicrotask(()=>{queued=false;appSyncNavigation()});
+  }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style']});
+  appSyncNavigation();
+});
+
 function syncTgBackButton(name){
   const tg = window.Telegram && window.Telegram.WebApp;
   if (!tg || !tg.BackButton) return;
   try {
     /* В партии кнопка нужна: она возвращает к списку игр */
     const inGame = document.documentElement.hasAttribute('data-gg-play');
-    if (!inGame && TG_ROOT_VIEWS.indexOf(name) !== -1) tg.BackButton.hide();
+    if (!inGame && !appBackLayer() && !(name==='games' && document.documentElement.hasAttribute('data-games-category')) && TG_ROOT_VIEWS.indexOf(name) !== -1) tg.BackButton.hide();
     else tg.BackButton.show();
   } catch(e){}
 }
@@ -12514,6 +12579,7 @@ function tgBackHandler(){
   if (now - tgBackLast < 400) return;   // одно нажатие пришло обоими путями
   tgBackLast = now;
   tgBackFired++;
+  const layer=appBackLayer(); if(layer){layer.dismiss(); return;}
   if(document.getElementById("dgs")?.classList.contains("open")){closeDigest();return;}
   try {
     /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
@@ -12543,6 +12609,7 @@ function tgBackHandler(){
     if (live && live.style.display === 'flex'){ collapseLiveFull(); return; }
     const reader = document.getElementById('view-magazine-read');
     if (reader && reader.classList.contains('active')){ closeMagazineReader(); return; }
+    if(document.getElementById('view-games')?.classList.contains('active')&&document.getElementById('gg-final-wrap')?.style.display!=='none'){ggBackToList();return;}
     if(typeof kqBack==='function'&&kqBack())return;
     switchView('portal');
   } catch(e){
@@ -36361,7 +36428,7 @@ function renderCollectionStrip(){
 
   const newKeys = newCardKeys();
   const ownedInDeck = inDeck.filter(function(c){ return owned[c.key]; }).length;
-  if (cnt) cnt.textContent = ownedInDeck + ' из ' + inDeck.length;
+  if (cnt) cnt.textContent = 'Все карточки';
 
   // Сначала полученные (свежие впереди), потом несобранные силуэтами —
   // так лента сразу читается как «вот моё, а вот чего не хватает»
@@ -38434,6 +38501,7 @@ async function ggOpen(){
      подпиской упирался в пейвол. Ровно тот класс, что записан уроком:
      решение по флагу, который ещё не загружен. Ждём ГОТОВНОСТИ, не паузы. */
   ggBackToList();
+  kqHome();
   await waitProfile(4000);
   if(typeof kqLoad==='function')kqLoad();
   /* ⚠️ ПРЕДЛОЖЕНИЕ — ПОСЛЕ ЗАГРУЗКИ СПИСКА: без него нечем взять
@@ -38794,6 +38862,8 @@ function ggShow(which){
 }
 
 function ggBackToList(){
+  const returning=document.documentElement.hasAttribute('data-gg-play')||document.getElementById('gg-final-wrap')?.style.display!=='none';
+  if(returning&&typeof kqCategory==='function')kqCategory('ai');
   ggS = null;
   ggShow('list');
   /* ⚠️ Возврат к списку возвращает пилюлю, но НЕ шапку приложения: на вкладке
@@ -41143,6 +41213,6 @@ function ivAutoOpen(){
 </script>
 <script src="exit-presence.js?v=3"></script>
 <script src="personal-digest.js?v=5"></script>
-<script src="knowledge-quizzes.js?v=4"></script></body>
+<script src="knowledge-quizzes.js?v=5"></script></body>
 
 </html>
