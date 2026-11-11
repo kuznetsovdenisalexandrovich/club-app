@@ -6588,7 +6588,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
             <button class="gg-round" onclick="ggPop('gg-m-howto')" aria-label="Как устроено">?</button>
           </div>
         </div>
-        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')" data-text="games.ai_category">Тренировка с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
+        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')"><img class="game-category-cover" data-game-cover="ai" src="game-covers/ai.jpg" alt="" width="960" height="640"><span class="game-category-title" data-text="games.ai_category">Тренировка с ИИ</span></button><button class="card" onclick="kqCategory('god')"><img class="game-category-cover" data-game-cover="god" src="game-covers/gods.jpg" alt="" width="960" height="640"><span class="game-category-title">Кто ты из богов продаж?</span></button><button class="card" id="kq-category" onclick="kqCategory('quizzes')"><img class="game-category-cover" data-game-cover="quizzes" src="game-covers/quizzes.jpg" alt="" width="960" height="640"><span class="game-category-title">Квизы</span></button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
       </div>
 
       <!-- Партия. ⚠️ Мастер-бар и пилюля на этом экране скрыты -->
@@ -12199,7 +12199,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v554 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v555 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -38703,6 +38703,7 @@ function ggCardHtml(g){
     + '</button>';
 
   return '<div class="gg-gm-card' + (g.locked ? ' gg-locked' : '') + '" onclick="ggTap(' + jsArg(g.key) + ')">'
+    + gameCoverMarkup(g.image_url,'ai','gg-game-cover')
     + share
     + (best >= 100 ? '<div class="gg-gm-done">Пройдена</div>' : '')
     + '<div class="gg-gm-top">'
@@ -41281,6 +41282,17 @@ html[data-kq-screen="intro"] #gg-root #kq-panel h2{font-size:21px;line-height:1.
 html[data-lite][data-theme="dark"]{--bg2:#0b0c1b}
 html[data-tg-native-back] .app-native-close-handle{display:none!important}
 html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-lite] #gg-root .kq-categories>.card,html[data-lite] #gg-root .kq-options button{background:var(--gg-solid-panel)!important}
-</style><script src="knowledge-quizzes.js?v=7"></script></body>
+</style><style>
+#gg-root .kq-categories{gap:10px;margin:18px 0}
+#gg-root .kq-categories>.card{display:flex;flex-direction:column;align-items:stretch;min-height:0;padding:0;border-radius:16px;overflow:hidden;box-shadow:var(--gg-card-sh)}
+#gg-root .game-category-cover{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;flex:none}
+#gg-root .game-category-title{display:block;font:600 12px/1.35 var(--gg-font-body);padding:10px;min-height:52px;text-align:left}
+#gg-root .kq-categories .kq-access-lock{position:absolute;left:8px;top:8px;background:var(--gg-solid-panel);padding:4px;border-radius:7px;z-index:2}
+#gg-root .kq-categories .kq-access-lock[hidden]{display:none}
+#gg-root .gg-game-cover{display:block;width:calc(100% + 40px);max-width:none;height:auto;aspect-ratio:3/2;object-fit:cover;margin:-18px -20px 16px;border-radius:27px 27px 0 0}
+#gg-root .kq-quiz-cover{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:19px 19px 0 0;margin-bottom:14px}
+#gg-root .kq-tile{padding:0 0 16px;overflow:hidden}
+#gg-root .kq-tile>span{margin-left:16px;margin-right:16px}
+</style><script src="knowledge-quizzes.js?v=8"></script></body>
 
 </html>
