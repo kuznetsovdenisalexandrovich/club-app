@@ -12200,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v563 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v564 · 11.11.2026 Карточки результатов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -13767,6 +13767,7 @@ function runAppRoute(payload){
   const p = String(payload || '');
   if (!p) return;
   try {
+    if(/^play_[a-f0-9]{24}$/.test(p)){openGameInvitation(p.slice(5));return;}
     if (p.indexOf('gs_') === 0 || p.indexOf('g_') === 0){
       const key = p.replace(/^gs?_/, '').replace(/_(\d+|u[0-9a-z]{8})$/, '');
       if (typeof ggOpenTo === 'function'){ ggOpenTo(key, p.indexOf('gs_') === 0 ? 'play' : 'rules'); return; }
@@ -16369,6 +16370,21 @@ const DEBUG_OFF_PHRASE = 'обычный режим';
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const APP_TEXTS = {
+  'resultshare.title': {c:'Игры',l:'Поделиться результатом',w:'Результат игры',i:false,t:'Поделиться результатом'},
+  'resultshare.preview': {c:'Игры',l:'Карточка результата',w:'Результат игры',i:false,t:'Карточка результата'},
+  'resultshare.hint': {c:'Игры',l:'В карточке есть QR-код. По ссылке друзья смогут бесплатно сыграть в эту игру. Приглашение учитывается в реферальной программе.',w:'Результат игры',i:false,t:'В карточке есть QR-код. По ссылке друзья смогут бесплатно сыграть в эту игру. Приглашение учитывается в реферальной программе.'},
+  'resultshare.preparing': {c:'Игры',l:'Готовлю картинку…',w:'Результат игры',i:false,t:'Готовлю картинку…'},
+  'resultshare.link': {c:'Игры',l:'Поделиться ссылкой',w:'Результат игры',i:false,t:'Поделиться ссылкой'},
+  'resultshare.bot': {c:'Игры',l:'Получить карточку в Telegram',w:'Результат игры',i:false,t:'Получить карточку в Telegram'},
+  'resultshare.image': {c:'Игры',l:'Поделиться картинкой',w:'Результат игры',i:false,t:'Поделиться картинкой'},
+  'resultshare.error': {c:'Игры',l:'Не получилось подготовить карточку. Попробуй ещё раз.',w:'Результат игры',i:false,t:'Не получилось подготовить карточку. Попробуй ещё раз.'},
+  'resultshare.retry': {c:'Игры',l:'Попробовать снова',w:'Результат игры',i:false,t:'Попробовать снова'},
+  'resultshare.free': {c:'Игры',l:'Сыграй тоже — бесплатно',w:'Результат игры',i:false,t:'Сыграй тоже — бесплатно'},
+  'resultshare.saved': {c:'Игры',l:'Картинка сохранена. Ссылка также доступна через «Поделиться ссылкой».',w:'Результат игры',i:false,t:'Картинка сохранена. Ссылка также доступна через «Поделиться ссылкой».'},
+  'resultshare.sent': {c:'Игры',l:'Карточка отправлена тебе в Telegram',w:'Результат игры',i:false,t:'Карточка отправлена тебе в Telegram'},
+  'resultshare.button': {c:'Игры',l:'Поделиться результатом',w:'Результат игры',i:false,t:'Поделиться результатом'},
+  'resultshare.guest': {c:'Игры',l:'Бесплатное прохождение по приглашению — без клубных наград.',w:'Результат игры',i:false,t:'Бесплатное прохождение по приглашению — без клубных наград.'},
+
   'games.ai_category':'Тренировка с ИИ',
   "guest.route_title": {c:"Гостевой маршрут",l:"С чего начать",w:"Демо",i:false,t:"С чего начать"},
   "guest.route_intro": {c:"Гостевой маршрут",l:"Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент.",w:"Демо",i:false,t:"Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент."},
@@ -32682,6 +32698,7 @@ async function init(){
     try {
       // Personal access must not depend on marketing presence or attribution.
       const accessStart = appStartParamRaw();
+      if(/^play_[a-f0-9]{24}$/.test(accessStart)){await openGameInvitation(accessStart.slice(5));return;}
       if(/^games_(ai|gods|quizzes)$/.test(accessStart)){await waitProfile(8000);switchView('games');kqCategory(accessStart==='games_gods'?'god':accessStart.slice(6));return;}
       if(/^kq_[a-f0-9]{32}$/.test(accessStart)){await openKnowledgeQuiz(accessStart.slice(3));return;}
       if (accessStart.indexOf('paid_') === 0){
@@ -37324,20 +37341,20 @@ async function attachPendingReferral(){
   let ref = '';
   try { ref = localStorage.getItem(REF_PENDING_KEY) || ''; } catch(e){}
   if (!ref || !telegramId) return;
-  try { localStorage.removeItem(REF_PENDING_KEY); } catch(e){}
-  await attachReferralRef(ref);
+  if(await attachReferralRef(ref)){try { localStorage.removeItem(REF_PENDING_KEY); } catch(e){}}
 }
 async function attachReferralRef(ref){
   const asCode = /^u[0-9a-z]{8}$/.test(String(ref || ''));
   const refId = asCode ? 0 : Number(ref);
   if (!asCode && (!refId || refId === Number(telegramId))) return;
   try {
-    await fetch(`${API_URL}/referral/attach`, {
+    const response=await fetch(`${API_URL}/referral/attach`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(asCode ? { telegram_id: telegramId, ref_code: ref }
                                   : { telegram_id: telegramId, ref_id: refId })
     });
-  } catch (e) { /* не критично: привязка не должна ломать вход */ }
+    return response.ok;
+  } catch (e) { return false; /* retry after identity/network recovery */ }
 }
 async function attachReferralFromStart(){
   const p = appStartParam();
@@ -37483,6 +37500,7 @@ function quizShareUrl(){
 }
 
 async function shareQuizResult(){
+  return openGameShare('gods');
   const me = quizResult && QUIZ_RESULTS[quizResult.code];
   if (!me) return;
   const text = 'Я — ' + me.god + ', ' + me.role.toLowerCase() + '. А ты кто из боженек продаж?';
@@ -37714,6 +37732,8 @@ function quizCardUrl(){
 }
 
 async function shareQuizImage(){
+  return openGameShare('gods');
+/* legacy image export kept for reference */
   const me = quizResult && QUIZ_RESULTS[quizResult.code];
   if (!me) return;
   const btn = document.getElementById('quiz-img-btn');
@@ -38553,7 +38573,7 @@ async function ggLoad(){
   try {
     const q = telegramId ? ('telegram_id=' + encodeURIComponent(telegramId))
                          : ('guest_key=' + encodeURIComponent(ggGuestKey()));
-    const r = await fetch(API_URL + '/games/list?' + q);
+    const r = await fetch(API_URL + '/games/list?' + q + '&invitation=' + encodeURIComponent(gameInviteToken()));
     if (!r.ok) throw new Error('HTTP ' + r.status);
     ggList = await r.json();
     if (typeof renderTabDots === 'function') renderTabDots();
@@ -38677,7 +38697,7 @@ function ggShareResult(ev){
   /* Партия как единица атрибуции: событие пишем ДО ухода в шторку — из неё
      человек может не вернуться, и вызов после неё не выполнится */
   track('game_result_share', (ggS && ggS.session_id) || key, score);
-  shareWithChoice(text, 'gs_' + key + shareTail());
+  openGameShare('ai');
 }
 
 function ggTrackName(key){
@@ -39022,7 +39042,7 @@ async function ggStart(key){
   vkTrack('game');
   try {
     await waitProfile(4000);   // то же и на старте: партия пишется на субъекта
-    const body = { game_key: key, source: 'app' };
+    const body = { game_key: key, source: 'app', invitation:gameInviteToken(key) };
     if (telegramId) body.telegram_id = telegramId; else body.guest_key = ggGuestKey();
     const r = await fetch(API_URL + '/games/session/start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -41327,6 +41347,8 @@ html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-li
 .qr-shadow:has(.qr-shadow-tilt){overflow:visible;perspective:1000px}
 .qr-shadow:has(.qr-shadow-tilt)::after{display:none}
 .qr-shadow-tilt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 45%,rgba(6,6,10,.85) 100%)}
-</style><script src="knowledge-quizzes.js?v=8"></script></body>
+</style><script src="knowledge-quizzes.js?v=9"></script><script src="game-sharing.js?v=1"></script><style>
+#game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px}.game-share-dialog .kq-options button{min-height:46px}
+</style></body>
 
 </html>
