@@ -12146,7 +12146,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v533 · 11.11.2026 гостевой вход и оплата';
+const APP_BUILD = 'v534 · 11.11.2026 персональная выжимка';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39848,7 +39848,8 @@ async function openDigest(slug){
 }
 
 /* Возвращаем готовый опубликованный выпуск вместо автоматической ленты событий. */
-async function openDigestMissed(since){
+async function openDigestMissed(since){ return openPersonalDigest(); }
+async function legacyOpenDigestMissed(since){
   dgsLoading(t('digest.loading'));
   try {
     const rows = await apiRequest(API_URL + '/digest/issues' + dgsWho());
@@ -40319,6 +40320,9 @@ async function ensureDigestLatest(){
 }
 
 function openDigestFromHome(){
+ dgsOpenLayer();dgsPdfBtn(false);dgsShareBtnShow(false);document.getElementById("dgs-count").textContent="";document.getElementById("dgs-pages").innerHTML='<div class="dgs-shelf"><h2>Что хочешь почитать?</h2><button class="dgs-shelf-item" onclick="openPersonalDigest()">Твоя выжимка — быстро нагнать материал</button><button class="dgs-shelf-item" onclick="openGeneralDigestFromHome()">Общий дайджест клуба</button></div>';
+}
+function openGeneralDigestFromHome(){
   const карточка = document.getElementById('digest-card');
   const slug = (карточка && карточка.getAttribute('data-slug'))
             || (digestLatest && digestLatest.slug) || '';
@@ -41190,6 +41194,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
+<script src="personal-digest.js?v=1"></script>
 </body>
 
 </html>
