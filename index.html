@@ -5770,6 +5770,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 .quiz-advice-content h3{font-size:18px;line-height:1.4;margin:4px 0 12px}
 .quiz-advice-content p{margin:0 0 16px}.quiz-advice-bridge{color:var(--text-dim)}
 .quiz-advice-content button{width:100%;white-space:normal;font:inherit;min-height:48px}
+.qr-share-top{width:100%;margin:0 0 14px;flex-shrink:0}.qr-share-top .access-btn{min-height:48px;margin:0;font-size:16px}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -12207,7 +12208,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v573 · 11.11.2026 Совет после игры';
+const APP_BUILD = 'v574 · 11.11.2026 Поделиться результатом';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -37251,7 +37252,9 @@ function renderQuizResult(){
     : '';
 
   document.getElementById('quiz-inner').innerHTML =
-      '<div class="quiz-hero">'
+      '<div class="qr-share-top">'
+      + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
+      + '</div><div class="quiz-hero">'
       + sceneHtml
       + (second ? '<div class="qr-hint">'
                   + 'Нажми на теневую карточку, чтобы увидеть вторую натуру</div>' : '')
@@ -37266,7 +37269,6 @@ function renderQuizResult(){
     + allyHtml
     + godLink
     + '<div class="qr-actions">'
-      + '<button class="lec-link-btn access-btn" style="width:100%" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
       + '<div class="qr-tertiary">'
         // Действующему участнику рассказывать, что за клуб, незачем — он внутри
         + ((typeof isMember !== 'undefined' && isMember)
