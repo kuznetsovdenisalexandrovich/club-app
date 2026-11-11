@@ -3799,7 +3799,7 @@ html[data-lite] #funnel-screen .access-btn,html[data-lite] #funnel-after .access
   --cv-title:#f6e9d9; --cv-text:#a9a2b8; --cv-dim:#8d8799;
   --cv-plate-ink:#f6e9d9; --cv-plate-label:#9d97a8;
   --cv-glow-a:rgba(255,214,150,.14); --cv-glow-b:rgba(255,156,59,.26); --cv-glow-c:rgba(255,113,31,.18);
-  --cv-sigil-op:.20}
+  --cv-sigil-op:.30}
 .reveal-overlay[data-look="legendary"]{
   --cv-a:#150c22; --cv-b:#0c0716; --cv-c:#120a1e;
   --cv-warm:#ffc35c; --cv-warm-soft:rgba(255,168,58,.30);
@@ -4855,7 +4855,7 @@ html[data-tg-native-back] .cv-back{display:none!important}
    Та же сцена, что на результате, но приглушённая: карта второй натуры в
    рамке, её сигил за спиной, её знак. Отдельной вёрстки нет намеренно —
    два экрана одного теста обязаны выглядеть родственниками */
-.qr-stack.is-shadow{--qr-w:min(56vw,232px);margin-bottom:16px}
+.qr-stack.is-shadow{--qr-w:min(76vw,340px);margin-bottom:16px}
 .qr-stack.is-shadow .qr-card{filter:grayscale(.62) brightness(.86) saturate(.75)}
 .qr-stack.is-shadow .qr-sigil{opacity:.2}
 .qr-stack.is-shadow .qr-badge{color:#c3a179}
@@ -12199,7 +12199,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v557 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v558 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -36904,11 +36904,13 @@ function openQuiz(restart){
 }
 
 function closeQuiz(){
+  quizHoloStop();
   const ov = document.getElementById('quiz-overlay');
   if (ov) ov.classList.remove('open');
 }
 
 function renderQuizIntro(){
+  quizHoloStop();
   // ⚠️ ТЕМУ СНИМАЕМ НА ВХОДЕ В ТЕСТ, а не только на выходе. Иначе вопросы
   // следующего прохода рисуются в теме карты ПРОШЛОГО результата — экран
   // остаётся, например, светлым в тёмном приложении
@@ -37053,7 +37055,6 @@ function cardSceneHtml(o){
       + '<div class="qr-card-art">'
         + (o.art ? '<img src="' + escapeHtml(o.art) + '" alt="">' : '')
       + '</div>'
-      + (o.sign ? '<div class="qr-badge">' + o.sign + '</div>' : '')
       + '<div class="qr-copy">'
         + '<div class="qr-god">' + escapeHtml(o.god || '') + '</div>'
         + '<div class="qr-role">' + escapeHtml(o.role || '') + '</div>'
@@ -37064,6 +37065,22 @@ function cardSceneHtml(o){
 }
 
 /* Экран результата теста — тот же кирпич, свои источники картинок */
+
+let quizHoloEffects=[];
+function quizHoloStop(){quizHoloEffects.forEach(f=>{try{f.destroy()}catch(e){}});quizHoloEffects=[];document.querySelectorAll('#quiz-inner .hfx-tilting').forEach(el=>el.classList.remove('hfx-tilting'))}
+function quizHoloStart(gift){
+  quizHoloStop();
+  if(liteOn()||!window.HoloFX||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const stack=document.querySelector('#quiz-inner .qr-stack');if(!stack)return;
+  const settings=cardHoloSettings(cardHoloOf(gift)||{pattern:'foil',intensity:.12,glare:.25,tilt:8});
+  stack.classList.add('hfx-tilting');
+  const main=stack.querySelector('.qr-card'),art=stack.querySelector('.qr-card-art');
+  if(main&&art)quizHoloEffects.push(HoloFX.mount(art,settings,{input:main,tiltEl:main,gyro:true,touch:false}));
+  const shadow=stack.querySelector('.qr-shadow-tilt');
+  if(shadow)quizHoloEffects.push(HoloFX.mount(shadow,Object.assign({},settings,{intensity:.08,glare:.18}),{input:shadow,tiltEl:shadow,gyro:true,touch:false}));
+}
+window.addEventListener('club-motion-change',()=>{if(liteOn())quizHoloStop();else if(document.getElementById('quiz-overlay')?.classList.contains('open')&&quizResult)quizHoloStart(quizGiftOf(document.getElementById('quiz-shadow-scene')?quizResult.secondCode:quizResult.code))});
+
 function quizCardSceneHtml(godName, gift, opts){
   opts = opts || {};
   return cardSceneHtml({
@@ -37071,7 +37088,7 @@ function quizCardSceneHtml(godName, gift, opts){
     frame: (gift && gift.frame_url) || '',
     // Приглушённая версия сигила своя, при её отсутствии — основная.
     // Нет ни той ни другой — слоя просто нет, сцена живёт без него
-    sigil: gift ? (gift.sigil_url_soft || gift.sigil_url || '') : '',
+    sigil: gift ? (gift.sigil_url || gift.sigil_url_soft || '') : '',
     sign:  godSignFor(godName, 0),
     god:   godName,
     role:  opts.role || '',
@@ -37131,6 +37148,7 @@ function quizHasCloseAxis(r){
 }
 
 function renderQuizResult(){
+  quizHoloStop();
   const r = quizResult;
   if (!r || !QUIZ_RESULTS[r.code]){ renderQuizIntro(); return; }
   const me = QUIZ_RESULTS[r.code];
@@ -37166,11 +37184,10 @@ function renderQuizResult(){
   const secondArt = second ? quizGodArt(second.god) : '';
   const secondSign = second ? godSignFor(second.god, 0) : '';
   const shadowHtml = second
-    ? '<div class="qr-shadow" onclick="openQuizShadow()">'
+    ? '<div class="qr-shadow" onclick="openQuizShadow()"><div class="qr-shadow-tilt">'
       + (secondArt ? '<img src="' + escapeHtml(secondArt) + '" alt="">' : '')
       + '<div class="qr-shadow-name">' + escapeHtml(second.god) + '</div>'
-      + (secondSign ? '<div class="qr-shadow-sign">' + secondSign + '</div>' : '')
-      + '</div>'
+      + '</div></div>'
     : '';
 
   const sceneHtml = quizCardSceneHtml(me.god, gift, { role: me.role, behind: shadowHtml });
@@ -37222,6 +37239,7 @@ function renderQuizResult(){
         + '<span class="payment-help-link" onclick="openQuiz(true)">Пройти заново</span>'
       + '</div>'
     + '</div>';
+  quizHoloStart(gift);
 }
 
 /* ── Разбор точки входа ──────────────────────────────────────────────────────
@@ -37540,6 +37558,7 @@ function quizFromUrl(){
    собрать план занятий. Это превращает тест из развлечения в начало пути */
 
 function openQuizShadow(){
+  quizHoloStop();
   const r = quizResult;
   if (!r) return;
   const second = QUIZ_RESULTS[r.secondCode];
@@ -37586,6 +37605,7 @@ function openQuizShadow(){
     + '</div>'
     + godLink
     + '<div class="payment-help-link" style="margin-top:2px" onclick="renderQuizResult()">← К результату</div>';
+  quizHoloStart(gift);
 }
 
 /* ══ МИНИ-ВОРОНКА ВОКРУГ ЗАМОРОЖЕННЫХ БАЛЛОВ ═══════════════════════════════
@@ -41077,6 +41097,7 @@ function ivAutoOpen(){
                      false: палец там листает карточки, перелив ведёт наклон
      opts.onInput  — сообщить, откуда сейчас ввод ("pointer" / "gyro" / "tg")
      opts.onFps    — сообщать кадры в секунду (null — покой) */
+  var gyroUsers = 0;
   function mount(host, settings, opts){
     injectCss(); opts = opts || {};
     var S = normalize(settings);
@@ -41182,6 +41203,8 @@ function ivAutoOpen(){
       cb = cb || function(){};
       var TG = root.ownerDocument.defaultView.Telegram && root.ownerDocument.defaultView.Telegram.WebApp;
       if (TG && TG.DeviceOrientation && TG.isVersionAtLeast && TG.isVersionAtLeast("8.0")) {
+        if(tgHandler)return;
+        gyroUsers++;
         tgHandler = function(){ var o = TG.DeviceOrientation; fromAngles(o.beta*180/Math.PI, o.gamma*180/Math.PI); };
         TG.onEvent("deviceOrientationChanged", tgHandler);
         TG.DeviceOrientation.start({refresh_rate:20, need_absolute:false}, function(ok){
@@ -41206,7 +41229,7 @@ function ivAutoOpen(){
     }
     function stopGyro(){
       var TG = root.ownerDocument.defaultView.Telegram && root.ownerDocument.defaultView.Telegram.WebApp;
-      if (tgHandler && TG){ try { TG.offEvent("deviceOrientationChanged", tgHandler); TG.DeviceOrientation.stop(); } catch(e) {} tgHandler = null; }
+      if (tgHandler && TG){ try { TG.offEvent("deviceOrientationChanged", tgHandler); gyroUsers=Math.max(0,gyroUsers-1); if(!gyroUsers)TG.DeviceOrientation.stop(); } catch(e) {} tgHandler = null; }
       if (domHandler){ window.removeEventListener("deviceorientation", domHandler); domHandler = null; }
       mode = "pointer"; target.x = 0; target.y = 0; kick();
     }
@@ -41294,6 +41317,14 @@ html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-li
 #gg-root .kq-cover{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:19px 19px 0 0;margin-bottom:14px}
 #gg-root .kq-tile{padding:0 0 16px;overflow:hidden}
 #gg-root .kq-tile>span{margin-left:16px;margin-right:16px}
+
+.quiz-overlay .qr-sigil{opacity:.34}
+.quiz-overlay[data-look="light"] .qr-sigil{opacity:.24}
+.quiz-overlay .qr-stack.is-shadow .qr-sigil{opacity:.30}
+.qr-shadow-tilt{position:absolute;inset:0;overflow:hidden;border-radius:18px;transform-style:preserve-3d}
+.qr-shadow:has(.qr-shadow-tilt){overflow:visible;perspective:1000px}
+.qr-shadow:has(.qr-shadow-tilt)::after{display:none}
+.qr-shadow-tilt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 45%,rgba(6,6,10,.85) 100%)}
 </style><script src="knowledge-quizzes.js?v=8"></script></body>
 
 </html>
