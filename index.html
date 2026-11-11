@@ -12196,7 +12196,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v545 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v546 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39721,7 +39721,7 @@ function closeDigest(){
   if(window.pdReturnToWinback){window.pdReturnToWinback=false;document.getElementById("winback-overlay")?.classList.add("open");}
   if (typeof destroyPersonalDigest === "function") destroyPersonalDigest();
   const ov = document.getElementById('dgs');
-  if (ov) ov.classList.remove('open');
+  if (ov) ov.classList.remove('open','issue-mode');
   document.body.style.overflow = '';
   dgsPdfBtn(false);
   dgsFromShelf=false;appSyncNavigation();appSyncChrome();
@@ -39845,6 +39845,7 @@ function dgsLoading(текст){
 function dgsWho(){ return telegramId ? '?telegram_id=' + telegramId : ''; }
 
 async function openDigestShelf(){
+  document.getElementById('dgs').classList.remove('issue-mode');
   dgsFromShelf=false;dgsPdfBtn(false);dgsShareBtnShow(false);
   dgsMode = 'shelf';
   dgsLoading(t('digest.loading'));
@@ -39869,6 +39870,7 @@ async function openDigestShelf(){
 }
 
 async function openDigest(slug,fromShelf=false){
+ document.getElementById('dgs').classList.add('issue-mode');
  dgsFromShelf=fromShelf;
  if(typeof pdFeatureOpened==='function')pdFeatureOpened('digest');
   dgsMode = 'issue';
@@ -41264,6 +41266,11 @@ html[data-gg="1"] .level-card,html[data-gg="1"][data-theme="dark"] .level-card,h
 html[data-kq-screen="intro"][data-games-category="quizzes"] #gg-root .gg-head,html[data-kq-playing] #gg-root .gg-head{display:none}
 html[data-kq-screen="intro"] #gg-root #kq-panel h2{font-size:21px;line-height:1.35}
 #gg-root #kq-panel{scroll-margin-top:16px}
+</style><style>
+#dgs.issue-mode{padding-top:calc(var(--safe-top,0px) + 54px)}
+#dgs.issue-mode::before{content:"";position:fixed;inset:0 0 auto;height:calc(var(--safe-top,0px) + 54px);background:var(--dgs-paper);border-bottom:1px solid var(--dgs-rule);z-index:3;pointer-events:none}
+#dgs.issue-mode>.dgs-close,#dgs.issue-mode>.dgs-share-btn,#dgs.issue-mode>.dgs-count{z-index:4}
+#dgs.issue-mode>.dgs-pdf-sheet{z-index:5}
 </style><script src="knowledge-quizzes.js?v=7"></script></body>
 
 </html>
