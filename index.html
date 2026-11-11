@@ -6098,7 +6098,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 #gg-root .kq-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:24px 0}
 #gg-root .kq-categories[hidden]{display:none}
 #gg-root .kq-categories>.card,#gg-root .kq-tile,#gg-root .kq-gate{background:var(--gg-card);border:1px solid var(--gg-pill-brd);box-shadow:var(--gg-card-sh);color:var(--gg-ink);border-radius:20px}
-#gg-root .kq-categories>.card{margin:0;min-height:150px;padding:20px 16px;text-align:left;position:relative;font:600 16px/1.4 var(--gg-font-body);overflow-wrap:normal;hyphens:manual;display:flex;align-items:flex-end}
+#gg-root .kq-categories>.card{margin:0;min-height:124px;padding:18px 14px;text-align:left;position:relative;font:600 16px/1.4 var(--gg-font-body);overflow-wrap:normal;hyphens:manual;display:flex;align-items:flex-end}
 #gg-root #kq-panel{color:var(--gg-ink);font-family:var(--gg-font-body);font-size:16px;line-height:1.55;padding-bottom:24px}
 #gg-root #kq-panel h2{font-family:var(--gg-font-disp);font-size:24px;line-height:1.25;margin:18px 0}
 #gg-root .kq-muted{color:var(--gg-muted)}
@@ -6119,7 +6119,8 @@ html[data-tg-native-back] .quiz-close,html[data-tg-native-back] .god-close{displ
 .coll-strip{align-items:flex-start}
 html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
 .coll-strip .coll-art{height:100%;width:100%}
-.portal-section-link{background:none;border:0;padding:8px 0;color:var(--warm);font:600 12px var(--body);cursor:pointer;text-decoration:underline}
+.portal-section-link{appearance:none;background:none;border:0;padding:10px 0;min-height:40px;color:var(--warm);font:600 12px/1.4 var(--body);letter-spacing:0;text-transform:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-align:right}
+.portal-section-link::after{content:" →";display:inline-block;margin-left:5px;text-decoration:none}
 </style></head>
 <body>
 
@@ -6182,6 +6183,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
       </div>
     </div>
   </header>
+  <div id="app-level-slot"></div>
 
   <!-- ── Портал ── -->
   <div class="view active" id="view-portal">
@@ -6385,7 +6387,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
     <div class="hblock" data-block="schedule">
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
       <span>Расписание</span>
-      <span style="font-size:12px;font-weight:600;color:var(--warm);cursor:pointer" onclick="switchView('schedule')">Настроить расписание →</span>
+      <button type="button" class="portal-section-link" onclick="switchView('schedule')">Настроить расписание</button>
     </div>
     <div class="card cal-widget-card">
       <div class="cal-widget-today" id="cal-widget-today">—</div>
@@ -6584,7 +6586,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
             <button class="gg-round" onclick="ggPop('gg-m-howto')" aria-label="Как устроено">?</button>
           </div>
         </div>
-        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')">Потрени&shy;роваться с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
+        <div id="games-level-slot"></div><button class="gg-round games-category-back" onclick="kqHome()" aria-label="К категориям">←</button><div class="kq-categories"><button class="card" onclick="kqCategory('ai')">Потренироваться с ИИ</button><button class="card" onclick="kqCategory('god')">Кто ты из богов продаж?</button><button class="card" id="kq-category" onclick="kqCategory('quizzes')">Квизы</button></div><section id="kq-panel" hidden></section><div id="gg-list" style="display:none"></div>
       </div>
 
       <!-- Партия. ⚠️ Мастер-бар и пилюля на этом экране скрыты -->
@@ -11007,7 +11009,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 
 <!-- ═══ ДАЙДЖЕСТ ═══ полосы выпуска, состав целиком приходит с сервера ═══ -->
 <div class="dgs-overlay" id="dgs">
-  <button class="dgs-close" onclick="closeDigest()" aria-label="Закрыть">✕</button>
+  <button class="dgs-close" onclick="dgsBack()" aria-label="Закрыть">✕</button>
   <!-- v423 (g44): номер файлом в выбранной теме -->
   <button class="dgs-close dgs-pdf-btn" id="dgs-pdf-btn" style="display:none" onclick="dgsPdfOpen()" data-text="digest.pdf_btn">PDF</button>
   <div class="dgs-count" id="dgs-count"></div>
@@ -12174,11 +12176,18 @@ function applyThemeIcon(theme){
     el.textContent = sign;
   });
 }
+function appSyncChrome(){
+  const tg=window.Telegram?.WebApp;if(!tg)return;
+  const dark=document.documentElement.dataset.theme==='dark';
+  const color=dark?'#222320':'#eee8df';
+  try{tg.setHeaderColor(color);tg.setBackgroundColor(color);tg.setBottomBarColor?.(color);}catch(e){}
+}
 function toggleTheme(){
   const html = document.documentElement;
   const next = html.dataset.theme === 'light' ? 'dark' : 'light';
   html.dataset.theme = next;
   applyThemeIcon(next);
+  appSyncChrome();
   try{ localStorage.setItem('club_app_theme', next); }catch(e){}
 }
 
@@ -12187,7 +12196,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v543 · 11.11.2026 Квизы по занятиям';
+const APP_BUILD = 'v544 · 11.11.2026 Навигация и экраны';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12509,7 +12518,7 @@ function comingSoon() {
 const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
 /* Native Back follows the top dismissible layer, including dialogs above games. */
 function appBackLayer(){
-  const explicit={'dgs':()=>closeDigest(),'quiz-overlay':()=>closeQuiz(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
+  const explicit={'dgs':()=>dgsBack(),'quiz-overlay':()=>closeQuiz(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
   const layers=Array.from(document.querySelectorAll('[id].open,[id].gg-open')).filter(el=>el.offsetWidth&&el.offsetHeight);
   const choices=layers.map((el,i)=>{
     let dismiss=explicit[el.id];
@@ -12524,15 +12533,15 @@ function appBackLayer(){
 }
 function appSyncNavigation(){
   const active=document.querySelector('.view.active');const name=active?.id.replace(/^view-/,'')||'portal';
-  const slot=document.getElementById('games-level-slot');
+  const slot=document.getElementById(name==='games'?'games-level-slot':'app-level-slot');
   for(const id of ['level-card','reward-level-badge']){
     const el=document.getElementById(id);if(!el)continue;
     if(!el._homeAnchor){el._homeAnchor=document.createComment(id+' home');el.before(el._homeAnchor)}
-    if(name==='games'&&slot&&el.parentElement!==slot)slot.append(el);
-    else if(name!=='games'&&el.parentElement===slot)el._homeAnchor.after(el);
+    if(slot&&el.parentElement!==slot)slot.append(el);
   }
   document.documentElement.toggleAttribute('data-app-layer',!!appBackLayer());
   syncTgBackButton(name);
+  const fab=document.getElementById('qa-fab');if(fab)qaFabPlace(fab);
 }
 window.addEventListener('DOMContentLoaded',()=>{
   let queued=false;
@@ -12540,7 +12549,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     if(!records.some(r=>r.target instanceof Element&&(r.target.matches('.view,[id*="overlay"],.gg-overlay,#dgs,#card-share-sheet')||r.target===document.documentElement&&r.attributeName==='data-games-category')))return;
     if(queued)return;queued=true;queueMicrotask(()=>{queued=false;appSyncNavigation()});
   }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style']});
-  appSyncNavigation();
+  appSyncNavigation();appSyncChrome();
 });
 
 function syncTgBackButton(name){
@@ -19420,6 +19429,7 @@ function syncLevelGap(){
     const card = document.getElementById('level-card');
     const hdr = document.querySelector('#app-shell > header');
     if (!hdr) return;
+    if(card?.parentElement?.id.endsWith('-level-slot')){hdr.style.marginBottom='0px';return;}
     if (!card || card.style.display === 'none' || !document.body.classList.contains('onboarding-bar-visible')){ hdr.style.marginBottom = ''; return; }
     const hr = hdr.getBoundingClientRect();
     if (!hr.height || !card.offsetHeight) return;          // шапка ещё не видна — посчитаем при следующем показе
@@ -31019,6 +31029,7 @@ function updateLevelBarScrollPosition(){
   const bar = document.getElementById('level-card');
   const badge = document.getElementById('reward-level-badge');
   if (!bar || bar.style.display === 'none') return;
+  if(bar.parentElement?.id.endsWith('-level-slot')){bar.style.transform='';if(badge)badge.style.transform='';return;}
   const shift = Math.min(window.scrollY, LEVEL_BAR_MAX_SHIFT);
   const transform = shift > 0 ? `translateY(-${shift}px)` : '';
   bar.style.transform = transform;
@@ -36024,9 +36035,12 @@ function qaFabPos(){
 }
 function qaFabPlace(b, p){
   p = p || qaFabPos();
-  const w = window.innerWidth, h = window.innerHeight, s = 54, m = 10;
+  const w = window.innerWidth, h = window.innerHeight, s = b.offsetWidth || 44, m = 10;
   b.style.left = Math.round(m + Math.max(0, Math.min(1, p.x)) * (w - s - 2 * m)) + 'px';
-  b.style.top  = Math.round(m + Math.max(0, Math.min(1, p.y)) * (h - s - 2 * m)) + 'px';
+  const nav=document.getElementById('tabbar'),nr=nav?.getBoundingClientRect();
+  const bottom=nr&&nr.height&&getComputedStyle(nav).display!=='none'?nr.top-m:h-m;
+  const safe=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top'))||0;
+  b.style.top=Math.round(Math.max(safe+m,Math.min(bottom-s,m+Math.max(0,Math.min(1,p.y))*(h-s-2*m))))+'px';
 }
 function qaRenderFab(){
   qaRenderProfileToggle();
@@ -39686,6 +39700,8 @@ function ggKeyboardFollow(){
 let dgsPages = [];
 let digestLatest = null;   // свежий выпуск: нужен и блоку главной, и плитке в «Что посмотреть»
 let dgsMode  = '';
+let dgsFromShelf = false;
+function dgsBack(){if(dgsMode==='issue'&&dgsFromShelf){openDigestShelf();return;}closeDigest();}
 
 function dgsOpenLayer(){
   const ov = document.getElementById('dgs');
@@ -39707,6 +39723,7 @@ function closeDigest(){
   if (ov) ov.classList.remove('open');
   document.body.style.overflow = '';
   dgsPdfBtn(false);
+  dgsFromShelf=false;appSyncNavigation();appSyncChrome();
 }
 
 /* ══ v423 · НОМЕР ФАЙЛОМ В ВЫБРАННОЙ ТЕМЕ (g42, g44) ═══════════════════════
@@ -39827,6 +39844,7 @@ function dgsLoading(текст){
 function dgsWho(){ return telegramId ? '?telegram_id=' + telegramId : ''; }
 
 async function openDigestShelf(){
+  dgsFromShelf=false;dgsPdfBtn(false);dgsShareBtnShow(false);
   dgsMode = 'shelf';
   dgsLoading(t('digest.loading'));
   try {
@@ -39838,19 +39856,19 @@ async function openDigestShelf(){
         '<div class="dgs-shelf">'
       + '<div class="dgs-h1" style="font-size:30px;margin-top:0">' + escapeHtml(t('digest.shelf_h')) + '</div>'
       + '<div class="dgs-rule"></div>'
-      + '<div style="margin-top:20px">'
+      + '<div class="dgs-issue-grid">'
       + rows.map(function(r){
-          return '<div class="dgs-shelf-item" onclick="openDigest(' + jsArg(r.slug) + ')">'
-            + '<div><div class="dgs-h2">' + escapeHtml(r.title || r.slug) + '</div>'
-            + '<div class="dgs-sub">' + escapeHtml(dgsMonth(r.month)) + '</div></div>'
-            + '<b style="font-variant-numeric:tabular-nums;opacity:.5">' + (r.pages || '') + '</b>'
-            + '</div>';
+          return '<button class="dgs-issue-card" onclick="openDigest(' + jsArg(r.slug) + ',true)">'
+            + '<span class="dgs-issue-cover">'+(r.cover_url?'<img src="'+escapeHtml(r.cover_url)+'" alt="" loading="lazy">':'<span>'+escapeHtml(r.title || r.slug)+'</span>')+'</span>'
+            + '<span class="dgs-issue-title">'+escapeHtml(r.title || r.slug)+'</span>'
+            + '<span class="dgs-sub">'+escapeHtml(dgsMonth(r.month))+'</span></button>';
         }).join('')
       + '</div></div>';
   } catch(e){ dgsEmpty(t('digest.fail')); }
 }
 
-async function openDigest(slug){
+async function openDigest(slug,fromShelf=false){
+ dgsFromShelf=fromShelf;
  if(typeof pdFeatureOpened==='function')pdFeatureOpened('digest');
   dgsMode = 'issue';
   dgsSlug = slug;
@@ -41213,6 +41231,34 @@ function ivAutoOpen(){
 </script>
 <script src="exit-presence.js?v=3"></script>
 <script src="personal-digest.js?v=5"></script>
-<script src="knowledge-quizzes.js?v=5"></script></body>
+<style>
+/* Shared flow layout: the level bar must never cover scrollable content. */
+body.onboarding-bar-visible #app-shell>header{margin-bottom:0!important}
+#app-level-slot{position:relative;margin:8px 0 24px}
+#app-level-slot:empty{display:none}
+#app-level-slot .level-card,#games-level-slot .level-card{position:relative!important;inset:auto!important;width:100%;max-width:none;transform:none!important;margin:0;z-index:1}
+#app-level-slot .reward-level-badge,#games-level-slot .reward-level-badge{position:absolute!important;top:-12px!important;right:6px!important;transform:none!important;z-index:2}
+html[data-gg] #app-level-slot,html[data-app-layer] #app-level-slot{display:none}
+.lec-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.lec-links .lec-link-btn{min-width:0;white-space:normal;display:flex;align-items:center;justify-content:center;min-height:42px}
+.lec-links .lec-link-btn:only-child{grid-column:1/-1}
+#qa-fab{width:44px;height:44px}
+html[data-app-layer] #qa-fab,html[data-kq-playing] #qa-fab,html[data-gg-play] #qa-fab{display:none!important}
+html[data-kq-playing] #tabbar,html[data-kq-playing] .scroll-fade{display:none!important}
+html[data-kq-playing] #gg-root #kq-panel h2{font:600 19px/1.4 var(--gg-font-body)}
+html[data-kq-playing] #gg-root #kq-panel{padding-bottom:24px}
+html[data-tg-native-back] .kq-local-back{display:none!important}
+#gg-root #kq-panel .kq-stats{font-size:13px;color:var(--gg-muted);margin:18px 0}
+html[data-gg="1"] .level-card,html[data-gg="1"][data-theme="dark"] .level-card,html[data-gg="1"] .tabbar,html[data-gg="1"][data-theme="dark"] .tabbar{background:var(--gg-card);border:1px solid var(--gg-pill-brd)}
+</style>
+<style>
+.dgs-issue-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px;margin-top:24px}
+.dgs-issue-card{appearance:none;border:0;padding:0;background:none;color:var(--dgs-ink);font:inherit;text-align:left;cursor:pointer;min-width:0}
+.dgs-issue-cover{display:flex;align-items:center;aspect-ratio:3/4;overflow:hidden;border:1px solid var(--dgs-rule);border-radius:4px;background:var(--dgs-bg);box-shadow:3px 5px 12px #0002}
+.dgs-issue-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.dgs-issue-cover>span{font:22px/1.2 Georgia,serif;padding:14px}
+.dgs-issue-title{display:block;font-size:15px;line-height:1.35;margin-top:12px}
+.dgs-issue-card .dgs-sub{display:block;font-size:12px;margin-top:6px}
+</style><script src="knowledge-quizzes.js?v=6"></script></body>
 
 </html>
