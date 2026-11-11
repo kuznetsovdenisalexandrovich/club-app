@@ -12200,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v560 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v561 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -41113,7 +41113,7 @@ function ivAutoOpen(){
 
     var input = opts.input || host, tiltEl = opts.tiltEl || null;
     var target = {x:0, y:0}, cur = {x:0, y:0}, mode = "pointer", running = false, dead = false;
-    var frames = 0, fpsT = 0, cw = 300, ch = 420, moved = 0, base = null;
+    var frames = 0, fpsT = 0, cw = 300, ch = 420, moved = 0, base = null, returning = false, lastFrame = 0;
     var offs = [];
 
     function applyPattern(){
@@ -41152,7 +41152,8 @@ function ivAutoOpen(){
     }
     function frame(now){
       if (dead) return;
-      var k = S.smooth;
+      var dt = lastFrame ? Math.min(64,now-lastFrame) : 1000/60; lastFrame=now;
+      var k = returning ? 1-Math.exp(-dt/220) : S.smooth;
       cur.x += (target.x - cur.x) * k; cur.y += (target.y - cur.y) * k;
       render(); frames++;
       if (!fpsT) fpsT = now;
@@ -41162,10 +41163,11 @@ function ivAutoOpen(){
       }
       requestAnimationFrame(frame);
     }
-    function kick(){ if (!running && !dead){ running = true; frames = 0; fpsT = 0; requestAnimationFrame(frame); } }
+    function kick(){ if (!running && !dead){ running = true; frames = 0; fpsT = 0; lastFrame = 0; requestAnimationFrame(frame); } }
 
     function on(el, ev, fn, o){ el.addEventListener(ev, fn, o); offs.push(function(){ el.removeEventListener(ev, fn, o); }); }
     function fromPointer(e){
+      returning = false;
       var r = input.getBoundingClientRect();
       target.x = clamp(((e.clientX - r.left)/r.width - .5) * 2);
       target.y = clamp(((e.clientY - r.top)/r.height - .5) * 2);
@@ -41173,16 +41175,21 @@ function ivAutoOpen(){
     }
     var downAt = null, allowTouch = opts.touch !== false;
     var mine = function(e){ return allowTouch || e.pointerType === "mouse"; };
-    on(input, "pointermove", function(e){
-      if (mode !== "pointer" || !mine(e)) return;
-      if (e.pointerType === "mouse" || e.buttons){
-        if (downAt) moved = Math.max(moved, Math.abs(e.clientX-downAt[0]) + Math.abs(e.clientY-downAt[1]));
-        fromPointer(e);
-      }
-    });
-    on(input, "pointerdown", function(e){ if (!mine(e)) return; downAt = [e.clientX, e.clientY]; moved = 0; if (mode === "pointer") fromPointer(e); });
-    on(input, "pointerleave", function(e){ if (mode === "pointer" && e.pointerType === "mouse"){ target.x = 0; target.y = 0; kick(); } });
-    on(input, "pointerup", function(e){ if (!mine(e)) return; downAt = null; if (mode === "pointer"){ target.x = 0; target.y = 0; kick(); } });
+    function returnHome(){if(mode!=="pointer"||returning)return;returning=true;target.x=0;target.y=0;kick();}
+    function nearCard(e){
+      var r=input.getBoundingClientRect(),pad=40;
+      return r.width>0&&r.height>0&&e.clientX>=r.left-pad&&e.clientX<=r.right+pad&&e.clientY>=r.top-pad&&e.clientY<=r.bottom+pad;
+    }
+    var ownerWindow=root.ownerDocument.defaultView;
+    on(ownerWindow,"pointermove",function(e){
+      if(mode!=="pointer"||e.pointerType!=="mouse")return;
+      if(nearCard(e)){if(downAt)moved=Math.max(moved,Math.abs(e.clientX-downAt[0])+Math.abs(e.clientY-downAt[1]));fromPointer(e)}else returnHome();
+    },{passive:true});
+    on(ownerWindow,"blur",returnHome);
+    on(root.ownerDocument,"pointerout",function(e){if(e.pointerType==="mouse"&&!e.relatedTarget)returnHome()});
+    on(input,"pointermove",function(e){if(mode!=="pointer"||e.pointerType==="mouse"||!mine(e)||!e.buttons)return;if(downAt)moved=Math.max(moved,Math.abs(e.clientX-downAt[0])+Math.abs(e.clientY-downAt[1]));fromPointer(e)});
+    on(input,"pointerdown",function(e){if(!mine(e))return;downAt=[e.clientX,e.clientY];moved=0;if(mode==="pointer")fromPointer(e)});
+    on(ownerWindow,"pointerup",function(e){if(!mine(e))return;downAt=null;if(e.pointerType!=="mouse")returnHome()});
     // Провели пальцем по карточке — это не нажатие: не открываем увеличение
     on(input, "click", function(e){ if (moved > 10){ e.stopPropagation(); e.preventDefault(); } moved = 0; }, true);
 
@@ -41262,7 +41269,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=10"></script>
+<script src="personal-digest.js?v=11"></script>
 <style>
 /* Shared flow layout: the level bar must never cover scrollable content. */
 body.onboarding-bar-visible #app-shell>header{margin-bottom:0!important}
