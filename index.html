@@ -12199,7 +12199,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v550 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v551 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39708,7 +39708,7 @@ let dgsPages = [];
 let digestLatest = null;   // свежий выпуск: нужен и блоку главной, и плитке в «Что посмотреть»
 let dgsMode  = '';
 let dgsFromShelf = false;
-function dgsBack(){if(dgsMode==='issue'&&dgsFromShelf){openDigestShelf();return;}closeDigest();}
+function dgsBack(){if(dgsMode==='personal'&&typeof pdFrame!=='undefined'){const dialog=pdFrame?.contentDocument?.querySelector('dialog[open]');if(dialog){dialog.close();return;}}if(dgsMode==='issue'&&dgsFromShelf){openDigestShelf();return;}closeDigest();}
 
 function dgsOpenLayer(){
   const ov = document.getElementById('dgs');
@@ -41239,7 +41239,7 @@ function ivAutoOpen(){
 })(window);
 </script>
 <script src="exit-presence.js?v=3"></script>
-<script src="personal-digest.js?v=6"></script>
+<script src="personal-digest.js?v=7"></script>
 <style>
 /* Shared flow layout: the level bar must never cover scrollable content. */
 body.onboarding-bar-visible #app-shell>header{margin-bottom:0!important}
