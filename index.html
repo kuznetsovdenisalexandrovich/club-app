@@ -10428,7 +10428,8 @@ html[data-lite] .pf-node::after{display:none!important}
    подкладываем плотный фон темы */
 html[data-lite] .card,
 html[data-lite] .sched-popup,
-html[data-lite] #tabbar{background:var(--card)!important}
+html[data-lite] .center-modal,html[data-lite] .fullscreen-popup-card,html[data-lite] .toast,
+html[data-lite] #tabbar{background:var(--bg2)!important}
 /* ⚠️ У ВКЛАДКИ ИГР СВОЯ ПАЛИТРА, И ПОДКЛАДЫВАТЬ НАДО ЕЁ. Общий `--card` в
    светлой теме картонный, а страница игр голубовато-белая: карточки выходили
    кремовыми пятнами на чужом фоне. Правило идёт ПОСЛЕ общего, поэтому у
@@ -12196,7 +12197,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v546 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v547 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12539,7 +12540,10 @@ function appSyncNavigation(){
     if(!el._homeAnchor){el._homeAnchor=document.createComment(id+' home');el.before(el._homeAnchor)}
     if(slot&&el.parentElement!==slot)slot.append(el);
   }
-  document.documentElement.toggleAttribute('data-app-layer',!!appBackLayer());
+  const layer=appBackLayer();
+  document.documentElement.toggleAttribute('data-app-layer',!!layer);
+  document.querySelectorAll('.app-native-close-handle').forEach(b=>b.classList.remove('app-native-close-handle'));
+  if(layer&&hasRealTg())layer.el.querySelectorAll('button.icon-btn[onclick],button[class*="close"][onclick]').forEach(b=>{if(/^\s*(?:close\w*|\w*Close)\s*\([^)]*\)\s*;?\s*$/.test(b.getAttribute('onclick')||''))b.classList.add('app-native-close-handle')});
   syncTgBackButton(name);
   const fab=document.getElementById('qa-fab');if(fab)qaFabPlace(fab);
 }
@@ -41271,6 +41275,9 @@ html[data-kq-screen="intro"] #gg-root #kq-panel h2{font-size:21px;line-height:1.
 #dgs.issue-mode::before{content:"";position:fixed;inset:0 0 auto;height:calc(var(--safe-top,0px) + 54px);background:var(--dgs-paper);border-bottom:1px solid var(--dgs-rule);z-index:3;pointer-events:none}
 #dgs.issue-mode>.dgs-close,#dgs.issue-mode>.dgs-share-btn,#dgs.issue-mode>.dgs-count{z-index:4}
 #dgs.issue-mode>.dgs-pdf-sheet{z-index:5}
+</style><style>
+html[data-tg-native-back] .app-native-close-handle{display:none!important}
+html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-lite] #gg-root .kq-categories>.card,html[data-lite] #gg-root .kq-options button{background:var(--gg-solid-panel)!important}
 </style><script src="knowledge-quizzes.js?v=7"></script></body>
 
 </html>
