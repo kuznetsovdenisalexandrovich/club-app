@@ -12200,7 +12200,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v562 · 11.11.2026 Проверка интерфейса';
+const APP_BUILD = 'v563 · 11.11.2026 Проверка интерфейса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -35382,31 +35382,22 @@ function renderCardsAlbum(){
 
   const newKeys = newCardKeys();
 
-  // Группируем по богам, внутри — от редких к частым.
-  // v422 (d78): ГЕРОИ И СУЩЕСТВА (флажок «вне пантеона») — одним рядом ПОСЛЕ
-  // богов. Иначе Геракл и медуза вставали по алфавиту между Гермесом и Дионисом
-  // и выглядели ещё одним богом пантеона
-  const OUTSIDE = '\u0000outside';
-  const LOCKED = '\u0000locked';
-  const byGod = {};
-  shownCards.forEach(function(c){
-    const k = !owned[c.key] ? LOCKED : (c.unique_card ? OUTSIDE : (c.god || 'Пантеон'));
-    (byGod[k] = byGod[k] || []).push(c);
+  // All opened cards share one grid; locked catalogue entries stay below.
+  const LOCKED = 'locked', OPENED = 'opened';
+  const groups = {};
+  const ownedSpecial = cardCatalog.filter(c=>owned[c.key] && albumMatchesRarity(c,owned)
+    && ((c.card_class==='badge'&&!c.secret)||c.card_class==='prologue'||c.card_class==='raffle'));
+  shownCards.concat(ownedSpecial).forEach(c=>{
+    const key=owned[c.key]?OPENED:LOCKED;
+    (groups[key]||(groups[key]=[])).push(c);
   });
 
-  el.innerHTML = '<div class="album-tabs" role="group" aria-label="Редкость карт">'+[['all','Все'],['legendary','Легендарные'],['rare','Редкие'],['uncommon','Нечастые'],['common','Частые']].map(([key,label])=>'<button type="button" aria-pressed="'+(albumRarity===key)+'" onclick="setAlbumRarity('+jsArg(key)+')">'+label+'</button>').join('')+'</div>'+Object.keys(byGod).sort(function(a,b){
-    if(a===LOCKED)return 1;
-    if(b===LOCKED)return -1;
-    if (a === OUTSIDE) return 1;
-    if (b === OUTSIDE) return -1;
-    return a.localeCompare(b,'ru');
-  }).map(function(god){
-    const list = byGod[god].slice().sort(function(a,b){
+  el.innerHTML = '<div class="album-tabs" role="group" aria-label="Редкость карт">'+[['all','Все'],['legendary','Легендарные'],['rare','Редкие'],['uncommon','Нечастые'],['common','Частые']].map(([key,label])=>'<button type="button" aria-pressed="'+(albumRarity===key)+'" onclick="setAlbumRarity('+jsArg(key)+')">'+label+'</button>').join('')+'</div>'+[OPENED,LOCKED].filter(key=>groups[key]?.length).map(function(group){
+    const list = groups[group].slice().sort(function(a,b){
       const ra = CARD_RARITY_ORDER[a.rarity], rb = CARD_RARITY_ORDER[b.rarity];
-      return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
+      return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb) || (a.god||a.title||a.key).localeCompare(b.god||b.title||b.key,'ru');
     });
-    const gotHere = list.filter(function(c){ return owned[c.key]; }).length;
-    return '<div class="album-god-title">' + (god===LOCKED ? 'Ещё не открыты' : (god === OUTSIDE ? escapeHtml(t('cards.outside_title')) : godNameHtml(god)) + ' · ' + gotHere + ' открыто') + '</div>'
+    return (group===LOCKED ? '<div class="album-god-title">Ещё не открыты</div>' : '')
       + '<div class="album-grid">' + list.map(function(c){
         const n = owned[c.key] || 0;
         const art = (n && c.image_url)
@@ -35427,7 +35418,7 @@ function renderCardsAlbum(){
           + '<div class="album-name">' + escapeHtml(n ? (c.title || c.key) : (c.god || c.title || c.key)) + '</div>'
           + '</div>';
       }).join('') + '</div>';
-  }).join('') + badgeShelfHtml(owned, newKeys) + specialShelfHtml(owned, newKeys);
+  }).join('') + (albumRarity==='all'?badgeShelfHtml(owned,newKeys,true):'');
   if(!el.querySelector('.album-card'))el.insertAdjacentHTML('beforeend','<div class="sm-hint" style="padding:24px 0;text-align:center">У тебя пока нет открытых карт этой редкости.</div>');
 }
 
@@ -35449,9 +35440,9 @@ function badgeConditionText(c){
   return 'за уровень';   // Знак, повешенный на уровень, условия в самой карточке не имеет
 }
 
-function badgeShelfHtml(owned, newKeys){
+function badgeShelfHtml(owned, newKeys, lockedOnly=false){
   const list = cardCatalog.filter(function(c){
-    return (c.card_class || '') === 'badge' && (c.active || owned[c.key]) && !c.secret && albumMatchesRarity(c,owned);
+    return (c.card_class || '') === 'badge' && (c.active || owned[c.key]) && !c.secret && albumMatchesRarity(c,owned) && (!lockedOnly||!owned[c.key]);
   });
   if (!list.length) return '';
   const got = list.filter(function(c){ return owned[c.key]; }).length;
@@ -35609,7 +35600,7 @@ function openAlbumCard(key){
   cardBrowseList = cardCatalog.filter(function(c){ return owned[c.key]; })
     .sort(function(a,b){
       const ra = CARD_RARITY_ORDER[a.rarity], rb = CARD_RARITY_ORDER[b.rarity];
-      return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb);
+      return (ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb) || (a.god||a.title||a.key).localeCompare(b.god||b.title||b.key,'ru');
     });
   cardBrowseIndex = cardBrowseList.findIndex(function(c){ return c.key === key; });
   if (cardBrowseIndex === -1) return;   // ключ есть среди владений, но не в каталоге — не должно случаться, но не открываем пустую витрину
