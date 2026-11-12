@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v596 -->
+<!-- FILE_VERSION: index-v597 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v596'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v597'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -6241,7 +6241,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
 .coll-strip .coll-art{height:100%;width:100%}
 .portal-section-link{appearance:none;background:none;border:0;padding:10px 0;min-height:40px;color:var(--warm);font:600 12px/1.4 var(--body);letter-spacing:0;text-transform:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-align:right}
 .portal-section-link::after{content:" →";display:inline-block;margin-left:5px;text-decoration:none}
-</style><link rel="stylesheet" href="meeting-recordings.css?v=1"><script src="meeting-recordings.js?v=3"></script>
+</style><link rel="stylesheet" href="meeting-recordings.css?v=2"><script src="meeting-recordings.js?v=3"></script>
 </head>
 <body>
 
@@ -12338,7 +12338,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v596 · 12.11.2026 Записи встреч';
+const APP_BUILD = 'v597 · 12.11.2026 Записи встреч';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
