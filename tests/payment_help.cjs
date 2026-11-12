@@ -1,0 +1,8 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),test=require('node:test');
+const html=fs.readFileSync(require('path').join(__dirname,'../index.html'),'utf8');
+const help=html.slice(html.indexOf('const PAYMENT_TROUBLE_TEXT'),html.indexOf('function renderAccessButtons'));
+const support=html.slice(html.indexOf('function supportDmUrl('),html.indexOf('function openPaymentTrouble('));
+function setup(vk=false){const c={track(){},escapeHtml:x=>x,t:k=>k==='access.vk_dm_link'?'https://vk.ru/denis':'Повторить',isInsideVk:()=>vk,SUPPORT_DM_LINK:'https://t.me/kuznetsov_denis'};vm.createContext(c);vm.runInContext(help+support,c);return c;}
+test('failed payment has direct human help with exact draft',()=>{const c=setup();assert(c.accessLinksErrorHtml().includes('Написать Денису'));const u=new URL(c.supportDmUrl('Привет, не получается оплатить('));assert.equal(u.pathname,'/kuznetsov_denis');assert.equal(u.searchParams.get('text'),'Привет, не получается оплатить(');});
+test('VK keeps local dialogue and offers copyable text',()=>{const c=setup(true);assert(c.accessLinksErrorHtml().includes('Скопировать текст'));assert(c.accessLinksErrorHtml().includes('Привет, не получается оплатить('));assert.equal(c.supportDmUrl('text'),'https://vk.ru/denis');});
+test('promo retry preserves campaign rather than switching to regular prices',()=>{const c=setup();assert(c.accessLinksErrorHtml(true).includes('onclick="promoOpen()"'));assert(!c.accessLinksErrorHtml(true).includes('onclick="openAccessPage()"'));assert(c.accessLinksErrorHtml().includes('onclick="openAccessPage()"'));});

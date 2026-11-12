@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v583 -->
+<!-- FILE_VERSION: index-v584 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -12298,7 +12298,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v583 · 12.11.2026 Проверка аварийного режима';
+const APP_BUILD = 'v584 · 12.11.2026 Повтор получения оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22462,7 +22462,7 @@ async function promoGo(){
     const id = actionIdent();
     if (!promoServerOnly && provider.campaign === 'salebot' && (id.telegram_id || id.vk_id)) link = await botLinkFor('get_referral_promo_link');
     if (link) via = 'salebot';
-  } catch(e){ btn.disabled = false; btn.textContent = label; showToast(t('promo.c.fail')); return; }
+  } catch(e){ btn.disabled = false; btn.textContent = label; showPaymentLinkFailure(); return; }
   let refusal = '';
   if (!link){
     const s = await promoServerLink();
@@ -22494,6 +22494,7 @@ async function promoGo(){
   }
   track('promo', promoCode + ':' + (refusal || 'fail'));
   if (refusal === 'already_member'){ showToast(t('promo.c.member')); switchView('portal'); return; }
+  if(!['promo_used','promo_closed','already_paid'].includes(refusal)){showPaymentLinkFailure();return;}
   showToast(t(refusal === 'promo_used' ? 'promo.c.used' : refusal === 'promo_closed' ? 'promo.c.closed' : 'promo.c.fail'));
   openBuyRoute();
 }
@@ -30595,11 +30596,23 @@ async function payFallbackLinks(){
   return null;
 }
 
-function accessLinksErrorHtml(){
+const PAYMENT_TROUBLE_TEXT = 'Привет, не получается оплатить(';
+function showPaymentLinkFailure(){
+  closePromoTester();
+  switchView('access');
+  const el=document.getElementById('access-buttons');
+  if(el)el.innerHTML=accessLinksErrorHtml(true);
+}
+async function copyPaymentTrouble(){
+  try{await navigator.clipboard.writeText(PAYMENT_TROUBLE_TEXT);showToast('Текст скопирован');}
+  catch(e){showToast('Скопируй текст сообщения над кнопкой');}
+}
+function accessLinksErrorHtml(promo=false){
   track('access_open', 'links_late');
-  return `<div class="empty" style="line-height:1.5">${escapeHtml(t('access.links_late'))}</div>`
-    + `<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openAccessPage()">${escapeHtml(t('access.links_retry'))}</button>`
-    + `<div class="payment-help-link" onclick="openUrl(botLinkForAccess())">${escapeHtml(t('access.links_bot'))}</div>`;
+  return `<div class="empty" style="line-height:1.5">Не удалось получить ссылку на оплату. Можно попробовать ещё раз или написать Денису.</div>`
+    + `<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="${promo?'promoOpen()':'openAccessPage()'}">${escapeHtml(t('access.links_retry'))}</button>`
+    + `<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openSupportDm(PAYMENT_TROUBLE_TEXT)">Написать Денису</button>`
+    + (isInsideVk()?`<p style="line-height:1.5;user-select:text">${escapeHtml(PAYMENT_TROUBLE_TEXT)}</p><button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="copyPaymentTrouble()">Скопировать текст</button>`:'');
 }
 
 function renderAccessButtons(result){
