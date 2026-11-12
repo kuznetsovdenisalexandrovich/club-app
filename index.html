@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v593 -->
+<!-- FILE_VERSION: index-v594 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v593'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v594'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -12338,7 +12338,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v593 · 12.11.2026 Записи встреч';
+const APP_BUILD = 'v594 · 12.11.2026 Записи встреч';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28698,6 +28698,7 @@ function schedEventKey(e){
 function schedEventActionsHtml(e, i, dateStr){
   if (!e) return '';
   if(e.replay_state)return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openMeetingRecording(${Number(e.id)})">Смотреть запись</button></div>`;
+  if(e.meeting_finished)return '';
   if (!isMember) return e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn locked" onclick="openPaywall()">🔒 Перейти</button></div>` : '';
   var w = schedEventWindow(e, dateStr), key = schedEventKey(e), now = Date.now();
   // Нет времени или не понять, что за событие, — как раньше: ссылка, если есть
