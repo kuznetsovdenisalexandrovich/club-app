@@ -12213,7 +12213,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v577 · 12.11.2026 Карты и предложения';
+const APP_BUILD = 'v578 · 12.11.2026 Карты и предложения';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -31606,14 +31606,14 @@ function vkGroupId(){
   var m = String(typeof VK_GROUP_LINK === 'string' ? VK_GROUP_LINK : '').match(/club(\d+)/);
   return m ? Number(m[1]) : 0;
 }
-async function vkAskMessages(){
+async function vkAskMessages(force=false){
   const q = vkLaunchQuery();
   const gid = vkGroupId();
   if (!q || !gid || !window.vkBridge || !vkBridge.send) return;
   try {
     const no = Number(localStorage.getItem('vk_msg_no_at') || 0);
-    if (no && Date.now() - no < 3 * 86400000) return;
-    if (localStorage.getItem('vk_msg_ok') === '1') return;
+    if (!force && no && Date.now() - no < 3 * 86400000) return;
+    if (!force && localStorage.getItem('vk_msg_ok') === '1') return;
   } catch(e){}
   try {
     const st = await fetch(`${API_URL}/vk/allow-messages?query=` + encodeURIComponent(q))
@@ -41386,7 +41386,7 @@ body:has(#quiz-overlay.open) #film-chip,body:has(#quiz-overlay.open) #funnel-scr
 #bonus-bar .bb-row{padding:15px 18px;gap:14px}#bonus-bar .bb-txt{font-size:14px;white-space:normal;line-height:1.4}#bonus-bar .bb-time{font-size:22px;color:var(--accent);font-weight:700}#bonus-bar .bb-fuse{display:none}
 body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{display:none!important}
 html[data-motion="off"] .bb-time{animation:none!important}
-</style><script src="knowledge-quizzes.js?v=9"></script><script src="game-sharing.js?v=6"></script><script src="sales-timer.js?v=1"></script><style>
+</style><script src="knowledge-quizzes.js?v=9"></script><script src="game-sharing.js?v=7"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 </style></body>
 

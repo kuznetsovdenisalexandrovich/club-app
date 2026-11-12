@@ -19,7 +19,7 @@ async function openGameShare(kind,skipOffer=false){
    const r=await fetch(API_URL+'/game-sharing/'+gameShareData.id+'/card.jpg?platform='+platform);if(!r.ok)throw Error(gsText('error'));
    gameShareFile=new File([await r.blob()],'game-result.jpg',{type:'image/jpeg'});await gameShareImage();return;
   }
-  if(platform==='vk')await vkAskMessages();
+  if(platform==='vk')await vkAskMessages(true);
   showToast(gsText('sending'));
   await gameShareAPI('/'+gameShareData.id+'/send',{platform});
   showToast(gsText('sent'));
