@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v587 -->
+<!-- FILE_VERSION: index-v588 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -29,7 +29,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v587'
+   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v588'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if(/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||'')){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -12321,7 +12321,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v587 · 12.11.2026 Загрузка по маршруту';
+const APP_BUILD = 'v588 · 12.11.2026 Загрузка по маршруту';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -31490,7 +31490,8 @@ function loadPortalData(){
 }
 function bootNeedsPortal(){
   const target=appStartParamRaw();
-  return !target||['bm','welcome','portal','home'].includes(target);
+  // Only known content destinations defer the portal. Soft/unknown labels still open home.
+  return !/^(?:film(?:_|$)|about$|(?:ig|tt|yt|tg|vk|web|email)_film$|namedfilm_v[0-9]+$|(?:quiz|games)(?:_|$)|kq_|play_|gs?_|bi_|bset_|bonus_|nl_)/.test(target);
 }
 function startApp(){
   startAccessWatch();

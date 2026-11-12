@@ -10,6 +10,7 @@ test('deep-link boot loads identity/settings, portal loads once when opened',asy
  await vm.runInContext('(async()=>{'+html.slice(start,end)+';await boot;})()',c);assert.deepEqual(calls,['loadAppSettings','loadProfile']);
  await Promise.all([c.loadPortalData(),c.loadPortalData()]);assert.equal(calls.filter(x=>x==='loadCards').length,1);assert(calls.includes('loadNews'));
  c.appStartParamRaw=()=>'';assert(c.bootNeedsPortal());c.appStartParamRaw=()=> 'quiz';assert(!c.bootNeedsPortal());
+ for(const label of ['u_instagram','unknown_campaign','bm','welcome','cards','schedule']){c.appStartParamRaw=()=>label;assert(c.bootNeedsPortal(),label);}
 });
 test('news renders before support/tester replies and keeps later replies',async()=>{
  const pending={},card={style:{},classList:{add(){}},innerHTML:''},head={style:{},classList:{add(){}}};
