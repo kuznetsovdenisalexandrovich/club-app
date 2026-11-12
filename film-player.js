@@ -55,7 +55,7 @@
     fault(code){
       if(code==='film_unavailable'&&!this.probed&&root.clubProbeVideo){
         this.probed=true;const source=this.sources[this.index],position=this.position,index=this.index;
-        Promise.resolve().then(()=>root.clubProbeVideo(source,position,event=>{this.diagnostic('probe',{...event,source:index,position:Math.min(86400,Math.max(0,Math.round(position||0)))});})).catch(()=>{});
+        Promise.resolve().then(()=>root.clubProbeVideo(source,position,event=>{this.diagnostic('probe',{...event,source:index,server:root.clubMediaServer?root.clubMediaServer(source?.url||''):'unknown',position:Math.min(86400,Math.max(0,Math.round(position||0)))});})).catch(()=>{});
       }
       this.diagWaiting=true;this.diagnostic(code==='film_unavailable'?'unavailable':'stall');try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
     statusText(text){this.notice.textContent=text;}
@@ -210,7 +210,7 @@
     setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
-      if(!this.diagStarted){this.diagStarted=true;this.diagnostic('play');}
+      if(!this.diagStarted){this.lastProgress=Date.now();this.diagStarted=true;this.diagnostic('play');}
       if(this.refreshing){this.wantsPlay=true;return;}
       if(this.options.refreshSources&&Date.now()>=this.sourcesExpireAt&&Date.now()-this.lastRefresh>60000){this.wantsPlay=true;this.refreshSources();return;}
       if(this.exhausted){this.wantsPlay=true;this.switchSource(true);return;}
