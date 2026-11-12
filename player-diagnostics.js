@@ -91,14 +91,23 @@
     const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
     const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
     const attempt=[hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-'),started=Date.now();
-    let seq=0,queue=[],busy=false,timer=null,closed=false,retries=0;
+    let seq=0,queue=[],busy=false,timer=null,closed=false,retries=0,legacySchema=false;
     async function flush(){
       if(busy||!queue.length)return;
       busy=true;const batch=queue.slice(0,20);
       const controller=new AbortController(),deadline=setTimeout(()=>controller.abort(),5000);
       try{
-        const r=await fetch(endpoint()+'/client/player-diagnostics',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({attempt,content,managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events:batch}),keepalive:true,signal:controller.signal});
+        async function send(){
+          let events=batch;
+          if(legacySchema){
+            const allowed=['seq','elapsed','event','source','server','engine','reason','http','media','ready','network','position','visible','fatal','quality'];
+            events=batch.filter(e=>!['probe','milestone'].includes(e.event)).map(e=>Object.fromEntries(Object.entries(e).filter(([key])=>allowed.includes(key))));
+            if(!events.length)return {ok:true};
+          }
+          return fetch(endpoint()+'/client/player-diagnostics',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({attempt,content,managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events}),keepalive:true,signal:controller.signal});
+        }
+        let r=await send();if(r.status===422&&!legacySchema){legacySchema=true;r=await send();}
         if(!r.ok)throw Error('report');
         const accepted=new Set(batch.map(e=>e.seq));queue=queue.filter(e=>!accepted.has(e.seq));retries=0;
       }catch(e){retries++;}finally{clearTimeout(deadline);busy=false;if(queue.length&&retries<3)timer=setTimeout(flush,2000);}

@@ -1,14 +1,14 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const first=html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
-function setup({signed=true,fetchFailure=false,hidden=false,vk=false}={}){
+function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=false}={}){
  const timers=new Map(),events={},docEvents={},calls=[],nodes=[];let id=0;
  const create=tag=>({tag,style:{},children:[],textContent:'',setAttribute(){},appendChild(n){this.children.push(n);return n;},remove(){this.removed=true;}});
  const root=create('html'),body=create('body');
  const d={body,documentElement:root,hidden:hidden,createElement:tag=>{const n=create(tag);nodes.push(n);return n;},addEventListener:(e,f)=>docEvents[e]=f};
  const w={location:{hash:signed?'#tgWebAppData='+encodeURIComponent('auth_date=1&user=%7B%22id%22%3A123%7D&start_param=film'):'',search:'?startapp=film',reload(){}},
   crypto:{randomUUID:()=> '12345678-abcd-1234-abcd-123456789abc'},
-  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);calls.push(data);return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
+  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);calls.push(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
   addEventListener:(e,f)=>events[e]=f};
  if(vk){w.location.hash='#film';w.location.search='?vk_user_id=123&sign=synthetic&vk_ref=other';}
  Object.assign(w,{window:w,document:d,URLSearchParams,Promise,Math,location:w.location,setTimeout:(f,ms)=>{timers.set(++id,{f,ms});return id;},clearTimeout:id=>timers.delete(id)});
@@ -64,4 +64,8 @@ test('partial startup sends bounded stages without premature ready',async()=>{
 });
 test('JS error is evidence without declaring useful screen failure',async()=>{
  const s=setup();s.events.error();[...s.timers.values()].find(t=>t.ms===1000).f();await flush();assert(s.calls.some(c=>c.event==='status'&&c.marks.includes('scriptError')));assert(!s.calls.some(c=>c.event==='failed'));
+});
+
+test('server rollback preserves rescue by retrying old schema once with the same identity and sequence',async()=>{
+ const s=setup({legacy:true});await flush();assert.equal(s.calls.length,2);assert.equal(s.calls[0].seq,s.calls[1].seq);assert.equal(s.calls[0].launch,s.calls[1].launch);assert(!('stage_ms' in s.calls[1]));assert(!s.calls[1].marks.includes('html'));await s.deadline();assert(s.calls.some(c=>c.event==='failed'));assert(s.calls.slice(1).every(c=>!('stage_ms' in c)));
 });

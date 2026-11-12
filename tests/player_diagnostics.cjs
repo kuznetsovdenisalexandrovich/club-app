@@ -14,5 +14,9 @@ async function tick(){const work=[...timers.values()];timers.clear();for(const f
  const managed=ctx.clubPlayerDiagnostics('film',()=> 'https://api.test','v583',()=> 'signed-test-data',()=>true);
  managed({event:'unavailable'});await tick();
  assert.equal(requests.at(-1).tg_init,'signed-test-data');assert.equal(requests.at(-1).managed_rescue,true);
- console.log('OK diagnostic batching, stable retry IDs, safe server classification, close flush');
+ const rollbackCalls=[];ctx.fetch=async(url,options)=>{const body=JSON.parse(options.body);rollbackCalls.push(body);return body.events.some(e=>'os' in e||e.event==='probe')?{ok:false,status:422}:{ok:true};};
+ const legacy=ctx.clubPlayerDiagnostics('film',()=> 'https://api.test','v592',()=> 'identity',()=>true);
+ legacy({event:'play',delivery:'direct'});legacy({event:'unavailable',buffer_ms:0});legacy({event:'probe',probe_result:'network'});await tick();
+ assert.equal(rollbackCalls.length,2);assert.equal(rollbackCalls[0].attempt,rollbackCalls[1].attempt);assert(rollbackCalls[1].events.some(e=>e.event==='unavailable'));assert(rollbackCalls[1].events.every(e=>!('os' in e)&&!('buffer_ms' in e)&&e.event!=='probe'));
+ console.log('OK diagnostic batching, stable retry IDs, safe server classification, close flush, legacy schema fallback');
 })().catch(e=>{console.error(e);process.exit(1);});
