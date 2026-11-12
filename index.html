@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v592'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v593'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -6241,7 +6241,8 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
 .coll-strip .coll-art{height:100%;width:100%}
 .portal-section-link{appearance:none;background:none;border:0;padding:10px 0;min-height:40px;color:var(--warm);font:600 12px/1.4 var(--body);letter-spacing:0;text-transform:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-align:right}
 .portal-section-link::after{content:" →";display:inline-block;margin-left:5px;text-decoration:none}
-</style></head>
+</style><script src="meeting-recordings.js?v=1"></script>
+</head>
 <body>
 
 <!-- Экран загрузки. Лежит ПЕРВЫМ в body и стилизован инлайново: браузер рисует
@@ -11539,7 +11540,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="player-diagnostics.js?v=592"></script>
+<script src="player-diagnostics.js?v=593"></script>
 <script src="film-player.js?v=592" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('player_script')"></script>
 <script>
 if(window.ClubAppRescue)ClubAppRescue.mark('main');
@@ -12337,7 +12338,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v592 · 12.11.2026 Диагностика загрузки';
+const APP_BUILD = 'v593 · 12.11.2026 Записи встреч';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28529,6 +28530,7 @@ async function loadWidgetMonth(){
     const monthParam = `${TODAY_YEAR}-${pad2(TODAY_MONTH)}`;
     const data = await fetch(`${API_URL}/schedule?month=${monthParam}`).then(r => r.json());
     widgetDaysData = data.days || {};
+    renderMeetingNotice(data.meeting_notice);
     renderCalendarGrid('cal-widget-grid', TODAY_YEAR, TODAY_MONTH, widgetDaysData, null);
     renderTodayLine();
     wGridEl.dataset.loadedOnce = '1';
@@ -28695,6 +28697,7 @@ function schedEventKey(e){
 }
 function schedEventActionsHtml(e, i, dateStr){
   if (!e) return '';
+  if(e.replay_state)return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openMeetingRecording(${Number(e.id)})">Смотреть запись</button></div>`;
   if (!isMember) return e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn locked" onclick="openPaywall()">🔒 Перейти</button></div>` : '';
   var w = schedEventWindow(e, dateStr), key = schedEventKey(e), now = Date.now();
   // Нет времени или не понять, что за событие, — как раньше: ссылка, если есть
@@ -32902,6 +32905,7 @@ async function init(){
       if(/^play_[a-f0-9]{24}$/.test(accessStart)){if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));await openGameInvitation(accessStart.slice(5));return;}
       if(/^games_(ai|gods|quizzes)$/.test(accessStart)){await waitProfile(8000);switchView('games');kqCategory(accessStart==='games_gods'?'god':accessStart.slice(6));return;}
       if(/^kq_[a-f0-9]{32}$/.test(accessStart)){await openKnowledgeQuiz(accessStart.slice(3));return;}
+      if(/^meeting_[1-9][0-9]{0,12}$/.test(accessStart)){await waitProfile(8000);await openMeetingRecording(accessStart.slice(8));return;}
       if (accessStart.indexOf('paid_') === 0){
         await claimManualAccess(accessStart.slice(5));
         return;

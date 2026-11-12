@@ -15,7 +15,7 @@
     try{
       const url=new URL(source?.url||'');
       const host=mediaHost(url.href);
-      out.delivery=['selectel_storage','railway_storage'].includes(host)?'direct':/^\/media\/(?:bonus-)?hls\//.test(url.pathname)?(url.searchParams.get('direct')==='1'?'direct':'proxy'):'unknown';
+      out.delivery=['selectel_storage','railway_storage'].includes(host)?'direct':/^\/media\/(?:(?:bonus|meeting)-)?hls\//.test(url.pathname)?(url.searchParams.get('direct')==='1'?'direct':'proxy'):'unknown';
       if(['selectel_storage','railway_storage'].includes(host))out.media_server=host;
       if(out.delivery==='direct'&&['selectel_storage','railway_storage','other'].includes(source.storage))out.media_server=source.storage;
       const id=url.pathname.match(/\/([a-f0-9]{32})\/([a-f0-9]{16})\//);
@@ -49,7 +49,7 @@
   root.clubProbeVideo=async function(source,position,emit){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;
     const original=new URL(source.lowUrl);
-    if(!/^\/media\/(?:bonus-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
+    if(!/^\/media\/(?:(?:bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
     const plans=[original];
     if(original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
     for(const plan of plans){
