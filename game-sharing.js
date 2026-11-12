@@ -3,19 +3,25 @@ let gameShareData=null,gameShareFile=null,gameShareBusy=false,gameInvite=null;
 const gsText=(key)=>t('resultshare.'+key);
 async function gameShareAPI(path,body){return apiRequest(API_URL+'/game-sharing'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:undefined,45000)}
 function closeGameShare(){document.getElementById('game-share-overlay')?.classList.remove('open');appSyncNavigation()}
-async function openGameShare(kind){
+async function openGameShare(kind,skipOffer=false){
  if(gameShareBusy)return;
- if(!telegramId){showToast(gsText('telegramRequired'));return}
+ if(kind==='gods'&&!skipOffer&&!isMember){if(await quizShareOffer())return}
  gameShareBusy=true;
  try{
-  const payload={kind,guest_key:ggGuestKey()};
+  const platform=isInsideVk()?'vk':'tg';
+  const payload={kind,guest_key:ggGuestKey(),platform};
   if(kind==='ai')payload.result_id=ggS?.session_id||'';
   if(kind==='quiz')payload.result_id=kqAttempt?.attempt_id||'';
   if(kind==='gods')payload.code=quizResult?.code||'';
   gameShareData=await gameShareAPI('',payload);gameShareFile=null;
   closeGameShare();
+  if(!telegramId){
+   const r=await fetch(API_URL+'/game-sharing/'+gameShareData.id+'/card.jpg?platform='+platform);if(!r.ok)throw Error(gsText('error'));
+   gameShareFile=new File([await r.blob()],'game-result.jpg',{type:'image/jpeg'});await gameShareImage();return;
+  }
+  if(platform==='vk')await vkAskMessages();
   showToast(gsText('sending'));
-  await gameShareAPI('/'+gameShareData.id+'/send',{});
+  await gameShareAPI('/'+gameShareData.id+'/send',{platform});
   showToast(gsText('sent'));
  }catch(e){showToast(e.message||gsText('error'))}finally{gameShareBusy=false}
 }
@@ -28,10 +34,10 @@ async function gameShareImage(){
  const href=URL.createObjectURL(gameShareFile),a=document.createElement('a');a.href=href;a.download='game-result.jpg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),10000);showToast(gsText('saved'));
 }
 function gameShareLink(){if(gameShareData)shareWithChoice(gameShareData.title+' — '+gameShareData.score+'. '+gsText('free'),gameShareData.payload)}
-async function gameShareBot(button){if(!gameShareData)return;button.disabled=true;try{await gameShareAPI('/'+gameShareData.id+'/send',{});showToast(gsText('sent'))}catch(e){showToast(e.message||gsText('error'))}finally{button.disabled=false}}
+async function gameShareBot(button){if(!gameShareData)return;button.disabled=true;try{await gameShareAPI('/'+gameShareData.id+'/send',{platform:isInsideVk()?'vk':'tg'});showToast(gsText('sent'))}catch(e){showToast(e.message||gsText('error'))}finally{button.disabled=false}}
 async function openGameInvitation(token){
  try{
-  await waitProfile(8000);const data=await gameShareAPI('/'+token);gameInvite=data;
+  await waitProfile(8000);const data=await gameShareAPI('/'+token+'?platform='+(isInsideVk()?'vk':'tg'));gameInvite=data;
   if(data.ref_code){try{localStorage.setItem(REF_PENDING_KEY,data.ref_code)}catch(e){}await attachPendingReferral()}
   const shell=document.getElementById('app-shell');if(!shell||shell.style.display==='none'||shell.style.display==='')enterDemoMode();
   if(data.kind==='gods'){openQuiz(true);return}

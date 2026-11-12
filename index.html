@@ -12213,7 +12213,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v576 · 11.11.2026 Поделиться под картой';
+const APP_BUILD = 'v577 · 12.11.2026 Карты и предложения';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12535,7 +12535,7 @@ function comingSoon() {
 const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
 /* Native Back follows the top dismissible layer, including dialogs above games. */
 function appBackLayer(){
-  const explicit={'dgs':()=>dgsBack(),'quiz-overlay':()=>closeQuiz(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
+  const explicit={'dgs':()=>dgsBack(),'quiz-share-offer':()=>closeQuizShareOffer(),'quiz-overlay':()=>closeQuiz(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
   const layers=Array.from(document.querySelectorAll('[id].open,[id].gg-open')).filter(el=>el.offsetWidth&&el.offsetHeight);
   const choices=layers.map((el,i)=>{
     let dismiss=explicit[el.id];
@@ -16418,7 +16418,7 @@ const APP_TEXTS = {
   'resultshare.saved': {c:'Игры',l:'Картинка сохранена. Ссылка также доступна через «Поделиться ссылкой».',w:'Результат игры',i:false,t:'Картинка сохранена. Ссылка также доступна через «Поделиться ссылкой».'},
   'resultshare.telegramRequired': {c:'Игры',l:'Открой игру в Telegram, чтобы бот мог прислать тебе карточку.',w:'Результат игры',i:false,t:'Открой игру в Telegram, чтобы бот мог прислать тебе карточку.'},
   'resultshare.sending': {c:'Игры',l:'Готовлю карточку и отправляю тебе в бота…',w:'Результат игры',i:false,t:'Готовлю карточку и отправляю тебе в бота…'},
-  'resultshare.sent': {c:'Игры',l:'Карточка отправлена тебе в Telegram',w:'Результат игры',i:false,t:'Карточка отправлена тебе в Telegram'},
+  'resultshare.sent': {c:'Игры',l:'Карточка отправлена тебе в сообщения',w:'Результат игры',i:false,t:'Карточка отправлена тебе в сообщения'},
   'resultshare.button': {c:'Игры',l:'Поделиться результатом',w:'Результат игры',i:false,t:'Поделиться результатом'},
   'resultshare.guest': {c:'Игры',l:'Бесплатное прохождение по приглашению — без клубных наград.',w:'Результат игры',i:false,t:'Бесплатное прохождение по приглашению — без клубных наград.'},
 
@@ -22206,9 +22206,9 @@ async function promoTesterOpen(){
   try {
     const r = await fetch(`${API_URL}/promo/tester/claim`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(actionIdent())
+      body: JSON.stringify({...actionIdent(),guest_key:ggGuestKey()})
     });
-    d = await r.json().catch(() => ({}));
+    saleTimerUse(d,promoCode);
   } catch(e){ d = {}; }
   if (d.reason === 'member') return;      // уже в клубе — только режим тестера
   promoT1rShow(d);
@@ -22294,11 +22294,11 @@ async function promoOpen(){
   if (!promoCode) return;
   let d = {};
   try {
-    const r = await fetch(`${API_URL}/promo/${encodeURIComponent(promoCode)}/claim`, {
+    d = await apiRequest(`${API_URL}/promo/${encodeURIComponent(promoCode)}/claim`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(actionIdent())
+      body: JSON.stringify({...actionIdent(),guest_key:ggGuestKey()})
     });
-    d = await r.json().catch(() => ({}));
+    saleTimerUse(d,promoCode);
   } catch(e){ d = {}; }
   if (d.reason === 'member'){ showToast(t('promo.c.member')); switchView('portal'); return; }
   const box = document.getElementById('promo-t1r-overlay');
@@ -22331,7 +22331,7 @@ async function promoServerLink(){
     const rid = saved.record.request_id;
     const r = await fetch(`${API_URL}/payments/checkouts`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': rid },
-      body: JSON.stringify({ request_id: rid, plan: 'promo', source: 'app', promo: promoCode,
+      body: JSON.stringify({ request_id: rid, plan: 'promo', source: 'app', promo: promoCode, guest_key:ggGuestKey(),
                              tg_init: iv.tg_init, vk_query: iv.vk_query })
     });
     const d = await r.json().catch(() => ({}));
@@ -28998,6 +28998,8 @@ async function bwNameLoot(){
   let rows = [];
   try { rows = await bwLoadList(); } catch(e){ return; }
   if (!rows || !rows.length) return;
+  if(typeof saleOffer!=='undefined'&&saleOffer&&saleDeadline>performance.now())return;
+  if(!saleBonusOnly){el.textContent='Бонусы за вступление · посмотреть';return}
   const first = (rows[0].title || rows[0].key || '').trim();
   if (!first) return;
   el.textContent = rows.length > 1
@@ -29006,6 +29008,8 @@ async function bwNameLoot(){
 }
 
 function bwStart(seconds){
+  if(typeof saleOffer!=='undefined' && saleOffer?.timer?.seconds_left>0 && saleDeadline>performance.now())return;
+  saleTimerPlace();
   if (!(seconds > 0) || isMember) return;
   bwSyncLastMin();
   bwEndsAt = Date.now() + seconds * 1000;
@@ -29019,6 +29023,7 @@ function bwStart(seconds){
 }
 
 function bwTick(){
+  if(typeof saleOffer!=='undefined' && saleOffer && saleDeadline>performance.now()){saleTimerTick();return}
   const left = Math.max(0, Math.round((bwEndsAt - Date.now()) / 1000));
   const t = document.getElementById('bb-time');
   if (t){
@@ -29107,7 +29112,11 @@ async function bwOpen(){
   track('bonus_window_peek');
   const box = document.getElementById('bw-list');
   if (!box) return;
-  const rows = await bwLoadList();
+  let rows = await bwLoadList();
+  const offer=typeof saleOffer!=='undefined'?saleOffer:null;
+  const sub=document.getElementById('bw-sub');
+  if(sub)sub.textContent=offer?(offer.body||''):(saleBonusOnly?'Вступи до конца окна — эти бонусы останутся у тебя вместе с доступом.':'Бонусы доступны участникам клуба. Сейчас их доступность не ограничена таймером.');
+  if(offer?.timer?.bonus_keys?.length)rows=rows.filter(b=>offer.timer.bonus_keys.includes(b.key));
   if (!rows.length){
     box.innerHTML = '<div class="bw-sub" data-text="bw.empty">' +
       ((typeof t === 'function' && t('bw.empty')) || 'Бонусы откроются вместе с доступом.') + '</div>';
@@ -29129,6 +29138,7 @@ function bwClose(){
 
 function bwBuy(){
   bwClose();
+  if(typeof saleOffer!=='undefined'&&saleOffer){promoCode=saleOffer.code;promoOpen();return}
   track('bonus_window_buy');
   if (typeof enterDemoMode === 'function') enterDemoMode();
   openAccessPage();
@@ -36935,6 +36945,7 @@ function quizScore(answers){
 /* ── Экраны ──────────────────────────────────────────────────────────────── */
 
 function openQuiz(restart){
+  quizPauseFilm();
   if (onbQuizBlocked()) return;
   const ov = document.getElementById('quiz-overlay');
   if (!ov) return;
@@ -36953,6 +36964,7 @@ function openQuiz(restart){
 }
 
 function closeQuiz(){
+  closeQuizShareOffer();
   quizHoloStop();
   const ov = document.getElementById('quiz-overlay');
   if (ov) ov.classList.remove('open');
@@ -37167,6 +37179,33 @@ function quizGiftNoteHtml(gift){
    Превью — ЕГО бог в версии участника (свой арт, рамка наряднее). Показываем
    только гостю и только когда у бога версия участника заведена: сервер кладёт
    её в `gift.plus`. После вступления карта превращается сама (/users/me). */
+
+/* Full-screen games never leave an unrelated video floating over the result. */
+function quizPauseFilm(){
+ const film=document.getElementById('funnel-screen');
+ if(film && film.classList.contains('pip-mode')) filmDockShut();
+}
+function closeQuizShareOffer(){document.getElementById('quiz-share-offer')?.remove();appSyncNavigation()}
+async function quizShareOffer(){
+ if(isMember || !quizResult)return false;
+ let gift=quizGiftOf(quizResult.code);
+ if(!gift){
+  try{const d=await apiRequest(API_URL+'/quiz/gift-card?code='+encodeURIComponent(quizResult.code)+(telegramId?'&telegram_id='+telegramId:''));gift=d.card;quizGifts[quizResult.code]=gift}catch(e){return false}
+ }
+ if(!gift?.plus)return false;
+ closeQuizShareOffer();
+ const p=gift.plus,me=QUIZ_RESULTS[quizResult.code],ov=document.createElement('div');
+ ov.id='quiz-share-offer';ov.className='quiz-share-offer open';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label','Твоя карта участника клуба');
+ ov.innerHTML='<div class="quiz-share-offer-body"><button class="quiz-offer-close" aria-label="Закрыть" onclick="closeQuizShareOffer()">×</button>'
+ +'<h2>Твоя карта может выглядеть так</h2><p>Вступи в клуб — твоя карта получит другой арт и роскошную рамку.</p>'
+ +'<div class="quiz-offer-card">'+cardSceneHtml({art:p.art_url,frame:p.frame_url,sigil:p.sigil_url||p.sigil_url_soft,god:me.god})+'</div>'
+ +'<button class="quiz-share-btn" onclick="quizShareOfferJoin()">Ай, была не была!</button>'
+ +'<button class="quiz-offer-skip" onclick="quizShareOfferFree()">Нет, пока заберу бесплатную</button></div>';
+ document.getElementById('quiz-overlay').append(ov);appSyncNavigation();track('prologue_plus_seen',p.key||'');return true;
+}
+function quizShareOfferJoin(){closeQuizShareOffer();closeQuiz();if(getComputedStyle(document.getElementById('app-shell')).display==='none')enterDemoMode();openAccessPage()}
+function quizShareOfferFree(){closeQuizShareOffer();openGameShare('gods',true)}
+
 var qzPlusSeen = {};
 function quizPlusOfferHtml(godName, gift){
   if (!gift || !gift.plus) return '';
@@ -37202,6 +37241,7 @@ function quizHasCloseAxis(r){
 }
 
 function renderQuizResult(){
+  quizPauseFilm();
   quizHoloStop();
   const r = quizResult;
   if (!r || !QUIZ_RESULTS[r.code]){ renderQuizIntro(); return; }
@@ -37235,11 +37275,14 @@ function renderQuizResult(){
 
   // Теневая карточка второй натуры. Без арта показываем имя — два одинаковых
   // ромба-заглушки читались бы как ошибка вёрстки
-  const secondArt = second ? quizGodArt(second.god) : '';
+  const secondGift = second ? quizGiftOf(r.secondCode) : null;
+  if (second && !quizGiftAsked[r.secondCode]) loadQuizGift(r.secondCode, function(){ if(quizResult===r && !document.getElementById('quiz-shadow-scene')) renderQuizResult(); });
+  const secondArt = second ? ((secondGift && secondGift.art_url) || '') : '';
   const secondSign = second ? godSignFor(second.god, 0) : '';
   const shadowHtml = second
     ? '<div class="qr-shadow" onclick="openQuizShadow()"><div class="qr-shadow-tilt">'
-      + (secondArt ? '<img src="' + escapeHtml(secondArt) + '" alt="">' : '')
+      + (secondArt ? '<img class="qr-shadow-art" src="' + escapeHtml(secondArt) + '" alt="">' : '')
+      + (secondGift && secondGift.frame_url ? '<img class="qr-shadow-frame" src="' + escapeHtml(secondGift.frame_url) + '" alt="">' : '')
       + '<div class="qr-shadow-name">' + escapeHtml(second.god) + '</div>'
       + '</div></div>'
     : '';
@@ -37274,7 +37317,6 @@ function renderQuizResult(){
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
     + quizAdviceHtml(r.code)
-    + quizPlusOfferHtml(me.god, gift)
     + '<div class="quiz-axes">' + axesHtml + '</div>'
     + allyHtml
     + godLink
@@ -41327,7 +41369,24 @@ html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-li
 .qr-shadow:has(.qr-shadow-tilt){overflow:visible;perspective:1000px}
 .qr-shadow:has(.qr-shadow-tilt)::after{display:none}
 .qr-shadow-tilt::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 45%,rgba(6,6,10,.85) 100%)}
-</style><script src="knowledge-quizzes.js?v=9"></script><script src="game-sharing.js?v=5"></script><style>
+
+/* Guest sharing offer inherits the card screen's actual light/dark palette. */
+.quiz-share-offer{position:fixed;inset:0;z-index:30001;overflow:auto;overscroll-behavior:contain;background:var(--bg,#09090f);color:var(--text);padding:calc(var(--tg-content-safe-top,0px) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.quiz-share-offer-body{position:relative;width:min(100%,420px);margin:auto;text-align:center}
+.quiz-share-offer h2{font-size:23px;line-height:1.25;margin:10px 26px 12px}.quiz-share-offer p{font-size:15px;line-height:1.5;color:var(--text-dim);margin:0 0 14px}
+.quiz-offer-close{position:absolute;right:-8px;top:-12px;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:var(--card-bg);color:var(--text);font-size:24px;cursor:pointer}
+.quiz-offer-card{position:relative;overflow:hidden;padding:16px 24px 22px}.quiz-offer-card .qr-stack{width:min(240px,52dvh);max-width:100%;margin:0 auto}.quiz-offer-card .qr-sigil{opacity:.15;mask-image:radial-gradient(ellipse,#000 20%,transparent 68%)}
+.quiz-share-offer .quiz-share-btn{width:100%;margin:0;min-height:48px}.quiz-offer-skip{display:block;border:0;background:none;color:var(--text-dim);font:inherit;font-size:14px;min-height:48px;margin:8px auto 0;padding:10px;cursor:pointer;text-decoration:underline;text-underline-offset:4px}
+.quiz-overlay .qr-shadow{background:#111017;border:0}.qr-shadow img.qr-shadow-art{position:absolute;inset:5%;width:90%;height:90%;object-fit:cover;border-radius:14px;filter:brightness(.55) saturate(.55)}
+.qr-shadow img.qr-shadow-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;filter:brightness(.65);z-index:2}.qr-shadow-name{z-index:3}
+body:has(#quiz-overlay.open) #film-chip,body:has(#quiz-overlay.open) #funnel-screen.pip-mode{display:none!important}
+#funnel-screen.pip-mode .film-dock{height:198px;padding:0;background:transparent;min-height:0}
+
+#app-level-slot #bonus-bar{position:relative;inset:auto;z-index:1;width:100%;box-sizing:border-box;margin:0 0 18px;background:var(--card-bg);border:1px solid var(--line);border-radius:20px;box-shadow:none;color:var(--text)}
+#bonus-bar .bb-row{padding:15px 18px;gap:14px}#bonus-bar .bb-txt{font-size:14px;white-space:normal;line-height:1.4}#bonus-bar .bb-time{font-size:22px;color:var(--accent);font-weight:700}#bonus-bar .bb-fuse{display:none}
+body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{display:none!important}
+html[data-motion="off"] .bb-time{animation:none!important}
+</style><script src="knowledge-quizzes.js?v=9"></script><script src="game-sharing.js?v=6"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 </style></body>
 
