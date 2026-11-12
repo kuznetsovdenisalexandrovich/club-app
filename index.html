@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v589 -->
+<!-- FILE_VERSION: index-v590 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -36,7 +36,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v589'
+   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v590'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if((platform==='tg'&&/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||''))||(platform==='vk'&&/^https:\/\/vk\.me\/club[0-9]+$/.test(data.bot_url||''))){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -12328,7 +12328,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v589 · 12.11.2026 Аварийный путь ВК';
+const APP_BUILD = 'v590 · 12.11.2026 Ближайшая встреча';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28528,17 +28528,23 @@ async function loadWidgetMonth(){
   }
 }
 
-function renderTodayLine(){
+async function renderTodayLine(){
   const el = document.getElementById('cal-widget-today');
-  const events = widgetDaysData[todayStr()] || [];
-  if (!events.length) {
-    el.innerHTML = `Сегодня занятий нет — можешь посмотреть <span class="link">библиотеку →</span>`;
-    el.onclick = () => switchView('library');
-  } else {
-    const first = events[0];
-    const extra = events.length > 1 ? ` +ещё ${events.length - 1}` : '';
-    el.innerHTML = `Сегодня: <b>${first.title}</b>${first.time ? ' в ' + first.time : ''}${extra}`;
-    el.onclick = () => openDayPopup(todayStr());
+  try {
+    const next = await apiRequest(`${API_URL}/schedule/next`);
+    if(next.found){
+      el.innerHTML = `<b>${escapeHtml(next.title)}</b> · ${escapeHtml(next.label)}`;
+      el.onclick = async () => {
+        try{const month=await apiRequest(`${API_URL}/schedule?month=${next.date.slice(0,7)}`);Object.assign(widgetDaysData,month.days||{});openDayPopup(next.date);}
+        catch(e){showToast('Не удалось загрузить занятие. Попробуй ещё раз.');}
+      };
+    }else{
+      el.innerHTML = 'Ближайших занятий пока нет — <span class="link">библиотека →</span>';
+      el.onclick = () => switchView('library');
+    }
+  }catch(e){
+    el.textContent = 'Не удалось обновить ближайшее занятие · повторить';
+    el.onclick = renderTodayLine;
   }
 }
 
