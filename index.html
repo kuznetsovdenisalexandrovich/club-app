@@ -3361,6 +3361,8 @@ dialog.native-film-expanded{position:fixed;inset:0;box-sizing:border-box;width:1
 .native-film-retry{min-height:44px;padding:8px 12px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .native-film-help-panel{position:absolute;top:44px;left:0;right:0;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:var(--card,#f8f4ed);box-shadow:0 8px 25px #0002}
 .native-film-help [hidden]{display:none}
+.native-film.native-film-failed{height:240px!important;min-height:0!important;max-height:32vh;aspect-ratio:auto}.native-film.native-film-failed video{opacity:.15}.native-film>.native-film-bot{position:absolute;bottom:18px;left:16px;width:calc(100% - 32px);z-index:4;background:var(--card-bg,var(--bg));color:var(--text)}
+.native-film-bot{display:block;width:100%;padding:12px 16px;margin-top:10px;font-weight:700!important}.native-film-bot[hidden]{display:none!important}
 .native-film-option{min-height:44px;border:1px solid #ded6ce;border-radius:10px;background:var(--card2,#fff9);color:var(--text,#302b29);font:inherit;font-size:14px;cursor:pointer}
 #funnel-screen #funnel-film-slot:has(.native-film){margin-bottom:48px}
 #funnel-screen.pip-mode .native-film-help{display:none}
@@ -11436,7 +11438,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 </div>
 
 <script src="player-diagnostics.js?v=518"></script>
-<script src="film-player.js?v=580"></script>
+<script src="film-player.js?v=581"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -12213,7 +12215,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v580 · 12.11.2026 Загрузка видео';
+const APP_BUILD = 'v581 · 12.11.2026 Видео в боте';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17033,6 +17035,8 @@ const APP_TEXTS = {
     c:'Первый экран', l:'Если список бонусов пуст', w:'Попап по нажатию на бар', i:true,
     t:'Бонусы откроются вместе с доступом.' },
   'film.help': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Не грузится видео?'},
+  'film.bot_watch': {c:'Плеер',l:'Запасной просмотр',w:'Сбой видео',i:true,t:'Посмотреть в боте'},
+  'film.bot_failed': {c:'Плеер',l:'Ошибка отправки',w:'Сбой видео',i:true,t:'Не удалось отправить. Попробуй ещё раз'},
   'film.other_server': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Попробовать другой сервер'},
   'film.low': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Включить 360p'},
   'film.auto': {c:'Первый экран',l:'Помощь с видео',w:'Свой плеер',i:true,t:'Автоматическое качество'},
@@ -23412,6 +23416,18 @@ function playBonusVideo(bonusKey, itemKey){
 
 let bonusNativePlayer = null;
 let bonusNativeGeneration = 0;
+function canWatchVideoInBot(){return !!(telegramId && Number(telegramId)>0 && !isInsideVk());}
+async function watchVideoInBot(bonusKey='',itemKey=''){
+  const d=await apiRequest(`${API_URL}/media/watch-in-bot`,{method:'POST',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({bonus_key:bonusKey,item_key:itemKey})},25000);
+  if(d.url)openUrl(d.url);
+  return d;
+}
+function addVideoBotFallback(slot,bonusKey='',itemKey=''){
+  if(!canWatchVideoInBot())return;
+  const b=document.createElement('button');b.className='native-film-option native-film-bot';b.textContent=t('film.bot_watch');
+  b.onclick=async()=>{b.disabled=true;try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.message||t('film.bot_watch');}catch(e){b.textContent=t('film.bot_failed');}finally{b.disabled=false;}};
+  slot.appendChild(b);
+}
 let bonusNativeRequest = null;
 function disposeBonusNative(){
   ++bonusNativeGeneration;
@@ -23441,6 +23457,7 @@ async function playNativeBonus(bonusKey, itemKey, it){
     try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
     bonusNativePlayer = new ClubFilmPlayer(slot, {
       sources:results[1].sources, position:position, text:t, expiresIn:results[1].expires_in,
+      onBotFallback:canWatchVideoInBot()?()=>watchVideoInBot(bonusKey,itemKey):null,
       refreshSources:()=>refreshFilmSources(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}?direct_capable=1`),
       onEvent:function(event){
         if (Number.isFinite(event.time) && event.time > 0){
@@ -23458,7 +23475,7 @@ async function playNativeBonus(bonusKey, itemKey, it){
     const retry = document.createElement('button');
     retry.className = 'native-film-start'; retry.textContent = t('film.try_again');
     retry.onclick = function(){ playBonusVideo(bonusKey, itemKey); };
-    slot.appendChild(retry);
+    slot.appendChild(retry);addVideoBotFallback(slot,bonusKey,itemKey);
   } finally {
     clearTimeout(timeout);
     if (bonusNativeRequest === controller) bonusNativeRequest = null;
@@ -29307,10 +29324,11 @@ function startFunnelFilm(){
         sources:preferredFilmSources(manifest.sources), position:filmSeekDone ? 0 : saved, expiresIn:manifest.expires_in,
         refreshSources:()=>refreshFilmSources(`${API_URL}/media/film?direct_capable=1&edition=${encodeURIComponent(manifest.film)}`),
         poster:'images/film-ya-podumayu.jpg', text:t,
+        onBotFallback:canWatchVideoInBot()?()=>watchVideoInBot():null,
         onEvent:function(d){ filmHandlePlayback(d, true); },
         onDiagnostic:diagnostic,
         onFault:function(code){
-          if(code!=='film_unavailable'||filmEdition())return;
+          if(code!=='film_unavailable'||filmEdition()||canWatchVideoInBot())return;
           // Both own sources were exhausted. Keep Boomstream as the last resort.
           setTimeout(function(){
             if(generation!==filmNativeGeneration)return;

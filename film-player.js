@@ -23,6 +23,16 @@
       this.low=this.button(options.text('film.low'),'native-film-option',()=>this.setQuality('360'));
       this.auto=this.button(options.text('film.auto'),'native-film-option',()=>this.setQuality('auto'));
       this.panel.append(this.other,this.low,this.auto);this.help.append(this.retry,this.panel);
+      if(options.onBotFallback){
+        this.botFallback=this.button(options.text('film.bot_watch'),'native-film-option native-film-bot',async()=>{
+          if(this.botFallback.disabled)return;
+          this.botFallback.disabled=true;
+          try{const result=await options.onBotFallback();if(!this.destroyed)this.statusText(result.message||'');}
+          catch(e){if(!this.destroyed)this.statusText(e.message||options.text('film.bot_failed'));}
+          finally{if(!this.destroyed)this.botFallback.disabled=false;}
+        });
+        this.botFallback.hidden=true;this.wrapper.append(this.botFallback);
+      }
       this.fullscreen=this.button(options.text('film.fullscreen'),'native-film-fullscreen',()=>this.toggleFullscreen());
       this.fullscreen.textContent='';
       this.fullscreen.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg>';
@@ -43,10 +53,11 @@
     }
     failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
     fault(code){this.diagWaiting=true;this.diagnostic(code==='film_unavailable'?'unavailable':'stall');try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
+    statusText(text){this.notice.textContent=text;}
     status(key){this.notice.textContent=key?this.options.text(key):'';}
     clearTimers(){clearTimeout(this.timer);clearTimeout(this.helpTimer);this.timer=null;this.helpTimer=null;}
     progress(){
-      this.clearTimers();this.retry.hidden=true;this.panel.hidden=true;
+      this.clearTimers();this.retry.hidden=true;this.panel.hidden=true;if(this.botFallback)this.botFallback.hidden=true;
       if(this.wantsPlay)this.arm();
     }
     arm(){
@@ -97,9 +108,9 @@
         if(this.wantsPlay)this.fault('film_unavailable');
         this.exhausted=true;this.wantsPlay=false;this.clearTimers();
         ++this.generation;if(this.video)this.video.pause();
-        this.status('film.unavailable');this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;
+        this.wrapper.className='native-film native-film-failed';this.status('film.unavailable');if(this.botFallback)this.botFallback.hidden=false;this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;
       }
-      this.exhausted=false;
+      this.exhausted=false;this.wrapper.className='native-film';
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;

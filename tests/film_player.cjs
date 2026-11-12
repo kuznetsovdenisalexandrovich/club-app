@@ -84,3 +84,9 @@ const recovering=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https
 recovering.video.readyState=0;recovering.video.networkState=2;recovering.play();advance(4000);advance(10000);
 recovering.video.readyState=3;recovering.video.fire('playing');recovering.video.currentTime=1;recovering.video.fire('timeupdate');assert(!recovering.exhausted);recovering.destroy();
 console.log('OK slow native startup: fast reserve, 20s bounded final load, recovery');
+(async()=>{
+ let requests=0;const rescued=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/video',type:'mp4'}],text:k=>k,onEvent:()=>{},onBotFallback:async()=>{requests++;return {message:'Queued in bot'};}});
+ assert(rescued.botFallback.hidden);assert.equal(requests,0);rescued.play();rescued.video.fire('error');assert(!rescued.botFallback.hidden);assert.equal(requests,0);
+ await rescued.botFallback.onclick();assert.equal(requests,1);assert.equal(rescued.notice.textContent,'Queued in bot');assert(!rescued.botFallback.disabled);rescued.destroy();
+ console.log('OK explicit bot fallback is shown on exhaustion and only sends on click');
+})();
