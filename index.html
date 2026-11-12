@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v582 -->
+<!-- FILE_VERSION: index-v583 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -29,7 +29,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',build:'app-v582'
+   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v583'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if(/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||'')){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -45,11 +45,11 @@
    return data;
   }).catch(function(){if(statusNode)statusNode.textContent='Сервис сейчас не отвечает. Перезагрузи страницу или открой бота.';return null;}).then(function(result){clearTimeout(timeout);return result;});
  }
- function show(){
+ function show(reason){
   if(disabled||panel)return;
   panel=d.createElement('div');panel.id='club-app-rescue';panel.setAttribute('role','alert');
   panel.style.cssText='position:fixed;z-index:2147483647;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));max-width:540px;margin:auto;box-sizing:border-box;padding:20px;border:1px solid #b9aec6;border-radius:18px;background:#f7f3ed;color:#29262f;font:16px/1.45 system-ui,sans-serif;box-shadow:0 6px 30px #0004';
-  var title=d.createElement('strong');title.textContent='Не удалось загрузить приложение';
+  var title=d.createElement('strong');title.textContent=reason==='content_error'?'Не удалось загрузить материал':'Не удалось загрузить приложение';
   var text=d.createElement('p');text.textContent='Попробуй перезагрузить страницу или перейти в бота — продолжим там.';text.style.margin='10px 0';
   statusNode=d.createElement('p');statusNode.style.cssText='font-size:14px;margin:8px 0 14px';statusNode.textContent=signedLaunch()?'Связываемся с ботом…':'Открой бота, чтобы продолжить и сообщить о проблеме.';
   var actions=d.createElement('div');actions.style.cssText='display:flex;gap:10px;flex-wrap:wrap';
@@ -66,15 +66,15 @@
  }
  function fail(reason){
   if(disabled||d.hidden||failed)return;
-  failed=true;clearTimeout(timer);show();signal('failed',reason||'content_error').then(poll);
+  failed=true;clearTimeout(timer);show(reason);signal('failed',reason||'content_error').then(poll);
  }
  function mark(name){
   marks[name]=true;
-  if(!ready&&marks.settings&&(marks.profile||marks.guest)&&marks.rendered){ready=true;clearTimeout(timer);signal('ready');}
+  if(!ready&&(marks.content||marks.gate||(marks.settings&&(marks.profile||marks.guest)&&marks.rendered))){ready=true;clearTimeout(timer);signal('ready');}
  }
- function arm(){if(disabled||ready||failed)return;clearTimeout(timer);signal('boot');timer=setTimeout(function(){fail('boot_timeout');},35000);}
+ function arm(){if(disabled||d.hidden||ready||failed)return;clearTimeout(timer);signal('boot');timer=setTimeout(function(){fail('boot_timeout');},35000);}
  function setTarget(next){
-  if(!/^[A-Za-z0-9_-]{0,160}$/.test(next)||target===next||(next==='film'&&/^(ig|tt|yt|tg|vk|web|email)_film$/.test(target)))return;
+  if(!/^[A-Za-z0-9_-]{0,160}$/.test(next)||target===next||(next==='film'&&/^(?:(ig|tt|yt|tg|vk|web|email)_film|film_[A-Za-z0-9_-]+|namedfilm_v[0-9]+)$/.test(target)))return;
   signal('closed');target=next;attempt='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);});sequence=0;
   failed=false;lastState='';polls=0;clearTimeout(poller);clearTimeout(timer);w.ClubAppRescue.accepted=false;
   if(panel){panel.remove();panel=null;statusNode=null;botLink=null;}
@@ -11519,7 +11519,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="player-diagnostics.js?v=518"></script>
+<script src="player-diagnostics.js?v=583"></script>
 <script src="film-player.js?v=581"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
@@ -12298,7 +12298,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v582 · 12.11.2026 Аварийное продолжение в боте';
+const APP_BUILD = 'v583 · 12.11.2026 Проверка аварийного режима';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12365,8 +12365,9 @@ async function refreshFilmSources(url){
 }
 function filmDiagnostics(content){
   try{
-    const report=window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>window.ClubAppRescue&&ClubAppRescue.accepted?'':ivIdent().tg_init);
+    const report=window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>ivIdent().tg_init,()=>!!(window.ClubAppRescue&&ClubAppRescue.accepted));
     return function(event){
+      if(window.ClubAppRescue&&['frame','recovered'].includes(event.event))ClubAppRescue.mark('content');
       if(window.ClubAppRescue&&['unavailable','manifest_error'].includes(event.event))ClubAppRescue.fail('content_error');
       report(event);
     };
@@ -13054,6 +13055,7 @@ function ensureBotAccess(next){
   if (el) el.style.display = '';
   const veil = document.getElementById('botaccess-veil');
   if (veil) veil.classList.add('on');
+  if(el&&veil&&window.ClubAppRescue)ClubAppRescue.mark('gate');
   return false;
 }
 

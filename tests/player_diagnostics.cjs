@@ -11,5 +11,8 @@ async function tick(){const work=[...timers.values()];timers.clear();for(const f
  assert.match(requests[0].attempt,/^[0-9a-f-]{36}$/);assert.equal(requests[0].build,'v517');
  emit({event:'closed'});await Promise.resolve();assert(!listeners.pagehide);
  assert.equal(requests.at(-1).events[0].event,'closed');
+ const managed=ctx.clubPlayerDiagnostics('film',()=> 'https://api.test','v583',()=> 'signed-test-data',()=>true);
+ managed({event:'unavailable'});await tick();
+ assert.equal(requests.at(-1).tg_init,'signed-test-data');assert.equal(requests.at(-1).managed_rescue,true);
  console.log('OK diagnostic batching, stable retry IDs, safe server classification, close flush');
 })().catch(e=>{console.error(e);process.exit(1);});

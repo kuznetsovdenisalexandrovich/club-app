@@ -8,7 +8,7 @@
       if(host.endsWith('.up.railway.app'))return 'railway';return 'other';
     }catch(e){return 'unknown';}
   };
-  root.clubPlayerDiagnostics=function(content,endpoint,build,identity){
+  root.clubPlayerDiagnostics=function(content,endpoint,build,identity,managedRescue){
     const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
     const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
     const attempt=[hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-'),started=Date.now();
@@ -19,7 +19,7 @@
       const controller=new AbortController(),deadline=setTimeout(()=>controller.abort(),5000);
       try{
         const r=await fetch(endpoint()+'/client/player-diagnostics',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({attempt,content,tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events:batch}),keepalive:true,signal:controller.signal});
+          body:JSON.stringify({attempt,content,managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events:batch}),keepalive:true,signal:controller.signal});
         if(!r.ok)throw Error('report');
         const accepted=new Set(batch.map(e=>e.seq));queue=queue.filter(e=>!accepted.has(e.seq));retries=0;
       }catch(e){retries++;}finally{clearTimeout(deadline);busy=false;if(queue.length&&retries<3)timer=setTimeout(flush,2000);}
