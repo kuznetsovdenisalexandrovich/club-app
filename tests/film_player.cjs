@@ -74,3 +74,13 @@ console.log('OK native buffering cannot start the old wall-clock completion time
  assert.equal(refreshes,2);assert(trace.some(e=>e.event==='refresh_failed'&&e.http===503));p.video.fire('error');assert.equal(refreshes,2,'No unbounded manifest-refresh loop');p.destroy();
  console.log('OK expired links renew once, preserve position, prove recovery by progress, and bound failed renewals');
 })().catch(e=>{console.error(e);process.exitCode=1;});
+
+// A slow native initial load gets a bounded final-source window, not a false failure at 12s.
+const slow=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/video',type:'mp4'},{url:'https://b.test/video',type:'mp4'}],text:k=>k,onEvent:()=>{}});
+slow.video.readyState=0;slow.video.networkState=2;slow.play();advance(4000);assert.equal(slow.index,1);
+advance(8000);assert(!slow.exhausted,'Still loading the final native source');
+advance(11999);assert(!slow.exhausted);advance(1);assert(slow.exhausted,'Startup deadline remains bounded');slow.destroy();
+const recovering=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/video',type:'mp4'},{url:'https://b.test/video',type:'mp4'}],text:k=>k,onEvent:()=>{}});
+recovering.video.readyState=0;recovering.video.networkState=2;recovering.play();advance(4000);advance(10000);
+recovering.video.readyState=3;recovering.video.fire('playing');recovering.video.currentTime=1;recovering.video.fire('timeupdate');assert(!recovering.exhausted);recovering.destroy();
+console.log('OK slow native startup: fast reserve, 20s bounded final load, recovery');

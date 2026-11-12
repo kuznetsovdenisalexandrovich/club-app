@@ -55,7 +55,12 @@
       if(!this.helpTimer&&this.retry.hidden){
         this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay){this.retry.hidden=false;this.fault('film_stall');}},this.options.helpMs||10000);
       }
-      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},this.options.stallMs||(this.index===0&&this.sources.length>1?4000:8000));
+      // Keep the fast first failover, but let the final source finish a slow
+      // native startup. NETWORK_LOADING/HAVE_NOTHING is not a media error.
+      const loadingStartup=this.engine==='native'&&!this.started&&this.video&&this.video.readyState===0&&this.video.networkState===2;
+      const lastCandidate=this.failedSources.size>=this.sources.length-1;
+      const wait=this.options.stallMs||(this.index===0&&this.sources.length>1?4000:loadingStartup&&lastCandidate?20000:8000);
+      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},wait);
     }
     async refreshSources(){
       if(this.refreshing||this.destroyed)return;
