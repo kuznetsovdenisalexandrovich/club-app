@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v588 -->
+<!-- FILE_VERSION: index-v589 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -10,12 +10,19 @@
  var endpoint='https://bot.youselllikeagod-magazine.ru/content/app-rescue';
  var nativeFetch=w.fetch&&w.fetch.bind(w), marks={}, ready=false, failed=false, panel=null, statusNode=null, botLink=null;
  var failureReason='',timer=null,poller=null,polls=0,lastState='',botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
- var attempt='',target='',launch='',disabled=false,sequence=0;
+ var attempt='',target='',launch='',platform='tg',disabled=false,sequence=0;
  try{
   var outer=new URLSearchParams(location.hash.slice(1)),query=new URLSearchParams(location.search);
   launch=outer.get('tgWebAppData')||'';
   var inner=new URLSearchParams(launch);
   target=outer.get('tgWebAppStartParam')||inner.get('start_param')||query.get('startapp')||'';
+  [location.search||'',location.hash||''].some(function(part){
+   var raw=part.replace(/^[#?]/,'');if(raw.indexOf('?')>=0)raw=raw.slice(raw.indexOf('?')+1);
+   var params=new URLSearchParams(raw);
+   if(!params.get('vk_user_id')||!params.get('sign'))return false;
+   platform='vk';launch=raw;target=(/^[A-Za-z0-9_-]+$/.test(location.hash.slice(1))?location.hash.slice(1):'')||query.get('startapp')||params.get('vk_ref')||'';
+   botUrl='https://vk.me/club232119632';return true;
+  });
   if(!/^[A-Za-z0-9_-]{0,160}$/.test(target))target='';
   disabled=query.has('view');
   attempt=w.crypto&&w.crypto.randomUUID?w.crypto.randomUUID():('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);}));
@@ -29,10 +36,10 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v588'
+   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v589'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
-    if(/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||'')){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
+    if((platform==='tg'&&/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||''))||(platform==='vk'&&/^https:\/\/vk\.me\/club[0-9]+$/.test(data.bot_url||''))){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
     lastState=data.status;w.ClubAppRescue.accepted=true;
     if(statusNode){
      statusNode.textContent=data.status==='sent'?(data.kind==='video'?'Видео уже отправлено в бота.': 'Сообщение с продолжением уже в боте.'):
@@ -83,7 +90,7 @@
   signal('closed');target=next;attempt='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);});sequence=0;
   failed=false;lastState='';polls=0;clearTimeout(poller);clearTimeout(timer);w.ClubAppRescue.accepted=false;
   if(panel){panel.remove();panel=null;statusNode=null;botLink=null;}
-  botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
+  botUrl=platform==='vk'?'https://vk.me/club232119632':'https://t.me/youselllikeagod_bot?start=apprescue';
   w.__leadMaterialBoot={code:target,attempt:attempt};
   signal('boot');if(ready)signal('ready');else arm();
  }
@@ -12321,7 +12328,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v588 · 12.11.2026 Загрузка по маршруту';
+const APP_BUILD = 'v589 · 12.11.2026 Аварийный путь ВК';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

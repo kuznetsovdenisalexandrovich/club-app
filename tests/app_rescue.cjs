@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const first=html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
-function setup({signed=true,fetchFailure=false,hidden=false}={}){
+function setup({signed=true,fetchFailure=false,hidden=false,vk=false}={}){
  const timers=new Map(),events={},docEvents={},calls=[],nodes=[];let id=0;
  const create=tag=>({tag,style:{},children:[],textContent:'',setAttribute(){},appendChild(n){this.children.push(n);return n;},remove(){this.removed=true;}});
  const root=create('html'),body=create('body');
@@ -10,6 +10,7 @@ function setup({signed=true,fetchFailure=false,hidden=false}={}){
   crypto:{randomUUID:()=> '12345678-abcd-1234-abcd-123456789abc'},
   fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);calls.push(data);return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
   addEventListener:(e,f)=>events[e]=f};
+ if(vk){w.location.hash='#film';w.location.search='?vk_user_id=123&sign=synthetic&vk_ref=other';}
  Object.assign(w,{window:w,document:d,URLSearchParams,Promise,Math,location:w.location,setTimeout:(f,ms)=>{timers.set(++id,{f,ms});return id;},clearTimeout:id=>timers.delete(id)});
  vm.createContext(w);vm.runInContext(first,w);
  return {w,d,calls,nodes,timers,events,docEvents,async deadline(){const t=[...timers.values()].find(t=>t.ms===35000);assert(t);t.f();await flush();}};
@@ -50,4 +51,9 @@ test('player distinguishes failed source with remaining fallback from final fail
  const start=html.indexOf('function filmDiagnostics('),end=html.indexOf('// Failure reporting',start);vm.createContext(ctx);vm.runInContext(html.slice(start,end),ctx);
  const recovering=ctx.filmDiagnostics('film',()=>true);recovering({event:'manifest_error'});assert.equal(calls.length,0);assert.equal(reports.length,1);
  const final=ctx.filmDiagnostics('bonus');final({event:'unavailable'});assert(calls.includes('fail:content_error'));final({event:'recovered'});assert(calls.includes('mark:content'));
+});
+
+test('VK startup preserves material and offers local bot without Telegram identity',async()=>{
+ const s=setup({vk:true});await s.deadline();assert(s.calls.length>0);assert(s.calls.every(x=>x.platform==='vk'&&x.launch.includes('vk_user_id=123')));assert(s.calls.every(x=>x.target==='film'));
+ const link=s.nodes.find(n=>n.textContent==='Перейти в бота');assert(link.href.startsWith('https://vk.me/club232119632'));
 });
