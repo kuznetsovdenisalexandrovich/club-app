@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v591 -->
+<!-- FILE_VERSION: index-v592 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -8,7 +8,7 @@
 (function(w,d){
  'use strict';
  var endpoint='https://bot.youselllikeagod-magazine.ru/content/app-rescue';
- var nativeFetch=w.fetch&&w.fetch.bind(w), marks={}, ready=false, failed=false, panel=null, statusNode=null, botLink=null;
+ var nativeFetch=w.fetch&&w.fetch.bind(w), marks={html:true}, stageTimes={html:0}, startedAt=Date.now(), progressTimer=null, progressReports=0, ready=false, failed=false, panel=null, statusNode=null, botLink=null;
  var failureReason='',timer=null,poller=null,polls=0,lastState='',botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
  var attempt='',target='',launch='',platform='tg',disabled=false,sequence=0;
  try{
@@ -36,7 +36,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v591'
+   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v592'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if((platform==='tg'&&/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||''))||(platform==='vk'&&/^https:\/\/vk\.me\/club[0-9]+$/.test(data.bot_url||''))){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -73,15 +73,18 @@
  }
  function fail(reason){
   if(disabled||d.hidden||failed)return;
-  failed=true;failureReason=reason||'content_error';clearTimeout(timer);show(reason);signal('failed',reason||'content_error').then(poll);
+  failed=true;clearTimeout(progressTimer);progressTimer=null;failureReason=reason||'content_error';clearTimeout(timer);show(reason);signal('failed',reason||'content_error').then(poll);
  }
  function mark(name){
-  marks[name]=true;
+  if(!/^(html|card_script|sdk|player_script|main|dom|settings|profile|guest|rendered|gate|content|scriptError)$/.test(name))return;
+  marks[name]=true;if(stageTimes[name]===undefined)stageTimes[name]=Math.min(86400000,Math.max(0,Date.now()-startedAt));
   var useful=marks.content||marks.gate||(marks.settings&&(marks.profile||marks.guest)&&marks.rendered);
   if(useful&&(!ready||failed)&&(!failed||failureReason!=='content_error'||name==='content')){
-   ready=true;failed=false;failureReason='';lastState='ready';polls=0;clearTimeout(timer);clearTimeout(poller);
+   ready=true;failed=false;failureReason='';clearTimeout(progressTimer);progressTimer=null;lastState='ready';polls=0;clearTimeout(timer);clearTimeout(poller);
    if(panel){panel.remove();panel=null;statusNode=null;botLink=null;}
    signal('ready');
+  }else if(!ready&&!failed&&!d.hidden&&!progressTimer&&progressReports<6){
+   progressTimer=setTimeout(function(){progressTimer=null;if(!ready&&!failed&&!d.hidden){progressReports++;signal('status');}},1000);
   }
  }
  function arm(){if(disabled||d.hidden||ready||failed)return;clearTimeout(timer);signal('boot');timer=setTimeout(function(){fail('boot_timeout');},35000);}
@@ -96,19 +99,21 @@
  }
  w.ClubAppRescue={mark:mark,fail:fail,signal:signal,target:setTarget,version:1,accepted:false};
  w.__leadMaterialBoot={code:target,attempt:attempt};
- w.addEventListener('pagehide',function(){clearTimeout(timer);clearTimeout(poller);if(!failed)signal('closed');});
+ w.addEventListener('pagehide',function(){clearTimeout(progressTimer);progressTimer=null;clearTimeout(timer);clearTimeout(poller);if(!failed)signal('closed');});
  d.addEventListener('visibilitychange',function(){
-  if(d.hidden){clearTimeout(timer);clearTimeout(poller);if(!ready&&!failed)signal('closed');}
+  if(d.hidden){clearTimeout(progressTimer);progressTimer=null;clearTimeout(timer);clearTimeout(poller);if(!ready&&!failed)signal('closed');}
   else if(failed)poll();else arm();
  });
  // Unhandled errors are evidence for the watchdog, not immediate proof that
  // the useful page is broken (third-party widgets can fail independently).
- w.addEventListener('error',function(){marks.scriptError=true;});
+ w.addEventListener('error',function(){mark('scriptError');});
+ w.addEventListener('unhandledrejection',function(){mark('scriptError');});
+ d.addEventListener('DOMContentLoaded',function(){mark('dom');});
  arm();
 })(window,document);
 
 </script>
-<script src="card-motion.js?v=1"></script>
+<script src="card-motion.js?v=1" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('card_script')"></script>
 
 <meta charset="UTF-8">
 
@@ -132,14 +137,14 @@
      «Bot API 9.6» и рядом «SDK Telegram: не доехал».
      Динамическая загрузка со сторожем эту гонку не выиграла — так что гонки
      больше нет: копия лежит рядом с приложением и подключается обычным тегом.
-     К моменту запуска объект существует ВСЕГДА, ветка всегда основная.
+     Загрузка SDK отмечается в независимой диагностике; отсутствие файла
+     или остановка загрузки страницы не считаются успешным запуском.
 
      ⚠️ Почему блокирующий тег здесь безопасен, хотя это записанные грабли
      («внешний скрипт в <head> = белый экран на урезанной сети»): файл СВОЙ, с
-     того же домена, что и сам апп. Если он недоступен — недоступна и
-     страница, терять нечего. Именно поэтому адрес относительный, а не
-     telegram.org. -->
-<script src="telegram-web-app.js"></script>
+     того же домена, что и сам апп. Отдельный файл всё равно может не загрузиться:
+     первый inline-watchdog работает независимо и сохраняет пройденные этапы. -->
+<script src="telegram-web-app.js" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('sdk')"></script>
 <link rel="manifest" href="manifest.json">
 <!-- iOS берёт ИМЕННО apple-touch-icon: манифест для «Добавить на экран Домой»
      он не читает. Нативный размер 180×180 — другой система отмасштабирует сама,
@@ -11531,9 +11536,10 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="player-diagnostics.js?v=583"></script>
-<script src="film-player.js?v=591"></script>
+<script src="player-diagnostics.js?v=592"></script>
+<script src="film-player.js?v=592" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('player_script')"></script>
 <script>
+if(window.ClubAppRescue)ClubAppRescue.mark('main');
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
    пока грузится страница, а дальше — то, что нарисуем мы. Раньше это был пустой
@@ -12328,7 +12334,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v591 · 12.11.2026 Восстановление видео';
+const APP_BUILD = 'v592 · 12.11.2026 Диагностика загрузки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

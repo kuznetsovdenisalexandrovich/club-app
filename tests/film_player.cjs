@@ -122,3 +122,10 @@ assert(!lowFaults.includes('film_unavailable'));assert(lowRecovery.retry.hidden)
 lowRecovery.action('pause');const pausedSource=lowRecovery.index;advance(60000);assert.equal(lowRecovery.index,pausedSource);assert(!lowRecovery.exhausted);
 lowRecovery.setQuality('auto');assert.equal(lowRecovery.quality,'auto');assert(!lowRecovery.wantsPlay,'Manual quality change preserves pause');lowRecovery.destroy();
 console.log('OK 360 advances before confirming recovery, avoids emergency, preserves manual pause and quality control');
+
+(async()=>{
+ let probes=0;ctx.clubProbeVideo=async(source,position,emit)=>{probes++;emit({event:'probe',reason:'sample_360'});};
+ const bounded=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',lowUrl:'https://a.test/360',type:'hls'}],text:k=>k,onEvent:()=>{}});
+ bounded.play();await Promise.resolve();assert.equal(probes,0,'Normal playback has no diagnostic downloads');bounded.video.fire('error');await Promise.resolve();assert.equal(probes,0,'Recovering playback has no diagnostic downloads');bounded.video.fire('error');await Promise.resolve();assert.equal(probes,1);bounded.play();bounded.video.fire('error');await Promise.resolve();assert.equal(probes,1,'Repeated failure has only one comparison per player');bounded.destroy();delete ctx.clubProbeVideo;
+ console.log('OK diagnostic samples only after final failure, once per player');
+})().catch(e=>{console.error(e);process.exitCode=1;});

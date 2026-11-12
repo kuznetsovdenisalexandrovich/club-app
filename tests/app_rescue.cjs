@@ -57,3 +57,11 @@ test('VK startup preserves material and offers local bot without Telegram identi
  const s=setup({vk:true});await s.deadline();assert(s.calls.length>0);assert(s.calls.every(x=>x.platform==='vk'&&x.launch.includes('vk_user_id=123')));assert(s.calls.every(x=>x.target==='film'));
  const link=s.nodes.find(n=>n.textContent==='Перейти в бота');assert(link.href.startsWith('https://vk.me/club232119632'));
 });
+
+test('partial startup sends bounded stages without premature ready',async()=>{
+ const s=setup();s.w.ClubAppRescue.mark('sdk');s.w.ClubAppRescue.mark('main');const progress=[...s.timers.values()].find(t=>t.ms===1000);assert(progress);progress.f();await flush();const partial=s.calls.find(c=>c.event==='status');assert(partial);assert(partial.marks.includes('html'));assert(partial.marks.includes('sdk'));assert(partial.stage_ms.main>=0);assert(!s.calls.some(c=>c.event==='ready'));
+ ['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();assert(s.calls.some(c=>c.event==='ready'));
+});
+test('JS error is evidence without declaring useful screen failure',async()=>{
+ const s=setup();s.events.error();[...s.timers.values()].find(t=>t.ms===1000).f();await flush();assert(s.calls.some(c=>c.event==='status'&&c.marks.includes('scriptError')));assert(!s.calls.some(c=>c.event==='failed'));
+});
