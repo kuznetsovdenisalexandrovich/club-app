@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v590 -->
+<!-- FILE_VERSION: index-v591 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -36,7 +36,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v590'
+   launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v591'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if((platform==='tg'&&/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||''))||(platform==='vk'&&/^https:\/\/vk\.me\/club[0-9]+$/.test(data.bot_url||''))){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -11532,7 +11532,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 </div>
 
 <script src="player-diagnostics.js?v=583"></script>
-<script src="film-player.js?v=581"></script>
+<script src="film-player.js?v=591"></script>
 <script>
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
    Telegram своей заставки для мини-аппов не даёт: он показывает аватар бота,
@@ -12328,7 +12328,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v590 · 12.11.2026 Ближайшая встреча';
+const APP_BUILD = 'v591 · 12.11.2026 Восстановление видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

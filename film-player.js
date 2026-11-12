@@ -66,11 +66,11 @@
       if(!this.helpTimer&&this.retry.hidden){
         this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay){this.retry.hidden=false;this.fault('film_stall');}},this.options.helpMs||10000);
       }
-      // Keep the fast first failover, but let the final source finish a slow
-      // native startup. NETWORK_LOADING/HAVE_NOTHING is not a media error.
-      const loadingStartup=this.engine==='native'&&!this.started&&this.video&&this.video.readyState===0&&this.video.networkState===2;
+      // Loading a replacement at the saved position needs the same bounded
+      // window as startup. HAVE_METADATA/NETWORK_LOADING is not a media error.
+      const loadingNative=this.engine==='native'&&this.video&&this.video.readyState<3&&this.video.networkState===2;
       const lastCandidate=this.failedSources.size>=this.sources.length-1;
-      const wait=this.options.stallMs||(this.index===0&&this.sources.length>1?4000:loadingStartup&&lastCandidate?20000:8000);
+      const wait=this.options.stallMs||(this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
       if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},wait);
     }
     async refreshSources(){
@@ -97,11 +97,19 @@
       this.emit('pause');
       if(manual)this.failedSources.clear();
       if(!same&&this.index>=0&&!manual)this.failedSources.add(this.index);
-      let next=this.index;
+      let next=this.index,automaticLow=false;
       if(!same){
         for(let step=1;step<=this.sources.length;step++){
           const candidate=(this.index+step)%this.sources.length;
           if(!this.failedSources.has(candidate)){next=candidate;break;}
+        }
+      }
+      if(!same&&this.failedSources.size>=this.sources.length&&this.wantsPlay&&this.quality==='auto'){
+        // One low-bandwidth pass per recovery; staying in 360 prevents loops.
+        const lowCandidate=this.sources.findIndex(source=>source.lowUrl);
+        if(lowCandidate>=0){
+          this.quality='360';automaticLow=true;next=lowCandidate;this.failedSources.clear();
+          this.sources.forEach((source,index)=>{if(!source.lowUrl)this.failedSources.add(index);});
         }
       }
       if(!same&&this.failedSources.size>=this.sources.length){
@@ -112,7 +120,7 @@
       }
       this.exhausted=false;this.wrapper.className='native-film';
       if(!same)this.index=next;
-      this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:manual?'manual':same?'quality':'automatic'});
+      this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
       // Keep the same element: WebKit grants playback permission per element.
       if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}

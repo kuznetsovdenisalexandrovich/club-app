@@ -42,10 +42,10 @@ player.action('pause');assert.equal(timers.size,0);assert(!player.wantsPlay);adv
 player.setQuality('360');assert.equal(player.hls.url,'https://other.test/360');assert(!player.wantsPlay);assert.equal(player.position,30);
 player.video.fire('loadedmetadata');assert.equal(player.video.currentTime,30);
 player.setQuality('auto');assert.equal(player.hls.url,'https://other.test/master');
-player.action('play');player.hls.listeners.error(null,{fatal:true,details:'fragLoadError',response:{code:503,url:'https://secret.test/?signature=secret'}});assert(diagnostics.some(e=>e.http===503&&e.reason==='fragLoadError'));assert(!JSON.stringify(diagnostics).includes('secret'));assert.equal(player.index,0,'Later reserve failure retries primary after real playback');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);assert.equal(timers.size,0);
+player.action('play');player.hls.listeners.error(null,{fatal:true,details:'fragLoadError',response:{code:503,url:'https://secret.test/?signature=secret'}});assert(diagnostics.some(e=>e.http===503&&e.reason==='fragLoadError'));assert(!JSON.stringify(diagnostics).includes('secret'));assert.equal(player.index,0,'Later reserve failure retries primary after real playback');assert(!player.exhausted);player.video.fire('error');assert(!player.exhausted);assert.equal(player.quality,'360');player.video.fire('error');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);assert.equal(timers.size,0);
 assert(events.some(e=>e.fault==='film_unavailable'));
 player.low.onclick();assert(player.wantsPlay);assert(!player.exhausted);player.video.fire('error');assert(!player.exhausted);player.video.fire('error');assert(player.exhausted);
-player.other.onclick();assert.equal(player.index,0);assert(!player.exhausted);assert.equal(player.position,30);
+const beforeManualSwitch=player.index;player.other.onclick();assert.equal(player.index,(beforeManualSwitch+1)%2);assert(!player.exhausted);assert.equal(player.position,30);
 player.destroy();assert.equal(timers.size,0);const count=events.length;player.video.fire('ended');assert.equal(events.length,count);
 const preloadFaults=[];
 const preload=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],text:k=>k,onEvent:()=>{},onFault:c=>preloadFaults.push(c)});
@@ -90,3 +90,35 @@ console.log('OK slow native startup: fast reserve, 20s bounded final load, recov
  await rescued.botFallback.onclick();assert.equal(requests,1);assert.equal(rescued.notice.textContent,'Queued in bot');assert(!rescued.botFallback.disabled);rescued.destroy();
  console.log('OK explicit bot fallback is shown on exhaustion and only sends on click');
 })();
+
+// Resume after a real frame: slow native reserve loading is not a final failure.
+const resumeFaults=[],resumeTrace=[];
+const savedCanPlay=Element.prototype.canPlayType;Element.prototype.canPlayType=()=> 'probably';
+const resume=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',lowUrl:'https://a.test/360',type:'hls'},{url:'https://b.test/master',lowUrl:'https://b.test/360',type:'hls'}],text:k=>k,onEvent:()=>{},onFault:c=>resumeFaults.push(c),onDiagnostic:e=>resumeTrace.push(e)});
+resume.play();resume.video.readyState=4;resume.video.networkState=2;resume.video.fire('playing');resume.video.currentTime=45;resume.video.fire('timeupdate');
+resume.video.readyState=2;resume.video.fire('waiting');advance(4000);assert.equal(resume.index,1);
+resume.video.readyState=1;resume.video.fire('loadedmetadata');advance(8000);
+assert(!resume.exhausted,'Do not abandon a loading native reserve after playback at eight seconds');
+assert.equal(resume.quality,'auto','Reserve has time before lowering quality');
+advance(12000);assert.equal(resume.quality,'360');assert(!resume.exhausted);assert.equal(resume.video.src,'https://a.test/360');
+resume.video.fire('loadedmetadata');assert.equal(resume.video.currentTime,45);
+advance(8000);assert.equal(resume.video.src,'https://b.test/360');assert(!resume.exhausted);
+advance(20000);assert(resume.exhausted,'No endless retry loop after both qualities fail');
+assert.equal(resumeFaults.filter(x=>x==='film_unavailable').length,1);
+assert(resumeTrace.some(x=>x.event==='source'&&x.reason==='automatic_low'&&x.quality==='360'));
+resume.destroy();Element.prototype.canPlayType=savedCanPlay;
+console.log('OK native resume waits for loading, tries bounded 360 recovery, preserves position, and fails once');
+
+const lowFaults=[],lowTrace=[];
+const lowRecovery=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',lowUrl:'https://a.test/360',type:'hls'},{url:'https://b.test/master',lowUrl:'https://b.test/360',type:'hls'}],text:k=>k,onEvent:()=>{},onFault:c=>lowFaults.push(c),onDiagnostic:e=>lowTrace.push(e)});
+lowRecovery.play();lowRecovery.video.currentTime=45;lowRecovery.video.fire('error');lowRecovery.video.fire('error');
+assert.equal(lowRecovery.quality,'360');assert(!lowFaults.includes('film_unavailable'));
+lowRecovery.video.fire('loadedmetadata');assert.equal(lowRecovery.video.currentTime,45);
+lowRecovery.video.readyState=4;lowRecovery.video.fire('playing');
+assert(!lowTrace.some(e=>e.event==='recovered'),'Loading or playing alone is not a recovered frame');
+lowRecovery.video.currentTime=46;lowRecovery.video.fire('timeupdate');
+assert(lowTrace.some(e=>e.event==='recovered'&&e.quality==='360'));
+assert(!lowFaults.includes('film_unavailable'));assert(lowRecovery.retry.hidden);
+lowRecovery.action('pause');const pausedSource=lowRecovery.index;advance(60000);assert.equal(lowRecovery.index,pausedSource);assert(!lowRecovery.exhausted);
+lowRecovery.setQuality('auto');assert.equal(lowRecovery.quality,'auto');assert(!lowRecovery.wantsPlay,'Manual quality change preserves pause');lowRecovery.destroy();
+console.log('OK 360 advances before confirming recovery, avoids emergency, preserves manual pause and quality control');
