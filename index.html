@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v585 -->
+<!-- FILE_VERSION: index-v586 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -9,7 +9,7 @@
  'use strict';
  var endpoint='https://bot.youselllikeagod-magazine.ru/content/app-rescue';
  var nativeFetch=w.fetch&&w.fetch.bind(w), marks={}, ready=false, failed=false, panel=null, statusNode=null, botLink=null;
- var timer=null,poller=null,polls=0,lastState='',botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
+ var failureReason='',timer=null,poller=null,polls=0,lastState='',botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
  var attempt='',target='',launch='',disabled=false,sequence=0;
  try{
   var outer=new URLSearchParams(location.hash.slice(1)),query=new URLSearchParams(location.search);
@@ -29,7 +29,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v583'
+   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v586'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if(/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||'')){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -66,11 +66,16 @@
  }
  function fail(reason){
   if(disabled||d.hidden||failed)return;
-  failed=true;clearTimeout(timer);show(reason);signal('failed',reason||'content_error').then(poll);
+  failed=true;failureReason=reason||'content_error';clearTimeout(timer);show(reason);signal('failed',reason||'content_error').then(poll);
  }
  function mark(name){
   marks[name]=true;
-  if(!ready&&(marks.content||marks.gate||(marks.settings&&(marks.profile||marks.guest)&&marks.rendered))){ready=true;clearTimeout(timer);signal('ready');}
+  var useful=marks.content||marks.gate||(marks.settings&&(marks.profile||marks.guest)&&marks.rendered);
+  if(useful&&(!ready||failed)&&(!failed||failureReason!=='content_error'||name==='content')){
+   ready=true;failed=false;failureReason='';lastState='ready';polls=0;clearTimeout(timer);clearTimeout(poller);
+   if(panel){panel.remove();panel=null;statusNode=null;botLink=null;}
+   signal('ready');
+  }
  }
  function arm(){if(disabled||d.hidden||ready||failed)return;clearTimeout(timer);signal('boot');timer=setTimeout(function(){fail('boot_timeout');},35000);}
  function setTarget(next){
@@ -12303,7 +12308,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v585 · 12.11.2026 Стабилизация оплаты';
+const APP_BUILD = 'v586 · 12.11.2026 Восстановление материалов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12368,12 +12373,12 @@ async function refreshFilmSources(url){
     return await r.json();
   }finally{clearTimeout(timer);}
 }
-function filmDiagnostics(content){
+function filmDiagnostics(content, canRecover){
   try{
     const report=window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>ivIdent().tg_init,()=>!!(window.ClubAppRescue&&ClubAppRescue.accepted));
     return function(event){
       if(window.ClubAppRescue&&['frame','recovered'].includes(event.event))ClubAppRescue.mark('content');
-      if(window.ClubAppRescue&&['unavailable','manifest_error'].includes(event.event))ClubAppRescue.fail('content_error');
+      if(window.ClubAppRescue&&['unavailable','manifest_error'].includes(event.event)&&!(canRecover&&canRecover(event)))ClubAppRescue.fail('content_error');
       report(event);
     };
   }catch(e){return function(event){if(window.ClubAppRescue&&event.event==='unavailable')ClubAppRescue.fail('content_error');};}
@@ -18471,11 +18476,12 @@ async function syncAppTexts(){
 async function loadAppSettings(){
   try {
     appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
-    if(window.ClubAppRescue)ClubAppRescue.mark('settings');
     appSettings.insights_unlock_level = parseInt(appSettings.insights_unlock_level, 10) || 2;
     appSettings.pdf_unlock_level = parseInt(appSettings.pdf_unlock_level, 10) || 3;
   } catch (e) {}
   applyAppSettings();
+  // Valid built-in settings are usable when the optional override request fails.
+  if(window.ClubAppRescue)ClubAppRescue.mark('settings');
   loadAppTexts();
 }
 
@@ -29411,7 +29417,7 @@ function startFunnelFilm(){
   const generation = ++filmNativeGeneration;
   slot.textContent = t('film.boot');
   const controller = new AbortController();
-  const diagnostic=filmDiagnostics('film');
+  const diagnostic=filmDiagnostics('film',event=>!filmEdition()&&(event.event==='manifest_error'||!canWatchVideoInBot()));
   let manifestStatus=0,manifestServer='unknown';
   // Allow the API to try both storage copies before abandoning the manifest.
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
@@ -29486,6 +29492,7 @@ function startBoomstreamFilm(){
      лучше чёрный прямоугольник, который человек ткнёт, чем наша картинка,
      под которой уже идёт кино */
   filmBootTimer = setTimeout(filmBootHide, 12000);
+  addVideoBotFallback(slot); // explicit escape if the legacy player also cannot play
   filmMountedAt = Date.now();
   /* ⚠️ ОФИЦИАЛЬНАЯ СВЯЗЬ С ПЛЕЕРОМ (24.08.2026). По их документации команды
      передаются через `new bIframeSDK(КОД)` — объект сам находит на странице
@@ -29630,6 +29637,7 @@ function filmHandlePlayback(d, native){
   if (d.method === 'stop'){ showFunnelAfter(); return; }
 
   if (d.method === 'time' && d.duration > 0){
+    if(d.time>0&&window.ClubAppRescue)ClubAppRescue.mark('content');
     // Реальная позиция точнее любых наших часов: помним её для возврата
     // («продолжить с того же места») и для честного окончания
     filmLastPos = d.time;

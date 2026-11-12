@@ -37,3 +37,17 @@ test('actual video frame proves useful content loaded',async()=>{const s=setup()
 test('initially hidden page never arms server or client watchdog',async()=>{const s=setup({hidden:true});await flush();assert.equal(s.calls.length,0);assert(![...s.timers.values()].some(x=>x.ms===35000));});
 test('failure includes observed startup stages',async()=>{const s=setup();s.w.ClubAppRescue.mark('rendered');await s.deadline();assert(s.calls.find(x=>x.event==='failed').marks.includes('rendered'));});
 test('player diagnostics retain signed identity independently of delivery ownership',()=>{assert(!html.includes("ClubAppRescue.accepted?'':ivIdent()"));assert(html.includes('()=>ivIdent().tg_init,()=>!!(window.ClubAppRescue'));});
+test('late useful startup removes emergency UI and stops polling',async()=>{
+ const s=setup();await s.deadline();const panel=s.nodes.find(n=>n.id==='club-app-rescue');assert(panel&&!panel.removed);
+ ['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();assert(panel.removed);assert(s.calls.some(x=>x.event==='ready'));
+});
+test('profile refresh cannot dismiss content failure; actual frame can',async()=>{
+ const s=setup();['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));s.w.ClubAppRescue.fail('content_error');await flush();
+ const panel=s.nodes.find(n=>n.id==='club-app-rescue');s.w.ClubAppRescue.mark('profile');assert(!panel.removed);s.w.ClubAppRescue.mark('content');await flush();assert(panel.removed);
+});
+test('player distinguishes failed source with remaining fallback from final failure',()=>{
+ const calls=[],reports=[];const ctx={window:{clubPlayerDiagnostics:()=>event=>reports.push(event),ClubAppRescue:{}},ClubAppRescue:{mark:x=>calls.push('mark:'+x),fail:x=>calls.push('fail:'+x)},API_URL:'',APP_BUILD:'v586',ivIdent:()=>({tg_init:'signed'})};
+ const start=html.indexOf('function filmDiagnostics('),end=html.indexOf('// Failure reporting',start);vm.createContext(ctx);vm.runInContext(html.slice(start,end),ctx);
+ const recovering=ctx.filmDiagnostics('film',()=>true);recovering({event:'manifest_error'});assert.equal(calls.length,0);assert.equal(reports.length,1);
+ const final=ctx.filmDiagnostics('bonus');final({event:'unavailable'});assert(calls.includes('fail:content_error'));final({event:'recovered'});assert(calls.includes('mark:content'));
+});
