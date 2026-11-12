@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v584 -->
+<!-- FILE_VERSION: index-v585 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -11964,6 +11964,11 @@ function createRFParallelTransport(config){
     let response,error;
     try{response=await send(original);if(![425,502,503,504].includes(response.status))return response;}
     catch(e){error=e;if(options.signal&&options.signal.aborted)throw e;}
+    // A checkout may still be running after a lost response. Only 425 proves
+    // rejection before execution; provider retries belong to the server alone.
+    if(method==='POST' && u.pathname==='/payments/checkouts' && (!response || response.status!==425)){
+      if(error)throw error;return response;
+    }
     if(!retry){if(error)throw error;return response;}
     const target=1-original;
     const ready=await readiness(target);
@@ -12298,7 +12303,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v584 · 12.11.2026 Повтор получения оплаты';
+const APP_BUILD = 'v585 · 12.11.2026 Стабилизация оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -30452,14 +30457,15 @@ function personalPaymentRecord(plan){
   try { localStorage.setItem(key, JSON.stringify(record)); } catch(e){}
   return {key, record};
 }
-async function personalPaymentLinks(){
+async function personalPaymentLinks(plan){
+  if(!['monthly','lifetime','trial'].includes(plan))throw new Error('Неизвестный тариф');
   const iv = ivIdent();
   if (!iv.tg_init && !iv.vk_query) throw new Error('Открой оплату в приложении Telegram или ВК');
   const identity = personalPaymentIdentity();
   const expectedPlatform = identity.platform;
   const expectedId = identity.id;
   const links = {};
-  for (const plan of ['monthly','lifetime','trial']) {
+  {
     const saved = personalPaymentRecord(plan);
     const response = await fetch(`${API_URL}/payments/checkouts`, {
       method:'POST', headers:{'Content-Type':'application/json','Idempotency-Key':saved.record.request_id},
@@ -30467,7 +30473,7 @@ async function personalPaymentLinks(){
     });
     const data = await response.json();
     if (!response.ok) {
-      if (plan === 'trial' && response.status === 409 && ['trial_unavailable','trial_not_eligible'].includes(data.code)) continue;
+      if (['idempotency_conflict','checkout_expired'].includes(data.code)){personalPaymentMemory.delete(saved.key);try{localStorage.removeItem(saved.key);}catch(e){}}
       throw new Error(data.detail || 'Не удалось подготовить оплату');
     }
     const url = new URL(data.payment_url);
@@ -30508,7 +30514,7 @@ async function openAccessPage(direct){
   try {
     const provider = await paymentProviderConfig();
     if (provider.regular === 'server') {
-      renderAccessButtons(await personalPaymentLinks());
+      renderServerPaymentChoices();
       // access_open уже записан до выбора провайдера.
       return;
     }
@@ -30613,6 +30619,28 @@ function accessLinksErrorHtml(promo=false){
     + `<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="${promo?'promoOpen()':'openAccessPage()'}">${escapeHtml(t('access.links_retry'))}</button>`
     + `<button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="openSupportDm(PAYMENT_TROUBLE_TEXT)">Написать Денису</button>`
     + (isInsideVk()?`<p style="line-height:1.5;user-select:text">${escapeHtml(PAYMENT_TROUBLE_TEXT)}</p><button class="lec-link-btn access-btn" style="width:100%;margin-top:10px" onclick="copyPaymentTrouble()">Скопировать текст</button>`:'');
+}
+
+let serverPaymentBusy=false;
+function renderServerPaymentChoices(){
+  const el=document.getElementById('access-buttons');
+  el.innerHTML=[['trial','Тест-драйв (1р./3 дня)'],['monthly','База (990р./мес.)'],['lifetime',"Вечный (19'990 разовый платёж)"]].map(([plan,label])=>`<button class="lec-link-btn access-btn" data-payment-plan="${plan}" onclick="chooseServerPayment('${plan}')">${label}</button>`).join('')+'<div id="server-payment-status" role="status"></div>';
+}
+async function chooseServerPayment(plan){
+  if(serverPaymentBusy)return;
+  serverPaymentBusy=true;
+  const status=document.getElementById('server-payment-status');
+  const buttons=Array.from(document.querySelectorAll('[data-payment-plan]'));
+  buttons.forEach(b=>b.disabled=true);
+  if(status)status.textContent='Готовим ссылку…';
+  try{
+    const links=await personalPaymentLinks(plan);
+    window._paymentLinks=[{link:links[plan+'_link']}];
+    if(status)status.textContent='Ссылка готова';
+    goToPayment(0);
+  }catch(e){
+    if(status)status.innerHTML='<p>Не удалось подготовить этот тариф. Можно выбрать его ещё раз или другой вариант.</p>'+accessLinksErrorHtml();
+  }finally{serverPaymentBusy=false;buttons.forEach(b=>b.disabled=false);}
 }
 
 function renderAccessButtons(result){

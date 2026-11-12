@@ -119,6 +119,11 @@ function createRFParallelTransport(config){
     let response,error;
     try{response=await send(original);if(![425,502,503,504].includes(response.status))return response;}
     catch(e){error=e;if(options.signal&&options.signal.aborted)throw e;}
+    // A checkout may still be running after a lost response. Only 425 proves
+    // rejection before execution; provider retries belong to the server alone.
+    if(method==='POST' && u.pathname==='/payments/checkouts' && (!response || response.status!==425)){
+      if(error)throw error;return response;
+    }
     if(!retry){if(error)throw error;return response;}
     const target=1-original;
     const ready=await readiness(target);
