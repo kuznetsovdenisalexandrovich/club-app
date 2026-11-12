@@ -1,23 +1,105 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v543 -->
+<!-- FILE_VERSION: index-v582 -->
 <html lang="ru" data-theme="light">
 <head>
+<script>
+/* APP_RESCUE_V1 — must be the first executable HTML. See APP_RESCUE.md.
+   No SDK, stylesheet, player or main application dependency. */
+(function(w,d){
+ 'use strict';
+ var endpoint='https://bot.youselllikeagod-magazine.ru/content/app-rescue';
+ var nativeFetch=w.fetch&&w.fetch.bind(w), marks={}, ready=false, failed=false, panel=null, statusNode=null, botLink=null;
+ var timer=null,poller=null,polls=0,lastState='',botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
+ var attempt='',target='',launch='',disabled=false,sequence=0;
+ try{
+  var outer=new URLSearchParams(location.hash.slice(1)),query=new URLSearchParams(location.search);
+  launch=outer.get('tgWebAppData')||'';
+  var inner=new URLSearchParams(launch);
+  target=outer.get('tgWebAppStartParam')||inner.get('start_param')||query.get('startapp')||'';
+  if(!/^[A-Za-z0-9_-]{0,160}$/.test(target))target='';
+  disabled=query.has('view');
+  attempt=w.crypto&&w.crypto.randomUUID?w.crypto.randomUUID():('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);}));
+ }catch(e){}
+ function signedLaunch(){
+  return launch||(w.Telegram&&w.Telegram.WebApp&&w.Telegram.WebApp.initData)||'';
+ }
+ function signal(event,reason){
+  if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
+  var requestAttempt=attempt;
+  var ctrl=w.AbortController?new AbortController():null;
+  var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
+  return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',build:'app-v582'
+  }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
+   if(data&&requestAttempt===attempt){
+    if(/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||'')){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
+    lastState=data.status;w.ClubAppRescue.accepted=true;
+    if(statusNode){
+     statusNode.textContent=data.status==='sent'?(data.kind==='video'?'Видео уже отправлено в бота.': 'Сообщение с продолжением уже в боте.'):
+      data.status==='start_required'?'Нажми «Перейти в бота» и «Запустить», чтобы бот смог прислать материал.':
+      data.status==='unknown'?'Бот не подтвердил результат отправки. Проверь переписку — повторно материал не отправляем.':
+      data.status==='blocked'?'Бот сейчас не может написать тебе. Открой переписку и проверь, не заблокирован ли он.':
+      data.status==='failed'?'Отправка не подтвердилась. Открой бота или попробуй перезагрузить страницу.':'Готовим продолжение в боте…';
+    }
+   }
+   return data;
+  }).catch(function(){if(statusNode)statusNode.textContent='Сервис сейчас не отвечает. Перезагрузи страницу или открой бота.';return null;}).then(function(result){clearTimeout(timeout);return result;});
+ }
+ function show(){
+  if(disabled||panel)return;
+  panel=d.createElement('div');panel.id='club-app-rescue';panel.setAttribute('role','alert');
+  panel.style.cssText='position:fixed;z-index:2147483647;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));max-width:540px;margin:auto;box-sizing:border-box;padding:20px;border:1px solid #b9aec6;border-radius:18px;background:#f7f3ed;color:#29262f;font:16px/1.45 system-ui,sans-serif;box-shadow:0 6px 30px #0004';
+  var title=d.createElement('strong');title.textContent='Не удалось загрузить приложение';
+  var text=d.createElement('p');text.textContent='Попробуй перезагрузить страницу или перейти в бота — продолжим там.';text.style.margin='10px 0';
+  statusNode=d.createElement('p');statusNode.style.cssText='font-size:14px;margin:8px 0 14px';statusNode.textContent=signedLaunch()?'Связываемся с ботом…':'Открой бота, чтобы продолжить и сообщить о проблеме.';
+  var actions=d.createElement('div');actions.style.cssText='display:flex;gap:10px;flex-wrap:wrap';
+  var reload=d.createElement('button');reload.type='button';reload.textContent='Перезагрузить';reload.onclick=function(){location.reload();};
+  botLink=d.createElement('a');botLink.textContent='Перейти в бота';botLink.href=botUrl;botLink.target='_blank';botLink.rel='noopener';
+  var style='display:flex;align-items:center;justify-content:center;min-height:46px;flex:1 1 150px;box-sizing:border-box;padding:10px 14px;border:1px solid #aca1bb;border-radius:12px;background:#e7def0;color:#29262f;text-decoration:none;font:600 15px system-ui,sans-serif;cursor:pointer';
+  reload.style.cssText=style;botLink.style.cssText=style;
+  actions.appendChild(reload);actions.appendChild(botLink);panel.appendChild(title);panel.appendChild(text);panel.appendChild(statusNode);panel.appendChild(actions);
+  (d.body||d.documentElement).appendChild(panel);
+ }
+ function poll(){
+  if(!failed||d.hidden||++polls>18||/^(sent|blocked|unknown|start_required)$/.test(lastState))return;
+  signal('status').then(function(){poller=setTimeout(poll,4000);});
+ }
+ function fail(reason){
+  if(disabled||d.hidden||failed)return;
+  failed=true;clearTimeout(timer);show();signal('failed',reason||'content_error').then(poll);
+ }
+ function mark(name){
+  marks[name]=true;
+  if(!ready&&marks.settings&&(marks.profile||marks.guest)&&marks.rendered){ready=true;clearTimeout(timer);signal('ready');}
+ }
+ function arm(){if(disabled||ready||failed)return;clearTimeout(timer);signal('boot');timer=setTimeout(function(){fail('boot_timeout');},35000);}
+ function setTarget(next){
+  if(!/^[A-Za-z0-9_-]{0,160}$/.test(next)||target===next||(next==='film'&&/^(ig|tt|yt|tg|vk|web|email)_film$/.test(target)))return;
+  signal('closed');target=next;attempt='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);});sequence=0;
+  failed=false;lastState='';polls=0;clearTimeout(poller);clearTimeout(timer);w.ClubAppRescue.accepted=false;
+  if(panel){panel.remove();panel=null;statusNode=null;botLink=null;}
+  botUrl='https://t.me/youselllikeagod_bot?start=apprescue';
+  w.__leadMaterialBoot={code:target,attempt:attempt};
+  signal('boot');if(ready)signal('ready');else arm();
+ }
+ w.ClubAppRescue={mark:mark,fail:fail,signal:signal,target:setTarget,version:1,accepted:false};
+ w.__leadMaterialBoot={code:target,attempt:attempt};
+ w.addEventListener('pagehide',function(){clearTimeout(timer);clearTimeout(poller);if(!failed)signal('closed');});
+ d.addEventListener('visibilitychange',function(){
+  if(d.hidden){clearTimeout(timer);clearTimeout(poller);if(!ready&&!failed)signal('closed');}
+  else if(failed)poll();else arm();
+ });
+ // Unhandled errors are evidence for the watchdog, not immediate proof that
+ // the useful page is broken (third-party widgets can fail independently).
+ w.addEventListener('error',function(){marks.scriptError=true;});
+ arm();
+})(window,document);
+
+</script>
 <script src="card-motion.js?v=1"></script>
 
 <meta charset="UTF-8">
-<script>
-/* Register an authenticated intent before the large application script runs.
-   If HTML itself never arrives, only a prior bot entry can identify the content. */
-(function(){
- try{
-  const outer=new URLSearchParams(location.hash.slice(1));const raw=outer.get('tgWebAppData')||'';
-  const inner=new URLSearchParams(raw);const code=outer.get('tgWebAppStartParam')||inner.get('start_param')||new URLSearchParams(location.search).get('startapp')||'';
-  if(!raw||!/^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,60}$/.test(code))return;
-  const attempt=crypto.randomUUID();window.__leadMaterialBoot={code,attempt};
-  fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch:raw,event:'requested'}),keepalive:true,signal:AbortSignal.timeout(5000)}).catch(function(){});
- }catch(e){}
-})();
-</script>
+
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Ты Боженька Продаж</title>
@@ -11455,6 +11537,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 var splashHidden = false;
 
 function hideSplash(){
+  if(window.ClubAppRescue)ClubAppRescue.mark('rendered');
   if (splashHidden) return;
   splashHidden = true;
   markAppReady();   // с этого мгновения падения уже не «не запустилось»
@@ -12215,7 +12298,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v581 · 12.11.2026 Видео в боте';
+const APP_BUILD = 'v582 · 12.11.2026 Аварийное продолжение в боте';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12281,7 +12364,13 @@ async function refreshFilmSources(url){
   }finally{clearTimeout(timer);}
 }
 function filmDiagnostics(content){
-  try{return window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>ivIdent().tg_init);}catch(e){return function(){};}
+  try{
+    const report=window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>window.ClubAppRescue&&ClubAppRescue.accepted?'':ivIdent().tg_init);
+    return function(event){
+      if(window.ClubAppRescue&&['unavailable','manifest_error'].includes(event.event))ClubAppRescue.fail('content_error');
+      report(event);
+    };
+  }catch(e){return function(event){if(window.ClubAppRescue&&event.event==='unavailable')ClubAppRescue.fail('content_error');};}
 }
 // Failure reporting is independent of the user's request; never retry a payment here.
 const clientIncidentSent = new Set();
@@ -14304,6 +14393,7 @@ async function loadProfile() {
   try {
     const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
     const u = await r.json();
+    if(r.ok&&typeof u.found==='boolean'&&window.ClubAppRescue)ClubAppRescue.mark('profile');
 
     // Настройка главной приезжает вместе с профилем — отдельного запроса на
     // старте нет намеренно, каждый новый запрос это ещё одна причина рывка
@@ -18374,6 +18464,7 @@ async function syncAppTexts(){
 async function loadAppSettings(){
   try {
     appSettings = Object.assign(appSettings, await apiRequest(`${API_URL}/settings`, {}, 8000));
+    if(window.ClubAppRescue)ClubAppRescue.mark('settings');
     appSettings.insights_unlock_level = parseInt(appSettings.insights_unlock_level, 10) || 2;
     appSettings.pdf_unlock_level = parseInt(appSettings.pdf_unlock_level, 10) || 3;
   } catch (e) {}
@@ -22868,6 +22959,7 @@ function contentFromUrl(){
    показывался, но ПОД приложением, за краем экрана. Denis видел просто
    главную. Тот же класс, что ловили 14.08 с кнопкой «Получить доступ». */
 function openFilmRoute(){
+ if(window.ClubAppRescue)ClubAppRescue.target('film');
   /* ⚠️⚠️ РАЗВИЛКА ПО ЧЛЕНСТВУ, А НЕ ПО ВИДИМОСТИ ОБОЛОЧКИ. Первая версия
      смотрела, поднято ли приложение, и в Telegram у гостя оболочка поднята —
      то есть холодный человек С РЕКЛАМЫ попадал бы на карточку занятия вместо
@@ -23005,6 +23097,7 @@ function nativeMaterialFromUrl(){
  openNativeMaterial(raw.slice(3));return true;
 }
 async function openNativeMaterial(code){
+ if(window.ClubAppRescue)ClubAppRescue.target('nl_'+code);
  try{
   const response=await fetch('https://bot.youselllikeagod-magazine.ru/content/native/'+encodeURIComponent(code),{signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw new Error('material');
@@ -23030,6 +23123,7 @@ function leadMaterialFromUrl(){
 Object.assign(APP_TEXTS, {"lead.vkNotSubscribed": {"c":"Материалы","l":"Подписка пока не найдена. Подпишись на сообщество и повтори проверку.","w":"Материал","i":false,"t":"Подписка пока не найдена. Подпишись на сообщество и повтори проверку."}, "lead.vkGate": {"c": "Материалы", "l": "PDF-выжимка — за подписку на моё бесплатное сообщество ВКонтакте. Подпишись и нажми «Проверить подписку».", "w": "Материал", "i": false, "t": "PDF-выжимка — за подписку на моё бесплатное сообщество ВКонтакте. Подпишись и нажми «Проверить подписку»."}, "lead.vkSubscribe": {"c": "Материалы", "l": "Подписаться на сообщество", "w": "Материал", "i": false, "t": "Подписаться на сообщество"}, "lead.vkAllow": {"c": "Материалы", "l": "Чтобы получить материал и сохранить возможность просмотра в сообщениях, разреши сообщения сообщества по кнопке ниже.", "w": "Материал", "i": false, "t": "Чтобы получить материал и сохранить возможность просмотра в сообщениях, разреши сообщения сообщества по кнопке ниже."}});
 Object.assign(APP_TEXTS, {"lead.expired": {"c": "Материалы", "l": "Сеанс приложения устарел. Закрой приложение и открой лекцию заново из сообщения бота.", "w": "Материал", "i": false, "t": "Сеанс приложения устарел. Закрой приложение и открой лекцию заново из сообщения бота."}, "lead.blocked": {"c": "Материалы", "l": "Получение сообщений отключено. Открой бота, чтобы возобновить получение материалов.", "w": "Материал", "i": false, "t": "Получение сообщений отключено. Открой бота, чтобы возобновить получение материалов."}, "lead.authError": {"c": "Материалы", "l": "Не удалось подтвердить вход в приложение. Закрой его и открой лекцию заново из сообщения бота.", "w": "Материал", "i": false, "t": "Не удалось подтвердить вход в приложение. Закрой его и открой лекцию заново из сообщения бота."}, "lead.connectionError": {"c": "Материалы", "l": "Не удалось связаться с сервером. Попробуй ещё раз — повторно запускать бота не нужно.", "w": "Материал", "i": false, "t": "Не удалось связаться с сервером. Попробуй ещё раз — повторно запускать бота не нужно."}, "lead.retry": {"c": "Материалы", "l": "Повторить проверку", "w": "Материал", "i": false, "t": "Повторить проверку"}});
 async function openLeadMaterial(code){
+ if(window.ClubAppRescue)ClubAppRescue.target(code);
  if(leadMaterialClose)leadMaterialClose();
  const root=document.createElement('dialog');root.style.cssText='margin:auto;width:min(900px,94vw);box-sizing:border-box;max-height:90dvh;overflow:auto;border:1px solid var(--border,#777);border-radius:20px;background:var(--bg,#202020);color:var(--text,#eee);padding:24px';
  const close=document.createElement('button');close.className='lec-link-btn';close.textContent=t('lead.close');close.style.marginBottom='20px';
@@ -23043,7 +23137,7 @@ async function openLeadMaterial(code){
  const platform=isInsideVk()?'vk':'tg';if(platform==='vk')launch=vkLaunchQuery();
  const startUrl=platform==='vk'?'https://vk.ru/app54827669#'+encodeURIComponent(code):'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code);
  let signalChain=Promise.resolve();
- const signal=event=>signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event,platform}),keepalive:true,signal:AbortSignal.timeout(15000)}).catch(()=>null):Promise.resolve(null));
+ const signal=event=>{if(event==='error'&&window.ClubAppRescue)ClubAppRescue.fail('content_error');return signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event,platform,managed_rescue:!!(window.ClubAppRescue&&ClubAppRescue.accepted)}),keepalive:true,signal:AbortSignal.timeout(15000)}).catch(()=>null):Promise.resolve(null));};
  leadMaterialClose=()=>{if(closed)return;closed=true;nurtureOfferCollapsed();signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
  close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
  const button=(label,action)=>{const b=document.createElement('button');b.className='lec-link-btn';b.textContent=label;b.style.cssText='white-space:normal;min-height:46px;width:100%;box-sizing:border-box';b.onclick=action;return b};
@@ -23435,6 +23529,7 @@ function disposeBonusNative(){
   if (bonusNativePlayer){ bonusNativePlayer.destroy(); bonusNativePlayer = null; }
 }
 async function playNativeBonus(bonusKey, itemKey, it){
+  if(window.ClubAppRescue)ClubAppRescue.target('bi_'+bonusKey+'__'+itemKey);
   const generation = bonusNativeGeneration;
   const slot = document.getElementById('bonus-video-slot');
   const card = slot.closest('.fullscreen-popup-card');
@@ -30066,6 +30161,7 @@ function startStoragePollOnce(){
    участник в демо видел бы свою карту участника вместо гостевой */
 var appDemoMode = false;
 function enterDemoMode(){
+  if(window.ClubAppRescue)ClubAppRescue.mark('guest');
   appDemoMode = true;
   // Карта за тест могла закэшироваться до входа в демо — участницкой
   try { quizGifts = {}; quizGiftAsked = {}; } catch(e){}
@@ -31428,7 +31524,7 @@ function startApp(){
   const cap = new Promise(function(resolve){ setTimeout(resolve, SPLASH_CAP); });
   Promise.race([boot, cap]).then(function(){
     // ещё кадр на раскладку — иначе снимаем заставку ровно в момент вставки
-    requestAnimationFrame(function(){ setTimeout(hideSplash, 60); });
+    requestAnimationFrame(function(){ setTimeout(function(){hideSplash();if(window.ClubAppRescue)ClubAppRescue.mark('rendered');}, 60); });
     /* ⚠️ НАБОРЫ ЭКРАНА ВСКРЫТИЯ ГРЕЕМ ЗАРАНЕЕ, В ТИШИНЕ. [stated] Denis:
        «всё грузится рывками при открытии экрана пака». Так и было: экран
        сначала одевался ЗАПАСНЫМ комплектом, потом приезжал ответ сервера и
@@ -32571,6 +32667,7 @@ async function proceedToWebLogin(){
   var tabEl = document.getElementById('tabbar');
   if (tabEl) tabEl.style.display = 'none';
   document.getElementById('web-login-screen').style.display = 'flex';
+  if(window.ClubAppRescue)ClubAppRescue.mark('guest');
   window.scrollTo(0, 0);
   // Заставку снимаем ИМЕННО ЗДЕСЬ, а не в startWebSession: до этого момента
   // человек либо уже входит в собранный апп (её снимет startApp), либо ждёт
