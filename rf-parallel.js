@@ -31,13 +31,20 @@ function createRFParallelTransport(config){
     try{return await fetcher(url,{...options,signal:controller.signal});}
     finally{done=true;clearTimeout(timer);if(parent)parent.removeEventListener('abort',abort);}
   }
-  async function readiness(index){
-    try {
-      const r=await timed(endpoints[index]+'/rf/readiness',{cache:'no-store',redirect:'error'});
-      if(!r.ok)return null;
-      const d=await r.json();
-      return d.protocol===2 && d.ready===true && d.node===['selectel','timeweb'][index] && Number.isSafeInteger(d.own_seq) && Number.isSafeInteger(d.peer_seq) ? d : null;
-    }catch(e){return null;}
+  const healthPending=[null,null];
+  function readiness(index){
+    if(healthPending[index])return healthPending[index];
+    healthPending[index]=(async()=>{
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+      try{
+        const r=await fetcher(endpoints[index]+'/rf/readiness',{cache:'no-store',redirect:'error',signal:controller.signal});
+        if(!r.ok)return null;
+        const d=await r.json();
+        return d.protocol===2 && d.ready===true && d.node===['selectel','timeweb'][index] && Number.isSafeInteger(d.own_seq) && Number.isSafeInteger(d.peer_seq) ? d : null;
+      }catch(e){return null;}
+      finally{clearTimeout(timer);}
+    })().finally(()=>{healthPending[index]=null;});
+    return healthPending[index];
   }
   function remember(response,index){
     const seq=Number(response.headers.get('x-rf-own-seq'));
@@ -121,7 +128,7 @@ function createRFParallelTransport(config){
     catch(e){error=e;if(options.signal&&options.signal.aborted)throw e;}
     // A checkout may still be running after a lost response. Only 425 proves
     // rejection before execution; provider retries belong to the server alone.
-    if(method==='POST' && u.pathname==='/payments/checkouts' && (!response || response.status!==425)){
+    if(method==='POST' && ['/payments/checkouts','/nurture/offers/checkout'].includes(u.pathname) && (!response || response.status!==425)){
       if(error)throw error;return response;
     }
     if(!retry){if(error)throw error;return response;}

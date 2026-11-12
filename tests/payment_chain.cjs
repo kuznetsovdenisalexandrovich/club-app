@@ -36,3 +36,6 @@ test('payment screen makes no order until selection and suppresses double clicks
  const pending=c.chooseServerPayment('monthly');await c.chooseServerPayment('monthly');assert.equal(calls,1);assert(buttons.every(b=>b.disabled));finish({monthly_link:'https://demo.payform.ru/link'});await pending;assert.equal(opened,1);assert(buttons.every(b=>!b.disabled));
  c.personalPaymentLinks=async()=>{throw Error('provider')};await c.chooseServerPayment('lifetime');assert.equal(opened,1);assert(status.innerHTML.includes('Help'));assert(el.innerHTML.includes('monthly'));
 });
+test('nurture checkout shares the same no-ambiguous-replay policy',async()=>{
+ const s=setup('provider');const response=await s.c.fetch('https://primary.test/nurture/offers/checkout',{method:'POST',body:'{}'});assert.equal(response.status,502);assert.equal(s.calls.length,1);
+});

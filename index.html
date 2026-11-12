@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v586 -->
+<!-- FILE_VERSION: index-v587 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -29,7 +29,7 @@
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
   return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v586'
+   launch:signedLaunch(),attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),build:'app-v587'
   }),keepalive:true,signal:ctrl?ctrl.signal:undefined}).then(function(r){return r.ok?r.json():null;}).then(function(data){
    if(data&&requestAttempt===attempt){
     if(/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||'')){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
@@ -11881,13 +11881,20 @@ function createRFParallelTransport(config){
     try{return await fetcher(url,{...options,signal:controller.signal});}
     finally{done=true;clearTimeout(timer);if(parent)parent.removeEventListener('abort',abort);}
   }
-  async function readiness(index){
-    try {
-      const r=await timed(endpoints[index]+'/rf/readiness',{cache:'no-store',redirect:'error'});
-      if(!r.ok)return null;
-      const d=await r.json();
-      return d.protocol===2 && d.ready===true && d.node===['selectel','timeweb'][index] && Number.isSafeInteger(d.own_seq) && Number.isSafeInteger(d.peer_seq) ? d : null;
-    }catch(e){return null;}
+  const healthPending=[null,null];
+  function readiness(index){
+    if(healthPending[index])return healthPending[index];
+    healthPending[index]=(async()=>{
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+      try{
+        const r=await fetcher(endpoints[index]+'/rf/readiness',{cache:'no-store',redirect:'error',signal:controller.signal});
+        if(!r.ok)return null;
+        const d=await r.json();
+        return d.protocol===2 && d.ready===true && d.node===['selectel','timeweb'][index] && Number.isSafeInteger(d.own_seq) && Number.isSafeInteger(d.peer_seq) ? d : null;
+      }catch(e){return null;}
+      finally{clearTimeout(timer);}
+    })().finally(()=>{healthPending[index]=null;});
+    return healthPending[index];
   }
   function remember(response,index){
     const seq=Number(response.headers.get('x-rf-own-seq'));
@@ -11971,7 +11978,7 @@ function createRFParallelTransport(config){
     catch(e){error=e;if(options.signal&&options.signal.aborted)throw e;}
     // A checkout may still be running after a lost response. Only 425 proves
     // rejection before execution; provider retries belong to the server alone.
-    if(method==='POST' && u.pathname==='/payments/checkouts' && (!response || response.status!==425)){
+    if(method==='POST' && ['/payments/checkouts','/nurture/offers/checkout'].includes(u.pathname) && (!response || response.status!==425)){
       if(error)throw error;return response;
     }
     if(!retry){if(error)throw error;return response;}
@@ -12221,7 +12228,12 @@ let STORAGE_DOWN = false;
 let storageBannerDismissed = false;
 let storagePollTimer = null;
 
-async function checkStorageStatus(){
+let storageStatusPending=null;
+function checkStorageStatus(){
+  if(!storageStatusPending)storageStatusPending=readStorageStatus().finally(()=>{storageStatusPending=null;});
+  return storageStatusPending;
+}
+async function readStorageStatus(){
   try {
     const r = await fetch(`${API_URL}/storage/status`);
     const d = await r.json();
@@ -12252,6 +12264,7 @@ function dismissStorageBanner(){
    вкладке — держать связь с сервером ради баннера, когда его никто не видит,
    не нужно. Раз в две минуты: хранилище лежит не секунды, чаще не имеет смысла */
 function startStoragePoll(){
+  if(storagePollTimer)return;
   checkStorageStatus();
   clearInterval(storagePollTimer);
   storagePollTimer = setInterval(function(){
@@ -12308,7 +12321,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v586 · 12.11.2026 Восстановление материалов';
+const APP_BUILD = 'v587 · 12.11.2026 Загрузка по маршруту';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -12800,7 +12813,7 @@ async function refreshScreenData(name, force){
   screenRefreshedAt[name] = now;
   try {
     if (name === 'portal'){
-      await Promise.allSettled([loadNews(), loadContinueWidget(), loadWidgetMonth(), loadRaffle()]);
+      await loadPortalData();
     } else if (name === 'library'){
       await Promise.allSettled([loadSavedSlugs(), loadLibrary(), loadStreams()]);
     } else if (name === 'cards'){
@@ -12833,6 +12846,7 @@ function switchView(name) {
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) openLibraryFirstTime();
   if (name === 'library') renderFreeDemo();   // v388: участником мог стать между заходами
+  if (name === 'portal') loadPortalData();
   if (name === 'cards') {
     renderCardsAlbum();
     // Отмечаем увиденное только после отрисовки, иначе метки погаснут
@@ -13653,19 +13667,18 @@ function stopVideoHeartbeat(){
   videoWatchSecs = 0;
 }
 
-async function apiRequest(url, options, timeoutMs = 15000){
-  const res = await fetchWithTimeout(url, options, timeoutMs);
-  if (!res.ok) throw new Error(res.error || 'нет связи с сервером');
-  const r = res.response;
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok){
-    // Код ответа нужен вызывающему: 402 у карточек «Пролога» — это не ошибка,
-    // а предложение оформить доступ, и показывать его надо пейволлом
-    const err = new Error(data.detail || `сервер ответил ${r.status}`);
-    err.status = r.status;
-    throw err;
-  }
-  return data;
+async function apiRequest(url, options={}, timeoutMs = 15000){
+  const controller=new AbortController(),parent=options&&options.signal;
+  const abort=()=>controller.abort();
+  if(parent&&parent.aborted)throw new DOMException('Aborted','AbortError');
+  if(parent)parent.addEventListener('abort',abort,{once:true});
+  const timer=setTimeout(abort,timeoutMs);
+  try{
+    const r=await fetch(url,{...options,signal:controller.signal});
+    const data=await r.json().catch(e=>{if(controller.signal.aborted)throw e;return {};});
+    if(!r.ok){const err=new Error(data.detail||`сервер ответил ${r.status}`);err.status=r.status;throw err;}
+    return data;
+  }finally{clearTimeout(timer);if(parent)parent.removeEventListener('abort',abort);}
 }
 
 async function diagPingApi(){
@@ -13957,53 +13970,11 @@ function qaTicketSeen(id){
   }
 }
 
+let newsGeneration=0;
 async function loadNews() {
-  const el = document.getElementById('news-card');
-  const headerEl = document.getElementById('news-header');
-  try {
-    // ЗАПРОС СПИСКОВ SALEBOT ВЫНЕСЕН ИЗ ОБЩЕГО Promise.all (07.08.2026).
-    // Раньше он блокировал показ даже простой общей новости — а он нужен
-    // ТОЛЬКО таргетированным новостям («кто в списке Х»). Denis: «Обновления
-    // клуба» показывались заметно позже заставки — вот прямая причина:
-    // fetchListMembership может идти дольше остального (Salebot из России
-    // отвечает нестабильно, см. хостинговую сагу), а общий текст никакого
-    // отношения к спискам не имеет и мог бы появиться сразу
-    const [news, urgent] = await Promise.all([
-      fetch(`${API_URL}/news/latest`).then(r => r.json()),
-      fetch(`${API_URL}/news/urgent`).then(r => r.json()).catch(() => ({ text: null })),
-    ]);
-
-    /* Ответы поддержки — тут же, первым блоком. ⚠️ ОТДЕЛЬНЫЙ ЗАПРОС И
-       ОТДЕЛЬНЫЙ catch: если он упадёт, обычные новости обязаны показаться */
-    supportReplies = telegramId
-      ? await fetch(`${API_URL}/support/my?telegram_id=${telegramId}`)
-          .then(r => r.json()).catch(() => [])
-      : [];
-    const hasReplies = Array.isArray(supportReplies) && supportReplies.length > 0;
-
-    /* v434: тикеты — сообщения об ошибках со статусом. Свой запрос и свой
-       catch, как у поддержки: упадёт — новости всё равно покажутся */
-    qaTickets = (telegramId || qaVkId())
-      ? await fetch(`${API_URL}/tester/my?telegram_id=${encodeURIComponent(telegramId || '')}&vk_id=${encodeURIComponent(qaVkId())}`)
-          .then(r => r.json()).then(d => (d && d.tickets) || []).catch(() => [])
-      : [];
-    qaTickets = qaTickets.filter(qaTicketShow);
-    const hasTickets = qaTickets.length > 0;
-
-    /* ⚠️ ТА ЖЕ ПРОВЕРКА, ЧТО И У СРОЧНОЙ. 29.08.2026: срочную починили, а
-       обычную пропустили — и запись из одного «<br>» осталась висеть пустой
-       строкой в «Обновлениях клуба». Один класс ошибки живёт в нескольких
-       местах: правим все разом. */
-    const hasCommon = hasVisibleText(news.common_text);
-    const hasUrgent = urgent && hasVisibleText(urgent.text);
-    const hasTargeted = isMember && (news.targeted || []).some(t => hasVisibleText(t.text));
-
-    if (!hasCommon && !hasUrgent && !hasTargeted && !hasReplies && !hasTickets && !liteRemindDue()) {
-      el.style.display = 'none';
-      headerEl.style.display = 'none';
-      return;
-    }
-
+  const generation=++newsGeneration;
+  const el=document.getElementById('news-card'),headerEl=document.getElementById('news-header');
+  let news={},urgent={},targetedHtml='',hasReplies=false,hasTickets=false,hasCommon=false,hasUrgent=false;
     function commonHtml(){
       let html = '';
       /* Ответ поддержки выше всего, даже срочного: это ответ ЛИЧНО ему,
@@ -14049,43 +14020,30 @@ async function loadNews() {
       return html;
     }
 
-    // Показываем сразу то, что не зависит от списков — обычно это и есть
-    // весь текст, который увидит человек
-    if (hasCommon || hasUrgent || hasReplies || hasTickets || liteRemindDue()) {
-      el.innerHTML = commonHtml();
-      el.classList.add('fade-rise');
-      el.style.display = 'block';
-      headerEl.classList.add('fade-rise');
-      headerEl.style.display = 'flex';
-    }
-
-    if (!hasTargeted) return;
-
-    // Таргетированные новости требуют списков — ждём их ОТДЕЛЬНО, не задерживая
-    // уже показанный общий текст. Если общего текста не было, карточка появится
-    // только сейчас — с той же плавностью
-    if (!listMembership) await fetchListMembership();
-    let targetedHtml = '';
-    news.targeted.forEach(t => {
-      const cfg = NOTIF_LISTS.find(n => n.list_id === t.list_id);
-      const key = cfg ? cfg.key : null;
-      const isListMember = key && listMembership && listMembership[key] === 'True';
-      if (isListMember && hasVisibleText(t.text)) {
-        targetedHtml += `<div class="news-block"><div class="news-tag">${cfg.name}</div>${t.text}</div>`;
-      }
-    });
-    if (!targetedHtml) return;
-
-    const wasHidden = el.style.display !== 'block';
-    el.innerHTML = commonHtml() + targetedHtml;
-    if (wasHidden) el.classList.add('fade-rise');
-    el.style.display = 'block';
-    headerEl.classList.add('fade-rise');
-    headerEl.style.display = 'flex';
-  } catch (e) {
-    el.style.display = 'none';
-    headerEl.style.display = 'none';
+  function draw(){
+    if(generation!==newsGeneration)return;
+    hasReplies=Array.isArray(supportReplies)&&supportReplies.length>0;
+    hasTickets=Array.isArray(qaTickets)&&qaTickets.length>0;
+    hasCommon=hasVisibleText(news.common_text);hasUrgent=hasVisibleText(urgent.text);
+    const html=commonHtml()+targetedHtml;
+    el.innerHTML=html;el.style.display=html?'block':'none';headerEl.style.display=html?'flex':'none';
+    if(html){el.classList.add('fade-rise');headerEl.classList.add('fade-rise');}
   }
+  const read=path=>apiRequest(API_URL+path,{},10000);
+  const latest=read('/news/latest').then(async data=>{
+    if(generation!==newsGeneration)return;news=data||{};draw();
+    if(!isMember||!(news.targeted||[]).some(x=>hasVisibleText(x.text)))return;
+    if(!listMembership)await fetchListMembership();
+    if(generation!==newsGeneration)return;
+    targetedHtml=(news.targeted||[]).map(item=>{
+      const cfg=NOTIF_LISTS.find(n=>n.list_id===item.list_id);
+      return cfg&&listMembership&&listMembership[cfg.key]==='True'&&hasVisibleText(item.text)?`<div class="news-block"><div class="news-tag">${cfg.name}</div>${item.text}</div>`:'';
+    }).join('');draw();
+  });
+  const urgentJob=read('/news/urgent').then(data=>{urgent=data||{};draw();});
+  const replies=telegramId?read('/support/my?telegram_id='+telegramId).then(data=>{if(generation!==newsGeneration)return;supportReplies=Array.isArray(data)?data:[];draw();}):Promise.resolve();
+  const tickets=(telegramId||qaVkId())?read('/tester/my?telegram_id='+encodeURIComponent(telegramId||'')+'&vk_id='+encodeURIComponent(qaVkId())).then(data=>{if(generation!==newsGeneration)return;qaTickets=((data&&data.tickets)||[]).filter(qaTicketShow);draw();}):Promise.resolve();
+  await Promise.allSettled([latest,urgentJob,replies,tickets]);
 }
 
 async function loadNotifications() {
@@ -14403,9 +14361,8 @@ let pausedUntil = '';
 
 async function loadProfile() {
   try {
-    const r = await fetch(`${API_URL}/users/me?telegram_id=${telegramId}`);
-    const u = await r.json();
-    if(r.ok&&typeof u.found==='boolean'&&window.ClubAppRescue)ClubAppRescue.mark('profile');
+    const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}`, {}, 15000);
+    if(typeof u.found==='boolean'&&window.ClubAppRescue)ClubAppRescue.mark('profile');
 
     // Настройка главной приезжает вместе с профилем — отдельного запроса на
     // старте нет намеренно, каждый новый запрос это ещё одна причина рывка
@@ -28060,7 +28017,9 @@ function scheduleLiveWatch(){
   }, liveNextDelay());
 }
 
+let liveWatchStarted=false;
 function startLiveWatch(){
+  if(liveWatchStarted)return;liveWatchStarted=true;
   loadLiveNow().then(function(){
     if (liveNow && liveNow.found) liveLastSeenAt = Date.now();
     scheduleLiveWatch();
@@ -31520,6 +31479,19 @@ function applyTelegramSafeAreaSoon(){
   setTimeout(applyTelegramSafeArea, 500);
 }
 
+let portalDataPending=null,portalInitialized=false;
+function loadPortalData(){
+  if(portalDataPending)return portalDataPending;
+  startLiveWatch();
+  const jobs=[loadContinueWidget(),loadNews(),loadWidgetMonth(),loadRaffle()];
+  if(!portalInitialized)jobs.push(loadSavedSlugs(),loadCards(),loadDigestBlock(),loadStories());
+  portalDataPending=Promise.allSettled(jobs).finally(()=>{portalInitialized=true;portalDataPending=null;});
+  return portalDataPending;
+}
+function bootNeedsPortal(){
+  const target=appStartParamRaw();
+  return !target||['bm','welcome','portal','home'].includes(target);
+}
 function startApp(){
   startAccessWatch();
   try { clubPassEnsure(); } catch(e){}
@@ -31564,14 +31536,7 @@ function startApp(){
      ОГРАНИЧИТЕЛЬ ОБЯЗАТЕЛЕН: на медленной сети ждать нечего, через SPLASH_CAP
      показываем что есть. Лучше неполный экран, чем застрявшая заставка. */
   const SPLASH_CAP = 1600;
-  const boot = Promise.allSettled([
-    loadAppSettings(), loadProfile(), loadContinueWidget(), loadNews(),
-    loadWidgetMonth(), loadSavedSlugs(), loadCards(), loadRaffle(), loadDigestBlock(),
-    loadStories(),
-  ]);
-  // Эфир СОЗНАТЕЛЬНО вне boot: заставка не должна ждать ответа про трансляцию.
-  // Блок появится сам, когда придёт ответ — на 99% запусков эфира нет
-  startLiveWatch();
+  const boot = Promise.allSettled([loadAppSettings(),loadProfile(),bootNeedsPortal()?loadPortalData():Promise.resolve()]);
   const cap = new Promise(function(resolve){ setTimeout(resolve, SPLASH_CAP); });
   Promise.race([boot, cap]).then(function(){
     // ещё кадр на раскладку — иначе снимаем заставку ровно в момент вставки
@@ -31589,7 +31554,7 @@ function startApp(){
        заход не увидит вовсе. Сам список наборов (это JSON, он лёгкий) просим
        всегда — из него собирается выбор набора. */
     setTimeout(function(){
-      if (typeof prLoadScreens !== 'function') return;
+      if (!bootNeedsPortal()||typeof prLoadScreens !== 'function') return;
       prLoadScreens().then(function(){
         try {
           prPickScreens();
@@ -33883,7 +33848,12 @@ function escapeHtml(s){
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-async function loadGods(){
+let godsPending=null;
+function loadGods(){
+  if(!godsPending)godsPending=readGods().finally(()=>{godsPending=null;});
+  return godsPending;
+}
+async function readGods(){
   try {
     const rows = await apiRequest(`${API_URL}/gods`, {}, 10000);
     godMap = {};
@@ -33957,7 +33927,12 @@ function cardWordApp(n){
   return 'карточек';
 }
 
-async function loadCards(){
+let cardsPending=null;
+function loadCards(){
+  if(!cardsPending)cardsPending=readCards().finally(()=>{cardsPending=null;});
+  return cardsPending;
+}
+async function readCards(){
   // Независимые данные запрашиваем одновременно; справочник богов не
   // задерживает карточки, которые пользователь видит на главной.
   const catUrl = telegramId
