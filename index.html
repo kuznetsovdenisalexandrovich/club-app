@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v608 -->
+<!-- FILE_VERSION: index-v609 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v608'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v609'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -11070,6 +11070,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
     <button class="lec-link-btn access-btn" style="width:100%;margin-bottom:6px" onclick="openAccessPage()">Оплатить доступ</button>
     <div class="payment-help-link" style="margin:0" onclick="openSupportDm('Не могу залогиниться в приложении')" data-text="pay.a5">Уже оплачивал — написать Денису</div>
   </div>
+  <div id="login-delivery-help" style="width:100%;max-width:320px;font-size:13px;line-height:1.45;color:var(--text-dim)"></div>
   <div class="payment-help-link" id="web-login-resend" style="display:none" onclick="resendLoginCode()">Отправить код ещё раз</div>
   <div class="payment-help-link" id="web-login-help-link" onclick="openSupportDm('Не могу авторизоваться в приложении')">Не удаётся зайти по номеру</div>
   <div style="margin-top:24px;font-size:13px;color:var(--text-dim);cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="openDemoEntryPopup()">Я ещё не являюсь участником</div>
@@ -35762,6 +35763,8 @@ let codeSendAttempts = 0;
    Решает не приложение, а сервер: /auth/lookup отвечает, куда он может прислать код. */
 let loginRoute = '';
 let loginChannelLabels = [];
+let loginDeliveryGeneration = 0;
+let loginDeliveryState = 'sent';
 
 /* Откуда человек входит прямо сейчас. Внутри Telegram платформа известна сразу,
    в вебе её нет вовсе — тогда подтверждать будем чем угодно из известного,
@@ -35926,6 +35929,7 @@ function setLoginNotFound(show, message){
 
 // Выход из демо обратно на экран входа — человек решил залогиниться
 function exitDemoToLogin(){
+  ++loginDeliveryGeneration;loginDeliveryHelp({});
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('tabbar').style.display = 'none';
   const ls = document.getElementById('web-login-screen');
@@ -35951,7 +35955,9 @@ function renderLoginStage(){
     title.textContent = 'Введи код';
     // Название платформы берём от сервера: он знает, куда реально отправил
     const where = loginChannelLabels.join(' и ');
-    subtitle.textContent = `Код отправлен в ${where}. Открой бота, посмотри код и вернись сюда.`;
+    subtitle.textContent = loginDeliveryState === 'sent'
+      ? `Код отправлен в ${where}. Открой бота, посмотри код и вернись сюда.`
+      : 'Проверяем доставку кода. Если он уже пришёл в бота, можешь ввести его здесь.';
     input.type = 'tel';
     input.inputMode = 'numeric';
     input.maxLength = 4;
@@ -35986,6 +35992,7 @@ function handleLoginButton(){
    привязан Telegram или ВК — или ничего, и тогда подсказка открыть апп из бота.
    Приложение не гадает и не хранит это решение между заходами. */
 async function startLogin(){
+  ++loginDeliveryGeneration;loginDeliveryHelp({});
   setLoginError('');
   const btn = document.getElementById('web-login-btn');
   btn.disabled = true;
@@ -36015,7 +36022,47 @@ async function startLogin(){
   }
 }
 
+function loginDeliveryHelp(data){
+  const box = document.getElementById('login-delivery-help');
+  if (!box) return;
+  box.replaceChildren();
+  for (const item of (data.help || [])){
+    const p = document.createElement('p');p.textContent = item.text;box.appendChild(p);
+    if (/^https:\/\/(?:t\.me\/[A-Za-z0-9_]+|vk\.me\/club[0-9]+)$/.test(item.url || '')){
+      const a = document.createElement('a');a.className = 'payment-help-link';a.textContent = item.label;a.href = item.url;
+      a.onclick = function(e){e.preventDefault();openUrl(item.url);};box.appendChild(a);
+    }
+  }
+}
+function applyLoginDelivery(data){
+  loginDeliveryState = data.status || (data.sent ? 'sent' : 'failed');
+  loginDeliveryHelp(data);
+  if (data.sent){
+    loginChannelLabels = data.labels || [];
+    document.getElementById('web-login-subtitle').textContent = `Код отправлен в ${loginChannelLabels.join(' и ')}. Открой бота, посмотри код и вернись сюда.`;
+    setLoginError('');
+  } else if (loginDeliveryState !== 'pending'){
+    document.getElementById('web-login-subtitle').textContent = 'Доставка кода не подтверждена.';
+    setLoginError(loginDeliveryState === 'blocked' ? '' : loginDeliveryState === 'expired' ? 'Срок кода истёк. Запроси новый.' : 'Не удалось подтвердить доставку. Попробуй запросить код позже или напиши в поддержку.');
+  }
+}
+async function waitLoginDelivery(ticket, generation){
+  for (let i=0;i<15;i++){
+    await new Promise(resolve=>setTimeout(resolve,2000));
+    if (generation !== loginDeliveryGeneration || loginStage !== 'code') return;
+    try {
+      const d = await apiRequest(`${API_URL}/auth/challenge/status`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delivery_ticket:ticket})},6000);
+      if (generation !== loginDeliveryGeneration || loginStage !== 'code') return;
+      applyLoginDelivery(d);
+      if (d.status !== 'pending') return;
+    } catch(e) { /* A read failure is not proof that the bot did not send. */ }
+  }
+  if (generation === loginDeliveryGeneration && loginStage === 'code'){
+    document.getElementById('web-login-subtitle').textContent = 'Подтверждение доставки задерживается. Проверь сообщения бота; если код пришёл, введи его здесь. Иначе попробуй запросить новый код позже.';
+  }
+}
 async function sendBotCode(){
+  const generation = ++loginDeliveryGeneration;
   setLoginError('');
   const btn = document.getElementById('web-login-btn');
   btn.disabled = true;
@@ -36028,15 +36075,16 @@ async function sendBotCode(){
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'Не получилось отправить код');
-    if (!data.sent){
-      // Каналы были на прошлом шаге, а отправить не вышло — не молчим и не
-      // притворяемся, что код ушёл: человек будет ждать его впустую
-      throw new Error('Не удалось отправить код. Попробуй ещё раз или напиши в поддержку');
-    }
+    if (generation !== loginDeliveryGeneration) return;
+    if (!data.sent && !data.delivery_ticket) throw new Error('Не удалось запросить код. Открой приложение из бота или напиши в поддержку.');
+    loginDeliveryState = data.status || (data.sent ? 'sent' : 'pending');
     loginChannelLabels = data.labels || [];
     codeSendAttempts += 1;
     loginStage = 'code';
     renderLoginStage();
+    applyLoginDelivery(data);
+    if (data.delivery_ticket && data.status === 'pending') waitLoginDelivery(data.delivery_ticket,generation);
+
   } catch (e) {
     setLoginError(e.message);
   } finally {
@@ -36075,7 +36123,6 @@ async function verifyBotCode(){
 }
 
 function resendLoginCode(){
-  loginStage = 'phone';
   sendBotCode();
 }
 
@@ -36101,6 +36148,7 @@ function sessionHeaders(){
 }
 
 function finishWebLogin(id, token){
+  ++loginDeliveryGeneration;
   rememberSessionToken(token);
   // ЧИСЛО, А НЕ СТРОКА: в базе telegram_id — bigint, и строка в теле POST-запроса
   // роняла запрос на сервере (Postgres не сравнивает bigint с текстом). В
