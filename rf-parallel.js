@@ -60,9 +60,9 @@ function createRFParallelTransport(config){
     const seq=Number(response.headers.get('x-rf-own-seq'));
     if(index===1 && Number.isSafeInteger(seq)&&seq>=0){returnBarrier=Math.max(returnBarrier,seq);persist();}
   }
-  // Race only catalogue/bootstrap reads. Writes keep the serial idempotent path.
+  // Race catalogue/bootstrap and video manifests only. Writes stay serial.
   function fastRead(path,method){
-    return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding))(?:\?|$)/.test(path));
+    return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding|bonus\/[^/?]+\/[^/?]+|meeting\/[0-9]+\/replay))(?:\?|$)/.test(path));
   }
   async function hedgedRead(path,options,headers){
     const origin=active,target=1-origin;
