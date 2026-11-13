@@ -65,18 +65,42 @@
       this.clearTimers();this.retry.hidden=true;this.panel.hidden=true;if(this.botFallback)this.botFallback.hidden=true;
       if(this.wantsPlay)this.arm();
     }
+    sampleProgress(){
+      const v=this.video;
+      if(!v||v.seeking||v.readyState<2)return false;
+      const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
+      if(!advancing||v.paused)return false;
+      this.lastProgress=Date.now();this.failedSources.clear();
+      if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
+      this.progress();this.emit('time');return true;
+    }
     arm(){
       if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden)return;
       // Preserve these deadlines through source changes: continuous waiting counts.
       if(!this.helpTimer&&this.retry.hidden){
-        this.helpTimer=setTimeout(()=>{this.helpTimer=null;if(this.wantsPlay){this.retry.hidden=false;this.fault('film_stall');}},this.options.helpMs||10000);
+        const helpTimer=setTimeout(()=>{
+          if(this.helpTimer!==helpTimer)return;
+          this.helpTimer=null;
+          if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden||this.sampleProgress())return;
+          this.retry.hidden=false;this.fault('film_stall');
+        },this.options.helpMs||10000);
+        this.helpTimer=helpTimer;
       }
       // Loading a replacement at the saved position needs the same bounded
       // window as startup. HAVE_METADATA/NETWORK_LOADING is not a media error.
       const loadingNative=this.engine==='native'&&this.video&&this.video.readyState<3&&this.video.networkState===2;
       const lastCandidate=this.failedSources.size>=this.sources.length-1;
       const wait=this.options.stallMs||(this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
-      if(!this.timer)this.timer=setTimeout(()=>{this.timer=null;this.failure('progress_timeout');this.switchSource(false);},wait);
+      if(!this.timer){
+        const timer=setTimeout(()=>{
+          if(this.timer!==timer)return;
+          this.timer=null;
+          // Native media can advance while WebView JavaScript callbacks are delayed.
+          if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden||this.sampleProgress())return;
+          this.failure('progress_timeout');this.switchSource(false);
+        },wait);
+        this.timer=timer;
+      }
     }
     async refreshSources(){
       if(this.refreshing||this.destroyed)return;
@@ -151,16 +175,10 @@
         this.started=true;v.controls=true;this.start.hidden=true;this.start.disabled=false;
         this.wantsPlay=true;this.status('');this.emit('play');this.progress();
       });
-      on('timeupdate',()=>{
-        if(v.seeking||v.readyState<2)return;
-        const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
-        if(advancing&&!v.paused){this.lastProgress=Date.now();this.failedSources.clear();
-          if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
-          this.progress();this.emit('time');}
-      });
+      on('timeupdate',()=>this.sampleProgress());
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
       on('seeking',()=>{this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
-      on('pause',()=>{if(!v.paused)return;this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
+      on('pause',()=>{if(!v.paused||v.error)return;this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
       on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
       const source=this.sources[this.index];

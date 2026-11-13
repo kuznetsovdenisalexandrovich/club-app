@@ -60,6 +60,26 @@ vm.createContext(funnel);vm.runInContext(handler,funnel);
 vm.runInContext("filmHandlePlayback({method:'play'},true);filmHandlePlayback({method:'pause'},true)",funnel);
 assert(funnel.funnelFilmStarted);assert.equal(funnel.filmPlayStartedAt,null);assert(!funnel.completed);
 console.log('OK native buffering cannot start the old wall-clock completion timer');
+// WebViews can deliver watchdog timers before a delayed timeupdate callback.
+const suspendedTrace=[];
+const suspended=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],text:k=>k,onEvent:()=>{},onDiagnostic:e=>suspendedTrace.push(e)});
+suspended.play();suspended.video.readyState=4;suspended.video.fire('playing');suspended.video.currentTime=10;suspended.video.fire('timeupdate');
+suspended.video.currentTime=35; // Media progressed; JavaScript events were delayed.
+advance(60000);
+assert.equal(suspended.index,0,'A late watchdog must recheck actual progress before discarding healthy video');
+assert(!suspendedTrace.some(e=>e.reason==='progress_timeout'),'Delayed timeupdate is not proof of playback failure');
+assert(suspended.retry.hidden,'Do not show a stall report for media that advanced');
+suspended.video.currentTime=36;suspended.video.fire('timeupdate');advance(4000);
+assert.equal(suspended.index,1,'A real lack of progress must still trigger bounded fallback');suspended.destroy();
+
+const failedPause=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],text:k=>k,onEvent:()=>{}});
+failedPause.play();failedPause.video.readyState=4;failedPause.video.fire('playing');
+failedPause.video.error={code:4};failedPause.video.paused=true;failedPause.video.fire('pause');
+assert(failedPause.wantsPlay,'A media-error pause must not cancel the viewer playback request');
+failedPause.video.fire('error');assert.equal(failedPause.index,1);assert(failedPause.wantsPlay);
+failedPause.video.error=null;failedPause.action('pause');assert(!failedPause.wantsPlay,'Explicit pause still wins');failedPause.destroy();
+console.log('OK delayed watchdog samples real progress; media error pause keeps recovery intent; explicit pause preserved');
+
 (async()=>{
  const trace=[];let refreshes=0;
  const p=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/old',type:'hls'},{url:'https://b.test/old',type:'hls'}],text:k=>k,onEvent:()=>{},onDiagnostic:e=>trace.push(e),
