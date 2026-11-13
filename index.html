@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v604 -->
+<!-- FILE_VERSION: index-v605 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v604'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v605'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -3474,6 +3474,8 @@ dialog.native-film-expanded{position:fixed;inset:0;box-sizing:border-box;width:1
 .native-film-bot{display:block;width:100%;padding:12px 16px;margin-top:10px;font-weight:700!important}.native-film-bot[hidden]{display:none!important}
 .native-film-option{min-height:44px;border:1px solid #ded6ce;border-radius:10px;background:var(--card2,#fff9);color:var(--text,#302b29);font:inherit;font-size:14px;cursor:pointer}
 #funnel-screen #funnel-film-slot:has(.native-film){margin-bottom:48px}
+/* Legacy fallback sits after the fixed-height iframe: reserve its own row so it cannot cover purchase actions. */
+#funnel-screen:not(.pip-mode) .film-dock:has(#funnel-film-slot > .native-film-bot:not([hidden])){padding-bottom:64px}
 #funnel-screen.pip-mode .native-film-help{display:none}
 
 #funnel-screen.pip-mode .native-film-retry{display:none}
@@ -3625,6 +3627,9 @@ dialog.native-film-expanded{position:fixed;inset:0;box-sizing:border-box;width:1
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .funnel-close:active{background:var(--card)}
+/* Secondary film action stays in normal flow and hides with the guest window in PiP. */
+#funnel-screen .funnel-share{position:static;flex:none;align-self:center;max-width:100%;min-height:40px;margin:0;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--text-dim);font:inherit;font-size:13px;line-height:1.4;text-align:center;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+#funnel-screen .funnel-share:focus-visible{outline:2px solid var(--lav);outline-offset:2px}
 .film-dock{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;flex:none}
 .film-dock-cover,.film-dock-x,.film-dock-done{display:none}
 /* PiP: слой воронки остаётся в DOM (в нём живёт плеер), но становится
@@ -7578,6 +7583,7 @@ html .coll-strip .coll-card{box-shadow:none;aspect-ratio:3/4}
     <button class="lec-link-btn access-btn" id="funnel-buy" onclick="funnelBuy()" data-text="funnel.buy">Получить доступ в клуб</button>
     <button class="lec-link-btn funnel-secondary" id="funnel-about" onclick="funnelAbout()" data-text="funnel.about">Узнать подробнее о клубе</button>
   </div>
+  <button type="button" class="funnel-share" onclick="shareFilm()" data-text="share.film">Поделиться фильмом</button>
   <div class="payment-help-link" id="funnel-login" style="margin-top:16px" onclick="funnelToLogin()" data-text="funnel.login">Уже участник — войти</div>
   <!-- ⚠️ РЕКВИЗИТЫ В ПОТОКЕ, А НЕ ПРИБИТЫ К НИЗУ ЭКРАНА (23.08.2026). Пока
        воронка была страницей, `position:fixed` держал их у нижнего края. Теперь
@@ -12355,7 +12361,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v604 · 13.11.2026 Сохранение позиции видео';
+const APP_BUILD = 'v605 · 13.11.2026 Поделиться фильмом';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
