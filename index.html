@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v601 -->
+<!-- FILE_VERSION: index-v602 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v601'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v602'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -5862,7 +5862,7 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .restricted-card p{font-size:16px;line-height:1.6;margin:0 0 24px}
 .restricted-card button{min-height:46px;width:100%;border-radius:12px}
 
-.nurture-offer-modal{width:min(92vw,600px);height:78dvh;max-height:calc(100dvh - 40px - env(safe-area-inset-top));box-sizing:border-box;margin:auto;padding:0;border:1px solid var(--border,#888);border-radius:24px;background:var(--bg,#f1efeb);color:var(--text,#292729);box-shadow:0 16px 70px #0005}.nurture-offer-modal::backdrop{background:#0008;backdrop-filter:blur(6px)}.nurture-offer-inner{display:flex;flex-direction:column;gap:18px;padding:24px;min-height:100%;box-sizing:border-box;overflow-wrap:anywhere}.nurture-offer-inner h2,.nurture-offer-inner p{margin:0}.nurture-offer-inner button{min-height:46px;height:auto;white-space:normal;flex:0 0 auto;padding:12px 18px}.nurture-offer-terms{padding:16px;border:1px solid var(--border,#888);border-radius:12px;line-height:1.5}.nurture-offer-consent{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.5}.nurture-offer-consent input{flex:0 0 20px;width:20px;height:20px;margin-top:2px}.nurture-offer-consent[hidden]{display:none}.nurture-offer-clock{font-variant-numeric:tabular-nums;font-weight:700}.nurture-offer-modal button:focus-visible,.nurture-offer-modal input:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+.nurture-offer-modal{width:min(92vw,600px);height:78dvh;max-height:calc(100dvh - 40px - env(safe-area-inset-top));box-sizing:border-box;margin:auto;padding:0;border:1px solid var(--border,#888);border-radius:24px;background:var(--bg,#f1efeb);color:var(--text,#292729);box-shadow:0 16px 70px #0005}.nurture-offer-modal::backdrop{background:#0008;backdrop-filter:blur(6px)}.nurture-offer-inner{display:flex;flex-direction:column;gap:18px;padding:24px;min-height:100%;box-sizing:border-box;overflow-wrap:anywhere}.nurture-offer-inner h2,.nurture-offer-inner p{margin:0}.nurture-offer-inner button{min-height:46px;height:auto;white-space:normal;flex:0 0 auto;padding:12px 18px}.nurture-offer-terms{padding:16px;border:1px solid var(--border,#888);border-radius:12px;line-height:1.5}.nurture-offer-consent{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.5}.nurture-offer-consent input{flex:0 0 20px;width:20px;height:20px;margin-top:2px}.nurture-offer-consent[hidden]{display:none}.nurture-offer-modal.checkout-resume-modal{height:fit-content}.checkout-resume-modal .nurture-offer-inner{min-height:0}.checkout-resume-modal [hidden]{display:none}.nurture-offer-clock{font-variant-numeric:tabular-nums;font-weight:700}.nurture-offer-modal button:focus-visible,.nurture-offer-modal input:focus-visible{outline:2px solid var(--text);outline-offset:3px}
 
 .dgs-overlay.native-back .dgs-close:not(.dgs-pdf-btn){display:none}
 html[data-digest-open] .level-card,html[data-digest-open] #bug-report-btn{visibility:hidden}
@@ -12012,7 +12012,7 @@ function createRFParallelTransport(config){
     catch(e){error=e;if(options.signal&&options.signal.aborted)throw e;}
     // A checkout may still be running after a lost response. Only 425 proves
     // rejection before execution; provider retries belong to the server alone.
-    if(method==='POST' && ['/payments/checkouts','/nurture/offers/checkout'].includes(u.pathname) && (!response || response.status!==425)){
+    if(method==='POST' && (['/payments/checkouts','/nurture/offers/checkout'].includes(u.pathname)||/^\/payments\/checkouts\/[a-f0-9]{24}\/resume$/.test(u.pathname)) && (!response || response.status!==425)){
       if(error)throw error;return response;
     }
     if(!retry){if(error)throw error;return response;}
@@ -12355,7 +12355,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v601 · 13.11.2026 Доступ из ВК в Telegram';
+const APP_BUILD = 'v602 · 13.11.2026 Продолжение исходной оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -30471,6 +30471,31 @@ function personalPaymentRecord(plan){
   try { localStorage.setItem(key, JSON.stringify(record)); } catch(e){}
   return {key, record};
 }
+let checkoutResumeDialog=null;
+function openCheckoutResume(checkout){
+ if(!/^[a-f0-9]{24}$/.test(checkout))return;
+ if(checkoutResumeDialog?.dataset.checkout===checkout)return;
+ if(checkoutResumeDialog){checkoutResumeDialog.close();checkoutResumeDialog.remove();}
+ const box=document.createElement('dialog');box.className='nurture-offer-modal checkout-resume-modal';box.dataset.checkout=checkout;
+ const content=document.createElement('div');content.className='nurture-offer-inner';
+ const title=document.createElement('h2');title.textContent='Продолжить оплату';
+ const status=document.createElement('p');status.setAttribute('role','status');status.textContent='Откроем твой исходный заказ с выбранным тарифом и акцией. Новый заказ не создаётся.';
+ const pay=document.createElement('button');pay.className='lec-link-btn access-btn';pay.textContent='Продолжить оплату';
+ const close=document.createElement('button');close.className='lec-link-btn';close.textContent='Закрыть';close.onclick=()=>box.close();
+ box.addEventListener('close',()=>{if(checkoutResumeDialog===box)checkoutResumeDialog=null;box.remove();},{once:true});
+ pay.onclick=async()=>{
+  if(pay.disabled)return;pay.disabled=true;status.textContent='Проверяем заказ…';
+  try{
+   const ident=ivIdent();
+   const r=await fetch(API_URL+'/payments/checkouts/'+checkout+'/resume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tg_init:ident.tg_init,vk_query:ident.vk_query}),signal:AbortSignal.timeout(50000)});
+   const d=await r.json();if(!r.ok){if(['already_paid','already_member','checkout_expired','promo_closed','offer_expired'].includes(d.code)){pay.hidden=true;title.textContent=d.code==='already_paid'?'Заказ уже оплачен':'Заказ недоступен';}throw new Error(d.detail||'Не удалось проверить заказ. Попробуй ещё раз.');}
+   const u=new URL(d.payment_url);
+   if(d.checkout_id!==checkout||d.status!=='pending'||!['monthly','trial','lifetime','promo','nurture7','nurture30'].includes(d.plan)||u.protocol!=='https:'||u.username||u.password||(u.hostname!=='payform.ru'&&!u.hostname.endsWith('.payform.ru'))||!Number.isFinite(Date.parse(d.expires_at))||Date.parse(d.expires_at)<=Date.now())throw new Error('Не удалось подтвердить исходный заказ');
+   status.textContent='Исходный заказ готов. Если страница оплаты не открылась, нажми ещё раз.';openUrl(d.payment_url);
+  }catch(e){status.textContent=e.message||'Связь прервалась. Повторная попытка продолжит тот же заказ.';}finally{pay.disabled=false;}
+ };
+ content.append(title,status,pay,close);box.append(content);document.body.append(box);checkoutResumeDialog=box;box.showModal();
+}
 async function personalPaymentLinks(plan){
   if(!['monthly','lifetime','trial'].includes(plan))throw new Error('Неизвестный тариф');
   const iv = ivIdent();
@@ -32956,6 +32981,7 @@ async function init(){
         return;
       }
       if(!await resolveNurtureStart())return;
+      if(/^checkout_[a-f0-9]{24}$/.test(appStartParam())){openCheckoutResume(appStartParam().slice(9));return;}
       try { nurtureOfferPresence(); } catch(e){}
       /* ⚠️ УЧЁТ — САМЫМ ПЕРВЫМ ДЕЛОМ И ОДИН РАЗ НА ВСЕ ВИДЫ ССЫЛОК. Ниже идут
          восемь веток разбора, каждая со своим `return`; учёт внутри любой из

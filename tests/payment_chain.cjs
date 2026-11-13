@@ -39,3 +39,10 @@ test('payment screen makes no order until selection and suppresses double clicks
 test('nurture checkout shares the same no-ambiguous-replay policy',async()=>{
  const s=setup('provider');const response=await s.c.fetch('https://primary.test/nurture/offers/checkout',{method:'POST',body:'{}'});assert.equal(response.status,502);assert.equal(s.calls.length,1);
 });
+test('owned checkout resume never replays ambiguous writes on reserve',async()=>{
+ for(const mode of ['provider','lost']){
+  const s=setup(mode);const run=s.c.fetch('https://primary.test/payments/checkouts/'+'a'.repeat(24)+'/resume',{method:'POST',body:'{}'});
+  if(mode==='lost')await assert.rejects(run);else assert.equal((await run).status,502);
+  assert.equal(s.calls.length,1);
+ }
+});

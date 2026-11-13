@@ -138,7 +138,7 @@ function createRFParallelTransport(config){
     catch(e){error=e;if(options.signal&&options.signal.aborted)throw e;}
     // A checkout may still be running after a lost response. Only 425 proves
     // rejection before execution; provider retries belong to the server alone.
-    if(method==='POST' && ['/payments/checkouts','/nurture/offers/checkout'].includes(u.pathname) && (!response || response.status!==425)){
+    if(method==='POST' && (['/payments/checkouts','/nurture/offers/checkout'].includes(u.pathname)||/^\/payments\/checkouts\/[a-f0-9]{24}\/resume$/.test(u.pathname)) && (!response || response.status!==425)){
       if(error)throw error;return response;
     }
     if(!retry){if(error)throw error;return response;}
