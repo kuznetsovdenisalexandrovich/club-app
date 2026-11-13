@@ -30,3 +30,22 @@ test('concurrent failed API reads share one health request, without caching repl
  const transport=c.module.exports.createRFParallelTransport({endpoints:['https://primary.test','https://reserve.test'],fetch:async(url)=>{if(url.includes('readiness')){checks++;await new Promise(r=>setTimeout(r,10));return new Response(JSON.stringify({protocol:2,ready:true,node:'timeweb',own_seq:1,peer_seq:1}))}return new Response('{}',{status:url.includes('primary')?503:200})}});
  await Promise.all(Array.from({length:10},()=>transport.request('https://primary.test/users/me')));assert.equal(checks,1);
 });
+test('card motion defaults are available inline without a blocking startup request',()=>{
+ assert(!/<script\b[^>]*src="card-motion\.js/.test(html));
+ const source=fs.readFileSync(require('path').join(__dirname,'../card-motion.js'),'utf8').trim();assert(html.includes(source),'Keep the app and dashboard motion defaults in sync');
+ const context={window:{}};vm.createContext(context);vm.runInContext(source,context);assert.equal(context.window.ClubCardMotion.tilt,9.6);
+ assert(html.indexOf(source)<html.indexOf('src="telegram-web-app.js"'),'Motion does not delay SDK parsing');
+});
+
+test('stalled VK bridge cannot block authenticated startup indefinitely',async()=>{
+ const timers=new Map();let id=0,auth=0,started=0;
+ const c={Promise,AbortController,setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),window:null,vkBridge:{send:()=>new Promise(()=>{})},vkAskMessages(){},API_URL:'https://api.test',vkLaunchQuery:()=> 'signed-fixture',fetch:async(url,opts)=>{auth++;assert(opts.signal);return {ok:true,json:async()=>({found:true,telegram_id:-77})}},startApp:()=>started++};c.window=c;vm.createContext(c);
+ vm.runInContext(slice('async function boundedVkInit(){','/* ── Разовая ссылка'),c);const result=c.startVkSession();await flush();assert.equal(auth,0);
+ const bridge=[...timers.values()].find(t=>t.ms===3500);assert(bridge);bridge.fn();assert.equal(await result,true);assert.equal(auth,1);assert.equal(started,1);assert.equal(c.telegramId,-77);assert.equal(timers.size,0);
+});
+for(const platform of ['tg','vk'])test(platform+' session stops after its deadline even when response headers arrived',async()=>{
+ const timers=new Map();let id=0,started=0;
+ const c={Promise,AbortController,DOMException,setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),window:{},API_URL:'https://api.test',vkLaunchQuery:()=> 'signed',tgLaunchData:()=> 'signed',startApp:()=>started++,flushPendingAttribution(){},fetch:async(url,opts)=>({ok:true,json:()=>new Promise((resolve,reject)=>opts.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true}))})};vm.createContext(c);
+ const code=platform==='tg'?html.slice(html.indexOf('async function startTgSessionFallback(){'),html.indexOf('\n}\n',html.indexOf('async function startTgSessionFallback(){'))+3):slice('async function boundedVkInit(){','/* ── Разовая ссылка');
+ vm.runInContext(code,c);const pending=platform==='tg'?c.startTgSessionFallback():c.startVkSession();await flush();const deadline=[...timers.values()].find(t=>t.ms===12000);assert(deadline);deadline.fn();assert.equal(await pending,false);assert.equal(started,0);assert.equal(timers.size,0);
+});

@@ -28,7 +28,17 @@ function createRFParallelTransport(config){
       timer=setTimeout(check,timeout);
     };
     timer=setTimeout(check,timeout);
-    try{return await fetcher(url,{...options,signal:controller.signal});}
+    try{
+      const raw=await fetcher(url,{...options,signal:controller.signal});
+      // JSON is consumed by every API caller. Keep cancellation/deadlines alive
+      // until its body arrives, not just until HTTP headers arrive.
+      if(!/\bapplication\/(?:[a-z0-9.-]+\+)?json\b/i.test(raw.headers.get('content-type')||''))return raw;
+      const bytes=await raw.arrayBuffer();
+      const response=new Response([204,205,304].includes(raw.status)||(options.method||'GET').toUpperCase()==='HEAD'?null:bytes,
+        {status:raw.status,statusText:raw.statusText,headers:raw.headers});
+      Object.defineProperty(response,'url',{value:raw.url});
+      return response;
+    }
     finally{done=true;clearTimeout(timer);if(parent)parent.removeEventListener('abort',abort);}
   }
   const healthPending=[null,null];

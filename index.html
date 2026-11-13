@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v598 -->
+<!-- FILE_VERSION: index-v599 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v598'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v599'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -116,7 +116,14 @@
 })(window,document);
 
 </script>
-<script src="card-motion.js?v=1" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('card_script')"></script>
+<script>
+/* Inline critical card defaults; source: card-motion.js. Verified by startup tests. */
+/* One motion profile for all club cards and the editor preview. */
+window.ClubCardMotion=Object.freeze({tilt:9.6,smooth:0.216,range:15});
+window.withClubCardMotion=function(settings){return Object.assign({},settings||{},window.ClubCardMotion)};
+
+if(window.ClubAppRescue)ClubAppRescue.mark('card_script');
+</script>
 
 <meta charset="UTF-8">
 
@@ -11820,8 +11827,7 @@ function clubPassUse(id){
           if (clubPassId !== String(telegramId)) clubPassUse(telegramId);
           if (clubPass && Number(clubPass.split('.')[1]) <= Date.now()/1000+60) clubPass='';
           if (!clubPass && !/^\/(?:auth\/|media\/(?:film|onboarding)(?:$|\/)|settings$|app-texts$)/.test(new URL(input,location.href).pathname)){
-            if (!clubPassPending) clubPassPending = clubPassEnsure().finally(()=>{clubPassPending=null;});
-            await clubPassPending;
+            await clubPassWait(clubPassEnsure(), init && init.signal);
           }
           if (clubPass){
             const url = new URL(input,location.href);
@@ -11832,7 +11838,8 @@ function clubPassUse(id){
           Object.entries(sessionHeaders()).forEach(([key,value])=>{if (!headers.has(key)) headers.set(key,value);});
           init = {...init, headers};
         }
-      } catch(e){}
+      } catch(e){if(init && init.signal && init.signal.aborted)throw e;}
+      if(init && init.signal && init.signal.aborted)throw new DOMException('Aborted','AbortError');
       const response = await origFetch(input, init);
       if (owned && response.status === 403){
         const body = await response.clone().json().catch(()=>null);
@@ -11895,7 +11902,17 @@ function createRFParallelTransport(config){
       timer=setTimeout(check,timeout);
     };
     timer=setTimeout(check,timeout);
-    try{return await fetcher(url,{...options,signal:controller.signal});}
+    try{
+      const raw=await fetcher(url,{...options,signal:controller.signal});
+      // JSON is consumed by every API caller. Keep cancellation/deadlines alive
+      // until its body arrives, not just until HTTP headers arrive.
+      if(!/\bapplication\/(?:[a-z0-9.-]+\+)?json\b/i.test(raw.headers.get('content-type')||''))return raw;
+      const bytes=await raw.arrayBuffer();
+      const response=new Response([204,205,304].includes(raw.status)||(options.method||'GET').toUpperCase()==='HEAD'?null:bytes,
+        {status:raw.status,statusText:raw.statusText,headers:raw.headers});
+      Object.defineProperty(response,'url',{value:raw.url});
+      return response;
+    }
     finally{done=true;clearTimeout(timer);if(parent)parent.removeEventListener('abort',abort);}
   }
   const healthPending=[null,null];
@@ -12338,7 +12355,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v598 · 13.11.2026 Восстановление видео';
+const APP_BUILD = 'v599 · 13.11.2026 Устойчивый запуск';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -31859,9 +31876,10 @@ let tgKnownId = 0;
 async function startTgSessionFallback(){
   const data = tgLaunchData();
   if (!data){ tgAuthWhy = 'Telegram не передал данные запуска'; return false; }
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
   try {
     const r = await fetch(`${API_URL}/auth/tg/session`, {
-      method: 'POST',
+      method: 'POST', signal:controller.signal,
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: data })
@@ -31885,7 +31903,7 @@ async function startTgSessionFallback(){
     /* сюда попадает обрыв сети и заблокированный запрос — самая частая
        причина разового сбоя на мобильном интернете */
     tgAuthWhy = 'запрос к серверу не дошёл: ' + (e && e.message ? e.message : e);
-  }
+  } finally {clearTimeout(timer);}
   return false;
 }
 
@@ -31953,16 +31971,23 @@ async function startMaxSession(){
 /* Запуск внутри ВК. Подпись проверяет СЕРВЕР — доверять адресной строке нельзя,
    в неё можно дописать чужой vk_user_id. Не узнали человека — не беда: показываем
    обычный вход по телефону, после подтверждения ВК привяжется сам. */
+async function boundedVkInit(){
+  let timer;
+  try {await Promise.race([vkBridge.send('VKWebAppInit',{}),new Promise(resolve=>{timer=setTimeout(resolve,3500);})]);}
+  catch(e){}finally{clearTimeout(timer);}
+}
 async function startVkSession(){
+  let controller,timer;
   try {
     if (window.vkBridge && vkBridge.send) {
       // Без этого мобильные клиенты ВК открывают приложение со второго раза
-      try { await vkBridge.send('VKWebAppInit', {}); } catch(e){}
+      await boundedVkInit();
       // v435: разрешение писать от сообщества — первым же экраном, не дожидаясь входа
       try { vkAskMessages(); } catch(e){}
     }
+    controller=new AbortController();timer=setTimeout(()=>controller.abort(),12000);
     const r = await fetch(`${API_URL}/auth/vk/session`, {
-      method: 'POST',
+      method: 'POST', signal:controller.signal,
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: vkLaunchQuery() })
@@ -31974,7 +31999,7 @@ async function startVkSession(){
       startApp();
       return true;
     }
-  } catch(e){}
+  } catch(e){} finally {clearTimeout(timer);}
   return false;
 }
 
@@ -32316,7 +32341,22 @@ function clubPassTgData(){
   }
   return d;
 }
-async function clubPassEnsure(){
+function clubPassWait(promise,signal){
+  if(!signal)return promise;
+  if(signal.aborted)return Promise.reject(new DOMException('Aborted','AbortError'));
+  return new Promise((resolve,reject)=>{
+    const abort=()=>{cleanup();reject(new DOMException('Aborted','AbortError'));};
+    const cleanup=()=>signal.removeEventListener('abort',abort);
+    signal.addEventListener('abort',abort,{once:true});
+    promise.then(value=>{cleanup();resolve(value);},error=>{cleanup();reject(error);});
+  });
+}
+function clubPassEnsure(){
+  if(!clubPassPending)clubPassPending=clubPassRequest().finally(()=>{clubPassPending=null;});
+  return clubPassPending;
+}
+async function clubPassRequest(){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
   try {
     if (!telegramId || clubPassId===String(telegramId) && clubPass && Number(clubPass.split('.')[1])>Date.now()/1000+60 || clubPassUse(telegramId)) return;
     const body = Object.assign({}, launchIdentity());
@@ -32324,7 +32364,7 @@ async function clubPassEnsure(){
     if (tgd) body.tg_launch = tgd;
     try { if (VIEW_TOKEN) body.view_token = VIEW_TOKEN; } catch(e){}
     const r = await fetch(API_URL + '/auth/pass', {
-      method: 'POST', credentials: 'include', signal: AbortSignal.timeout(12000),
+      method: 'POST', credentials: 'include', signal: controller.signal,
       headers: Object.assign({ 'Content-Type': 'application/json' }, sessionHeaders()),
       body: JSON.stringify(body)
     });
@@ -32338,7 +32378,7 @@ async function clubPassEnsure(){
     clubPassUse(telegramId);
     /* В хранилище не записалось (приватный режим) — держим в памяти */
     if (!clubPass && got[String(telegramId)]){ clubPass = got[String(telegramId)]; clubPassId = String(telegramId); }
-  } catch(e){}
+  } catch(e){} finally {clearTimeout(timer);}
 }
 
 function showAccessRestricted(){
