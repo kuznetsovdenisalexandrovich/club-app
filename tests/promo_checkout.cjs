@@ -2,7 +2,8 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert'),cp=require('chi
 const repo=require('path').resolve(__dirname,'..');
 const html=fs.readFileSync(repo+'/index.html','utf8');
 const before=cp.execFileSync('git',['show','HEAD:index.html'],{cwd:repo,encoding:'utf8',maxBuffer:20e6});
-const names=s=>[...s.matchAll(/(?:async\s+)?function\s+(\w+)\s*\(/g)].map(x=>x[1]);
+// Vendored SDK has private duplicate names; application declarations stay guarded.
+const names=s=>[...s.replace(/<script id="club-telegram-sdk">[\s\S]*?<\/script>/,'').matchAll(/(?:async\s+)?function\s+(\w+)\s*\(/g)].map(x=>x[1]);
 assert.deepEqual(names(before).filter(n=>!names(html).includes(n)),[]);
 for(const n of new Set(names(html))) assert(names(html).filter(x=>x===n).length<=Math.max(1,names(before).filter(x=>x===n).length));
 const scripts=[...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).join('\n');

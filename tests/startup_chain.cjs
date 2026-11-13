@@ -34,7 +34,7 @@ test('card motion defaults are available inline without a blocking startup reque
  assert(!/<script\b[^>]*src="card-motion\.js/.test(html));
  const source=fs.readFileSync(require('path').join(__dirname,'../card-motion.js'),'utf8').trim();assert(html.includes(source),'Keep the app and dashboard motion defaults in sync');
  const context={window:{}};vm.createContext(context);vm.runInContext(source,context);assert.equal(context.window.ClubCardMotion.tilt,9.6);
- assert(html.indexOf(source)<html.indexOf('src="telegram-web-app.js"'),'Motion does not delay SDK parsing');
+ assert(html.indexOf(source)<html.indexOf('<script id="club-telegram-sdk">'),'Motion does not delay SDK parsing');
 });
 
 test('stalled VK bridge cannot block authenticated startup indefinitely',async()=>{
@@ -49,3 +49,5 @@ for(const platform of ['tg','vk'])test(platform+' session stops after its deadli
  const code=platform==='tg'?html.slice(html.indexOf('async function startTgSessionFallback(){'),html.indexOf('\n}\n',html.indexOf('async function startTgSessionFallback(){'))+3):slice('async function boundedVkInit(){','/* ── Разовая ссылка');
  vm.runInContext(code,c);const pending=platform==='tg'?c.startTgSessionFallback():c.startVkSession();await flush();const deadline=[...timers.values()].find(t=>t.ms===12000);assert(deadline);deadline.fn();assert.equal(await pending,false);assert.equal(started,0);assert.equal(timers.size,0);
 });
+
+test('inline SDK exactly matches vendored source and has no blocking fetch',()=>{const source=require('fs').readFileSync(require('path').join(__dirname,'../telegram-web-app.js'),'utf8');assert(html.includes('<script id="club-telegram-sdk">\n'+source+'\n</script>'));assert(!html.includes('<script src="telegram-web-app.js"'));});

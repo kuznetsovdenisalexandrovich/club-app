@@ -1,19 +1,20 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const first=html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
-function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=false,reply=null}={}){
- const timers=new Map(),events={},docEvents={},calls=[],nodes=[];let id=0;
+function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=false,reply=null,diagReply=null,storage=null}={}){
+ const timers=new Map(),events={},docEvents={},calls=[],nodes=[],diagCalls=[];let id=0;
  const create=tag=>({tag,style:{},children:[],textContent:'',setAttribute(){},appendChild(n){this.children.push(n);return n;},remove(){this.removed=true;}});
  const root=create('html'),body=create('body');
  const d={body,documentElement:root,hidden:hidden,createElement:tag=>{const n=create(tag);nodes.push(n);return n;},addEventListener:(e,f)=>docEvents[e]=f};
  const w={location:{hash:signed?'#tgWebAppData='+encodeURIComponent('auth_date=1&user=%7B%22id%22%3A123%7D&start_param=film'):'',search:'?startapp=film',reload(){}},
   crypto:{randomUUID:()=> '12345678-abcd-1234-abcd-123456789abc'},
-  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);calls.push(data);if(reply)return reply(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
+  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);if(url.endsWith('/diagnostics')){diagCalls.push(data);return diagReply?diagReply(data):{ok:true,json:async()=>({status:'recorded',stored:data.records.length,discarded:0})};}calls.push(data);if(reply)return reply(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
   addEventListener:(e,f)=>events[e]=f};
+ if(storage)w.localStorage=storage;
  if(vk){w.location.hash='#film';w.location.search='?vk_user_id=123&sign=synthetic&vk_ref=other';}
  Object.assign(w,{window:w,document:d,URLSearchParams,Promise,Math,location:w.location,setTimeout:(f,ms)=>{timers.set(++id,{f,ms});return id;},clearTimeout:id=>timers.delete(id)});
  vm.createContext(w);vm.runInContext(first,w);
- return {w,d,calls,nodes,timers,events,docEvents,async deadline(){const t=[...timers.values()].find(t=>t.ms===35000);assert(t);t.f();await flush();}};
+ return {w,d,calls,diagCalls,nodes,timers,events,docEvents,async deadline(){const t=[...timers.values()].find(t=>t.ms===35000);assert(t);t.f();await flush();}};
 }
 async function flush(){for(let i=0;i<15;i++)await Promise.resolve();}
 test('rescue is inline and runs before dependencies',()=>{assert.match(first,/APP_RESCUE_V1/);assert(html.indexOf('APP_RESCUE_V1')<html.indexOf('card-motion.js'));});
@@ -101,4 +102,26 @@ test('switching target discards old ready retry',async()=>{
  const s=setup({reply:data=>data.event==='ready'?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
  s.w.ClubAppRescue.mark('gate');await flush();const old=s.calls.find(x=>x.event==='ready');const pending=[...s.timers.values()].find(t=>t.ms===1250);assert(pending);
  s.w.ClubAppRescue.target('meeting_31');await flush();pending.f();await flush();assert.equal(s.calls.filter(x=>x.event==='ready'&&x.attempt===old.attempt).length,1);assert(s.calls.some(x=>x.event==='ready'&&x.target==='meeting_31'));
+});
+
+function memoryStorage(){const m=new Map();return {getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)};}
+function fireTimer(s,ms){const entry=[...s.timers].find(([id,t])=>t.ms===ms);assert(entry,'timer '+ms);s.timers.delete(entry[0]);entry[1].f();}
+const diagKey='club_rescue_transport_v1';
+test('transport captures only bounded facts, reports503 then success without replaying delivery',async()=>{
+ const storage=memoryStorage();let rejected=true;
+ const s=setup({storage,reply:data=>data.event==='ready'&&rejected?{ok:false,status:503,headers:{get:()=> 'maintenance_busy'}}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ s.w.ClubAppRescue.mark('gate');await flush();
+ let records=JSON.parse(storage.getItem(diagKey));assert.equal(records[0].http,503);assert.equal(records[0].reason,'maintenance_busy');assert(!JSON.stringify(records).includes('auth_date'));assert(!JSON.stringify(records).includes('launch'));
+ rejected=false;fireTimer(s,1250);await flush();fireTimer(s,250);await flush();assert.equal(s.diagCalls.length,1);assert.deepEqual(s.diagCalls[0].records.map(r=>r.http),[503,200]);assert.equal(storage.getItem(diagKey),null);assert(!s.calls.some(r=>r.event==='failed'));
+});
+test('network failure survives reload; failed telemetry stays queued without loops',async()=>{
+ const storage=memoryStorage();const s=setup({storage,reply:data=>{if(data.event==='ready')throw Error('SECRET NETWORK DETAIL');return {ok:true,status:200,json:async()=>({status:data.event})};}});
+ s.w.ClubAppRescue.mark('gate');await flush();assert.equal(JSON.parse(storage.getItem(diagKey))[0].outcome,'network');assert(!storage.getItem(diagKey).includes('SECRET'));
+ const next=setup({storage,diagReply:()=>({ok:false,status:503})});await flush();fireTimer(next,250);await flush();assert.equal(next.diagCalls.length,1);assert(storage.getItem(diagKey));assert(![...next.timers.values()].some(t=>t.ms===250));
+ const recovered=setup({storage});await flush();fireTimer(recovered,250);await flush();assert.equal(recovered.diagCalls[0].records.length,1);assert.equal(storage.getItem(diagKey),null);
+});
+test('storage failures do not prevent ready; queue is capped and expired evidence is dropped',async()=>{
+ const broken={getItem(){throw Error('denied')},setItem(){throw Error('quota')},removeItem(){throw Error('denied')}};const s=setup({storage:broken});s.w.ClubAppRescue.mark('gate');await flush();assert(s.calls.some(r=>r.event==='ready'));
+ const storage=memoryStorage(),many=setup({storage});for(let i=0;i<20;i++){many.events.pagehide();await flush();}const records=JSON.parse(storage.getItem(diagKey));assert.equal(records.length,12);
+ storage.setItem(diagKey,JSON.stringify([{...records[0],at:Date.now()-86400001,secret:'untrusted'}, {...records[1],secret:'untrusted'}]));const clean=setup({storage});await flush();fireTimer(clean,250);await flush();assert.equal(clean.diagCalls[0].records.length,1);assert(!JSON.stringify(clean.diagCalls[0]).includes('untrusted'));
 });
