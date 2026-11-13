@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v607 -->
+<!-- FILE_VERSION: index-v608 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v607'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v608'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -34381,6 +34381,10 @@ async function askAi(){
   aiSend(q);
 }
 
+// A VK visitor without a club card has no personal session yet. Keep the
+// assistant anonymous; a raw VK launch ID must never select a private card.
+function aiIdent(){ return telegramId ? actionIdent() : {}; }
+
 async function aiSend(q){
   if (aiChat.busy) return;
   aiChat.busy = true;
@@ -34390,7 +34394,7 @@ async function aiSend(q){
   const wait = aiPush(escapeHtml(t('ai.thinking')), 'ai-msg bot wait');
   let d = null, legacy = false;
   try {
-    const ident = actionIdent();
+    const ident = aiIdent();
     const body = { question: q, history: aiChat.history.slice(-8), session: aiChat.session };
     if (ident.telegram_id) body.telegram_id = Number(ident.telegram_id);
     else if (ident.vk_id) body.vk_id = ident.vk_id;
@@ -34398,7 +34402,11 @@ async function aiSend(q){
     const r = await fetch(`${API_URL}/assistant/chat`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
-    if (r.status === 503 || r.status === 403) legacy = true;   // выключен в настройках — старый путь
+    if (r.status === 503) legacy = true;
+    else if (r.status === 403) {
+      const failure = await r.json().catch(function(){ return {}; });
+      legacy = failure.detail === 'Помощник доступен участникам клуба';
+    } // Only the feature gate may use legacy search, never an identity rejection.
     else if (r.ok) d = await r.json();
   } catch (e) {}
   wait.remove();
@@ -34451,7 +34459,7 @@ async function aiRenderExtra(d){
     }).join('') + '</div>';
   }
   if (d.turn_id){
-    h += '<div class="ai-fb" data-turn="' + d.turn_id + '"><span onclick="aiFeedback(this,1)">' + escapeHtml(t('ai.useful'))
+    h += '<div class="ai-fb" data-turn="' + d.turn_id + '" data-feedback-token="' + escapeHtml(d.feedback_token || '') + '"><span onclick="aiFeedback(this,1)">' + escapeHtml(t('ai.useful'))
        + '</span><span onclick="aiFeedback(this,-1)">' + escapeHtml(t('ai.useless')) + '</span></div>';
   }
   if (h) aiPush(h, 'ai-extra');
@@ -34462,7 +34470,7 @@ function aiFeedback(el, v){
   const box = el.parentNode;
   const id = Number(box.getAttribute('data-turn'));
   box.textContent = t('ai.thanks');
-  const body = Object.assign({ turn_id: id, value: v }, actionIdent());
+  const body = Object.assign({ turn_id: id, value: v, feedback_token: box.getAttribute('data-feedback-token') || '' }, aiIdent());
   if (!body.telegram_id && !body.vk_id) { try { body.guest_key = ggGuestKey(); } catch(e){} }
   fetch(`${API_URL}/assistant/feedback`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body) }).catch(function(){});
