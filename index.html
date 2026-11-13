@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v603 -->
+<!-- FILE_VERSION: index-v604 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v603'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v604'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -11548,7 +11548,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 </div>
 
 <script src="player-diagnostics.js?v=593"></script>
-<script src="film-player.js?v=598" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('player_script')"></script>
+<script src="film-player.js?v=604" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('player_script')"></script>
 <script>
 if(window.ClubAppRescue)ClubAppRescue.mark('main');
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
@@ -12355,7 +12355,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v603 · 13.11.2026 Учёт переходов в журнал';
+const APP_BUILD = 'v604 · 13.11.2026 Сохранение позиции видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

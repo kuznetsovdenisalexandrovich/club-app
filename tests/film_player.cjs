@@ -149,3 +149,26 @@ console.log('OK 360 advances before confirming recovery, avoids emergency, prese
  bounded.play();await Promise.resolve();assert.equal(probes,0,'Normal playback has no diagnostic downloads');bounded.video.fire('error');await Promise.resolve();assert.equal(probes,0,'Recovering playback has no diagnostic downloads');bounded.video.fire('error');await Promise.resolve();assert.equal(probes,1);bounded.play();bounded.video.fire('error');await Promise.resolve();assert.equal(probes,1,'Repeated failure has only one comparison per player');bounded.destroy();delete ctx.clubProbeVideo;
  console.log('OK diagnostic samples only after final failure, once per player');
 })().catch(e=>{console.error(e);process.exitCode=1;});
+
+// Native HLS may report an indefinite duration before its VOD playlist arrives.
+// A zero-time callback in that interval must not erase the saved resume point.
+const lateDurationTrace=[];
+const lateDuration=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],position:1744,text:k=>k,onEvent:()=>{},onDiagnostic:e=>lateDurationTrace.push(e)});
+lateDuration.video.duration=Infinity;lateDuration.video.readyState=2;lateDuration.play();
+lateDuration.video.fire('loadedmetadata');lateDuration.video.currentTime=0;lateDuration.video.fire('timeupdate');
+assert.equal(lateDuration.position,1744,'Indefinite metadata cannot erase the saved position');
+lateDuration.video.duration=2400;lateDuration.video.fire('durationchange');
+assert.equal(lateDuration.video.currentTime,1744,'Late VOD duration applies the original resume position');
+assert(!lateDurationTrace.some(e=>e.event==='frame'||e.event==='recovered'),'Seeking alone is not a frame');
+lateDuration.video.currentTime=1745;lateDuration.video.fire('timeupdate');assert(lateDurationTrace.some(e=>e.event==='frame'));
+lateDuration.destroy();
+console.log('OK late native duration preserves resume point and requires actual progress');
+const lateFallback=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],position:1744,text:k=>k,onEvent:()=>{}});
+lateFallback.video.duration=Infinity;lateFallback.video.readyState=2;lateFallback.play();lateFallback.video.fire('loadedmetadata');
+lateFallback.video.currentTime=1;lateFallback.video.fire('timeupdate');lateFallback.video.fire('error');
+assert.equal(lateFallback.position,1744,'A failed source must not replace the pending resume with its startup time');
+lateFallback.video.currentTime=0;lateFallback.video.fire('seeking');assert.equal(lateFallback.position,1744);
+lateFallback.video.duration=2400;lateFallback.video.fire('loadedmetadata');assert.equal(lateFallback.video.currentTime,1744);
+lateFallback.video.fire('timeupdate');assert(!lateFallback.diagFrame,'Restoring the timestamp does not prove a decoded frame');
+lateFallback.video.currentTime=1745;lateFallback.video.fire('timeupdate');assert(lateFallback.diagFrame);lateFallback.destroy();
+console.log('OK pending resume survives failure, reset seek, and reserve selection');

@@ -67,7 +67,7 @@
     }
     sampleProgress(){
       const v=this.video;
-      if(!v||v.seeking||v.readyState<2)return false;
+      if(!v||this.resumePending||v.seeking||v.readyState<2)return false;
       const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
       if(!advancing||v.paused)return false;
       this.lastProgress=Date.now();this.failedSources.clear();
@@ -105,7 +105,7 @@
     async refreshSources(){
       if(this.refreshing||this.destroyed)return;
       this.refreshing=true;this.lastRefresh=Date.now();this.clearTimers();this.diagWaiting=true;
-      if(this.video&&this.video.currentTime>0)this.position=this.video.currentTime;
+      if(!this.resumePending&&this.video&&this.video.currentTime>0)this.position=this.video.currentTime;
       this.diagnostic('refresh',{reason:'links_expired'});this.status('film.switching');
       try{
         const manifest=await this.options.refreshSources();
@@ -122,7 +122,7 @@
       if(this.destroyed||this.refreshing)return;
       if(this.options.refreshSources&&Date.now()>=this.sourcesExpireAt&&Date.now()-this.lastRefresh>60000){this.refreshSources();return;}
       clearTimeout(this.timer);this.timer=null;
-      if(this.video&&Number.isFinite(this.video.currentTime)&&this.video.currentTime>0)this.position=this.video.currentTime;
+      if(!this.resumePending&&this.video&&Number.isFinite(this.video.currentTime)&&this.video.currentTime>0)this.position=this.video.currentTime;
       this.emit('pause');
       if(manual)this.failedSources.clear();
       if(!same&&this.index>=0&&!manual)this.failedSources.add(this.index);
@@ -151,6 +151,7 @@
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
+      this.resumePending=this.position>0;
       // Keep the same element: WebKit grants playback permission per element.
       if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}
       this.mediaListeners=[];
@@ -166,10 +167,20 @@
       for(const stage of ['loadedmetadata','playing','waiting','seeking','seeked']){
         let seen=0;on(stage,()=>{if(seen++<2&&this.milestones++<20)this.diagnostic('milestone',{reason:stage});});
       }
+      const restorePosition=()=>{
+        if(!this.resumePending||!Number.isFinite(v.duration)||v.duration<=0)return;
+        const target=Math.min(this.position,Math.max(0,v.duration-.1));
+        // The VOD timeline may arrive after loadedmetadata (initial Infinity).
+        // Preserve the target through zero-time callbacks and failed source loads.
+        this.resumePending=false;
+        try{v.currentTime=target;this.position=target;}
+        catch(e){this.resumePending=true;}
+      };
       on('loadedmetadata',()=>{
-        if(this.position>0&&Number.isFinite(v.duration))v.currentTime=Math.min(this.position,Math.max(0,v.duration-.1));
-        this.emit('loaded');if(!this.wantsPlay)this.status('');
+        restorePosition();this.emit('loaded');if(!this.wantsPlay)this.status('');
       });
+      on('durationchange',restorePosition);
+      on('canplay',restorePosition);
       on('play',()=>{this.wantsPlay=true;this.arm();});
       on('playing',()=>{
         this.started=true;v.controls=true;this.start.hidden=true;this.start.disabled=false;
@@ -177,7 +188,7 @@
       });
       on('timeupdate',()=>this.sampleProgress());
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
-      on('seeking',()=>{this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
+      on('seeking',()=>{if(!this.resumePending)this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
       on('pause',()=>{if(!v.paused||v.error)return;this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
       on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
