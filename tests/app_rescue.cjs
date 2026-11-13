@@ -1,14 +1,14 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const first=html.match(/<script[^>]*>([\s\S]*?)<\/script>/)[1];
-function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=false}={}){
+function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=false,reply=null}={}){
  const timers=new Map(),events={},docEvents={},calls=[],nodes=[];let id=0;
  const create=tag=>({tag,style:{},children:[],textContent:'',setAttribute(){},appendChild(n){this.children.push(n);return n;},remove(){this.removed=true;}});
  const root=create('html'),body=create('body');
  const d={body,documentElement:root,hidden:hidden,createElement:tag=>{const n=create(tag);nodes.push(n);return n;},addEventListener:(e,f)=>docEvents[e]=f};
  const w={location:{hash:signed?'#tgWebAppData='+encodeURIComponent('auth_date=1&user=%7B%22id%22%3A123%7D&start_param=film'):'',search:'?startapp=film',reload(){}},
   crypto:{randomUUID:()=> '12345678-abcd-1234-abcd-123456789abc'},
-  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);calls.push(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
+  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);calls.push(data);if(reply)return reply(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
   addEventListener:(e,f)=>events[e]=f};
  if(vk){w.location.hash='#film';w.location.search='?vk_user_id=123&sign=synthetic&vk_ref=other';}
  Object.assign(w,{window:w,document:d,URLSearchParams,Promise,Math,location:w.location,setTimeout:(f,ms)=>{timers.set(++id,{f,ms});return id;},clearTimeout:id=>timers.delete(id)});
@@ -68,4 +68,37 @@ test('JS error is evidence without declaring useful screen failure',async()=>{
 
 test('server rollback preserves rescue by retrying old schema once with the same identity and sequence',async()=>{
  const s=setup({legacy:true});await flush();assert.equal(s.calls.length,2);assert.equal(s.calls[0].seq,s.calls[1].seq);assert.equal(s.calls[0].launch,s.calls[1].launch);assert(!('stage_ms' in s.calls[1]));assert(!s.calls[1].marks.includes('html'));await s.deadline();assert(s.calls.some(c=>c.event==='failed'));assert(s.calls.slice(1).every(c=>!('stage_ms' in c)));
+});
+
+test('ready retries transient rejection with identical packet and then stops',async()=>{
+ let rejected=true;
+ const s=setup({reply:data=>data.event==='ready'&&rejected?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ ['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();
+ const retry=[...s.timers.values()].find(t=>t.ms===1250);assert(retry,'A transiently lost ready must be retried');rejected=false;retry.f();await flush();
+ const packets=s.calls.filter(x=>x.event==='ready');assert.equal(packets.length,2);assert.deepEqual(packets[0],packets[1]);assert(![...s.timers.values()].some(t=>t.ms===3000));
+});
+test('terminal retries are bounded and cannot revive an older page state',async()=>{
+ const s=setup({reply:data=>data.event==='ready'?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ ['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();
+ const first=[...s.timers.values()].find(t=>t.ms===1250);assert(first);first.f();await flush();const last=[...s.timers.values()].find(t=>t.ms===3000);assert(last);last.f();await flush();assert.equal(s.calls.filter(x=>x.event==='ready').length,3);
+ const stale=setup({reply:data=>data.event==='ready'?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ ['settings','profile','rendered'].forEach(x=>stale.w.ClubAppRescue.mark(x));await flush();const pending=[...stale.timers.values()].find(t=>t.ms===1250);assert(pending);stale.events.pagehide();await flush();pending.f();await flush();assert.equal(stale.calls.filter(x=>x.event==='ready').length,1);
+});
+test('authorization failures and material-delivery requests are never automatically retried',async()=>{
+ const s=setup({reply:()=>({ok:false,status:401})});['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();assert(![...s.timers.values()].some(t=>t.ms===1250));
+ const f=setup({reply:()=>({ok:false,status:503})});await f.deadline();assert.equal(f.calls.filter(x=>x.event==='failed').length,1);assert(![...f.timers.values()].some(t=>t.ms===1250));
+});
+
+test('network loss retries closed and later stage marks cannot mutate a ready retry',async()=>{
+ let reject=true;
+ const s=setup({reply:data=>{if(data.event==='closed'&&reject)throw Error('network lost');return {ok:true,status:200,json:async()=>({status:data.event})};}});
+ s.events.pagehide();await flush();const retry=[...s.timers.values()].find(t=>t.ms===1250);assert(retry);reject=false;retry.f();await flush();
+ const closed=s.calls.filter(x=>x.event==='closed');assert.equal(closed.length,2);assert.deepEqual(closed[0],closed[1]);
+ const r=setup({reply:data=>data.event==='ready'?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ r.w.ClubAppRescue.mark('gate');await flush();const pending=[...r.timers.values()].find(t=>t.ms===1250);assert(pending);r.w.ClubAppRescue.mark('profile');pending.f();await flush();const ready=r.calls.filter(x=>x.event==='ready');assert.deepEqual(ready[0],ready[1]);assert(!('profile' in ready[1].stage_ms));
+});
+test('switching target discards old ready retry',async()=>{
+ const s=setup({reply:data=>data.event==='ready'?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ s.w.ClubAppRescue.mark('gate');await flush();const old=s.calls.find(x=>x.event==='ready');const pending=[...s.timers.values()].find(t=>t.ms===1250);assert(pending);
+ s.w.ClubAppRescue.target('meeting_31');await flush();pending.f();await flush();assert.equal(s.calls.filter(x=>x.event==='ready'&&x.attempt===old.attempt).length,1);assert(s.calls.some(x=>x.event==='ready'&&x.target==='meeting_31'));
 });

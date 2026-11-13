@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v605 -->
+<!-- FILE_VERSION: index-v606 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -33,14 +33,17 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var ctrl=w.AbortController?new AbortController():null;
-  var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v605'};
-  function send(){
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v606'};
+  var tries=0;
+  function sendAttempt(){
+   tries++;
+   var ctrl=w.AbortController?new AbortController():null;
+   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
+   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
   }
-  return send().then(function(r){if(r.status===422&&!legacySchema){legacySchema=true;return send();}return r;}).then(function(r){return r.ok?r.json():null;}).then(function(data){
+  return send().then(function(r){if(r.status===422&&!legacySchema){legacySchema=true;return send();}return r;}).then(function(r){if(!r.ok){var err=new Error('rescue_signal');err.retryable=r.status===429||r.status>=500;throw err;}return r.json();}).then(function(data){
    if(data&&requestAttempt===attempt){
     if((platform==='tg'&&/^https:\/\/t\.me\/youselllikeagod_bot\?start=apprescue_[A-Za-z0-9_-]{20,32}$/.test(data.bot_url||''))||(platform==='vk'&&/^https:\/\/vk\.me\/club[0-9]+$/.test(data.bot_url||''))){botUrl=data.bot_url;if(botLink)botLink.href=botUrl;}
     lastState=data.status;w.ClubAppRescue.accepted=true;
@@ -53,7 +56,18 @@
     }
    }
    return data;
-  }).catch(function(){if(statusNode)statusNode.textContent='Сервис сейчас не отвечает. Перезагрузи страницу или открой бота.';return null;}).then(function(result){clearTimeout(timeout);return result;});
+  }).catch(function(err){
+   // A busy restore/state barrier can reject a healthy page's acknowledgement.
+   // Retry only terminal observations, never delivery requests. Same seq/body;
+   // newer state or a different target invalidates every outstanding retry.
+   if((event==='ready'||event==='closed')&&tries<3&&(!err||err.retryable!==false)&&requestAttempt===attempt&&payload.seq===sequence){
+    setTimeout(function(){if(requestAttempt===attempt&&payload.seq===sequence)sendAttempt();},tries===1?1250:3000);
+   }
+   if(statusNode)statusNode.textContent='Сервис сейчас не отвечает. Перезагрузи страницу или открой бота.';
+   return null;
+  }).then(function(result){clearTimeout(timeout);return result;});
+  }
+  return sendAttempt();
  }
  function show(reason){
   if(disabled||panel)return;
@@ -12361,7 +12375,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v605 · 13.11.2026 Поделиться фильмом';
+const APP_BUILD = 'v606 · 13.11.2026 Подтверждение запуска';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
