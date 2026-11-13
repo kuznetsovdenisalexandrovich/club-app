@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v600 -->
+<!-- FILE_VERSION: index-v601 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -35,7 +35,7 @@
   var requestAttempt=attempt;
   var ctrl=w.AbortController?new AbortController():null;
   var timeout=setTimeout(function(){if(ctrl)ctrl.abort();},8000);
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v600'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:stageTimes,elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v601'};
   function send(){
    if(legacySchema){delete payload.stage_ms;delete payload.elapsed_ms;payload.marks=payload.marks.filter(function(m){return /^(settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);});}
    return nativeFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true,signal:ctrl?ctrl.signal:undefined});
@@ -12355,7 +12355,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v600 · 13.11.2026 Резерв запуска видео';
+const APP_BUILD = 'v601 · 13.11.2026 Доступ из ВК в Telegram';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22530,6 +22530,7 @@ const DEEPLINKS = {
   // то, за что платят
   'vk':          { go: () => openVkAccessFlow(),          guests: false },
   'vkaccess':    { go: () => openVkAccessFlow(),          guests: false },
+  'tgaccess':    { go: () => openTelegramAccessRoute(),   guests: false },
   // Вход прямо на фильм — сюда ведём рекламу. Метка источника едет ОТДЕЛЬНЫМ
   // куском payload (`film_<код единицы>`), см. unitFromUrl: в Telegram параметр
   // запуска один и в нём можно только латиницу с цифрами, обычные utm туда не
@@ -28298,20 +28299,23 @@ async function pollForTgAccess(attempts = 6, delayMs = 3000){
    может выдать доступы. Поэтому ссылка ведёт в САМОГО бота (`?start=`), а
    токен в ней — одноразовый: по открытому vk_id можно было бы привязать чужую
    карточку к своему телеграму. */
+let telegramLinkRequest=null,telegramLinkBusy=false;
+function openTelegramAccessRoute(){
+  openAppSettingsPopup();
+  const button=document.getElementById(isInsideVk()&&!hasRealTg()?'acc-tg-link':'acc-tg-grant');
+  if(button){button.scrollIntoView({block:'center'});button.focus();}
+}
 async function linkTelegramFromVk(){
-  const vk = Number(vkUserId()) || 0;
-  if (!vk && !telegramId){ showToast(t('settings.tg_link_fail')); return; }
-  showToast(t('tg.access_wait'));
-  try {
-    const r = await fetch(`${API_URL}/access/tg/start`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vk_id: vk || null, telegram_id: Number(telegramId) || null })
-    });
-    if (r.status === 403){ showToast(t('tg.access_members')); openPaywall(); return; }
-    const d = await r.json();
-    if (d && d.url){ openUrl(d.url); return; }
-    showToast(t('settings.tg_link_fail'));
-  } catch (e){ showToast(t('settings.tg_link_fail')); }
+  if(telegramLinkBusy)return;
+  if(!isInsideVk()){showToast(t('settings.tg_link_fail'));return;}
+  telegramLinkBusy=true;telegramLinkRequest=telegramLinkRequest||crypto.randomUUID();showToast(t('tg.access_wait'));
+  try{
+    const r=await fetch(API_URL+'/access/tg/app-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vk_query:vkLaunchQuery(),request_id:telegramLinkRequest}),signal:AbortSignal.timeout(15000)});
+    const d=await r.json();
+    if(!r.ok){if(['ticket_expired','ticket_used','reissue_required'].includes(d.code))telegramLinkRequest=null;throw new Error(typeof d.detail==='string'?d.detail:t('settings.tg_link_fail'));}
+    if(d&&/^https:\/\/t\.me\/youselllikeagod_bot(?:\?|$)/.test(d.url)){openUrl(d.url);return;}
+    throw new Error(t('settings.tg_link_fail'));
+  }catch(e){showToast(e.message||t('settings.tg_link_fail'));}finally{telegramLinkBusy=false;}
 }
 
 /* Строка доступов зависит от того, ГДЕ человек открыл клуб. Раньше три кнопки
