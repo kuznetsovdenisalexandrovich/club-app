@@ -11031,9 +11031,10 @@ function track(event, ref, value){
   try {
     fetch(`${API_URL}/events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
       body: JSON.stringify(Object.assign(
         { telegram_id: telegramId || 0, vk_query: vkq,
+          tg_init: tgLaunchData() || (window.Telegram?.WebApp?.initData ? 'tgWebAppData=' + encodeURIComponent(window.Telegram.WebApp.initData) : ''),
           event: event, ref: ref || '', value: value || 0 },
         tgContactFields()))
     }).catch(function(){});
