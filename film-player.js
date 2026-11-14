@@ -216,9 +216,10 @@
     }
     async toggleFullscreen(){
       if(this.expanded){this.closeExpanded();return;}
-      if(document.fullscreenElement===this.wrapper){await document.exitFullscreen();return;}
+      if(document.fullscreenElement===this.video||document.fullscreenElement===this.wrapper){await document.exitFullscreen();return;}
       try{
         if(this.video.webkitEnterFullscreen){this.video.webkitEnterFullscreen();return;}
+        if(this.video.requestFullscreen){await this.video.requestFullscreen();return;}
         if(this.wrapper.requestFullscreen){await this.wrapper.requestFullscreen();return;}
       }catch(e){} // Embedded browsers may deny native fullscreen; expand inside the app.
       const resume=!this.video.paused;
