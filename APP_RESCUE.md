@@ -82,3 +82,14 @@ controls remain unchanged; no custom seek/fullscreen controls were shipped.
 Six short-window/theme browser checks keep the primary action fully visible and
 exercise manual/automatic fallback. OS fullscreen in macOS Telegram remains
 unconfirmed; do not claim this layout change enables it.
+
+2026-11-14 v624: desktop fine-pointer/hover native portrait players use the card
+width, with object-fit:contain preserving the picture. WebKit inline controls
+can drop the complete timeline when the native video box is too narrow; CSS
+must not force its controls into a portrait-width strip on desktop. Touch
+layouts and PiP retain prior dimensions. No custom controls or player changes.
+12 funnel viewport/theme/input checks and 20 library layouts passed; 38 tests.
+Fullscreen is separate: installed Telegram 7.4.4 pins lib_webview 0948a2996df1733dc71f9374cef67347700ecb24,
+which does not enable WKPreferences.elementFullscreenEnabled. System default
+measured false on macOS 27.2.1. This frontend change does not enable host-level
+fullscreen and is not evidence about historical VPN playback incidents.
