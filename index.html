@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v613 -->
+<!-- FILE_VERSION: index-v614 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v613'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v614'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15798,7 +15798,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v613 · 14.11.2026 Фильм ВК';
+const APP_BUILD = 'v614 · 14.11.2026 Материалы игр';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -26245,8 +26245,8 @@ function openLectureAsGuest(l){
 }
 
 /* mode: '' | 'audio' | 'insights' */
-async function openLectureByKey(key, mode){
-  if (!ensureBotAccess(function(){ openLectureByKey(key, mode); })) return;
+async function openLectureByKey(key, mode, momentSeconds){
+  if (!ensureBotAccess(function(){ openLectureByKey(key, mode, momentSeconds); })) return;
   await ensureLibrary();
   let lec = lectureBySafeKey(key);
   if (!lec){
@@ -26283,6 +26283,21 @@ async function openLectureByKey(key, mode){
       return;
     }
     showFreeVersion(lec);
+    return;
+  }
+
+  if(mode==='moment' && Number.isFinite(momentSeconds) && momentSeconds>=0 && momentSeconds<=86400){
+    if(plHasAudio(lec)){
+      plPendingSeek={slug:lec.slug,sec:momentSeconds};
+      playOneLecture(lec);
+    }else{
+      const banner=document.getElementById('dl-banner');
+      if(banner){
+        banner.innerHTML='<div class="dl-banner-title">Момент в занятии — '+escapeHtml(plFmt(momentSeconds))+'</div><div class="dl-banner-text">Аудиоверсии пока нет. Открой видеозапись на карточке ниже и перейди к этому времени.</div>';
+        banner.style.display='block';
+        banner.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    }
     return;
   }
 
@@ -41823,14 +41838,18 @@ function plRenderPreviewNote(){
   });
 }
 
+let plLoadGeneration = 0;
 function plLoadCurrent(autoplay){
   var lec = plQueue[plIndex];
   if (!lec || !plAudio) return;
+  var generation = ++plLoadGeneration;
+  var requestedSeek = plPendingSeek && plPendingSeek.slug === lec.slug ? plPendingSeek.sec : null;
+  plPendingSeek = null;
 
   // Ставим сохранённый адрес сразу, а подписанный подставляем, когда придёт:
   // так плеер не ждёт сети, чтобы просто нарисовать название и обложку
   plResolveAudioUrl(lec).then(function(url){
-    if (plQueue[plIndex] !== lec) return;   // человек успел переключить трек
+    if (plQueue[plIndex] !== lec || generation !== plLoadGeneration) return;
     if (url && plAudio.src !== url){
       var wasPlaying = !plAudio.paused;
       var at = plAudio.currentTime || 0;
@@ -41839,6 +41858,14 @@ function plLoadCurrent(autoplay){
       // ⚠️ `try` НЕ ЛОВИТ ОТКАЗ ОБЕЩАНИЯ: `play()` отвечает отложенно, и на iOS
       // отказ «нужен жест человека» летел бы мимо обёртки прямо в чат
       if (wasPlaying) { var pr = plAudio.play(); if (pr && pr.catch) pr.catch(plSyncIcon); }
+    }
+    if(url && requestedSeek !== null){
+      var seekRequested = function(){
+        if(generation !== plLoadGeneration || plQueue[plIndex] !== lec)return;
+        try{plAudio.currentTime=requestedSeek;}catch(e){}
+      };
+      if(plAudio.readyState>=1)seekRequested();
+      else plAudio.addEventListener('loadedmetadata',seekRequested,{once:true});
     }
   });
 
@@ -41858,9 +41885,7 @@ function plLoadCurrent(autoplay){
   // Продолжаем с того места, где остановились в прошлый раз.
   // v400: минута из ответа ИИ-помощника главнее сохранённой позиции
   var saved = plPositions()[lec.slug];
-  if (plPendingSeek && plPendingSeek.slug === lec.slug) saved = plPendingSeek.sec;
-  plPendingSeek = null;
-  if (saved) {
+  if (saved && requestedSeek === null) {
     var jump = function(){ try { plAudio.currentTime = saved; } catch(e){} };
     if (plAudio.readyState >= 1) jump();
     else plAudio.addEventListener('loadedmetadata', jump, { once: true });
@@ -43262,7 +43287,7 @@ function ggFinal(f){
   if (f.material && String(f.material.slug || '').trim()){
     const m = f.material;
     h += '<div class="gg-block"><div class="gg-block-h">' + escapeHtml(t('games.material') || 'Разобрать теорию') + '</div>'
-      + '<div class="gg-material" onclick="ggOpenMaterial(' + jsArg(m.slug || '') + ')">'
+      + '<div class="gg-material" onclick="ggOpenMaterial(' + jsArg(m.slug || '') + ',' + jsArg(m.timecode || '') + ')">'
       + '<div class="gg-material-thumb">' + escapeHtml(m.timecode || '▶') + '</div>'
       + '<div><div class="gg-material-name">' + escapeHtml(m.title || 'Занятие') + '</div>'
       + '<div class="gg-material-why">' + escapeHtml(t('games.material_why') || 'Ровно про то, где ты просел') + '</div></div>'
@@ -43306,11 +43331,21 @@ function ggFinal(f){
 /* ⚠️ ЗАНЯТИЕ ОТКРЫВАЕМ ШТАТНОЙ ФУНКЦИЕЙ ПРИЛОЖЕНИЯ, а не своим плеером: она
    умеет и пейвол для гостя, и выжимку, и засчитывает просмотр. Ключ у неё —
    safeContentKey(slug), тот же, что в диплинках `l_` */
-function ggOpenMaterial(slug){
-  if (!slug) return;
-  if (typeof openLectureByKey === 'function' && typeof safeContentKey === 'function'){
-    openLectureByKey(safeContentKey(slug), 'video');
-  } else switchView('library');
+function ggTimecodeSeconds(value){
+  const raw=String(value||'').trim();
+  if(!/^\d{1,6}(?::\d{1,2}){0,2}$/.test(raw))return null;
+  const parts=raw.split(':').map(Number);
+  if(parts.slice(1).some(n=>n>=60))return null;
+  const seconds=parts.reduce((total,n)=>total*60+n,0);
+  return seconds<=86400?seconds:null;
+}
+function ggOpenMaterial(slug,timecode){
+  if(!slug)return;
+  if(typeof openLectureByKey==='function'&&typeof safeContentKey==='function'){
+    const seconds=ggTimecodeSeconds(timecode);
+    return openLectureByKey(safeContentKey(slug),seconds===null?'video':'moment',seconds);
+  }
+  switchView('library');
 }
 
 async function ggAfterFinal(){

@@ -39,7 +39,7 @@ test('card motion defaults are available inline without a blocking startup reque
 
 test('stalled VK bridge cannot block authenticated startup indefinitely',async()=>{
  const timers=new Map();let id=0,auth=0,started=0;
- const c={Promise,AbortController,setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),window:null,vkBridge:{send:()=>new Promise(()=>{})},vkAskMessages(){},API_URL:'https://api.test',vkLaunchQuery:()=> 'signed-fixture',fetch:async(url,opts)=>{auth++;assert(opts.signal);return {ok:true,json:async()=>({found:true,telegram_id:-77})}},startApp:()=>started++};c.window=c;vm.createContext(c);
+ const c={Promise,AbortController,setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),window:null,vkBridge:{send:()=>new Promise(()=>{})},vkAskMessages(){},filmContactName:()=>new Promise(()=>{}),API_URL:'https://api.test',vkLaunchQuery:()=> 'signed-fixture',fetch:async(url,opts)=>{auth++;assert(opts.signal);return {ok:true,json:async()=>({found:true,telegram_id:-77})}},startApp:()=>started++};c.window=c;vm.createContext(c);
  vm.runInContext(slice('async function boundedVkInit(){','/* ── Разовая ссылка'),c);const result=c.startVkSession();await flush();assert.equal(auth,0);
  const bridge=[...timers.values()].find(t=>t.ms===3500);assert(bridge);bridge.fn();assert.equal(await result,true);assert.equal(auth,1);assert.equal(started,1);assert.equal(c.telegramId,-77);assert.equal(timers.size,0);
 });
