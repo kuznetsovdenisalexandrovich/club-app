@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v625 -->
+<!-- FILE_VERSION: index-v626 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v625'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v626'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16290,7 +16290,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v625 · 14.11.2026 Демо после фильма';
+const APP_BUILD = 'v626 · 14.11.2026 Кнопки материалов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27129,9 +27129,10 @@ async function openLeadMaterial(code){
    return;
   }
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}sendAttributionTouch(code);
-  links.append(button(t('lead.full'),()=>{leadMaterialClose();openAccessPage()}));
+  const materialActions=Array.isArray(data.actions)?data.actions:['full','pdf','film'];
+  if(materialActions.includes('full'))links.append(button(t('lead.full'),()=>{leadMaterialClose();openAccessPage()}));
   const pdfGate=data.pdf_gate&&data.pdf_gate[platform];
-  if(pdfGate){
+  if(pdfGate&&materialActions.includes('pdf')){
    const explanation=document.createElement('p');explanation.textContent=t(platform==='vk'?'lead.vkGate':'lead.gate');explanation.style.cssText='margin-bottom:16px;line-height:1.5';
    const status=document.createElement('p');status.setAttribute('role','status');status.style.cssText='margin-top:16px;line-height:1.5';
    const check=button(t('lead.check'),async()=>{
@@ -27147,7 +27148,8 @@ async function openLeadMaterial(code){
    check.style.marginTop='12px';gate.append(explanation,anchor(t(platform==='vk'?'lead.vkSubscribe':'lead.subscribe'),pdfGate.url),check,status);
    links.append(button(t('lead.pdf'),()=>{gate.hidden=false;gate.scrollIntoView({behavior:'smooth',block:'nearest'});check.click()}));
   }
-  links.append(button(t('lead.film'),()=>{leadMaterialClose();openFilmRoute()}));
+  if(materialActions.includes('film'))links.append(button(t('lead.film'),()=>{leadMaterialClose();openFilmRoute()}));
+  if(materialActions.includes('demo'))links.append(button('Посмотреть демо клуба',()=>{leadMaterialClose();switchView('portal')}));
   if(platform==='vk'){if(data.vk_bot_url)links.append(anchor(t('lead.bot'),data.vk_bot_url))}
   else for(const [bot,url] of Object.entries(data.bot_urls||{}))links.append(anchor(t('lead.bot'),url));
   try{
