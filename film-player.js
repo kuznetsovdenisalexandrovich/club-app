@@ -92,13 +92,22 @@
       const lastCandidate=this.failedSources.size>=this.sources.length-1;
       const wait=this.options.stallMs||(this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
       if(!this.timer){
-        const timer=setTimeout(()=>{
+        const armedAt=Date.now();let timer;
+        const check=()=>{
           if(this.timer!==timer)return;
           this.timer=null;
           // Native media can advance while WebView JavaScript callbacks are delayed.
           if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden||this.sampleProgress())return;
+          // WebKit updates networkState asynchronously after load()/play(). Recheck
+          // at the short deadline; extend only a loading final source, never forever.
+          const remaining=20000-(Date.now()-armedAt);
+          if(!this.options.stallMs&&wait<20000&&remaining>0&&this.engine==='native'&&
+             this.failedSources.size>=this.sources.length-1&&this.video.readyState<3&&this.video.networkState===2){
+            timer=setTimeout(check,remaining);this.timer=timer;return;
+          }
           this.failure('progress_timeout');this.switchSource(false);
-        },wait);
+        };
+        timer=setTimeout(check,wait);
         this.timer=timer;
       }
     }

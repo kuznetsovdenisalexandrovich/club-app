@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');let now=100000,id=0,timers=new Map();
+function advance(ms){const end=now+ms;while(true){const pending=[...timers].filter(([,t])=>t.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!pending)break;now=pending[1].at;timers.delete(pending[0]);pending[1].f();}now=end;}
+class E{constructor(){this.listeners={};this.paused=true;this.currentTime=0;this.duration=100;this.readyState=0;this.networkState=0;}setAttribute(){}removeAttribute(){}append(){}prepend(){}replaceChildren(){}remove(){}canPlayType(){return 'probably'}load(){this.readyState=0;this.networkState=0;}addEventListener(n,f){(this.listeners[n]||=[]).push(f)}removeEventListener(n,f){this.listeners[n]=(this.listeners[n]||[]).filter(x=>x!==f)}fire(n){for(const f of this.listeners[n]||[])f()}play(){this.paused=false;this.fire('play');return Promise.resolve()}pause(){this.paused=true}}
+const c={Date:{now:()=>now},document:Object.assign(new E(),{hidden:false,createElement:()=>new E()}),setTimeout:(f,ms)=>{timers.set(++id,{f,at:now+ms});return id},clearTimeout:id=>timers.delete(id)};c.window=c;
+vm.runInNewContext(fs.readFileSync(require('path').join(__dirname,'../film-player.js'),'utf8'),c);
+const events=[];const p=new c.ClubFilmPlayer(new E(),{sources:[{url:'https://a.test/master',lowUrl:'https://a.test/360',type:'hls'},{url:'https://b.test/master',lowUrl:'https://b.test/360',type:'hls'}],text:k=>k,onEvent:()=>{},onDiagnostic:e=>events.push(e)});
+p.play();p.video.networkState=2;p.video.readyState=1;advance(4000);assert.equal(p.index,1);assert.equal(p.video.networkState,0);
+// Actual WebKit network state changes after load()/play() return, not synchronously.
+p.video.networkState=2;advance(8000);assert.equal(p.index,1);assert.equal(p.quality,'auto','Async native reserve must receive its bounded loading window');
+advance(11999);assert.equal(p.quality,'auto');advance(1);assert.equal(p.quality,'360');assert.equal(p.index,0);
+p.video.networkState=2;advance(8000);assert.equal(p.index,1);p.video.networkState=2;advance(8000);assert(!p.exhausted);advance(12000);assert(p.exhausted);assert.equal(events.filter(x=>x.event==='unavailable').length,1);assert.equal(timers.size,0);
+console.log('PASS asynchronous native loading extends reserve once to20s, both qualities exhaust within52s; no retry loop');p.destroy();
+const q=new c.ClubFilmPlayer(new E(),{...p.options,onDiagnostic:()=>{}});q.play();q.video.networkState=2;advance(4000);q.video.networkState=2;advance(8000);assert(q.timer);q.action('pause');assert.equal(timers.size,0);advance(30000);assert(!q.exhausted);assert.equal(q.index,1);q.destroy();console.log('PASS user pause cancels extended timer');

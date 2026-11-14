@@ -83,7 +83,7 @@
         phase='segment';http=0;bytes=0;await get(segment,false);result=bytes>0?'ok':'empty';
       }catch(e){if(timedOut)result='timeout';else if(e.message==='unsupported')result='unsupported';}
       finally{clearTimeout(timer);ctrl.abort();}
-      try{emit({event:'probe',reason:'sample_360',quality:'360',delivery:plan.searchParams.get('direct')==='1'?'direct':'proxy',probe_phase:phase,probe_result:result,probe_ms:Math.min(60000,Math.max(0,Date.now()-start)),probe_bytes:Math.min(1048576,bytes),media_server:server,http});}catch(e){}
+      try{emit({event:'probe',reason:'sample_low',quality:'360',delivery:plan.searchParams.get('direct')==='1'?'direct':'proxy',probe_phase:phase,probe_result:result,probe_ms:Math.min(60000,Math.max(0,Date.now()-start)),probe_bytes:Math.min(1048576,bytes),media_server:server,http});}catch(e){}
     }
   };
 

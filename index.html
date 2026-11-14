@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v611 -->
+<!-- FILE_VERSION: index-v612 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v611'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v612'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -14990,8 +14990,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   <div class="tour-skip" onclick="endLibraryTour(true)">Пропустить ✕</div>
 </div>
 
-<script src="player-diagnostics.js?v=593"></script>
-<script src="film-player.js?v=611" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('player_script')"></script>
+<script src="player-diagnostics.js?v=612"></script>
+<script src="film-player.js?v=612" onload="window.ClubAppRescue&amp;&amp;ClubAppRescue.mark('player_script')"></script>
 <script>
 if(window.ClubAppRescue)ClubAppRescue.mark('main');
 /* ── Экран загрузки ──────────────────────────────────────────────────────────
@@ -15798,7 +15798,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v607 · 13.11.2026 Диагностика запуска';
+const APP_BUILD = 'v612 · 14.11.2026 Загрузка видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
