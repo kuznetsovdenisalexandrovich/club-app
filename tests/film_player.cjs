@@ -172,3 +172,12 @@ lateFallback.video.duration=2400;lateFallback.video.fire('loadedmetadata');asser
 lateFallback.video.fire('timeupdate');assert(!lateFallback.diagFrame,'Restoring the timestamp does not prove a decoded frame');
 lateFallback.video.currentTime=1745;lateFallback.video.fire('timeupdate');assert(lateFallback.diagFrame);lateFallback.destroy();
 console.log('OK pending resume survives failure, reset seek, and reserve selection');
+
+// Alternative player appears during a stall and disappears on actual progress.
+setImmediate(()=>{
+let alternatives=0;
+const alt=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/video',type:'mp4'}],text:k=>k,onEvent:()=>{},onAlternative:()=>alternatives++,stallMs:20000});
+assert(alt.alternative.hidden);alt.play();advance(10000);assert(!alt.alternative.hidden);alt.alternative.onclick();assert.equal(alternatives,1);
+alt.video.readyState=4;alt.video.currentTime=3;alt.video.fire('timeupdate');assert(alt.alternative.hidden);alt.destroy();
+console.log('OK alternative player offered on stall, removed on progress');
+});

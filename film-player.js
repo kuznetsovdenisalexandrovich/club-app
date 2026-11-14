@@ -23,6 +23,10 @@
       this.low=this.button(options.text('film.low'),'native-film-option',()=>this.setQuality('360'));
       this.auto=this.button(options.text('film.auto'),'native-film-option',()=>this.setQuality('auto'));
       this.panel.append(this.other,this.low,this.auto);this.help.append(this.retry,this.panel);
+      if(options.onAlternative){
+        this.alternative=this.button('Попробовать другой плеер','native-film-retry',()=>options.onAlternative());
+        this.alternative.hidden=true;this.help.append(this.alternative);
+      }
       if(options.onBotFallback){
         this.botFallback=this.button(options.text('film.bot_watch'),'native-film-option native-film-bot',async()=>{
           if(this.botFallback.disabled)return;
@@ -59,7 +63,7 @@
     status(key){this.notice.textContent=key?this.options.text(key):'';}
     clearTimers(){clearTimeout(this.timer);clearTimeout(this.helpTimer);this.timer=null;this.helpTimer=null;}
     progress(){
-      this.clearTimers();this.retry.hidden=true;this.panel.hidden=true;if(this.botFallback)this.botFallback.hidden=true;
+      this.clearTimers();this.retry.hidden=true;this.panel.hidden=true;if(this.alternative)this.alternative.hidden=true;if(this.botFallback)this.botFallback.hidden=true;
       if(this.wantsPlay)this.arm();
     }
     sampleProgress(){
@@ -81,7 +85,7 @@
           this.helpTimer=null;
           if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden||this.sampleProgress())return;
           this.lateWatchdog(helpDue);
-          this.retry.hidden=false;this.fault('film_stall');
+          this.retry.hidden=false;if(this.alternative)this.alternative.hidden=false;this.fault('film_stall');
         },this.options.helpMs||10000);
         this.helpTimer=helpTimer;
       }
@@ -151,6 +155,7 @@
         }
       }
       if(!same&&this.failedSources.size>=this.sources.length){
+        if(this.alternative)this.alternative.hidden=false;
         if(this.wantsPlay)this.fault('film_unavailable');
         this.exhausted=true;this.wantsPlay=false;this.clearTimers();
         ++this.generation;if(this.video)this.video.pause();
