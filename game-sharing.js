@@ -12,7 +12,7 @@ async function openGameShare(kind,skipOffer=false){
   const payload={kind,guest_key:ggGuestKey(),platform};
   if(kind==='ai')payload.result_id=ggS?.session_id||'';
   if(kind==='quiz')payload.result_id=kqAttempt?.attempt_id||'';
-  if(kind==='gods')payload.code=quizResult?.code||'';
+  if(kind==='gods'){payload.code=quizResult?.code||'';payload.percentages=quizResult?.axes?.map(a=>Math.round(a.share*100))||[];}
   gameShareData=await gameShareAPI('',payload);gameShareFile=null;
   closeGameShare();
   if(!telegramId){
@@ -27,7 +27,7 @@ async function openGameShare(kind,skipOffer=false){
 }
 async function gameShareImage(){
  if(!gameShareFile||!gameShareData)return;
- const text=gameShareData.title+' — '+gameShareData.score+'\n'+gsText('free')+'\n'+gameShareData.url;
+ const text=gameShareData.caption||gameShareData.title+' — '+gameShareData.score+'\n'+gsText('free')+'\n'+gameShareData.url;
  if(navigator.share&&navigator.canShare?.({files:[gameShareFile]})){
   try{await navigator.share({files:[gameShareFile],title:gameShareData.title,text})}catch(e){if(e.name!=='AbortError')showToast(gsText('error'))}return;
  }
