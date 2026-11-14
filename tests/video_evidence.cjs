@@ -28,3 +28,18 @@ test('probe deadline includes stalled response body and does not loop',async()=>
  ctx.setTimeout=(fn,ms)=>setTimeout(fn,ms===5000?2:ms);
  await ctx.clubProbeVideo(source,0,e=>events.push(e));assert.equal(calls,2);assert(events.every(e=>e.probe_result==='timeout'&&e.probe_phase==='playlist'));assert(events.every(e=>e.http===200));
 });
+test('HTTP 200 then 16 KiB stall is not a successful media route',async()=>{
+ const events=[];let calls=0;
+ const ctx=setup(async(url,opts)=>{
+  calls++;
+  if(url.includes('index.m3u8'))return response('#EXTM3U\n#EXTINF:4,\nsegment-00000.ts');
+  let first=true;
+  return {ok:true,status:200,body:{getReader:()=>({read:async()=>{
+   if(first){first=false;return {done:false,value:new Uint8Array(16384)};}
+   return new Promise((resolve,reject)=>opts.signal.addEventListener('abort',()=>reject(Error('aborted')),{once:true}));
+  },cancel:async()=>{}})}};
+ });
+ ctx.setTimeout=(fn,ms)=>setTimeout(fn,ms===5000?5:ms);
+ await ctx.clubProbeVideo(source,0,e=>events.push(e),true);
+ assert.equal(calls,2);assert.equal(events.length,1);assert.equal(events[0].probe_result,'timeout');assert.equal(events[0].probe_phase,'segment');assert.equal(events[0].http,200);assert.equal(events[0].probe_bytes,16384);
+});

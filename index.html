@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v620 -->
+<!-- FILE_VERSION: index-v621 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v620'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v621'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15138,9 +15138,9 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
         const reader=response.body.getReader();let data='',size=0;
         try{
           const decoder=playlist?new TextDecoder():null;
-          while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;
+          while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;bytes=size;
             if(playlist){if(size>524288){result='oversize';throw Error('oversize');}data+=decoder.decode(part.value,{stream:true});}
-            else if(size>=16384)break;
+            else if(size>=65536)break;
           }
           if(decoder)data+=decoder.decode();bytes=size;return data;
         }finally{reader.cancel().catch(()=>{});}
@@ -16274,7 +16274,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v620 · 14.11.2026 Маршруты видео';
+const APP_BUILD = 'v621 · 14.11.2026 Проверка передачи';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

@@ -66,9 +66,9 @@
         const reader=response.body.getReader();let data='',size=0;
         try{
           const decoder=playlist?new TextDecoder():null;
-          while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;
+          while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;bytes=size;
             if(playlist){if(size>524288){result='oversize';throw Error('oversize');}data+=decoder.decode(part.value,{stream:true});}
-            else if(size>=16384)break;
+            else if(size>=65536)break;
           }
           if(decoder)data+=decoder.decode();bytes=size;return data;
         }finally{reader.cancel().catch(()=>{});}
