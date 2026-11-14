@@ -7,7 +7,7 @@
       this.sourcesExpireAt=Date.now()+Math.max(60,Number(options.expiresIn)||14400)*1000-60000;this.refreshing=false;this.lastRefresh=0;
       this.sources=options.sources.filter(s=>/^https:\/\//.test(s.url));
       if(!this.sources.length)throw Error('No film sources');
-      this.diagStarted=false;this.diagWaiting=false;this.diagFrame=false;this.engine='unknown';
+      this.lifecycleReports=0;this.lateReports=0;this.diagStarted=false;this.diagWaiting=false;this.diagFrame=false;this.engine='unknown';
       this.index=-1;this.position=options.position||0;this.generation=0;
       this.wantsPlay=false;this.started=false;this.destroyed=false;this.exhausted=false;
       this.lastProgress=0;this.probed=false;this.milestones=0;this.quality='auto';this.failedSources=new Set();this.timer=null;this.helpTimer=null;
@@ -34,7 +34,7 @@
         this.botFallback.hidden=true;this.wrapper.append(this.botFallback);
       }
       this.wrapper.append(this.notice,this.start);slot.replaceChildren(this.wrapper,this.help);
-      this.visibilityHandler=()=>{this.clearTimers();if(!document.hidden&&this.wantsPlay)this.arm();};
+      this.visibilityHandler=()=>{this.lifecycle(document.hidden?'visibility_hidden':'visibility_visible');this.clearTimers();if(!document.hidden&&this.wantsPlay)this.arm();};
       document.addEventListener('visibilitychange',this.visibilityHandler);
       this.switchSource(false);
     }
@@ -46,6 +46,8 @@
         server:root.clubMediaServer?root.clubMediaServer(this.sources[this.index]?.url):'unknown',position:Math.min(86400,Math.max(0,Math.round(this.position||0))),visible:!document.hidden,
         ready:v&&v.readyState||0,network:v&&v.networkState||0,quality:this.quality,...(root.clubVideoEvidence?root.clubVideoEvidence(v,this.sources[this.index],this.lastProgress):{}),...extra});}catch(e){}
     }
+    lifecycle(reason){if(this.lifecycleReports++<12)this.diagnostic('milestone',{reason});}
+    lateWatchdog(due){if(Date.now()>due+2000&&this.lateReports++<4)this.diagnostic('milestone',{reason:'watchdog_late'});}
     failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
     fault(code){
       if(code==='film_unavailable'&&!this.probed&&root.clubProbeVideo){
@@ -73,10 +75,12 @@
       if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden)return;
       // Preserve these deadlines through source changes: continuous waiting counts.
       if(!this.helpTimer&&this.retry.hidden){
+        const helpDue=Date.now()+(this.options.helpMs||10000);
         const helpTimer=setTimeout(()=>{
           if(this.helpTimer!==helpTimer)return;
           this.helpTimer=null;
           if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden||this.sampleProgress())return;
+          this.lateWatchdog(helpDue);
           this.retry.hidden=false;this.fault('film_stall');
         },this.options.helpMs||10000);
         this.helpTimer=helpTimer;
@@ -87,7 +91,7 @@
       const lastCandidate=this.failedSources.size>=this.sources.length-1;
       const wait=this.options.stallMs||(this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
       if(!this.timer){
-        const armedAt=Date.now();let timer;
+        const armedAt=Date.now();let due=armedAt+wait,timer;
         const check=()=>{
           if(this.timer!==timer)return;
           this.timer=null;
@@ -98,8 +102,9 @@
           const remaining=20000-(Date.now()-armedAt);
           if(!this.options.stallMs&&wait<20000&&remaining>0&&this.engine==='native'&&
              this.failedSources.size>=this.sources.length-1&&this.video.readyState<3&&this.video.networkState===2){
-            timer=setTimeout(check,remaining);this.timer=timer;return;
+            due=Date.now()+remaining;timer=setTimeout(check,remaining);this.timer=timer;return;
           }
+          this.lateWatchdog(due);
           this.failure('progress_timeout');this.switchSource(false);
         };
         timer=setTimeout(check,wait);
@@ -185,7 +190,7 @@
       });
       on('durationchange',restorePosition);
       on('canplay',restorePosition);
-      on('play',()=>{this.wantsPlay=true;this.arm();});
+      on('play',()=>{this.lifecycle('play_requested');this.wantsPlay=true;this.arm();});
       on('playing',()=>{
         this.started=true;v.controls=true;this.start.hidden=true;this.start.disabled=false;
         this.wantsPlay=true;this.status('');this.emit('play');this.progress();
@@ -193,7 +198,7 @@
       on('timeupdate',()=>this.sampleProgress());
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
       on('seeking',()=>{if(!this.resumePending)this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
-      on('pause',()=>{if(!v.paused||v.error)return;this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
+      on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
       on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
       const source=this.sources[this.index];

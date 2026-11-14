@@ -25,7 +25,8 @@ test('API timeout also covers a stalled response body',async()=>{
  await assert.rejects(c.apiRequest('https://api.test',{},15),{name:'AbortError'});
 });
 test('concurrent failed API reads share one health request, without caching replication state',async()=>{
- const core=slice('(function(root){','window.__rfTransport=createRFParallelTransport');
+ const end=html.indexOf('window.__rfTransport=createRFParallelTransport');
+ const core=html.slice(html.lastIndexOf('(function(root){',end),end);
  let checks=0;const c={module:{exports:{}},URL,Request,Response,Headers,AbortController,DOMException,setTimeout,clearTimeout,Date};vm.createContext(c);vm.runInContext(core,c);
  const transport=c.module.exports.createRFParallelTransport({endpoints:['https://primary.test','https://reserve.test'],fetch:async(url)=>{if(url.includes('readiness')){checks++;await new Promise(r=>setTimeout(r,10));return new Response(JSON.stringify({protocol:2,ready:true,node:'timeweb',own_seq:1,peer_seq:1}))}return new Response('{}',{status:url.includes('primary')?503:200})}});
  await Promise.all(Array.from({length:10},()=>transport.request('https://primary.test/users/me')));assert.equal(checks,1);

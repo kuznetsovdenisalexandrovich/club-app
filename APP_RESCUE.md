@@ -61,3 +61,7 @@ Probe reason sample_low satisfies the API letters/underscore contract; sample_36
 was rejected422 and dropped by legacy-schema fallback. Keep quality360 separately.
 APP_BUILD aligned with app-v612. This repairs proven defects, not proof of the
 historical iPhone user's transport/decoder root cause. No extra retries or user sends.
+
+2026-11-14 v618: bounded diagnostic-only milestones play_requested/paused/visibility_hidden/visibility_visible (12/player), watchdog_late (>2s past its scheduled deadline,4/player). Playback timing, pause handling, failover and emergency delivery unchanged. Profile request vs render failures: at most2/page, enum/status only, authenticated backend diagnostics branch with no marketing or account side effects. Historical f2e47c804c root cause remains unresolved; lastProgress age alone cannot distinguish pause from suspended JS.
+
+2026-11-14 v618 parser dependency fix: meeting-recordings.css/js, player-diagnostics.js and film-player.js are embedded byte-for-byte at their original positions. Keep canonical external files and parity test; do not change order. Browser fault injection proved any one of the4 separate requests could block main afterSDK; embedded build reaches main with all4requests unavailable. This identifies a reproducible startup failure class, not proof of the network cause for historicalmeeting_31. HTML +~36KB (~1.2%). Playback decisions unchanged.
