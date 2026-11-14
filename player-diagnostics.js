@@ -46,12 +46,12 @@
   }
   // One comparison after final failure, never on the healthy playback path.
   // Samples 360p at the saved position; it is NOT the native player's HTTP result.
-  root.clubProbeVideo=async function(source,position,emit){
+  root.clubProbeVideo=async function(source,position,emit,singleRoute=false){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;
     const original=new URL(source.lowUrl);
     if(!/^\/media\/(?:(?:bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
     const plans=[original];
-    if(original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
+    if(!singleRoute&&original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
     for(const plan of plans){
       let phase='playlist',http=0,bytes=0,server=mediaHost(plan.href),result='network';
       const start=Date.now(),ctrl=new root.AbortController();let timedOut=false;

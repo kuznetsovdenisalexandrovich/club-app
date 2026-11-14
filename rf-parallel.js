@@ -100,7 +100,7 @@ function createRFParallelTransport(config){
         if(!ready||(target===0&&ready.peer_seq<returnBarrier)){fail();return;}
         send(target);
       };
-      deadline=setTimeout(abort,config.readTimeoutMs||7000);
+      deadline=setTimeout(abort,config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000));
       timer=setTimeout(startOther,config.hedgeMs||900);
       send(origin);
     });

@@ -55,8 +55,13 @@
     failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
     fault(code){
       if(code==='film_unavailable'&&!this.probed&&root.clubProbeVideo){
-        this.probed=true;const source=this.sources[this.index],position=this.position,index=this.index;
-        Promise.resolve().then(()=>root.clubProbeVideo(source,position,event=>{this.diagnostic('probe',{...event,source:index,server:root.clubMediaServer?root.clubMediaServer(source?.url||''):'unknown',position:Math.min(86400,Math.max(0,Math.round(position||0)))});})).catch(()=>{});
+        this.probed=true;const position=this.position;
+        // Compare independent routes once, in parallel, instead of sampling only the last failure.
+        const seen=new Set();
+        this.sources.slice(0,3).forEach((source,index)=>{
+          if(!source.lowUrl||seen.has(source.lowUrl))return;seen.add(source.lowUrl);
+          Promise.resolve().then(()=>root.clubProbeVideo(source,position,event=>{this.diagnostic('probe',{...event,source:index,server:root.clubMediaServer?root.clubMediaServer(source.url):'unknown',position:Math.min(86400,Math.max(0,Math.round(position||0)))});},true)).catch(()=>{});
+        });
       }
       this.diagWaiting=true;this.diagnostic(code==='film_unavailable'?'unavailable':'stall');try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
     statusText(text){this.notice.textContent=text;}

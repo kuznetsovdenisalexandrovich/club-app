@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v619 -->
+<!-- FILE_VERSION: index-v620 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v619'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v620'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15118,12 +15118,12 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   }
   // One comparison after final failure, never on the healthy playback path.
   // Samples 360p at the saved position; it is NOT the native player's HTTP result.
-  root.clubProbeVideo=async function(source,position,emit){
+  root.clubProbeVideo=async function(source,position,emit,singleRoute=false){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;
     const original=new URL(source.lowUrl);
     if(!/^\/media\/(?:(?:bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
     const plans=[original];
-    if(original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
+    if(!singleRoute&&original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
     for(const plan of plans){
       let phase='playlist',http=0,bytes=0,server=mediaHost(plan.href),result='network';
       const start=Date.now(),ctrl=new root.AbortController();let timedOut=false;
@@ -15263,8 +15263,13 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
     fault(code){
       if(code==='film_unavailable'&&!this.probed&&root.clubProbeVideo){
-        this.probed=true;const source=this.sources[this.index],position=this.position,index=this.index;
-        Promise.resolve().then(()=>root.clubProbeVideo(source,position,event=>{this.diagnostic('probe',{...event,source:index,server:root.clubMediaServer?root.clubMediaServer(source?.url||''):'unknown',position:Math.min(86400,Math.max(0,Math.round(position||0)))});})).catch(()=>{});
+        this.probed=true;const position=this.position;
+        // Compare independent routes once, in parallel, instead of sampling only the last failure.
+        const seen=new Set();
+        this.sources.slice(0,3).forEach((source,index)=>{
+          if(!source.lowUrl||seen.has(source.lowUrl))return;seen.add(source.lowUrl);
+          Promise.resolve().then(()=>root.clubProbeVideo(source,position,event=>{this.diagnostic('probe',{...event,source:index,server:root.clubMediaServer?root.clubMediaServer(source.url):'unknown',position:Math.min(86400,Math.max(0,Math.round(position||0)))});},true)).catch(()=>{});
+        });
       }
       this.diagWaiting=true;this.diagnostic(code==='film_unavailable'?'unavailable':'stall');try{if(this.options.onFault)this.options.onFault(code);}catch(e){}}
     statusText(text){this.notice.textContent=text;}
@@ -15888,7 +15893,7 @@ function createRFParallelTransport(config){
         if(!ready||(target===0&&ready.peer_seq<returnBarrier)){fail();return;}
         send(target);
       };
-      deadline=setTimeout(abort,config.readTimeoutMs||7000);
+      deadline=setTimeout(abort,config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000));
       timer=setTimeout(startOther,config.hedgeMs||900);
       send(origin);
     });
@@ -16269,7 +16274,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v619 · 14.11.2026 Другой плеер';
+const APP_BUILD = 'v620 · 14.11.2026 Маршруты видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -33379,9 +33384,22 @@ function filmNativeDispose(){
 }
 
 function preferredFilmSources(sources){
+  // A storage-domain failure must have a same-region API path before the foreign mirror.
+  const routes=[];
+  for(const source of sources){
+    routes.push(source);
+    try{
+      const url=new URL(source.url),low=new URL(source.lowUrl);
+      if(source.delivery!=='direct'||source.storage!=='selectel_storage'||url.searchParams.get('direct')!=='1')continue;
+      if(!['selectel-api.youselllikeagod-magazine.ru','api.youselllikeagod-magazine.ru'].includes(url.hostname)||low.origin!==url.origin)continue;
+      if(!/^\/media\/hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/0\/master\.m3u8$/.test(url.pathname))continue;
+      url.searchParams.delete('direct');low.searchParams.delete('direct');
+      if(!sources.some(x=>x.url===url.href))routes.push({...source,url:url.href,lowUrl:low.href,delivery:'proxy'});
+    }catch(e){}
+  }
   const active=window.__rfTransport && window.__rfTransport.state().active;
-  if(active!=='timeweb')return sources;
-  return sources.slice().sort((a,b)=>Number(String(b.url).includes('twc1.net'))-Number(String(a.url).includes('twc1.net')));
+  if(active!=='timeweb')return routes;
+  return routes.slice().sort((a,b)=>Number(String(b.url).includes('twc1.net'))-Number(String(a.url).includes('twc1.net')));
 }
 
 function startFunnelFilm(){

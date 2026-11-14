@@ -30,3 +30,12 @@ test('unready replica cannot supply a media manifest',async()=>{
  const calls=[];const transport=setup(async(url,opts)=>{calls.push(url);if(url.includes('/rf/readiness'))return json({protocol:2,ready:false,node:'timeweb',own_seq:1,peer_seq:1});return pending(opts.signal);},{readTimeoutMs:40});
  await assert.rejects(transport.request('https://primary.test/media/bonus/a/b'),{name:'AbortError'});assert(!calls.some(u=>u.includes('reserve.test/media/')));
 });
+test('slow film manifest survives the former seven-second transport cutoff',async()=>{
+ const c={module:{exports:{}},URL,Request,Response,Headers,AbortController,DOMException,Date,crypto:require('node:crypto').webcrypto,clearTimeout,setTimeout:(fn,ms)=>setTimeout(fn,ms>=7000?ms/100:ms)};
+ vm.createContext(c);vm.runInContext(core,c);
+ const transport=c.module.exports.createRFParallelTransport({endpoints:['https://primary.test','https://reserve.test'],timeoutMs:15,hedgeMs:5,fetch:async(url,options)=>{
+  if(url.includes('/rf/readiness'))return json({ready:false});
+  return new Promise((resolve,reject)=>{const timer=setTimeout(()=>resolve(json({film:'fixture',sources:[]})),85);options.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));},{once:true});});
+ }});
+ assert.equal((await (await transport.request('https://primary.test/media/film')).json()).film,'fixture');
+});
