@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v614 -->
+<!-- FILE_VERSION: index-v615 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v614'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v615'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15798,7 +15798,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v614 · 14.11.2026 Материалы игр';
+const APP_BUILD = 'v615 · 14.11.2026 Доступы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17924,6 +17924,7 @@ async function loadProfile() {
     try { applyGodSign(); } catch(e){}
     const prevRewardLevel = rewardLevel;
     rewardLevel = u.reward_level || 3;
+    pdfManualUnlocked = u.pdf_manual_unlocked === true;
     lifetimePoints = u.lifetime_points || 0;
     nextLevelPoints = u.next_level_points ?? null;
     pointsToNext = u.points_to_next ?? null;
@@ -22331,6 +22332,7 @@ let hasPushSubscription = false;
 let notifyChannel = 'both';   // слой 1: bot | push | both
 let notifyCards   = true;     // слой 2: тип «подарочные карточки»
 let rewardLevel = 3;
+let pdfManualUnlocked = false;
 let levelUpShownThisSession = false;  // поздравление с уровнем — один раз за сессию
 let lifetimePoints = 0;
 let nextLevelPoints = null;
@@ -23985,6 +23987,7 @@ async function refreshOnboardStatus(){
     notifyCards = (u.notify_cards === undefined) ? true : !!u.notify_cards;
     vkAccessGranted = !!u.vk_access_granted;
       rewardLevel = u.reward_level || 3;
+    pdfManualUnlocked = u.pdf_manual_unlocked === true;
       lifetimePoints = u.lifetime_points || 0;
       nextLevelPoints = u.next_level_points ?? null;
       pointsToNext = u.points_to_next ?? null;
@@ -27346,7 +27349,7 @@ function lecCardHtml(l, i, src, fopts){
     ? `alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂')`
     : `openLectureLink(${i},'vk',${jsArg(src)})`;
   // Уровень копится только у участников, поэтому демо им не ограничиваем
-  const insightsLevelLocked = isMember && rewardLevel < (appSettings.insights_unlock_level || 2);
+  const insightsLevelLocked = insightsLevelIsLocked();
   // Для кнопки "Главные идеи" замок только по уровню, не по членству
   const insightsLocked = tourLocked || insightsLevelLocked;
   const insightsLockCls = insightsLocked ? ' locked' : '';
@@ -30111,6 +30114,12 @@ function openUrl(url) {
   try { location.href = url; } catch (e) {}
 }
 
+function insightsLevelIsLocked(){
+  return isMember && rewardLevel < (appSettings.insights_unlock_level || 2);
+}
+function pdfAccessAllowed(){
+  return isMember && (pdfManualUnlocked || rewardLevel >= (appSettings.pdf_unlock_level || 3));
+}
 function openInsightsLevelLockNotice(){
   const need = appSettings.insights_unlock_level || 2;
   document.getElementById('insights-lock-text').textContent =
@@ -30122,6 +30131,11 @@ function closeInsightsLevelLockNotice(){
 }
 
 function openInsightsModal(index, src){
+  if(isMember && tourActive){
+    alert('Ссылки откроются сразу после того, как закончишь знакомство с приложением 🙂');
+    return;
+  }
+  if(insightsLevelIsLocked()){openInsightsLevelLockNotice();return;}
  if(typeof pdFeatureOpened==='function')pdFeatureOpened('insights');
   // Демо-пользователя пускаем: выжимка — это как раз то, чем он прогревается.
   // Видео и PDF внутри попапа для него закрыты.
@@ -30171,9 +30185,11 @@ function _renderPdfBtn(slug) {
   const pdfLevel = appSettings.pdf_unlock_level || 3;
   const curLevel = rewardLevel || 0;
   // Для демо-пользователей PDF всегда заблокирован
-  const locked = !isMember || curLevel < pdfLevel;
+  const locked = !pdfAccessAllowed();
   if (locked) {
-    pdfEl.innerHTML = `<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с ${pdfLevel} уровня)</button>`;
+    pdfEl.innerHTML = isMember
+      ? `<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPdfLockNotice(${pdfLevel})">Скачать выжимку (с ${pdfLevel} уровня)</button>`
+      : '<button class="lec-link-btn" style="width:100%;opacity:.5;cursor:pointer" onclick="openPaywall()">PDF-выжимки — участникам клуба</button>';
   } else {
     pdfEl.innerHTML = `<button class="lec-link-btn access-btn" style="width:100%" data-slug="${slug}" onclick="downloadPdf('${slug}', this)">Скачать выжимку</button>`;
   }
@@ -30200,6 +30216,11 @@ function closePdfLockNotice(){
    пропадал с «что-то пошло не так». Ссылку открываем ВТОРЫМ касанием: после
    ожидания ответа сервера окно без жеста пальца встроенный браузер ВК блокирует */
 async function downloadPdf(slug, btn){
+  if(!pdfAccessAllowed()){
+    if(!isMember)openPaywall();
+    else openPdfLockNotice(appSettings.pdf_unlock_level || 3);
+    return;
+  }
   if (btn.dataset.pdfUrl){ openUrl(btn.dataset.pdfUrl); return; }
   const orig = btn.textContent;
   const viaLink = (typeof isInsideVk === 'function' && isInsideVk()) || !hasRealTg();
