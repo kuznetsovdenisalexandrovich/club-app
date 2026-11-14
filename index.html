@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v609 -->
+<!-- FILE_VERSION: index-v610 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v609'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v610'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -35764,6 +35764,7 @@ let codeSendAttempts = 0;
 let loginRoute = '';
 let loginChannelLabels = [];
 let loginDeliveryGeneration = 0;
+let loginCodeRequestPending = false;
 let loginDeliveryState = 'sent';
 
 /* Откуда человек входит прямо сейчас. Внутри Telegram платформа известна сразу,
@@ -36062,6 +36063,8 @@ async function waitLoginDelivery(ticket, generation){
   }
 }
 async function sendBotCode(){
+  if (loginCodeRequestPending) return;
+  loginCodeRequestPending = true;
   const generation = ++loginDeliveryGeneration;
   setLoginError('');
   const btn = document.getElementById('web-login-btn');
@@ -36088,6 +36091,7 @@ async function sendBotCode(){
   } catch (e) {
     setLoginError(e.message);
   } finally {
+    loginCodeRequestPending = false;
     btn.disabled = false;
   }
 }

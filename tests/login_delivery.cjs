@@ -5,3 +5,10 @@ test('pending delivery is bounded and never announced as sent',async()=>{const {
 test('stale poll cannot overwrite new attempt or completed login',async()=>{const {c,nodes,calls}=setup(c=>{c.loginDeliveryGeneration++;return {status:'sent',sent:true,labels:['Telegram']}});await c.waitLoginDelivery('old',1);assert.equal(calls.length,1);assert(!nodes['web-login-subtitle'])});
 test('confirmed receipt stops polling and names only confirmed channel',async()=>{const {c,nodes,calls}=setup({status:'sent',sent:true,labels:['ВКонтакте']});await c.waitLoginDelivery('receipt',1);assert.equal(calls.length,1);assert(nodes['web-login-subtitle'].textContent.startsWith('Код отправлен в ВКонтакте.'))});
 test('help is text and links are restricted to public bot destinations',()=>{const {c,nodes}=setup({});c.loginDeliveryHelp({help:[{text:'<img onerror=alert(1)>',url:'javascript:alert(1)'},{text:'Allow',url:'https://vk.me/club123',label:'Open'}]});const items=nodes['login-delivery-help'].children;assert.equal(items.length,3);assert.equal(items[0].textContent,'<img onerror=alert(1)>');assert.equal(items[2].href,'https://vk.me/club123')});
+test('double resend tap shares the in-flight request and releases the guard',async()=>{
+ const {c}=setup({});let calls=0,release;const gate=new Promise(r=>release=r);
+ Object.assign(c,{loginCodeRequestPending:false,loginPhone:'79990000001',codeSendAttempts:0,currentPlatform:()=> 'tg',currentPlatformId:()=>77,renderLoginStage:()=>{},fetch:async()=>{calls++;await gate;return {ok:true,json:async()=>({sent:true,status:'sent',labels:['ВКонтакте']})}}});
+ vm.runInContext(html.slice(html.indexOf('async function sendBotCode(){'),html.indexOf('async function verifyBotCode()')),c);
+ const first=c.sendBotCode();await c.sendBotCode();assert.equal(calls,1);assert.equal(c.loginCodeRequestPending,true);
+ release();await first;assert.equal(c.loginCodeRequestPending,false);await c.sendBotCode();assert.equal(calls,2);
+});
