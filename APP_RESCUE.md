@@ -65,3 +65,12 @@ historical iPhone user's transport/decoder root cause. No extra retries or user 
 2026-11-14 v618: bounded diagnostic-only milestones play_requested/paused/visibility_hidden/visibility_visible (12/player), watchdog_late (>2s past its scheduled deadline,4/player). Playback timing, pause handling, failover and emergency delivery unchanged. Profile request vs render failures: at most2/page, enum/status only, authenticated backend diagnostics branch with no marketing or account side effects. Historical f2e47c804c root cause remains unresolved; lastProgress age alone cannot distinguish pause from suspended JS.
 
 2026-11-14 v618 parser dependency fix: meeting-recordings.css/js, player-diagnostics.js and film-player.js are embedded byte-for-byte at their original positions. Keep canonical external files and parity test; do not change order. Browser fault injection proved any one of the4 separate requests could block main afterSDK; embedded build reaches main with all4requests unavailable. This identifies a reproducible startup failure class, not proof of the network cause for historicalmeeting_31. HTML +~36KB (~1.2%). Playback decisions unchanged.
+
+2026-11-14 v622: shared native video sizing now fills its media rectangle with
+object-fit:contain, including library bonus items (previously only funnel and
+meeting contexts constrained the actual video). Library native slots keep help
+in normal flow outside the media rectangle; vertical/horizontal wrappers retain
+9:16/16:9 and fit viewport width/height. Expanded help no longer clips or overlaps
+the title. No source, watchdog, authorization or delivery behavior changed.
+Verified old CSS overflow, 20 library viewport/theme/orientation layouts, existing
+player/rescue/meeting tests and full funnel fallback browser checks.
