@@ -74,3 +74,11 @@ in normal flow outside the media rectangle; vertical/horizontal wrappers retain
 the title. No source, watchdog, authorization or delivery behavior changed.
 Verified old CSS overflow, 20 library viewport/theme/orientation layouts, existing
 player/rescue/meeting tests and full funnel fallback browser checks.
+
+2026-11-14 v623: compact guest film window reduces the unused space below hidden
+help (36px visual gap to the primary action) and scales the video down on short
+viewports. Visible recovery actions retain their reserved row. Native video
+controls remain unchanged; no custom seek/fullscreen controls were shipped.
+Six short-window/theme browser checks keep the primary action fully visible and
+exercise manual/automatic fallback. OS fullscreen in macOS Telegram remains
+unconfirmed; do not claim this layout change enables it.

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v622 -->
+<!-- FILE_VERSION: index-v623 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v622'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v623'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -6916,9 +6916,11 @@ dialog.native-film-expanded{position:fixed;inset:0;box-sizing:border-box;width:1
 .native-film-bot{display:block;width:100%;padding:12px 16px;margin-top:10px;font-weight:700!important}.native-film-bot[hidden]{display:none!important}
 .native-film-option{min-height:44px;border:1px solid #ded6ce;border-radius:10px;background:var(--card2,#fff9);color:var(--text,#302b29);font:inherit;font-size:14px;cursor:pointer}
 #funnel-screen #funnel-film-slot:has(.native-film){margin-bottom:48px}
+#funnel-screen #funnel-film-slot:has(.native-film):not(:has(.native-film-help > button:not([hidden]))){margin-bottom:12px}
 /* Legacy fallback sits after the fixed-height iframe: reserve its own row so it cannot cover purchase actions. */
 #funnel-screen:not(.pip-mode) .film-dock:has(#funnel-film-slot > .native-film-bot:not([hidden])){padding-bottom:64px}
 #funnel-screen.pip-mode .native-film-help{display:none}
+@media(max-height:760px){#funnel-screen:not(.pip-mode) .funnel-film,#funnel-screen:not(.pip-mode) .funnel-film-slot{height:min(52vh,calc(100dvh - 264px));min-height:150px}}
 
 #funnel-screen.pip-mode .native-film-retry{display:none}
 
@@ -16280,7 +16282,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v622 · 14.11.2026 Размеры видео';
+const APP_BUILD = 'v623 · 14.11.2026 Компактное окно фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
