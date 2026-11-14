@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v624 -->
+<!-- FILE_VERSION: index-v625 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v624'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v625'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -9744,6 +9744,7 @@ function closeMeetingRecording(){
  if(meetingPreviousFocus?.isConnected)meetingPreviousFocus.focus();meetingPreviousFocus=null;
 }
 async function openMeetingRecording(id){
+ if(typeof isMember!=='undefined'&&!isMember&&!(typeof isPaused!=='undefined'&&isPaused)){openPaywall();return;}
  closeMeetingRecording();const gen=meetingGeneration;
  id=Number(id);if(!Number.isSafeInteger(id)||id<=0)return;
  if(window.ClubAppRescue)ClubAppRescue.target('meeting_'+id);
@@ -16289,7 +16290,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v624 · 14.11.2026 Штатный плеер на Mac';
+const APP_BUILD = 'v625 · 14.11.2026 Демо после фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16814,7 +16815,7 @@ function switchView(name) {
   if (tabEl) tabEl.classList.add('active');
   if (name === 'library' && !allLectures.length) openLibraryFirstTime();
   if (name === 'library') renderFreeDemo();   // v388: участником мог стать между заходами
-  if (name === 'portal') loadPortalData();
+  if (name === 'portal') { if(filmBrowseDeferred())loadFilmBrowseData();else loadPortalData(); }
   if (name === 'cards') {
     renderCardsAlbum();
     // Отмечаем увиденное только после отрисовки, иначе метки погаснут
@@ -19577,6 +19578,7 @@ let homeMovedLoaded = false;
 const HOME_MOVED_TRIES = 40;      // ~12 секунд ожидания авторизации, дальше сдаёмся
 
 function homeEnsureMovedLoaded(){
+  if (filmBrowseDeferred()) return;
   const moved = LIB_DEFAULT.some(function(k){ return homeOrder.indexOf(k) !== -1; });
   if (!moved || homeMovedLoaded) return;
   homeMovedLoaded = true;
@@ -19584,6 +19586,7 @@ function homeEnsureMovedLoaded(){
 }
 
 async function homeLoadMovedData(tries){
+  if (filmBrowseDeferred()){homeMovedLoaded=false;return;}
   // Ждём, пока приложение узнает, кто пользователь: без telegramId запросы
   // за ответами анкеты возвращаются пустыми и блок остаётся ни с чем
   if (!telegramId){
@@ -32638,7 +32641,6 @@ function openDayPopup(dateStr){
       <div class="sched-event-title">${e.title}</div>
       ${e.description ? `<div class="sched-event-desc">${e.description}</div>` : ''}
       ${schedEventActionsHtml(e, i, dateStr)}
-      ${!isMember ? `<div style="margin-top:8px;text-align:center"><span style="font-size:13px;color:var(--warm);cursor:pointer;text-decoration:underline" onclick="openPaywall()">Попасть на занятие</span></div>` : ''}
     </div>`).join('');
   /* Записи с этого дня — отдельным блоком под встречами. Их может не быть
      вовсе (будущий день), могут быть без встречи в списке (категория
@@ -32695,9 +32697,9 @@ function schedEventKey(e){
 }
 function schedEventActionsHtml(e, i, dateStr){
   if (!e) return '';
+  if (!isMember && !(e.replay_state && typeof isPaused!=='undefined' && isPaused)) return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn locked" onclick="openPaywall()">${e.replay_state ? 'Смотреть запись' : 'Попасть на занятие'}</button></div>`;
   if(e.replay_state)return `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openMeetingRecording(${Number(e.id)})">Смотреть запись</button></div>`;
   if(e.meeting_finished)return '';
-  if (!isMember) return e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn locked" onclick="openPaywall()">🔒 Перейти</button></div>` : '';
   var w = schedEventWindow(e, dateStr), key = schedEventKey(e), now = Date.now();
   // Нет времени или не понять, что за событие, — как раньше: ссылка, если есть
   if (!w || !key) return e.link ? `<div class="lec-links" style="margin-top:10px"><button class="lec-link-btn" onclick="openUrl(popupDayEvents[${i}].link)">Перейти</button></div>` : '';
@@ -33317,7 +33319,7 @@ function showFunnelScreen(){
   if (!isMember){
     const shellEl = document.getElementById('app-shell');
     const shellHidden = !shellEl || shellEl.style.display === 'none' || shellEl.style.display === '';
-    if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
+    if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode({deferContent:true});
   }
   /* ⚠️ ПЛЕЕР СТАВИМ СРАЗУ (14.08.2026). Свой постер с кнопкой был нужен, пока
      я собирался запускать фильм командой — тогда наш клик имел смысл. Теперь
@@ -33832,6 +33834,7 @@ function funnelMinimize(){
      видео в pip и оставлять человека в покое» — приглашение в тур переехало
      в плашку на главной, где его выбирают сами */
   funnelLeave(true);        // сам решит: PiP или полная остановка
+  loadFilmBrowseData();
 }
 
 /* Тап по PiP — развернуть окно фильма обратно. Слой воронки и так открыт
@@ -34193,7 +34196,7 @@ function startStoragePollOnce(){
 /* v394: признак демо. Сервер знает человека по telegram_id, и без признака
    участник в демо видел бы свою карту участника вместо гостевой */
 var appDemoMode = false;
-function enterDemoMode(){
+function enterDemoMode(options){
   if(window.ClubAppRescue)ClubAppRescue.mark('guest');
   appDemoMode = true;
   // Карта за тест могла закэшироваться до входа в демо — участницкой
@@ -34217,15 +34220,8 @@ function enterDemoMode(){
   document.getElementById('tabbar').style.display = 'flex';
   hideSplash();
   applyDebugMode();
-  // Загружаем только то что НЕ требует telegram_id
   loadAppSettings();
-  loadStreams();
-  loadLibrary();
-  loadWidgetMonth();
-  // Карточки грузим и в демо: у гостя уже может быть карта «Пролога» за тест,
-  // и она должна мозолить глаз, а не ждать оплаты, чтобы показаться
-  loadCards();
-  loadRaffle();
+  if (!options || !options.deferContent) loadFilmBrowseData();
   sendSellerTouch();
   track('app_open', 'demo');
   renderDemoBanner();
@@ -35578,6 +35574,18 @@ function loadPortalData(){
   if(!portalInitialized)jobs.push(loadSavedSlugs(),loadCards(),loadDigestBlock(),loadStories());
   portalDataPending=Promise.allSettled(jobs).finally(()=>{portalInitialized=true;portalDataPending=null;});
   return portalDataPending;
+}
+// Populate the real app only when the viewer leaves the focused film window.
+function filmBrowseDeferred(){
+  return !window.clubFilmBrowseRequested && /^(?:film(?:_|$)|(?:ig|tt|yt|tg|vk|web|email)_film$|namedfilm_v[0-9]+$)/.test(appStartParamRaw());
+}
+let filmBrowsePending=null;
+function loadFilmBrowseData(){
+  window.clubFilmBrowseRequested=true;
+  if(filmBrowsePending)return filmBrowsePending;
+  filmBrowsePending=Promise.allSettled([loadPortalData(),loadStreams(),loadLibrary()])
+    .finally(()=>{filmBrowsePending=null;});
+  return filmBrowsePending;
 }
 function bootNeedsPortal(){
   const target=appStartParamRaw();

@@ -18,6 +18,7 @@ function closeMeetingRecording(){
  if(meetingPreviousFocus?.isConnected)meetingPreviousFocus.focus();meetingPreviousFocus=null;
 }
 async function openMeetingRecording(id){
+ if(typeof isMember!=='undefined'&&!isMember&&!(typeof isPaused!=='undefined'&&isPaused)){openPaywall();return;}
  closeMeetingRecording();const gen=meetingGeneration;
  id=Number(id);if(!Number.isSafeInteger(id)||id<=0)return;
  if(window.ClubAppRescue)ClubAppRescue.target('meeting_'+id);

@@ -93,3 +93,14 @@ Fullscreen is separate: installed Telegram 7.4.4 pins lib_webview 0948a2996df173
 which does not enable WKPreferences.elementFullscreenEnabled. System default
 measured false on macOS 27.2.1. This frontend change does not enable host-level
 fullscreen and is not evidence about historical VPN playback incidents.
+
+2026-11-14 v625: film-target startup keeps portal/catalog deferred, including
+library blocks moved onto home. Minimizing the film or explicitly browsing home
+starts one shared in-flight hydration of portal, streams and library; the existing
+video element stays in PiP. A hidden-shell film entry uses deferContent demo setup;
+normal demo entry loads the real portal too. Public calendar event titles remain
+visible and each guest event/replay offers a paywall button even without a join
+URL. Direct guest replay entry opens paywall before protected requests; paused
+members retain the existing server-checked recording route. No access grants or
+backend projection changes. 28 tests plus four full browser flows (two widths,
+two themes) cover deferred requests, PiP identity, catalog, previews and paywalls.
