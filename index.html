@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v642'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v643'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -13474,7 +13474,7 @@ body.fo-on #fo-bar{display:block}
 
 
 @media(max-width:480px){
-  
+
   .gg-topbar{height:64px}.gg-exit{padding:10px 14px;font-size:14px}.gg-title{font-size:16px}.gg-turn{font-size:12px}
   .gg-arbiter{grid-template-columns:100px 1fr;gap:14px;min-height:198px;padding:20px 18px}
   .gg-robot{width:94px}.gg-robot-wrap::before{width:104px;height:104px}
@@ -15142,7 +15142,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     try{
       const url=new URL(source?.url||'');
       const host=mediaHost(url.href);
-      out.delivery=['selectel_storage','railway_storage'].includes(host)?'direct':/^\/media\/(?:(?:bonus|meeting)-)?hls\//.test(url.pathname)?(url.searchParams.get('direct')==='1'?'direct':'proxy'):'unknown';
+      out.delivery=['selectel_storage','railway_storage'].includes(host)?'direct':/^\/media\/(?:(?:film|bonus|meeting)-)?hls\//.test(url.pathname)?(url.searchParams.get('direct')==='1'?'direct':'proxy'):'unknown';
       if(['selectel_storage','railway_storage'].includes(host))out.media_server=host;
       if(out.delivery==='direct'&&['selectel_storage','railway_storage','other'].includes(source.storage))out.media_server=source.storage;
       const id=url.pathname.match(/\/([a-f0-9]{32})\/([a-f0-9]{16})\//);
@@ -15168,9 +15168,31 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     }catch(e){return 'unknown';}
   }
   root.clubMediaStorage=mediaHost;
+  // Public film catalog has no account/session/replication dependency.
+  root.clubPublicFilmManifest=async function(url,signal){
+    const requested=new URL(url);
+    if(requested.pathname!=='/media/film')throw Error('Invalid film manifest');
+    const controllers=[];
+    const abort=()=>controllers.forEach(c=>c.abort());
+    if(signal?.aborted)throw new DOMException('Aborted','AbortError');
+    signal?.addEventListener('abort',abort,{once:true});
+    try{
+      return await Promise.any(['https://selectel-api.youselllikeagod-magazine.ru','https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net'].map(async origin=>{
+        const controller=new AbortController();controllers.push(controller);
+        const timer=setTimeout(()=>controller.abort(),12000);
+        try{
+          const response=await probeFetch(origin+requested.pathname+requested.search,{signal:controller.signal,credentials:'omit',cache:'no-store'});
+          const data=await response.json();
+          if(!response.ok)throw Object.assign(Error(String(data.detail||'Film catalog unavailable')),{status:response.status});
+          if(!Array.isArray(data.sources)||!data.sources.length)throw Error('Empty film catalog');
+          return {ok:true,status:200,url:origin+requested.pathname,json:async()=>data};
+        }finally{clearTimeout(timer);}
+      }));
+    }finally{abort();signal?.removeEventListener('abort',abort);}
+  };
   root.clubPublicFilmFetch=function(url,signal){
     const u=new URL(url);
-    if(!['selectel','timeweb'].includes(root.clubMediaServer(u.href))||!/^\/media\/(?:film-preload|film-start\/[a-f0-9]{32}\/[a-f0-9]{16}\/(?:360|720))$/.test(u.pathname))return Promise.reject(Error('Invalid public film preload'));
+    if(!['selectel','timeweb'].includes(root.clubMediaServer(u.href))||!/^\/media\/(?:film-preload|film-hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/(?:360|720)\/segment-[0-9]{5}\.ts)$/.test(u.pathname))return Promise.reject(Error('Invalid public film preload'));
     return probeFetch(u.href,{signal,credentials:'omit',cache:u.pathname==='/media/film-preload'?'default':'force-cache'});
   };
 
@@ -15182,7 +15204,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   root.clubProbeVideo=async function(source,position,emit,singleRoute=false){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;
     const original=new URL(source.lowUrl);
-    if(!/^\/media\/(?:(?:bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
+    if(!/^\/media\/(?:(?:film|bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
     const plans=[original];
     if(!singleRoute&&original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
     for(const plan of plans){
@@ -16366,7 +16388,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v642 · 15.11.2026 Предзагрузка начала фильма';
+const APP_BUILD = 'v643 · 15.11.2026 Свободная загрузка фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16426,7 +16448,7 @@ if (VIEW_TOKEN){
 async function refreshFilmSources(url){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
   try{
-    const r=await fetch(url,{signal:controller.signal,cache:'no-store'});
+    const r=window.clubPublicFilmManifest&&new URL(url).pathname==='/media/film'?await window.clubPublicFilmManifest(url,controller.signal):await fetch(url,{signal:controller.signal,cache:'no-store'});
     if(!r.ok)throw Object.assign(new Error('manifest'),{status:r.status});
     return await r.json();
   }finally{clearTimeout(timer);}
@@ -33493,25 +33515,28 @@ function preloadClubFilmStart(){
   if(filmStartPreload||!window.clubPublicFilmFetch||navigator.connection?.saveData)return;
   if(typeof appSettings!=='undefined'&&(appSettings.film_delivery_native===false||appSettings.film_delivery_native==='0'))return;
   const controller=new AbortController(),state={controller,complete:false,film:''};filmStartPreload=state;
-  const timer=setTimeout(()=>controller.abort(),12000);
+
   // Only route-selected public editions, never the viewer name or account data.
   const query=filmEdition()?'?edition='+encodeURIComponent(filmEdition()):filmNameKey()?'?video_key='+encodeURIComponent(filmNameKey()):'';
   (async()=>{
     const response=await clubPublicFilmFetch(API_URL+'/media/film-preload'+query,controller.signal);
     if(!response.ok)throw Error('preload unavailable');
     const data=await response.json();
-    if(!/^[a-f0-9]{32}$/.test(data.film)||!/^[a-f0-9]{16}$/.test(data.release)||!Array.isArray(data.urls)||data.urls.length!==2)throw Error('preload catalog');
+    if(!/^[a-f0-9]{32}$/.test(data.film)||!/^[a-f0-9]{16}$/.test(data.release)||!Array.isArray(data.urls)||!data.urls.length)throw Error('preload catalog');
     if(controller.signal.aborted)return;
     state.film=data.film;
-    await Promise.all(data.urls.map(async url=>{
-      if(!new URL(url).pathname.startsWith('/media/film-start/'+data.film+'/'+data.release+'/'))throw Error('preload scope');
-      const part=await clubPublicFilmFetch(url,controller.signal);
-      if(!part.ok||Number(part.headers.get('Content-Length'))>8*1024*1024)throw Error('preload size');
-      const reader=part.body.getReader();let bytes=0;
-      try{while(true){const chunk=await reader.read();if(chunk.done)break;bytes+=chunk.value.byteLength;if(bytes>8*1024*1024)throw Error('preload size');}}finally{reader.cancel().catch(()=>{});}
-    }));
+    for(const url of data.urls){
+      if(controller.signal.aborted)break;
+      if(!new URL(url).pathname.startsWith('/media/film-hls/'+data.film+'/'+data.release+'/0/'))throw Error('preload scope');
+      const timeout=setTimeout(()=>controller.abort(),15000);
+      try{
+        const part=await clubPublicFilmFetch(url,controller.signal);
+        if(!part.ok)throw Error('preload unavailable');
+        await part.arrayBuffer();
+      }finally{clearTimeout(timeout);}
+    }
     state.complete=true;
-  })().catch(()=>{controller.abort();if(filmStartPreload===state)filmStartPreload=null;}).finally(()=>clearTimeout(timer));
+  })().catch(()=>{controller.abort();if(filmStartPreload===state)filmStartPreload=null;});
 }
 let filmWarmupStarted=false;
 function prepareClubFilm(){
@@ -33549,7 +33574,7 @@ function filmContactName(){
   return filmVkNamePromise;
 }
 function filmManifestQuery(contactName){
-  const permission=(window.clubFilmLegalToken?'&legal_view='+encodeURIComponent(window.clubFilmLegalToken):'')+(typeof filmStartPreload!=='undefined'&&filmStartPreload?.film?'&warm_film='+filmStartPreload.film:'');
+  const permission='';
   if(filmEdition())return '?direct_capable=1&edition='+filmEdition()+permission;
   if(filmNameKey())return '?direct_capable=1&video_key='+filmNameKey()+permission;
   const name=contactName===undefined?(tgContactFields().tg_first_name||''):String(contactName||'');
@@ -33634,22 +33659,9 @@ function preferredFilmSources(sources){
 }
 
 async function fetchFilmManifest(url,options,onWaiting){
-  const until=Date.now()+8000;let retry=0;
-  while(true){
-    const response=await fetch(url,options);
-    if(response.status!==425||Date.now()>=until||retry>=5)return response;
-    if(onWaiting)onWaiting();
-    const delay=Math.min([500,1000,1500,2000,3000][retry++],until-Date.now());
-    await new Promise((resolve,reject)=>{
-      const signal=options.signal;let timer;
-      const cleanup=()=>{clearTimeout(timer);if(signal)signal.removeEventListener('abort',abort);};
-      const abort=()=>{cleanup();reject(new DOMException('Aborted','AbortError'));};
-      if(signal&&signal.aborted){abort();return;}
-      if(signal)signal.addEventListener('abort',abort,{once:true});
-      timer=setTimeout(()=>{cleanup();resolve();},delay);
-    });
-  }
+  return window.clubPublicFilmManifest(url,options.signal);
 }
+
 function filmPermissionWaiting(slot){
   if(slot.querySelector('.film-permission-wait'))return;
   const box=document.createElement('div');box.className='film-permission-wait';box.setAttribute('role','status');box.setAttribute('aria-live','polite');
@@ -33674,6 +33686,7 @@ function startFunnelFilm(){
   let manifestStatus=0,manifestServer='unknown';
   // Allow the API to try both storage copies before abandoning the manifest.
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
+  stopClubFilmPreload();
   Promise.all([filmEngineReady(), filmContactName().then(function(name){return fetchFilmManifest(`${API_URL}/media/film${filmManifestQuery(name)}`, {signal:controller.signal, cache:'no-cache'},()=>{if(generation===filmNativeGeneration)filmPermissionWaiting(slot);});})
     .then(function(r){ manifestStatus=r.status;manifestServer=window.clubMediaServer?clubMediaServer(r.url):'unknown';if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
     .then(function(manifest){
@@ -33684,7 +33697,7 @@ function startFunnelFilm(){
       funnelPlayerReady = true; filmMountedAt = Date.now();
       filmNative = new ClubFilmPlayer(slot, {
         sources:preferredFilmSources(manifest.sources), position:filmSeekDone ? 0 : saved, expiresIn:manifest.expires_in,
-        refreshSources:()=>refreshFilmSources(`${API_URL}/media/film?direct_capable=1&edition=${encodeURIComponent(manifest.film)}&legal_view=${encodeURIComponent(window.clubFilmLegalToken||'')}`),
+        refreshSources:()=>refreshFilmSources(`${API_URL}/media/film?direct_capable=1&edition=${encodeURIComponent(manifest.film)}`),
         poster:'images/film-ya-podumayu.jpg', text:t,
         onBotFallback:canWatchVideoInBot()?()=>watchVideoInBot():null,
         onAlternative:filmEdition()?null:function(){

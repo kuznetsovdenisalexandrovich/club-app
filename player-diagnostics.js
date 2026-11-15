@@ -15,7 +15,7 @@
     try{
       const url=new URL(source?.url||'');
       const host=mediaHost(url.href);
-      out.delivery=['selectel_storage','railway_storage'].includes(host)?'direct':/^\/media\/(?:(?:bonus|meeting)-)?hls\//.test(url.pathname)?(url.searchParams.get('direct')==='1'?'direct':'proxy'):'unknown';
+      out.delivery=['selectel_storage','railway_storage'].includes(host)?'direct':/^\/media\/(?:(?:film|bonus|meeting)-)?hls\//.test(url.pathname)?(url.searchParams.get('direct')==='1'?'direct':'proxy'):'unknown';
       if(['selectel_storage','railway_storage'].includes(host))out.media_server=host;
       if(out.delivery==='direct'&&['selectel_storage','railway_storage','other'].includes(source.storage))out.media_server=source.storage;
       const id=url.pathname.match(/\/([a-f0-9]{32})\/([a-f0-9]{16})\//);
@@ -41,9 +41,31 @@
     }catch(e){return 'unknown';}
   }
   root.clubMediaStorage=mediaHost;
+  // Public film catalog has no account/session/replication dependency.
+  root.clubPublicFilmManifest=async function(url,signal){
+    const requested=new URL(url);
+    if(requested.pathname!=='/media/film')throw Error('Invalid film manifest');
+    const controllers=[];
+    const abort=()=>controllers.forEach(c=>c.abort());
+    if(signal?.aborted)throw new DOMException('Aborted','AbortError');
+    signal?.addEventListener('abort',abort,{once:true});
+    try{
+      return await Promise.any(['https://selectel-api.youselllikeagod-magazine.ru','https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net'].map(async origin=>{
+        const controller=new AbortController();controllers.push(controller);
+        const timer=setTimeout(()=>controller.abort(),12000);
+        try{
+          const response=await probeFetch(origin+requested.pathname+requested.search,{signal:controller.signal,credentials:'omit',cache:'no-store'});
+          const data=await response.json();
+          if(!response.ok)throw Object.assign(Error(String(data.detail||'Film catalog unavailable')),{status:response.status});
+          if(!Array.isArray(data.sources)||!data.sources.length)throw Error('Empty film catalog');
+          return {ok:true,status:200,url:origin+requested.pathname,json:async()=>data};
+        }finally{clearTimeout(timer);}
+      }));
+    }finally{abort();signal?.removeEventListener('abort',abort);}
+  };
   root.clubPublicFilmFetch=function(url,signal){
     const u=new URL(url);
-    if(!['selectel','timeweb'].includes(root.clubMediaServer(u.href))||!/^\/media\/(?:film-preload|film-start\/[a-f0-9]{32}\/[a-f0-9]{16}\/(?:360|720))$/.test(u.pathname))return Promise.reject(Error('Invalid public film preload'));
+    if(!['selectel','timeweb'].includes(root.clubMediaServer(u.href))||!/^\/media\/(?:film-preload|film-hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/(?:360|720)\/segment-[0-9]{5}\.ts)$/.test(u.pathname))return Promise.reject(Error('Invalid public film preload'));
     return probeFetch(u.href,{signal,credentials:'omit',cache:u.pathname==='/media/film-preload'?'default':'force-cache'});
   };
 
@@ -55,7 +77,7 @@
   root.clubProbeVideo=async function(source,position,emit,singleRoute=false){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;
     const original=new URL(source.lowUrl);
-    if(!/^\/media\/(?:(?:bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
+    if(!/^\/media\/(?:(?:film|bonus|meeting)-)?hls\/[a-f0-9]{32}\/[a-f0-9]{16}\/[01]\/360\/index\.m3u8$/.test(original.pathname))return;
     const plans=[original];
     if(!singleRoute&&original.searchParams.get('direct')==='1'){const proxy=new URL(original);proxy.searchParams.delete('direct');plans.push(proxy);}
     for(const plan of plans){
