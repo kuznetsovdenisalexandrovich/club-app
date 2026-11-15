@@ -70,7 +70,7 @@
     lateWatchdog(due){if(Date.now()>due+2000&&this.lateReports++<4)this.diagnostic('milestone',{reason:'watchdog_late'});}
     failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
     fault(code){
-      if(code==='film_unavailable'&&!this.probed&&root.clubProbeVideo){
+      if((code==='film_unavailable'||code==='film_stall')&&!this.probed&&root.clubProbeVideo){
         this.probed=true;const position=this.position;
         // Compare independent routes once, in parallel, instead of sampling only the last failure.
         const seen=new Set();
@@ -186,6 +186,10 @@
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
+      // Subsecond startup timestamps are not a useful resume point. Seeking to
+      // them on every replacement can strand native HLS before its first frame.
+      // Keep meaningful saved positions, including resumes near the end.
+      if(this.position>0&&this.position<1)this.position=0;
       this.resumePending=this.position>0;
       // Keep the same element: WebKit grants playback permission per element.
       if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}

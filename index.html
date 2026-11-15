@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v644'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v645'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15199,7 +15199,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   function allowedMedia(url){
     try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&['selectel','timeweb','railway','selectel_storage','railway_storage'].includes(mediaHost(url));}catch(e){return false;}
   }
-  // One comparison after final failure, never on the healthy playback path.
+  // One comparison after a sustained stall/final failure, never on healthy playback.
   // Samples 360p at the saved position; it is NOT the native player's HTTP result.
   root.clubProbeVideo=async function(source,position,emit,singleRoute=false){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;
@@ -15364,7 +15364,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     lateWatchdog(due){if(Date.now()>due+2000&&this.lateReports++<4)this.diagnostic('milestone',{reason:'watchdog_late'});}
     failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
     fault(code){
-      if(code==='film_unavailable'&&!this.probed&&root.clubProbeVideo){
+      if((code==='film_unavailable'||code==='film_stall')&&!this.probed&&root.clubProbeVideo){
         this.probed=true;const position=this.position;
         // Compare independent routes once, in parallel, instead of sampling only the last failure.
         const seen=new Set();
@@ -15480,6 +15480,10 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
+      // Subsecond startup timestamps are not a useful resume point. Seeking to
+      // them on every replacement can strand native HLS before its first frame.
+      // Keep meaningful saved positions, including resumes near the end.
+      if(this.position>0&&this.position<1)this.position=0;
       this.resumePending=this.position>0;
       // Keep the same element: WebKit grants playback permission per element.
       if(this.mediaListeners){for(const [name,listener] of this.mediaListeners)this.video.removeEventListener(name,listener);}
@@ -16388,7 +16392,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v644 · 15.11.2026 Фоновая проверка согласия';
+const APP_BUILD = 'v645 · 15.11.2026 Защищённое видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

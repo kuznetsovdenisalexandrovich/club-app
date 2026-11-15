@@ -72,7 +72,7 @@
   function allowedMedia(url){
     try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&['selectel','timeweb','railway','selectel_storage','railway_storage'].includes(mediaHost(url));}catch(e){return false;}
   }
-  // One comparison after final failure, never on the healthy playback path.
+  // One comparison after a sustained stall/final failure, never on healthy playback.
   // Samples 360p at the saved position; it is NOT the native player's HTTP result.
   root.clubProbeVideo=async function(source,position,emit,singleRoute=false){
     if(!source?.lowUrl||!allowedMedia(source.lowUrl)||!probeFetch||!root.AbortController)return;

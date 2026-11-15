@@ -181,3 +181,13 @@ assert(alt.alternative.hidden);alt.play();advance(10000);assert(!alt.alternative
 alt.video.readyState=4;alt.video.currentTime=3;alt.video.fire('timeupdate');assert(alt.alternative.hidden);alt.destroy();
 console.log('OK alternative player offered on stall, removed on progress');
 });
+
+// A partially decoded startup can expose a tiny timestamp without ever playing.
+// Replacing it must start naturally, not issue another seek near zero on iOS.
+const startSeek=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],text:k=>k,onEvent:()=>{}});
+startSeek.video.currentTime=.08;startSeek.switchSource(false);
+assert.equal(startSeek.position,0);assert.equal(startSeek.resumePending,false);
+let startupSeeks=0;Object.defineProperty(startSeek.video,'currentTime',{get:()=>0,set:()=>{startupSeeks++;},configurable:true});
+startSeek.video.fire('loadedmetadata');startSeek.video.fire('durationchange');startSeek.video.fire('canplay');
+assert.equal(startupSeeks,0);startSeek.destroy();
+console.log('OK replacement of subsecond startup avoids redundant native seek');

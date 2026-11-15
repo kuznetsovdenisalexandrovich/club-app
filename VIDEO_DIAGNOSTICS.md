@@ -24,3 +24,9 @@ HTTP 403/5xx отдельной пробы указывает на ответ и
 Проверки: frontend tests/video_evidence.cjs, film_player.cjs, player_diagnostics.cjs, app_rescue.cjs + весь набор; backend test_incidents/test_film_rescue/test_hls_delivery; bot test_app_rescue/test_lead_materials/test_lead_vk. Любое расширение диагностических запросов обязано сохранять их пределы и отсутствие на здоровом пути. Не сохранять реальные signed URL в тестовых fixtures или репозитории.
 
 Серверный startup v652: init_db журналирует начало/окончание этапов; уже выполненные TYPE TEXT, DROP NOT NULL, отсутствующие constraints и существующие indexes не повторяют DDL. Каталог проверяется в текущей схеме, реальные изменения сохраняются. Регрессия tests/rf_parallel/startup_columns_scenario.py выполняется на отдельной автоматически удаляемой схеме PostgreSQL. Блокировку старого кода воспроизвели; конкретный блокировщик первой неготовой выкладки v651 задним числом не установлен.
+
+2026-11-15 v645: comparison starts once at sustained film_stall or final
+film_unavailable, whichever happens first. Same per-route5s deadlines and
+first-block sampling, up to3sources; exhaustion never repeats the comparison.
+No healthy-path probes. This produces separate fetch evidence, not the native
+player HTTP response. Bonus incidents now have a distinct title.

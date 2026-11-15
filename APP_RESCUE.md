@@ -140,3 +140,16 @@ Film manifest retries only HTTP425 for up to eight seconds of synchronization wa
 2026-11-15 v643 / backend v701 supersedes film token/startup limits above: the public named-film catalog and all its HLS segments are anonymous. Stable /media/film-hls URLs have no grant, signature or expiration, and use immutable caching. Both API origins are read without account/RF wrappers; first complete valid catalog wins, loser is cancelled. Consent still gates UI playback and bot sending, not downloading public film bytes. Background sequential360p/720p prefetch continues throughout consent, stops at playback/close, and shares exact HTTP cache URLs with playback. Public proxy reads fall back between storage providers. Existing signed URLs remain supported for old clients; bonus/meeting namespaces still require membership and signatures. No chain state or message receipts changed.
 
 2026-11-15 v644: film consent is checked before constructing its modal/backdrop. A positive saved choice continues the existing route without a dialog or shown event. Pending checks coalesce repeated film entry; late cancelled replies cannot open a modal. Network failure leaves the application visible and reports a toast, never inferring refusal. Explicit settings still open immediately. Automatic account prompt skips granted consent and active film checks.
+
+2026-11-15 v645 / backend v702: bonus/meeting HLS keeps membership gates and
+namespace-scoped expiring signatures. Ordinary new manifests use proxy delivery
+for both sources; each segment can fall back between stores. Owner direct A/B
+override and old signed direct links remain compatible. Shared player avoids
+restoring subsecond startup timestamps on source replacement. One bounded
+diagnostic comparison now starts at sustained film_stall (or final failure),
+so closing before exhaustion need not erase transport evidence. No probes on
+healthy playback, no duplicate comparison at exhaustion, no new delivery calls.
+Bonus diagnostics are titled Bonus, not Film; existing incidents are untouched.
+Boris a6b95393: free first masterclass lesson, not proof of403; initial decoding
+on both routes but no advancing playback. Initial12s360/720 match both stores
+and decode correctly; exact historical iOS cause remains unconfirmed.
