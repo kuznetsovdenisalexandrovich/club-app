@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v637'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v638'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -6897,8 +6897,14 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .native-film video:fullscreen{width:100vw!important;height:100vh!important;object-fit:contain!important;border-radius:0!important}
 .native-film-fullscreen{display:flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;margin-left:auto;padding:0;border:1px solid var(--border,#d9d1c7);border-radius:12px;background:transparent;color:var(--text,#302b29);cursor:pointer}
 
-/* Four-arrow overlay stays above video, clear of native bottom controls. */
-.native-film-fullscreen{position:absolute;z-index:6;top:10px;right:10px;width:46px;height:46px;min-height:46px;margin:0;border:1px solid #ffffff66;border-radius:13px;background:#201b2ed9;color:#fff;box-shadow:0 0 16px #bda1ed35;backdrop-filter:blur(8px)}
+/* Reserve a separate row above the picture for the fullscreen control. */
+.native-film-fullscreen{position:absolute;z-index:6;top:-54px;right:0;width:46px;height:46px;min-height:46px;margin:0;border:1px solid #ffffff66;border-radius:13px;background:#201b2ed9;color:#fff;box-shadow:0 0 16px #bda1ed35;backdrop-filter:blur(8px)}
+.native-film:has(>.native-film-fullscreen){margin-top:60px;overflow:visible!important}
+#funnel-film-slot:has(.native-film-fullscreen){margin-top:68px!important}
+#funnel-film-slot>.native-film:has(>.native-film-fullscreen){margin-top:0}
+.native-film:fullscreen,.native-film.club-video-expanded,#funnel-film-slot:fullscreen,#funnel-film-slot.club-video-expanded{margin-top:0!important}
+:fullscreen>.native-film-fullscreen,.club-video-expanded>.native-film-fullscreen{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
+#funnel-screen.pip-mode #funnel-film-slot:has(.native-film-fullscreen){margin-top:0!important}
 .film-reload{display:block;width:100%;font-size:13px;margin:10px 0}
 .native-film-fullscreen:hover{background:#443451ed}
 .native-film-fullscreen svg{pointer-events:none}
@@ -16347,7 +16353,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v637 · 15.11.2026 Полный экран и восстановление';
+const APP_BUILD = 'v638 · 15.11.2026 Кнопка за пределами видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
