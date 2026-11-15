@@ -112,6 +112,7 @@
   var actions=d.createElement('div');actions.style.cssText='display:flex;gap:10px;flex-wrap:wrap';
   var reload=d.createElement('button');reload.type='button';reload.textContent='Перезагрузить';reload.onclick=function(){location.reload();};
   botLink=d.createElement('a');botLink.textContent='Перейти в бота';botLink.href=botUrl;botLink.target='_blank';botLink.rel='noopener';
+  botLink.onclick=function(e){try{if(platform==='tg'&&w.Telegram&&w.Telegram.WebApp&&typeof w.Telegram.WebApp.openTelegramLink==='function'){e.preventDefault();w.Telegram.WebApp.openTelegramLink(botLink.href);}}catch(err){w.open(botLink.href,'_blank','noopener');}};
   var style='display:flex;align-items:center;justify-content:center;min-height:46px;flex:1 1 150px;box-sizing:border-box;padding:10px 14px;border:1px solid #aca1bb;border-radius:12px;background:#e7def0;color:#29262f;text-decoration:none;font:600 15px system-ui,sans-serif;cursor:pointer';
   reload.style.cssText=style;botLink.style.cssText=style;
   actions.appendChild(reload);actions.appendChild(botLink);panel.appendChild(title);panel.appendChild(text);panel.appendChild(statusNode);panel.appendChild(actions);
@@ -9789,6 +9790,14 @@ function renderMeetingNotice(notice){
 <style id="member-profiles-css">
 .mp-head{display:flex;gap:16px;align-items:center;min-width:0}.mp-avatar{width:76px;height:76px;border-radius:50%;object-fit:cover;flex:none;background:var(--bg);display:grid;place-items:center;font-size:26px;color:var(--text)}.mp-name{font-size:21px;font-weight:650;overflow-wrap:anywhere}.mp-bio{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin:14px 0}.mp-muted{font-size:13px;line-height:1.6;color:var(--text-dim)}.mp-badge{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);margin-bottom:7px}.mp-tags{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}.mp-tag{padding:5px 9px;border:1px solid var(--line);border-radius:20px;font-size:12px;overflow-wrap:anywhere;max-width:100%}.mp-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}.mp-actions button,.mp-actions a,.mp-button{min-height:46px;padding:11px 15px;border-radius:12px;border:1px solid var(--line);background:var(--surface,var(--bg));color:var(--text);font:inherit;font-size:14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.mp-actions button:disabled,.mp-button:disabled{opacity:.55;cursor:wait}.mp-theme-lavender{border-color:#aa97c9!important;background-image:linear-gradient(125deg,rgba(158,130,199,.17),transparent)!important}.mp-theme-sand{border-color:#c4a783!important;background-image:linear-gradient(125deg,rgba(192,155,102,.18),transparent)!important}.mp-theme-graphite.mp-premium{border-color:#9994a5!important}.mp-overlay{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.48);display:flex;align-items:center;justify-content:center;padding:16px}.mp-overlay[hidden]{display:none}.mp-sheet{background:var(--bg);color:var(--text);width:min(100%,640px);max-height:calc(100dvh - 32px);overflow:auto;border-radius:20px;padding:24px;border:1px solid var(--line);overscroll-behavior:contain}.mp-sheet h2{font-size:23px;margin:0 0 20px;overflow-wrap:anywhere}.mp-field{display:flex;flex-direction:column;gap:16px;margin:20px 0;font-size:14px;line-height:1.5}.mp-field input:not([type=checkbox]),.mp-field textarea,.mp-field select{width:100%;box-sizing:border-box;min-height:46px;border-radius:12px;padding:12px;background:var(--surface,var(--bg));color:var(--text);border:1px solid var(--line);font:inherit;appearance:none;-webkit-appearance:none}.mp-field textarea{resize:vertical;min-height:100px}.mp-field:has(input[type=checkbox]){display:flex;flex-direction:row;align-items:flex-start;gap:12px}.mp-field input[type=checkbox]{width:20px;height:20px;flex:none;margin:0}.mp-field input:focus-visible,.mp-field textarea:focus-visible,.mp-field select:focus-visible,.mp-button:focus-visible,.mp-actions button:focus-visible{outline:2px solid #9a83bd;outline-offset:3px}.mp-status{min-height:22px;font-size:13px;line-height:1.6;overflow-wrap:anywhere;margin-top:14px}.mp-person{padding:20px;border:1px solid var(--line);border-radius:16px;margin:16px 0}.mp-person .mp-avatar{width:56px;height:56px;font-size:20px}.mp-person .mp-name{font-size:18px}.mp-project{border-top:1px solid var(--line);padding-top:16px;margin-top:18px}.mp-project h3{margin:0 0 10px;font-size:18px;overflow-wrap:anywhere}.mp-link{color:var(--text);text-decoration:underline;overflow-wrap:anywhere}.live-chat-who.mp-chat-link{background:none;border:0;padding:0;font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;color:inherit}@media(max-width:480px){.mp-overlay{padding:8px}.mp-sheet{padding:20px 16px;max-height:calc(100dvh - 16px)}.mp-actions>*{flex:1 1 auto}.mp-avatar{width:64px;height:64px}.mp-head{gap:12px}}
 
+/* Profile surfaces stay distinct from the app backdrop in both themes. */
+.mp-sheet{--mp-panel:#f4efe9;--mp-control:#e9e2db;--mp-border:#b8aa9c;--mp-ink:#332d29;--mp-muted:#655d56;background:var(--mp-panel);color:var(--mp-ink);border-color:var(--mp-border);box-shadow:0 18px 60px #0005;box-sizing:border-box}
+[data-theme="dark"] .mp-sheet{--mp-panel:#262630;--mp-control:#363641;--mp-border:#777383;--mp-ink:#f5f1fb;--mp-muted:#cec6d9}
+.mp-sheet .mp-muted{color:var(--mp-muted)}.mp-sheet .mp-field input:not([type=checkbox]),.mp-sheet .mp-field textarea,.mp-sheet .mp-field select,.mp-sheet button,.mp-sheet .mp-button{background:var(--mp-control);border-color:var(--mp-border);color:var(--mp-ink)}
+.mp-sheet input[type=file]::file-selector-button{border:1px solid var(--mp-border);border-radius:8px;padding:8px;margin-right:8px;background:var(--mp-panel);color:var(--mp-ink)}
+.mp-crop-frame{position:relative;width:min(100%,320px);aspect-ratio:1;margin:auto;border-radius:12px;overflow:hidden;background:#fff}.mp-crop-frame canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}.mp-crop-mask{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle closest-side,transparent 98%,#26263080 100%)}
+.mp-field input[type=range]{padding:0;appearance:auto;-webkit-appearance:auto;accent-color:#b9a2d4}.mp-facts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}.mp-facts>div,.mp-facts>button{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:14px;border:1px solid var(--line);border-radius:14px;background:transparent;color:var(--text);font:inherit}.mp-facts span{font-size:13px;color:var(--text-dim)}.mp-facts strong{font-size:24px}.mp-facts button{cursor:pointer}.mp-status-links{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:16px}.mp-status-links .mp-button{text-align:left;justify-content:flex-start}.profile-main-action{width:100%;margin:0 0 16px}.mp-sheet [hidden]{display:none!important}.mp-crop-frame:focus-within{outline:2px solid #b9a2d4;outline-offset:3px}
+
 </style>
 </head>
 <body>
@@ -10314,12 +10323,7 @@ function renderMeetingNotice(notice){
 
   <!-- ── Профиль ── -->
   <div class="view" id="view-profile">
-    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
-      <span>Профиль</span>
-      <!-- ⚠️ ЯВНАЯ КНОПКА ВМЕСТО ГОЛОГО ЗНАЧКА. Шестерёнка была эмодзи
-           без подписи — и незаметна, и против правила «эмодзи в интерфейсе нет» -->
-      <button class="profile-settings-btn" onclick="openAppSettingsPopup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 008.9 19a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 8.9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V10a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span data-text="settings.open">Настройки</span></button>
-    </div>
+    <div class="section-label">Профиль</div>
 
     <!-- ⚠️ ЧЕЛОВЕК ДОЛЖЕН ЗНАТЬ, ЧТО СИДИТ НА ОБЛЕГЧЁННОЙ ВЕРСИИ.
          [stated] Denis: «чтобы не получилось, что пользователь даже не понял,
@@ -10338,6 +10342,8 @@ function renderMeetingNotice(notice){
     </div>
 
     <div id="member-profile-card" class="card" hidden></div>
+    <button id="mp-people-entry" class="help-btn profile-main-action" data-mp="people" data-text="mp.people" hidden>Найти участника</button>
+    <button class="help-btn profile-main-action" onclick="openAppSettingsPopup()" data-text="mp.settings">Настройки приложения</button>
     <div class="section-label">Подписка</div>
     <div class="card sub-card" onclick="openSubManage()" style="cursor:pointer">
       <div class="sub-left">
@@ -10352,6 +10358,7 @@ function renderMeetingNotice(notice){
     </div>
     <div class="sub-note" id="sub-note"></div>
 
+    <div id="profile-points-source" hidden>
     <div class="section-label">Баллы</div>
     <div class="card points-card" onclick="openRewards()" style="cursor:pointer">
       <div class="points-value" id="p-points">0</div>
@@ -10359,11 +10366,13 @@ function renderMeetingNotice(notice){
       <div class="points-hint" data-text="points.a1">Нажми, чтобы посмотреть, на что их можно потратить</div>
     </div>
 
+    </div>
     <div class="section-label">Помощь</div>
     <div class="card">
       <!-- НЕ `lec-card` без рамки: в тёмной теме такая кнопка сливается с
            карточкой, внутри которой лежит, и читается как выключенная -->
-      <button class="help-btn" onclick="openAiPopup('profile')" data-text="ai.profile_btn">Спросить помощника</button>
+      <button class="help-btn" onclick="openHelpDocs()" data-text="mp.help">Справка</button>
+      <button class="help-btn" style="margin-top:8px" onclick="openAiPopup('profile')" data-text="ai.profile_btn">Спросить помощника</button>
       <button class="help-btn" style="margin-top:8px" onclick="openSupportPopup()">Написать в поддержку</button>
       <button class="help-btn" style="margin-top:8px" onclick="openBugPopup()">Сообщить о баге</button>
       <!-- v433: тумблер виден только тем, кто хоть раз пришёл по ссылке тестера -->
@@ -10372,6 +10381,8 @@ function renderMeetingNotice(notice){
         <div class="toggle off" id="qa-profile-toggle" onclick="qaToggleFromProfile()"><div class="toggle-thumb"></div></div>
       </div>
     </div>
+
+    <button id="mp-projects-entry" class="help-btn profile-main-action" data-mp="projects" data-text="mp.projects" hidden>Проекты клуба</button>
 
     <div id="debug-blocks" style="display:none">
       <div class="section-label">Отладка</div>
@@ -15260,7 +15271,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
         this.botFallback=this.button(options.text('film.bot_watch'),'native-film-option native-film-bot',async()=>{
           if(this.botFallback.disabled)return;
           this.botFallback.disabled=true;
-          try{const result=await options.onBotFallback();if(!this.destroyed)this.statusText(result.message||'');}
+          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
           catch(e){if(!this.destroyed)this.statusText(e.message||options.text('film.bot_failed'));}
           finally{if(!this.destroyed)this.botFallback.disabled=false;}
         });
@@ -16307,7 +16318,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v629 · 15.11.2026 Устойчивость приложения';
+const APP_BUILD = 'v630 · 15.11.2026 Профиль и аватарка';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -24344,6 +24355,7 @@ function continueClubRegistration(){
 }
 
 function renderLevelCard(){
+  if(window.MemberProfiles)MemberProfiles.refreshSummary();
   if(typeof kqRefreshLocks==='function')kqRefreshLocks();
   syncRegistrationNext();
   renderLevelCardInner();
@@ -27517,15 +27529,18 @@ function playBonusVideo(bonusKey, itemKey){
 let bonusNativePlayer = null;
 let bonusNativeGeneration = 0;
 function canWatchVideoInBot(){return !!(telegramId && Number(telegramId)>0 && !isInsideVk());}
+const videoBotDestinations=new Map();
 async function watchVideoInBot(bonusKey='',itemKey=''){
+  const key=String(telegramId)+':'+bonusKey+':'+itemKey;
+  if(videoBotDestinations.has(key)){const cached=videoBotDestinations.get(key);openUrl(cached.url);return cached;}
   const d=await apiRequest(`${API_URL}/media/watch-in-bot`,{method:'POST',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({bonus_key:bonusKey,item_key:itemKey})},25000);
-  if(d.url)openUrl(d.url);
+  if(d.url){if(d.status==='queued'||d.status==='check_bot')videoBotDestinations.set(key,d);openUrl(d.url);}
   return d;
 }
 function addVideoBotFallback(slot,bonusKey='',itemKey=''){
   if(!canWatchVideoInBot())return;
   const b=document.createElement('button');b.className='native-film-option native-film-bot';b.textContent=t('film.bot_watch');
-  b.onclick=async()=>{b.disabled=true;try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.message||t('film.bot_watch');}catch(e){b.textContent=t('film.bot_failed');}finally{b.disabled=false;}};
+  b.onclick=async()=>{b.disabled=true;try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=t('film.bot_failed');}finally{b.disabled=false;}};
   slot.appendChild(b);
 }
 let bonusNativeRequest = null;
@@ -41331,6 +41346,7 @@ function openQuiz(restart){
 }
 
 function closeQuiz(){
+  if(window.MemberProfiles)MemberProfiles.refreshSummary();
   closeQuizShareOffer();
   quizHoloStop();
   const ov = document.getElementById('quiz-overlay');
@@ -45815,8 +45831,23 @@ html[data-motion="off"] .bb-time{animation:none!important}
 /* Member profiles: lazy personal read, own revisions, member-only directory. */
 (function(){
 'use strict';
-let state=null,busy=false,sequence=0,lastFocus=null;
+let state=null,busy=false,sequence=0,lastFocus=null,crop=null,avatarDraft=null,photoSequence=0,photoLoading=false;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const profileTexts={
+ 'mp.photo_loading':'Подготавливаю фотографию…','mp.level':'Уровень','mp.points':'Баллы','mp.premium':'Премиум активен','mp.premium_get':'Получить премиум','mp.premium_title':'Премиум в клубе','mp.premium_pending':'Мы работаем над этой возможностью. Наполнение и условия появятся здесь позже.',
+ 'mp.god':'Твой бог продаж','mp.god_discover':'Узнай, кто ты из богов продаж','mp.crop_help':'Выбери кадр: передвигай фото пальцем или мышью и меняй масштаб. В профиле аватарка будет круглой.',
+ 'mp.zoom':'Масштаб','mp.crop_reset':'Вернуть исходный кадр','mp.photo_help':'JPG, PNG или WebP до 12 МБ. Выбери кадр и сохрани профиль.','mp.photo_choose':'Выбрать фотографию','mp.photo_missing':'Сначала выбери фотографию.','mp.photo_large':'Выбери изображение не больше 12 МБ.','mp.photo_invalid':'Не удалось открыть фотографию. Выбери JPG, PNG или WebP.','mp.crop_label':'Кадр аватарки. Для сдвига используй стрелки клавиатуры.','mp.photo_staged':'Фото будет удалено после сохранения профиля.','mp.close':'Закрыть','mp.save':'Сохранить профиль','mp.settings':'Настройки приложения','mp.help':'Справка','mp.people':'Найти участника','mp.projects':'Проекты клуба','mp.bot_chat':'Открыть переписку с ботом'
+};
+if(typeof APP_TEXTS!=='undefined')for(const [key,value] of Object.entries(profileTexts))APP_TEXTS[key]={c:'Профиль',l:value,w:'Профиль',i:false,t:value};
+const tx=key=>typeof t==='function'&&typeof APP_TEXTS!=='undefined'?t(key):profileTexts[key];
+function facts(){
+ const level=typeof nbState!=='undefined'&&nbState?.active?nbState.level:typeof currentLevelNum==='function'?currentLevelNum():null;
+ const points=document.getElementById('p-points')?.textContent||'0';
+ let god='';try{const result=savedQuizResult();god=result&&QUIZ_RESULTS[result.code]?.god||'';}catch(e){}
+ return '<div class="mp-facts"><div><span>'+esc(tx('mp.level'))+'</span><strong>'+esc(level??'—')+'</strong></div><button type="button" data-mp="points"><span>'+esc(tx('mp.points'))+'</span><strong>'+esc(points)+'</strong></button></div><div class="mp-status-links">'+(state.premium_active?'<span class="mp-badge">'+esc(tx('mp.premium'))+'</span>':'<button class="mp-button" data-mp="premium">'+esc(tx('mp.premium_get'))+'</button>')+'<button class="mp-button" data-mp="god">'+esc(god?tx('mp.god')+': '+god:tx('mp.god_discover'))+'</button></div>';
+}
+
 const root=()=>document.getElementById('member-profile-card');
 const overlay=()=>document.getElementById('mp-overlay');
 const sheet=()=>document.getElementById('mp-sheet');
@@ -45826,8 +45857,8 @@ function avatar(p){return p.avatar&&p.avatar.startsWith('data:image/jpeg;base64,
 function theme(p){return 'mp-theme-'+(p.premium_active&&['graphite','lavender','sand'].includes(p.theme)?p.theme:'graphite')+(p.premium_active?' mp-premium':'');}
 function safeLink(value){try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch(e){return '';}}
 function link(url,label){url=safeLink(url);return url?'<a class="mp-link" target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">'+esc(label)+'</a>':'';}
-function card(p){return '<div class="mp-head">'+avatar(p)+'<div style="min-width:0">'+(p.premium_active?'<div class="mp-badge">Премиальный профиль</div>':'')+'<div class="mp-name">'+esc(p.display_name)+'</div></div></div>'+(p.bio?'<p class="mp-bio">'+esc(p.bio)+'</p>':'')+'<div class="mp-tags">'+(p.tags||[]).map(t=>'<span class="mp-tag">'+esc(t)+'</span>').join('')+'</div>'+(p.premium_active?link(p.website,'Ссылка участника'):'')+(p.project?'<div class="mp-project"><h3>'+esc(p.project.title)+'</h3><p class="mp-bio">'+esc(p.project.description)+'</p>'+link(p.project.url,'Открыть проект')+'</div>':'');}
-function ownCard(){const r=root();if(!r||!state)return;r.hidden=false;r.className='card '+theme(state);r.innerHTML=card({...state,project:null})+'<div class="mp-actions"><button type="button" data-mp="edit">Редактировать профиль</button><button type="button" data-mp="people">Найти участника</button><button type="button" data-mp="projects">Проекты клуба</button></div>';}
+function card(p){return '<div class="mp-head">'+avatar(p)+'<div style="min-width:0">'+(p.premium_active&&!p.hide_badge?'<div class="mp-badge">Премиальный профиль</div>':'')+'<div class="mp-name">'+esc(p.display_name)+'</div></div></div>'+(p.bio?'<p class="mp-bio">'+esc(p.bio)+'</p>':'')+'<div class="mp-tags">'+(p.tags||[]).map(t=>'<span class="mp-tag">'+esc(t)+'</span>').join('')+'</div>'+(p.premium_active?link(p.website,'Ссылка участника'):'')+(p.project?'<div class="mp-project"><h3>'+esc(p.project.title)+'</h3><p class="mp-bio">'+esc(p.project.description)+'</p>'+link(p.project.url,'Открыть проект')+'</div>':'');}
+function ownCard(){const r=root();if(!r||!state)return;r.hidden=false;r.className='card '+theme(state);r.innerHTML=card({...state,project:null,hide_badge:true})+facts()+'<div class="mp-actions"><button type="button" data-mp="edit">Редактировать профиль</button></div>';for(const id of ['mp-people-entry','mp-projects-entry']){const e=document.getElementById(id);if(e)e.hidden=false;}}
 async function load(){const n=++sequence;const r=root();if(!r)return;try{await waitProfile();const p=await api('/me');if(n!==sequence)return;state=p;ownCard();return p;}catch(e){if(n!==sequence)return;r.hidden=e.status===401||e.status===403;if(!r.hidden)r.innerHTML='<p class="mp-muted">Профиль не загрузился.</p><button class="mp-button" data-mp="reload">Повторить</button>';}}
 async function openEditor(){
  switchView('profile');
@@ -45838,25 +45869,48 @@ async function openEditor(){
  if(p)edit();else status('Не удалось открыть профиль. Проверь вход в клуб и попробуй ещё раз.');
 }
 function open(html){lastFocus=document.activeElement;sheet().innerHTML=html+'<p class="mp-status" id="mp-status" role="status" aria-live="polite"></p>';overlay().hidden=false;sheet().focus();}
-function close(){if(busy)return;overlay().hidden=true;sequence++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
+function close(){if(busy)return;crop=null;avatarDraft=null;photoSequence++;photoLoading=false;overlay().hidden=true;sequence++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
 function field(label,id,value,max,type='text'){return '<label class="mp-field" for="'+id+'">'+label+'<input id="'+id+'" type="'+type+'" maxlength="'+max+'" value="'+esc(value)+'"></label>';}
-function edit(){if(!state)return;const p=state;open('<h2>Мой профиль</h2><p class="mp-muted">Имя, фотографию и описание видят другие участники клуба. После завершения подписки профиль скрывается и восстанавливается при возвращении.</p>'+avatar(p)+'<label class="mp-field">Своя аватарка<input id="mp-avatar-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="mp-muted">JPG, PNG или WebP до 2 МБ. Фотография обрежется до квадрата.</p><div class="mp-actions"><button type="button" data-mp="upload">Загрузить фото</button><button type="button" data-mp="remove-avatar" '+(!p.avatar?'disabled':'')+'>Убрать фото</button></div>'+field('Имя в клубе','mp-name',p.display_name,80)+'<label class="mp-field" for="mp-bio">О себе<textarea id="mp-bio" maxlength="500">'+esc(p.bio)+'</textarea></label>'+field('Профессия или специализация — например, психолог, коуч, продюсер. До 8 тегов через запятую','mp-tags',(p.tags||[]).join(', '),270)+'<label class="mp-field"><input id="mp-directory" type="checkbox" '+(p.directory?'checked':'')+'>Показывать мой профиль в поиске по участникам</label>'+(p.premium_active?field('Ссылка на себя','mp-website',p.website,500,'url')+'<label class="mp-field">Оформление<select id="mp-theme">'+[['graphite','Графит'],['lavender','Лаванда'],['sand','Песок']].map(([v,t])=>'<option value="'+v+'" '+(p.theme===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'<div class="mp-actions"><button type="button" data-mp="save">Сохранить</button>'+(p.premium_active?'<button type="button" data-mp="project-edit">Мой проект</button>':'')+'<button type="button" data-mp="close">Закрыть</button></div>');}
+function edit(){if(!state)return;crop=null;avatarDraft=null;photoSequence++;photoLoading=false;const p=state;open('<h2>Мой профиль</h2><p class="mp-muted">Имя, фотографию и описание видят другие участники клуба. После завершения подписки профиль скрывается и восстанавливается при возвращении.</p>'+avatar(p)+'<label class="mp-field">'+esc(tx('mp.photo_choose'))+'<input id="mp-avatar-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="mp-muted">'+esc(tx('mp.photo_help'))+'</p><div id="mp-crop-wrap" hidden></div><div class="mp-actions"><button type="button" data-mp="remove-avatar" '+(!p.avatar?'disabled':'')+'>Убрать фото</button></div>'+field('Имя в клубе','mp-name',p.display_name,80)+'<label class="mp-field" for="mp-bio">О себе<textarea id="mp-bio" maxlength="500">'+esc(p.bio)+'</textarea></label>'+field('Профессия или специализация — например, психолог, коуч, продюсер. До 8 тегов через запятую','mp-tags',(p.tags||[]).join(', '),270)+'<label class="mp-field"><input id="mp-directory" type="checkbox" '+(p.directory?'checked':'')+'>Показывать мой профиль в поиске по участникам</label>'+(p.premium_active?field('Ссылка на себя','mp-website',p.website,500,'url')+'<label class="mp-field">Оформление<select id="mp-theme">'+[['graphite','Графит'],['lavender','Лаванда'],['sand','Песок']].map(([v,t])=>'<option value="'+v+'" '+(p.theme===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'<div class="mp-actions"><button type="button" data-mp="save">'+esc(tx('mp.save'))+'</button>'+(p.premium_active?'<button type="button" data-mp="project-edit">Мой проект</button>':'')+'<button type="button" data-mp="close">Закрыть</button></div>');}
 function draft(){return {revision:state.revision,display_name:document.getElementById('mp-name').value,bio:document.getElementById('mp-bio').value,tags:document.getElementById('mp-tags').value.split(',').map(s=>s.trim()).filter(Boolean),directory:document.getElementById('mp-directory').checked,website:state.premium_active?document.getElementById('mp-website').value:'',theme:state.premium_active?document.getElementById('mp-theme').value:'graphite'};}
-async function mutate(action){if(busy)return;busy=true;overlay().querySelectorAll('button').forEach(b=>b.disabled=true);try{await action();ownCard();}catch(e){status(e.message||'Не удалось сохранить. Попробуй ещё раз.');}finally{busy=false;overlay().querySelectorAll('button').forEach(b=>b.disabled=false);}}
+async function mutate(action,closeAfter=false){let success=false;if(busy)return;busy=true;const controls=[...overlay().querySelectorAll('button,input,textarea,select')].map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);try{await action();ownCard();success=true;}catch(e){status(e.message||'Не удалось сохранить. Попробуй ещё раз.');}finally{busy=false;controls.forEach(([e,disabled])=>{if(e.isConnected)e.disabled=disabled;});if(success&&closeAfter)close();}}
 function projectEdit(){const p=state.project||{};const labels={draft:'Черновик',pending:'На рассмотрении у Дениса',approved:'Одобрено',rejected:'Нужны изменения',hidden:'Скрыто администратором'};open('<h2>Мой проект</h2><p class="mp-muted">Один проект на участника. После одобрения Дениса карточка появится в каталоге клуба. Изменения тоже проходят одобрение; до него остаётся прежняя опубликованная версия.</p><p>'+esc(labels[state.project_status]||'Черновик')+'</p>'+(state.review_note?'<p class="mp-bio">'+esc(state.review_note)+'</p>':'')+field('Название проекта','mp-project-title',p.title,100)+'<label class="mp-field">Чем полезен участникам<textarea id="mp-project-description" maxlength="1200">'+esc(p.description)+'</textarea></label>'+field('Ссылка на проект','mp-project-url',p.url,500,'url')+'<div class="mp-actions"><button data-mp="project-submit">Отправить на одобрение</button><button data-mp="project-hide">Скрыть проект и отозвать заявку</button><button data-mp="edit">Назад в профиль</button></div>');}
 async function directory(kind='people',append=false){const n=++sequence;if(!append){open('<h2>'+(kind==='people'?'Участники клуба':'Проекты участников')+'</h2>'+(kind==='people'?'<p class="mp-muted">Ищи по имени, описанию или тегам. Здесь только действующие участники, включившие видимость в поиске.</p><label class="mp-field">Поиск специалиста<input id="mp-search" maxlength="80" placeholder="Например, дизайнер"></label><button class="mp-button" data-mp="search">Найти</button>':'<p class="mp-muted">Проекты премиальных участников, одобренные Денисом.</p>')+'<div id="mp-results"></div><div class="mp-actions"><button id="mp-more" data-mp="more" hidden>Показать ещё</button><button data-mp="close">Закрыть</button></div>');sheet().dataset.kind=kind;sheet().dataset.offset='0';}
  const q=document.getElementById('mp-search')?.value||'';try{status('Загружаю…');const data=await api('/'+(kind==='people'?'people':'catalog')+'?offset='+(append?sheet().dataset.offset:'0')+'&q='+encodeURIComponent(q));if(n!==sequence||overlay().hidden)return;const results=document.getElementById('mp-results');if(!append)results.innerHTML='';results.insertAdjacentHTML('beforeend',data.items.map(p=>'<article class="mp-person '+theme(p)+'">'+card(p)+'<div class="mp-actions"><button data-mp="person" data-id="'+Number(p.id)+'">Посмотреть профиль</button></div></article>').join(''));const more=document.getElementById('mp-more');more.hidden=data.next_offset===null;sheet().dataset.offset=String(data.next_offset||0);status(results.children.length?'':'Пока никого не найдено.');}catch(e){if(n===sequence)status(e.message);}}
 async function person(path){const n=++sequence;open('<h2>Профиль участника</h2><div id="mp-person-view"></div><div class="mp-actions"><button data-mp="people">Все участники</button><button data-mp="close">Закрыть</button></div>');status('Загружаю…');try{const p=await api(path);if(n!==sequence||overlay().hidden)return;document.getElementById('mp-person-view').innerHTML='<article class="mp-person '+theme(p)+'">'+card(p)+'</article>';status('');}catch(e){if(n===sequence)status(e.message);}}
-async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
- if(name==='save')return mutate(async()=>{state=await api('/me','PUT',draft());status('Профиль сохранён.');if(typeof onbDone==='function')onbDone('profile');});
- if(name==='remove-avatar')return mutate(async()=>{state=await api('/me/avatar','DELETE',{revision:state.revision});status('Аватарка удалена.');const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar(state);});
- if(name==='upload')return mutate(async()=>{const file=document.getElementById('mp-avatar-file').files[0];if(!file)throw Error('Сначала выбери фотографию.');if(file.size>2097152)throw Error('Выбери изображение не больше 2 МБ.');const encoded=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Не удалось прочитать файл.'));r.readAsDataURL(file);});state=await api('/me/avatar','PUT',{revision:state.revision,image:encoded});const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar(state);status('Аватарка сохранена.');});
+async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium')return open('<h2>'+esc(tx('mp.premium_title'))+'</h2><p class="mp-bio">'+esc(tx('mp.premium_pending'))+'</p><button class="mp-button" data-mp="close">'+esc(tx('mp.close'))+'</button>');if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
+ if(name==='save'&&photoLoading){status(tx('mp.photo_loading'));return;}
+ if(name==='save')return mutate(async()=>{const values=draft();if(crop)state=await api('/me/avatar','PUT',{revision:state.revision,image:cropData()});else if(avatarDraft==='remove')state=await api('/me/avatar','DELETE',{revision:state.revision});crop=null;avatarDraft=null;state=await api('/me','PUT',{...values,revision:state.revision});if(typeof onbDone==='function')onbDone('profile');},true);
+ if(name==='remove-avatar'){crop=null;avatarDraft='remove';photoSequence++;photoLoading=false;document.getElementById('mp-crop-wrap').hidden=true;const file=document.getElementById('mp-avatar-file');if(file)file.value='';const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar({...state,avatar:''});status(tx('mp.photo_staged'));return;}
  if(name==='project-submit')return mutate(async()=>{state=await api('/me/project','POST',{revision:state.revision,project:{title:document.getElementById('mp-project-title').value,description:document.getElementById('mp-project-description').value,url:document.getElementById('mp-project-url').value}});status('Проект отправлен Денису на одобрение.');});
  if(name==='project-hide')return mutate(async()=>{state=await api('/me/project','DELETE',{revision:state.revision});status('Проект скрыт, заявка отозвана.');});}
+
+function clampCrop(){const size=512,k=crop.base*crop.zoom;crop.x=Math.min(0,Math.max(size-crop.image.width*k,crop.x));crop.y=Math.min(0,Math.max(size-crop.image.height*k,crop.y));}
+function paintCrop(){if(!crop)return;clampCrop();const c=document.getElementById('mp-crop-canvas');if(!c)return;const ctx=c.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,512,512);ctx.drawImage(crop.image,crop.x,crop.y,crop.image.width*crop.base*crop.zoom,crop.image.height*crop.base*crop.zoom);}
+function resetCrop(){if(!crop)return;crop.zoom=1;crop.x=(512-crop.image.width*crop.base)/2;crop.y=(512-crop.image.height*crop.base)/2;document.getElementById('mp-crop-zoom').value='1';paintCrop();}
+function zoomCrop(value){if(!crop)return;const next=Math.max(1,Math.min(4,value)),ratio=next/crop.zoom;crop.x=256-(256-crop.x)*ratio;crop.y=256-(256-crop.y)*ratio;crop.zoom=next;document.getElementById('mp-crop-zoom').value=String(next);paintCrop();}
+function cropData(){paintCrop();return document.getElementById('mp-crop-canvas').toDataURL('image/jpeg',.9).split(',')[1];}
+async function choosePhoto(file){const version=++photoSequence;if(!file||busy)return;photoLoading=true;status(tx('mp.photo_loading'));try{
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error(tx('mp.photo_invalid'));
+ if(file.size>12*1024*1024)throw Error(tx('mp.photo_large'));
+ const url=URL.createObjectURL(file);let img;try{img=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(Error(tx('mp.photo_invalid')));image.src=url;});}finally{URL.revokeObjectURL(url);}
+ if(version!==photoSequence||overlay().hidden)return;
+ if(!img.width||!img.height||img.width*img.height>40000000)throw Error(tx('mp.photo_invalid'));
+ crop={image:img,base:Math.max(512/img.width,512/img.height),zoom:1,x:0,y:0};avatarDraft=null;
+ const wrap=document.getElementById('mp-crop-wrap');wrap.hidden=false;wrap.innerHTML='<p class="mp-muted">'+esc(tx('mp.crop_help'))+'</p><div class="mp-crop-frame"><canvas id="mp-crop-canvas" width="512" height="512" tabindex="0" aria-label="'+esc(tx('mp.crop_label'))+'"></canvas><div class="mp-crop-mask" aria-hidden="true"></div></div><label class="mp-field">'+esc(tx('mp.zoom'))+'<input id="mp-crop-zoom" type="range" min="1" max="4" step=".01" value="1"></label><button type="button" class="mp-button" data-mp="crop-reset">'+esc(tx('mp.crop_reset'))+'</button>';
+ resetCrop();status('');const canvas=document.getElementById('mp-crop-canvas'),pointers=new Map();let distance=0;
+ canvas.onpointerdown=e=>{if(busy)return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});distance=0;};
+ canvas.onpointermove=e=>{if(busy||!crop||!pointers.has(e.pointerId))return;const before=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const [a,b]=[...pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(distance)zoomCrop(crop.zoom*d/distance);distance=d;}else{const ratio=512/canvas.getBoundingClientRect().width;crop.x+=(e.clientX-before.x)*ratio;crop.y+=(e.clientY-before.y)*ratio;paintCrop();}};
+ const release=e=>{pointers.delete(e.pointerId);distance=0;};canvas.onpointerup=release;canvas.onpointercancel=release;canvas.onlostpointercapture=release;
+ canvas.onkeydown=e=>{const shifts={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]};if(shifts[e.key]&&!busy){e.preventDefault();crop.x+=shifts[e.key][0];crop.y+=shifts[e.key][1];paintCrop();}};
+ document.getElementById('mp-crop-zoom').oninput=e=>{if(!busy)zoomCrop(Number(e.target.value));};
+ }catch(e){if(version===photoSequence)status(e.message);}finally{if(version===photoSequence)photoLoading=false;}}
+document.addEventListener('change',e=>{if(e.target.id==='mp-avatar-file')choosePhoto(e.target.files[0]);});
+
 document.addEventListener('click',e=>{const b=e.target.closest('[data-mp]');if(b)action(b.dataset.mp,b);});
 document.addEventListener('keydown',e=>{if(!overlay()||overlay().hidden)return;if(e.key==='Escape')close();if(e.key==='Enter'&&e.target.id==='mp-search'){e.preventDefault();search();}if(e.key==='Tab'){const els=[...sheet().querySelectorAll('button:not([disabled]):not([hidden]),input,textarea,select,a[href]')].filter(e=>e.offsetParent!==null);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 function search(){sheet().dataset.offset='0';document.getElementById('mp-results').innerHTML='';return directory('people',true);}
-window.MemberProfiles={load,openEditor,fromChat:id=>person('/from-chat/'+Number(id)),person:id=>person('/people/'+Number(id))};
+window.MemberProfiles={load,openEditor,refreshSummary:ownCard,fromChat:id=>person('/from-chat/'+Number(id)),person:id=>person('/people/'+Number(id))};
 })();
 
 </script>
