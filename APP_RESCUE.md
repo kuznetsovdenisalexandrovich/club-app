@@ -124,3 +124,5 @@ choices; non-film lesson/meeting access is unchanged. UI startup waits for late
 inline modules; guest shell exists before the consent modal can be dismissed.
 App leave-after-refusal alerts require an actual pagehide signal and no return for
 90 seconds; neither closing a dialog nor silence in a bot proves departure.
+
+2026-11-15 v637: four-arrow fullscreen overlay expands the existing video/container without replacing media; CSS fallback and Escape restore the same element. Explicit film reload saves the current or last known position before location.reload(), preserves launch/auth/settings/choices, and is bounded to once per ten minutes per launch route. No automatic reload based on missing Boomstream events. No receipts, chain cursors or video deliveries are reset. Wife incident showed Timeweb manifest403 followed by Selectel playback; cause of403 remains under investigation. Tests: video_controls, film_player, inline_player and full frontend suite.
