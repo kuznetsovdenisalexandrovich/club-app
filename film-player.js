@@ -53,7 +53,7 @@
         this.botFallback.hidden=true;this.wrapper.append(this.botFallback);
       }
       this.wrapper.append(this.notice,this.start);slot.replaceChildren(this.wrapper,this.help);
-      this.visibilityHandler=()=>{this.lifecycle(document.hidden?'visibility_hidden':'visibility_visible');this.clearTimers();if(!document.hidden&&this.wantsPlay)this.arm();};
+      this.visibilityHandler=()=>{this.lifecycle(document.hidden?'visibility_hidden':'visibility_visible');this.clearTimers();this.sourceWaitStarted=null;if(!document.hidden&&this.wantsPlay)this.arm();};
       document.addEventListener('visibilitychange',this.visibilityHandler);
       this.switchSource(false);
       this.removeFullscreen=addClubVideoFullscreen(this.wrapper,()=>this.video);
@@ -92,7 +92,7 @@
       if(!v||this.resumePending||v.seeking||v.readyState<2)return false;
       const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
       if(!advancing||v.paused)return false;
-      this.lastProgress=Date.now();this.failedSources.clear();
+      this.lastProgress=Date.now();this.sourceWaitStarted=null;this.failedSources.clear();
       if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
       this.progress();this.emit('time');return true;
     }
@@ -116,7 +116,12 @@
       const lastCandidate=this.failedSources.size>=this.sources.length-1;
       const wait=this.options.stallMs||(this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
       if(!this.timer){
-        const armedAt=Date.now();let due=armedAt+wait,timer;
+        // Metadata/seek callbacks may re-arm timers, but cannot restart the
+        // continuous foreground wait budget for this source.
+        if(this.sourceWaitStarted==null)this.sourceWaitStarted=Date.now();
+        const armedAt=this.sourceWaitStarted;
+        const delay=Math.max(0,Math.min(wait,(this.options.stallMs||20000)-(Date.now()-armedAt)));
+        let due=Date.now()+delay,timer;
         const check=()=>{
           if(this.timer!==timer)return;
           this.timer=null;
@@ -132,7 +137,7 @@
           this.lateWatchdog(due);
           this.failure('progress_timeout');this.switchSource(false);
         };
-        timer=setTimeout(check,wait);
+        timer=setTimeout(check,delay);
         this.timer=timer;
       }
     }
@@ -183,6 +188,7 @@
         this.wrapper.className='native-film native-film-failed'+(this.wrapper.className.includes('club-video-expanded')?' club-video-expanded':'');this.status('film.unavailable');if(this.botFallback)this.botFallback.hidden=false;this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;
       }
       this.exhausted=false;this.wrapper.className='native-film'+(this.wrapper.className.includes('club-video-expanded')?' club-video-expanded':'');
+      this.sourceWaitStarted=null;
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
@@ -228,7 +234,7 @@
       on('timeupdate',()=>this.sampleProgress());
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
       on('seeking',()=>{if(!this.resumePending)this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
-      on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
+      on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.sourceWaitStarted=null;this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
       on('error',()=>{
         const code=v.error&&v.error.code||0;

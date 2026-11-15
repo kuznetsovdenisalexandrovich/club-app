@@ -12,4 +12,9 @@ await Promise.resolve();assert.equal(probes,0);advance(6000);await Promise.resol
 assert.equal(probes,2,'Sustained stall samples both routes before user closes');assert(!player.exhausted);
 advance(60000);await Promise.resolve();assert(player.exhausted);assert.equal(probes,2,'Final failure does not repeat probes');player.destroy();
 console.log('PASS sustained stall probes early, bounded once, no healthy startup downloads');
+const stuck=new c.ClubFilmPlayer(new E(),{sources:[{url:'https://a.test/master',lowUrl:'https://a.test/360',type:'hls'},{url:'https://b.test/master',lowUrl:'https://b.test/360',type:'hls'}],text:k=>k,onEvent:()=>{}});
+stuck.play();
+for(let i=0;i<81&&!stuck.exhausted;i++){stuck.video.networkState=2;stuck.video.readyState=1;advance(1000);if(!stuck.exhausted)stuck.video.fire('seeking');}
+assert(stuck.exhausted,'Repeated seeking cannot keep the loading screen forever');assert.equal(timers.size,0);stuck.destroy();
+console.log('PASS repeated seek callbacks exhaust all sources within bounded foreground time');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -153,3 +153,9 @@ Bonus diagnostics are titled Bonus, not Film; existing incidents are untouched.
 Boris a6b95393: free first masterclass lesson, not proof of403; initial decoding
 on both routes but no advancing playback. Initial12s360/720 match both stores
 and decode correctly; exact historical iOS cause remains unconfirmed.
+Continuous foreground waiting per source is now capped even when seeking/metadata
+callbacks re-arm timers. The budget resets only on real progression, explicit
+pause/visibility suspension or source change, not on a playing callback alone.
+Regression: old player stays loading with repeated seeking; fixed player exhausts
+auto+360 sources within80seconds under that fault. Normal no-seek timeout path
+retains its existing52second bound. No automatic refresh/delivery was added.
