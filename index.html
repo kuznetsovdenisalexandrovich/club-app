@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v627 -->
+<!-- FILE_VERSION: index-v628 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v627'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v628'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16295,7 +16295,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v627 · 15.11.2026 Профили участников';
+const APP_BUILD = 'v628 · 15.11.2026 Знакомство с участниками';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -20948,6 +20948,9 @@ const APP_TEXTS = {
   'onb.tip_arbiter': { c:'Знакомство', l:'Подсказка при первой партии', w:'Экран партии', i:false,
     t:'Арбитр взвешивает каждую реплику и в конце объясняет счёт.' },
 
+  'onb.profile_t': {c:'Знакомство',l:'Шаг «Профиль» — заголовок',w:'Окно шага',i:false,t:'Расскажи о себе'},
+  'onb.profile_x': {c:'Знакомство',l:'Шаг «Профиль» — текст',w:'Окно шага',i:false,t:'Добавь фотографию, пару слов о себе и теги профессии: например, психолог, коуч или продюсер. Так участникам будет проще познакомиться с тобой и найти нужного специалиста. Видимость в поиске ты включаешь сам.'},
+  'onb.profile_b': {c:'Знакомство',l:'Шаг «Профиль» — кнопка',w:'Окно шага',i:false,t:'Заполнить профиль'},
   'onb.games_t': { c:'Знакомство', l:'Шаг «Игры» — заголовок', w:'Окно шага', i:false, t:'Игры' },
   'onb.games_x': { c:'Знакомство', l:'Шаг «Игры» — текст', w:'Окно шага', i:false,
     t:'Тренажёр с живым клиентом. Партия — три минуты, в конце счёт и разбор от арбитра.' },
@@ -25209,6 +25212,8 @@ const ONB_STEPS = [
      второй шаг знакомства. Тексты onb.plan_* в реестре остались, их никто не зовёт */
   { key:'lib',   view:'library', scrollTo:'ai-helper-btn',
     t:'onb.lib_t',   x:'onb.lib_x',   b:'onb.lib_b' },
+  { key:'profile', view:'profile', scrollTo:'member-profile-card',
+    t:'onb.profile_t', x:'onb.profile_x', b:'onb.profile_b' },
 ];
 
 let onbIdx = 0;          // на каком шаге стоим
@@ -25346,6 +25351,8 @@ async function onbStage(st){
     return;
   }
 
+  if (st.key === 'profile' && window.MemberProfiles) await MemberProfiles.load();
+
   if (st.key === 'live'){
     try { await window._scheduleLoadPromise; } catch (e) {}
     await tourWaitFor(function(){
@@ -25381,6 +25388,7 @@ function onbTry(){
      открываем только отсюда: на показе шага человек видит КАРТУ */
   if (st.key === 'plan' && typeof startPlanQuiz === 'function') startPlanQuiz();
   else if (st.key === 'lib' && typeof openAiPopup === 'function') openAiPopup();
+  else if (st.key === 'profile' && window.MemberProfiles) MemberProfiles.openEditor();
   else if (st.tryScrollTo || st.scrollTo) onbScrollTo(st.tryScrollTo || st.scrollTo, 'start');
 }
 
@@ -25491,7 +25499,7 @@ function onbFinish(){
    один общий (урок 115) */
 const ONB_MODAL_SEL = '.sched-popup-overlay.open, .center-modal-overlay.open,'
   + ' .fullscreen-popup-overlay.open, .quiz-overlay.open, .gg-overlay.gg-open,'
-  + ' #plan-field.in, #cardentry-overlay.open, #hd-overlay.open';
+  + ' #plan-field.in, #cardentry-overlay.open, #hd-overlay.open, #mp-overlay:not([hidden])';
 function onbModalOpen(){
   /* ⚠️ ИДУЩАЯ ПАРТИЯ — ТОЖЕ «ОТКРЫТОЕ ОКНО», хотя это не попап: экран игры
      занимает всё, лента прижата к полю ввода, и полоска садилась ровно на
@@ -26472,6 +26480,7 @@ function payShareUrl(src){
    Для сложных случаев с параметром (bonus_<ключ>, pay_<метка>) остаются
    отдельные функции выше — таблица покрывает переходы БЕЗ параметра */
 const DEEPLINKS = {
+  'profile_edit': { go: () => MemberProfiles.openEditor(), guests: false },
   // — Открытая часть: годится для рекламы и холодного трафика —
   // (`quiz` сюда не входит: он перехватывается раньше в openFromStartParam,
   //  потому что `quiz_КОД` показывает чужой результат — свой отдельный экран)
@@ -45793,7 +45802,15 @@ function safeLink(value){try{const u=new URL(value);return ['http:','https:'].in
 function link(url,label){url=safeLink(url);return url?'<a class="mp-link" target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">'+esc(label)+'</a>':'';}
 function card(p){return '<div class="mp-head">'+avatar(p)+'<div style="min-width:0">'+(p.premium_active?'<div class="mp-badge">Премиальный профиль</div>':'')+'<div class="mp-name">'+esc(p.display_name)+'</div></div></div>'+(p.bio?'<p class="mp-bio">'+esc(p.bio)+'</p>':'')+'<div class="mp-tags">'+(p.tags||[]).map(t=>'<span class="mp-tag">'+esc(t)+'</span>').join('')+'</div>'+(p.premium_active?link(p.website,'Ссылка участника'):'')+(p.project?'<div class="mp-project"><h3>'+esc(p.project.title)+'</h3><p class="mp-bio">'+esc(p.project.description)+'</p>'+link(p.project.url,'Открыть проект')+'</div>':'');}
 function ownCard(){const r=root();if(!r||!state)return;r.hidden=false;r.className='card '+theme(state);r.innerHTML=card({...state,project:null})+'<div class="mp-actions"><button type="button" data-mp="edit">Редактировать профиль</button><button type="button" data-mp="people">Найти участника</button><button type="button" data-mp="projects">Проекты клуба</button></div>';}
-async function load(){const n=++sequence;const r=root();if(!r)return;try{await waitProfile();const p=await api('/me');if(n!==sequence)return;state=p;ownCard();}catch(e){if(n!==sequence)return;r.hidden=e.status===401||e.status===403;if(!r.hidden)r.innerHTML='<p class="mp-muted">Профиль не загрузился.</p><button class="mp-button" data-mp="reload">Повторить</button>';}}
+async function load(){const n=++sequence;const r=root();if(!r)return;try{await waitProfile();const p=await api('/me');if(n!==sequence)return;state=p;ownCard();return p;}catch(e){if(n!==sequence)return;r.hidden=e.status===401||e.status===403;if(!r.hidden)r.innerHTML='<p class="mp-muted">Профиль не загрузился.</p><button class="mp-button" data-mp="reload">Повторить</button>';}}
+async function openEditor(){
+ switchView('profile');
+ open('<h2>Мой профиль</h2><p class="mp-muted">Загружаю профиль…</p><div class="mp-actions"><button data-mp="open-editor">Повторить</button><button data-mp="close">Закрыть</button></div>');
+ const request=load(), n=sequence;
+ const p=await request;
+ if(n!==sequence||overlay().hidden)return;
+ if(p)edit();else status('Не удалось открыть профиль. Проверь вход в клуб и попробуй ещё раз.');
+}
 function open(html){lastFocus=document.activeElement;sheet().innerHTML=html+'<p class="mp-status" id="mp-status" role="status" aria-live="polite"></p>';overlay().hidden=false;sheet().focus();}
 function close(){if(busy)return;overlay().hidden=true;sequence++;if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
 function field(label,id,value,max,type='text'){return '<label class="mp-field" for="'+id+'">'+label+'<input id="'+id+'" type="'+type+'" maxlength="'+max+'" value="'+esc(value)+'"></label>';}
@@ -45804,8 +45821,8 @@ function projectEdit(){const p=state.project||{};const labels={draft:'Черно
 async function directory(kind='people',append=false){const n=++sequence;if(!append){open('<h2>'+(kind==='people'?'Участники клуба':'Проекты участников')+'</h2>'+(kind==='people'?'<p class="mp-muted">Ищи по имени, описанию или тегам. Здесь только действующие участники, включившие видимость в поиске.</p><label class="mp-field">Поиск специалиста<input id="mp-search" maxlength="80" placeholder="Например, дизайнер"></label><button class="mp-button" data-mp="search">Найти</button>':'<p class="mp-muted">Проекты премиальных участников, одобренные Денисом.</p>')+'<div id="mp-results"></div><div class="mp-actions"><button id="mp-more" data-mp="more" hidden>Показать ещё</button><button data-mp="close">Закрыть</button></div>');sheet().dataset.kind=kind;sheet().dataset.offset='0';}
  const q=document.getElementById('mp-search')?.value||'';try{status('Загружаю…');const data=await api('/'+(kind==='people'?'people':'catalog')+'?offset='+(append?sheet().dataset.offset:'0')+'&q='+encodeURIComponent(q));if(n!==sequence||overlay().hidden)return;const results=document.getElementById('mp-results');if(!append)results.innerHTML='';results.insertAdjacentHTML('beforeend',data.items.map(p=>'<article class="mp-person '+theme(p)+'">'+card(p)+'<div class="mp-actions"><button data-mp="person" data-id="'+Number(p.id)+'">Посмотреть профиль</button></div></article>').join(''));const more=document.getElementById('mp-more');more.hidden=data.next_offset===null;sheet().dataset.offset=String(data.next_offset||0);status(results.children.length?'':'Пока никого не найдено.');}catch(e){if(n===sequence)status(e.message);}}
 async function person(path){const n=++sequence;open('<h2>Профиль участника</h2><div id="mp-person-view"></div><div class="mp-actions"><button data-mp="people">Все участники</button><button data-mp="close">Закрыть</button></div>');status('Загружаю…');try{const p=await api(path);if(n!==sequence||overlay().hidden)return;document.getElementById('mp-person-view').innerHTML='<article class="mp-person '+theme(p)+'">'+card(p)+'</article>';status('');}catch(e){if(n===sequence)status(e.message);}}
-async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='reload')return load();if(name==='edit')return edit();if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
- if(name==='save')return mutate(async()=>{state=await api('/me','PUT',draft());status('Профиль сохранён.');});
+async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
+ if(name==='save')return mutate(async()=>{state=await api('/me','PUT',draft());status('Профиль сохранён.');if(typeof onbDone==='function')onbDone('profile');});
  if(name==='remove-avatar')return mutate(async()=>{state=await api('/me/avatar','DELETE',{revision:state.revision});status('Аватарка удалена.');const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar(state);});
  if(name==='upload')return mutate(async()=>{const file=document.getElementById('mp-avatar-file').files[0];if(!file)throw Error('Сначала выбери фотографию.');if(file.size>2097152)throw Error('Выбери изображение не больше 2 МБ.');const encoded=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Не удалось прочитать файл.'));r.readAsDataURL(file);});state=await api('/me/avatar','PUT',{revision:state.revision,image:encoded});const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar(state);status('Аватарка сохранена.');});
  if(name==='project-submit')return mutate(async()=>{state=await api('/me/project','POST',{revision:state.revision,project:{title:document.getElementById('mp-project-title').value,description:document.getElementById('mp-project-description').value,url:document.getElementById('mp-project-url').value}});status('Проект отправлен Денису на одобрение.');});
@@ -45813,7 +45830,7 @@ async function action(name,button){if(busy)return;if(name==='close')return close
 document.addEventListener('click',e=>{const b=e.target.closest('[data-mp]');if(b)action(b.dataset.mp,b);});
 document.addEventListener('keydown',e=>{if(!overlay()||overlay().hidden)return;if(e.key==='Escape')close();if(e.key==='Enter'&&e.target.id==='mp-search'){e.preventDefault();search();}if(e.key==='Tab'){const els=[...sheet().querySelectorAll('button:not([disabled]):not([hidden]),input,textarea,select,a[href]')].filter(e=>e.offsetParent!==null);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 function search(){sheet().dataset.offset='0';document.getElementById('mp-results').innerHTML='';return directory('people',true);}
-window.MemberProfiles={load,fromChat:id=>person('/from-chat/'+Number(id)),person:id=>person('/people/'+Number(id))};
+window.MemberProfiles={load,openEditor,fromChat:id=>person('/from-chat/'+Number(id)),person:id=>person('/people/'+Number(id))};
 })();
 
 </script>
