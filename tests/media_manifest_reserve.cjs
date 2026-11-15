@@ -54,3 +54,7 @@ for(const bootstrap of [true,false])test('profile '+(bootstrap?'bootstrap recove
   else {await assert.rejects(result);assert(!calls.some(u=>u.startsWith('https://reserve.test')));}
  }finally{clearTimeout(timer);}
 });
+test('fresh film grant pending on reserve uses ready primary without weakening denial',async()=>{
+ const calls=[];const transport=setup(async(url,opts)=>{calls.push(url);if(url.endsWith('/rf/readiness'))return json({protocol:2,ready:true,node:'selectel',own_seq:8,peer_seq:4});if(url.startsWith('https://reserve.test'))return json({detail:'replication pending'},425);return json({sources:[{url:'https://media.test/film'}]});},{storage:{getItem:()=>JSON.stringify({active:1,returnBarrier:4}),setItem(){}}});
+ const r=await transport.request('https://primary.test/media/film?legal_view=fixture');assert.equal(r.status,200);assert(calls[0].startsWith('https://reserve.test'));assert(calls.some(u=>u.startsWith('https://primary.test/media/film')));
+});

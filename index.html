@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v639'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v640'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -6905,6 +6905,10 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .native-film:fullscreen,.native-film.club-video-expanded,#funnel-film-slot:fullscreen,#funnel-film-slot.club-video-expanded{margin-top:0!important}
 :fullscreen>.native-film-fullscreen,.club-video-expanded>.native-film-fullscreen{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
 #funnel-screen.pip-mode #funnel-film-slot:has(.native-film-fullscreen){margin-top:0!important}
+.film-permission-wait{height:100%;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text,#eee);font-size:14px;text-align:center}
+.film-permission-spinner{width:30px;height:30px;border:2px solid #a78acb40;border-top-color:#b59bdc;border-radius:50%;box-shadow:0 0 18px #b59bdc20;animation:film-permission-spin 1s linear infinite}
+@keyframes film-permission-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.film-permission-spinner{animation:none}}
 .film-reload{display:block;width:100%;font-size:13px;margin:10px 0}
 .native-film-fullscreen:hover{background:#443451ed}
 .native-film-fullscreen svg{pointer-events:none}
@@ -15307,8 +15311,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       if(options.onBotFallback){
         this.botFallback=this.button(options.text('film.bot_watch'),'native-film-option native-film-bot',async()=>{
           if(this.botFallback.disabled)return;
-          this.botFallback.disabled=true;
-          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.ready===false)this.botFallback.textContent='Проверить готовность видео';else if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
+          this.botFallback.disabled=true;this.botFallback.textContent='Готовим видео в боте…';
+          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
           catch(e){if(!this.destroyed)this.statusText(e.message||options.text('film.bot_failed'));}
           finally{if(!this.destroyed)this.botFallback.disabled=false;}
         });
@@ -16356,7 +16360,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v639 · 15.11.2026 Автовосстановление видео';
+const APP_BUILD = 'v640 · 15.11.2026 Быстрый переход и запуск фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27569,19 +27573,31 @@ function playBonusVideo(bonusKey, itemKey){
 let bonusNativePlayer = null;
 let bonusNativeGeneration = 0;
 function canWatchVideoInBot(){return isInsideVk()?!!vkUserId():!!(telegramId && Number(telegramId)>0);}
-const videoBotDestinations=new Map();
+const videoBotDestinations=new Map(),videoBotRequests=new Map();
 async function watchVideoInBot(bonusKey='',itemKey=''){
   const inVk=isInsideVk();
   const key=(inVk?'vk:'+vkUserId():'tg:'+telegramId)+':'+bonusKey+':'+itemKey;
   if(videoBotDestinations.has(key)){const cached=videoBotDestinations.get(key);openUrl(cached.url);return cached;}
-  const d=await apiRequest(inVk?'https://bot.youselllikeagod-magazine.ru/content/watch-in-bot':`${API_URL}/media/watch-in-bot`,{method:'POST',headers:{'Content-Type':'application/json',...(!inVk?sessionHeaders():{})},body:JSON.stringify(inVk?{platform:'vk',launch:vkLaunchQuery(),target:bonusKey?'bi_'+bonusKey+'__'+itemKey:'film'}:{bonus_key:bonusKey,item_key:itemKey})},25000);
-  if(d.url&&d.ready!==false){if(d.status==='queued'||d.status==='check_bot')videoBotDestinations.set(key,d);openUrl(d.url);}
-  return d;
+  let request=videoBotRequests.get(key);
+  if(!request){
+    request=apiRequest(inVk?'https://bot.youselllikeagod-magazine.ru/content/watch-in-bot':`${API_URL}/media/watch-in-bot`,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',...(!inVk?sessionHeaders():{})},body:JSON.stringify(inVk?{platform:'vk',launch:vkLaunchQuery(),target:bonusKey?'bi_'+bonusKey+'__'+itemKey:'film'}:{bonus_key:bonusKey,item_key:itemKey})},25000)
+      .then(d=>{if(d.url&&(d.status==='queued'||d.status==='check_bot'))videoBotDestinations.set(key,d);return d;})
+      .finally(()=>videoBotRequests.delete(key));
+    videoBotRequests.set(key,request);
+  }
+  const fallback={status:'preparing',url:inVk?'https://vk.me/club232119632':BOT_LINK,message:'Открываем переписку. Подготовка видео продолжается.'};
+  let timer;
+  try{
+    // Navigation has its own deadline; never cancel or replay the durable request.
+    const d=await Promise.race([request,new Promise(resolve=>{timer=setTimeout(()=>resolve(fallback),2000);})]);
+    if(d.url)openUrl(d.url);
+    return d;
+  }finally{clearTimeout(timer);}
 }
 function addVideoBotFallback(slot,bonusKey='',itemKey=''){
   if(!canWatchVideoInBot())return;
   const b=document.createElement('button');b.className='native-film-option native-film-bot';b.textContent=t('film.bot_watch');
-  b.onclick=async()=>{b.disabled=true;b.textContent='Готовим видео в боте…';try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.ready===false?'Проверить готовность видео':d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=e.message||t('film.bot_failed');}finally{b.disabled=false;}};
+  b.onclick=async()=>{b.disabled=true;b.textContent='Готовим видео в боте…';try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=e.message||t('film.bot_failed');}finally{b.disabled=false;}};
   slot.appendChild(b);
 }
 let bonusNativeRequest = null;
@@ -33573,6 +33589,30 @@ function preferredFilmSources(sources){
   return routes.slice().sort((a,b)=>Number(String(b.url).includes('twc1.net'))-Number(String(a.url).includes('twc1.net')));
 }
 
+async function fetchFilmManifest(url,options,onWaiting){
+  const until=Date.now()+8000;let retry=0;
+  while(true){
+    const response=await fetch(url,options);
+    if(response.status!==425||Date.now()>=until||retry>=5)return response;
+    if(onWaiting)onWaiting();
+    const delay=Math.min([500,1000,1500,2000,3000][retry++],until-Date.now());
+    await new Promise((resolve,reject)=>{
+      const signal=options.signal;let timer;
+      const cleanup=()=>{clearTimeout(timer);if(signal)signal.removeEventListener('abort',abort);};
+      const abort=()=>{cleanup();reject(new DOMException('Aborted','AbortError'));};
+      if(signal&&signal.aborted){abort();return;}
+      if(signal)signal.addEventListener('abort',abort,{once:true});
+      timer=setTimeout(()=>{cleanup();resolve();},delay);
+    });
+  }
+}
+function filmPermissionWaiting(slot){
+  if(slot.querySelector('.film-permission-wait'))return;
+  const box=document.createElement('div');box.className='film-permission-wait';box.setAttribute('role','status');box.setAttribute('aria-live','polite');
+  box.innerHTML='<span class="film-permission-spinner" aria-hidden="true"></span><span>Проверяем доступ к фильму…</span>';
+  slot.replaceChildren(box);
+}
+
 function startFunnelFilm(){
   if(!window.ensureClubFilmConsent||!ensureClubFilmConsent(startFunnelFilm))return;
   const enabled = appSettings.film_delivery_native !== false && appSettings.film_delivery_native !== '0';
@@ -33590,7 +33630,7 @@ function startFunnelFilm(){
   let manifestStatus=0,manifestServer='unknown';
   // Allow the API to try both storage copies before abandoning the manifest.
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
-  Promise.all([filmEngineReady(), filmContactName().then(function(name){return fetch(`${API_URL}/media/film${filmManifestQuery(name)}`, {signal:controller.signal, cache:'no-cache'});})
+  Promise.all([filmEngineReady(), filmContactName().then(function(name){return fetchFilmManifest(`${API_URL}/media/film${filmManifestQuery(name)}`, {signal:controller.signal, cache:'no-cache'},()=>{if(generation===filmNativeGeneration)filmPermissionWaiting(slot);});})
     .then(function(r){ manifestStatus=r.status;manifestServer=window.clubMediaServer?clubMediaServer(r.url):'unknown';if (!r.ok) throw new Error('manifest'); return r.json(); })]).then(function(results){return results[1];})
     .then(function(manifest){
       if (generation !== filmNativeGeneration){diagnostic({event:'closed'});return;}
