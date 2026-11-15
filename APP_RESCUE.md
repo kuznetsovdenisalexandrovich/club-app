@@ -104,3 +104,11 @@ URL. Direct guest replay entry opens paywall before protected requests; paused
 members retain the existing server-checked recording route. No access grants or
 backend projection changes. 28 tests plus four full browser flows (two widths,
 two themes) cover deferred requests, PiP identity, catalog, previews and paywalls.
+
+2026-11-15 v629: Android native HLS media error 4 may switch once to bundled
+HLS.js when supported; native playback is never delayed by optional preload.
+Position survives the switch, recovery still requires actual progress, and
+source/quality retries remain bounded. Bootstrap /users/me?bootstrap=1 is a
+read-only hedged request. The separate visit request runs once per session
+identity with rfNoRetry; it must never be raced against the reserve. Rescue
+messages and videos are not replayed by these fixes.

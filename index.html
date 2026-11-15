@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v628 -->
+<!-- FILE_VERSION: index-v629 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v628'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v629'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15439,12 +15439,23 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       on('seeking',()=>{if(!this.resumePending)this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
       on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
-      on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
+      on('error',()=>{
+        const code=v.error&&v.error.code||0;
+        this.failure('media_error',{media:code});
+        // One bounded decoder fallback per player, retaining the VOD position.
+        // Native Android can reject HLS after playback has already progressed.
+        if(code===4&&this.engine==='native'&&this.sources[this.index]?.type==='hls'&&!this.forceHls&&
+           /Android/i.test(root.navigator?.userAgent||'')&&root.Hls?.isSupported()){
+          this.forceHls=true;this.diagnostic('milestone',{reason:'native_to_hls'});
+          this.switchSource(false,true);return;
+        }
+        this.switchSource(false);
+      });
       const source=this.sources[this.index];
       // Native HLS must request cross-origin signed segments in CORS mode.
       if(source.type==='hls')v.crossOrigin='anonymous';else v.removeAttribute('crossorigin');
       const url=this.quality==='360'&&source.lowUrl?source.lowUrl:source.url;
-      if(source.type==='hls'&&!v.canPlayType('application/vnd.apple.mpegurl')){
+      if(source.type==='hls'&&(this.forceHls||!v.canPlayType('application/vnd.apple.mpegurl'))){
         this.engine='hls';
         if(!root.Hls||!root.Hls.isSupported()){this.failure('unsupported');this.switchSource(false);return;}
         const hls=this.hls=new root.Hls({startLevel:0,maxBufferLength:20,maxMaxBufferLength:40,
@@ -15876,6 +15887,7 @@ function createRFParallelTransport(config){
   }
   // Race catalogue/bootstrap and video manifests only. Writes stay serial.
   function fastRead(path,method){
+    if(['GET','HEAD'].includes(method)&&path.split('?')[0]==='/users/me')return new URL(path,endpoints[0]).searchParams.get('bootstrap')==='1';
     return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding|bonus\/[^/?]+\/[^/?]+|meeting\/[0-9]+\/replay))(?:\?|$)/.test(path));
   }
   async function hedgedRead(path,options,headers){
@@ -15941,10 +15953,10 @@ function createRFParallelTransport(config){
       if(!root.crypto||!root.crypto.randomUUID)throw Error('Secure operation ID unavailable');
       headers.set('Idempotency-Key',root.crypto.randomUUID());
     }
-    const retry=true;
+    const retry=options.rfNoRetry!==true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
-    if(fastRead(path,method))return hedgedRead(path,options,headers);
+    if(retry&&fastRead(path,method))return hedgedRead(path,options,headers);
     const original=active;
 
     let response,error;
@@ -16295,7 +16307,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v628 · 15.11.2026 Знакомство с участниками';
+const APP_BUILD = 'v629 · 15.11.2026 Устойчивость приложения';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -18335,12 +18347,21 @@ let pauseReturnPending = false;
 let pausedUntil = '';
 
 let profileFailureReports = 0;
+const profileVisitsStarted=new Set();
 async function loadProfile() {
   let profileResponseReceived=false;
   try {
-    const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}`, {}, 15000);
+    const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}&bootstrap=1`, {}, 15000);
     profileResponseReceived=true;
     if(typeof u.found==='boolean'&&window.ClubAppRescue)ClubAppRescue.mark('profile');
+    if(u.found&&!profileVisitsStarted.has(String(telegramId))){
+      const visitId=String(telegramId);profileVisitsStarted.add(visitId);
+      // The legacy visit has side effects; never race or replay it on a peer.
+      apiRequest(`${API_URL}/users/me?telegram_id=${encodeURIComponent(visitId)}`, {rfNoRetry:true}, 30000).then(function(visit){
+        if(String(telegramId)===visitId&&visit.share_code)shareCode=visit.share_code;
+      }).catch(function(){});
+    }
+
 
     // Настройка главной приезжает вместе с профилем — отдельного запроса на
     // старте нет намеренно, каждый новый запрос это ещё одна причина рывка
@@ -33368,8 +33389,13 @@ function showFunnelScreen(){
    Ифреймом, а не спаном с data-boomstream-*: их скрипт сканирует страницу при
    загрузке, наш блок появляется позже (те же грабли, что были с бонусами). */
 let filmEnginePromise=null;
-function filmEngineReady(){
-  if(document.createElement('video').canPlayType('application/vnd.apple.mpegurl') || window.Hls) return Promise.resolve();
+function filmEngineReady(force=false){
+  if(window.Hls) return Promise.resolve();
+  if(!force&&document.createElement('video').canPlayType('application/vnd.apple.mpegurl')){
+    // Warm the alternate decoder without delaying healthy native playback.
+    if(/Android/i.test(navigator.userAgent||''))filmEngineReady(true).catch(function(){});
+    return Promise.resolve();
+  }
   if(!filmEnginePromise)filmEnginePromise=new Promise(function(resolve,reject){
     const script=document.createElement('script');script.src='vendor/hls-1.7.3.min.js';
     const timer=setTimeout(function(){script.remove();filmEnginePromise=null;reject(new Error('Video engine timeout'));},6000);

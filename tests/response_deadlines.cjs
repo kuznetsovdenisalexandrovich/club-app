@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),test=require('node:test');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const slice=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
-const core=slice('(function(root){','window.__rfTransport=createRFParallelTransport');
+const core=html.slice(html.lastIndexOf('(function(root){',html.indexOf('function createRFParallelTransport(config)')),html.indexOf('window.__rfTransport=createRFParallelTransport'));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function transport(fetch){
  const c={module:{exports:{}},URL,Request,Response,Headers,AbortController,DOMException,setTimeout,clearTimeout,Date,crypto:require('crypto').webcrypto};vm.createContext(c);vm.runInContext(core,c);

@@ -210,12 +210,23 @@
       on('seeking',()=>{if(!this.resumePending)this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
       on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
-      on('error',()=>{this.failure('media_error',{media:v.error&&v.error.code||0});this.switchSource(false);});
+      on('error',()=>{
+        const code=v.error&&v.error.code||0;
+        this.failure('media_error',{media:code});
+        // One bounded decoder fallback per player, retaining the VOD position.
+        // Native Android can reject HLS after playback has already progressed.
+        if(code===4&&this.engine==='native'&&this.sources[this.index]?.type==='hls'&&!this.forceHls&&
+           /Android/i.test(root.navigator?.userAgent||'')&&root.Hls?.isSupported()){
+          this.forceHls=true;this.diagnostic('milestone',{reason:'native_to_hls'});
+          this.switchSource(false,true);return;
+        }
+        this.switchSource(false);
+      });
       const source=this.sources[this.index];
       // Native HLS must request cross-origin signed segments in CORS mode.
       if(source.type==='hls')v.crossOrigin='anonymous';else v.removeAttribute('crossorigin');
       const url=this.quality==='360'&&source.lowUrl?source.lowUrl:source.url;
-      if(source.type==='hls'&&!v.canPlayType('application/vnd.apple.mpegurl')){
+      if(source.type==='hls'&&(this.forceHls||!v.canPlayType('application/vnd.apple.mpegurl'))){
         this.engine='hls';
         if(!root.Hls||!root.Hls.isSupported()){this.failure('unsupported');this.switchSource(false);return;}
         const hls=this.hls=new root.Hls({startLevel:0,maxBufferLength:20,maxMaxBufferLength:40,

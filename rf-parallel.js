@@ -62,6 +62,7 @@ function createRFParallelTransport(config){
   }
   // Race catalogue/bootstrap and video manifests only. Writes stay serial.
   function fastRead(path,method){
+    if(['GET','HEAD'].includes(method)&&path.split('?')[0]==='/users/me')return new URL(path,endpoints[0]).searchParams.get('bootstrap')==='1';
     return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding|bonus\/[^/?]+\/[^/?]+|meeting\/[0-9]+\/replay))(?:\?|$)/.test(path));
   }
   async function hedgedRead(path,options,headers){
@@ -127,10 +128,10 @@ function createRFParallelTransport(config){
       if(!root.crypto||!root.crypto.randomUUID)throw Error('Secure operation ID unavailable');
       headers.set('Idempotency-Key',root.crypto.randomUUID());
     }
-    const retry=true;
+    const retry=options.rfNoRetry!==true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
-    if(fastRead(path,method))return hedgedRead(path,options,headers);
+    if(retry&&fastRead(path,method))return hedgedRead(path,options,headers);
     const original=active;
 
     let response,error;

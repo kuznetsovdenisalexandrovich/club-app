@@ -39,3 +39,18 @@ test('slow film manifest survives the former seven-second transport cutoff',asyn
  }});
  assert.equal((await (await transport.request('https://primary.test/media/film')).json()).film,'fixture');
 });
+
+for(const bootstrap of [true,false])test('profile '+(bootstrap?'bootstrap recovers':'visit is not replayed'),async()=>{
+ const calls=[];const transport=setup(async(url,opts)=>{
+  calls.push(url);
+  if(url.includes('/rf/readiness'))return json({protocol:2,ready:true,node:'timeweb',own_seq:1,peer_seq:1});
+  if(url.startsWith('https://reserve.test'))return json({found:true});
+  return pending(opts.signal);
+ },{requestTimeoutMs:30});
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),80);
+ try{
+  const result=transport.request('https://primary.test/users/me?telegram_id=77'+(bootstrap?'&bootstrap=1':''),{signal:ctrl.signal,rfNoRetry:!bootstrap});
+  if(bootstrap)assert.equal((await (await result).json()).found,true);
+  else {await assert.rejects(result);assert(!calls.some(u=>u.startsWith('https://reserve.test')));}
+ }finally{clearTimeout(timer);}
+});
