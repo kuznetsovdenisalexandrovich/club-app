@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v629'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v631'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16318,7 +16318,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v630 · 15.11.2026 Профиль и аватарка';
+const APP_BUILD = 'v631 · 15.11.2026 Просмотр в боте ВК';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27528,19 +27528,20 @@ function playBonusVideo(bonusKey, itemKey){
 
 let bonusNativePlayer = null;
 let bonusNativeGeneration = 0;
-function canWatchVideoInBot(){return !!(telegramId && Number(telegramId)>0 && !isInsideVk());}
+function canWatchVideoInBot(){return isInsideVk()?!!vkUserId():!!(telegramId && Number(telegramId)>0);}
 const videoBotDestinations=new Map();
 async function watchVideoInBot(bonusKey='',itemKey=''){
-  const key=String(telegramId)+':'+bonusKey+':'+itemKey;
+  const inVk=isInsideVk();
+  const key=(inVk?'vk:'+vkUserId():'tg:'+telegramId)+':'+bonusKey+':'+itemKey;
   if(videoBotDestinations.has(key)){const cached=videoBotDestinations.get(key);openUrl(cached.url);return cached;}
-  const d=await apiRequest(`${API_URL}/media/watch-in-bot`,{method:'POST',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({bonus_key:bonusKey,item_key:itemKey})},25000);
+  const d=await apiRequest(inVk?'https://bot.youselllikeagod-magazine.ru/content/watch-in-bot':`${API_URL}/media/watch-in-bot`,{method:'POST',headers:{'Content-Type':'application/json',...(!inVk?sessionHeaders():{})},body:JSON.stringify(inVk?{platform:'vk',launch:vkLaunchQuery(),target:bonusKey?'bi_'+bonusKey+'__'+itemKey:'film'}:{bonus_key:bonusKey,item_key:itemKey})},25000);
   if(d.url){if(d.status==='queued'||d.status==='check_bot')videoBotDestinations.set(key,d);openUrl(d.url);}
   return d;
 }
 function addVideoBotFallback(slot,bonusKey='',itemKey=''){
   if(!canWatchVideoInBot())return;
   const b=document.createElement('button');b.className='native-film-option native-film-bot';b.textContent=t('film.bot_watch');
-  b.onclick=async()=>{b.disabled=true;try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=t('film.bot_failed');}finally{b.disabled=false;}};
+  b.onclick=async()=>{b.disabled=true;try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=e.message||t('film.bot_failed');}finally{b.disabled=false;}};
   slot.appendChild(b);
 }
 let bonusNativeRequest = null;
