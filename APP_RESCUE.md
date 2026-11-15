@@ -112,3 +112,15 @@ source/quality retries remain bounded. Bootstrap /users/me?bootstrap=1 is a
 read-only hedged request. The separate visit request runs once per session
 identity with rfNoRetry; it must never be raced against the reserve. Rescue
 messages and videos are not replayed by these fixes.
+
+
+2026-11-15 legal baseline (app v632 / bot v205 / backend v693): promotional
+film requires separate versioned data and advertising choices. Refusal/closing
+does not grant access; paid service access keeps priority. Native film sends and
+rescue delivery check consent before claiming any delivery receipt. Consent
+pauses preserve nurture cursors, receipts and retry budgets; no chains are enabled
+by this release. Film manifests require a short-lived token checked against current
+choices; non-film lesson/meeting access is unchanged. UI startup waits for late
+inline modules; guest shell exists before the consent modal can be dismissed.
+App leave-after-refusal alerts require an actual pagehide signal and no return for
+90 seconds; neither closing a dialog nor silence in a bot proves departure.
