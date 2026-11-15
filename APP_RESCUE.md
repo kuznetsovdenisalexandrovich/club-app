@@ -132,3 +132,5 @@ Automatic reload carries only the previous diagnostic attempt UUID; the new fram
 
 2026-11-15 v640: explicit watch-in-bot navigates after response or two seconds, whichever comes first. Keep one in-flight keepalive request per identity/material; late responses update the cache without reopening chat. Confirmed queued receipts reopen without another request. Backend v699 returns425 for a missing well-formed film grant so RF transport can consult the other ready replica; existing revoked/expired grants still403. Reproduced identical fresh grant: Selectel200, Timeweb403, Timeweb200 five seconds later. No CDN/S3 permission changes.
 Film manifest retries only HTTP425 for up to eight seconds of synchronization waiting, with a visible spinner; normal200 and final401/403 are immediate. The original request cancellation/deadline remains active.
+
+2026-11-15 v641: film consent dialog starts one background warmup of bundled HLS decoder and first-party API connections; its existing poster loads concurrently. No manifest/video request or consent mutation during warmup. The synchronization spinner now reads «Загружаем фильм…».
