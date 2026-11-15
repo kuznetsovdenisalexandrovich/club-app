@@ -11,6 +11,7 @@ for(const marketing of [false,true])test('visible choices follow server mode: '+
 test('single explicit action records mailing bundle and then continues film',async()=>{
  const calls=[];let played=0;
  const c={busy:false,state:{can_receive:false,mailing_version:'mailing-v1'},choice:{data:true},run:1,visit:'a',continueFilm:()=>played++,legalRender(){},legalClose(){},legalEvent:async()=>{},sessionStorage:{getItem:()=>'',removeItem(){}},legalRequest:async body=>{calls.push(body);return {can_receive:true,film_token:'token'}},legalSaved:d=>c.state=d};
+ c.window=c;
  vm.runInNewContext(html.slice(html.indexOf('function legalMissingChoice()'),html.indexOf('function legalChoiceLabel('))+html.slice(html.indexOf('async function legalAcceptFilm()'),html.indexOf('async function legalRejectFilm()')),c);
  await c.legalAcceptFilm();assert.equal(played,1);assert.equal(calls.length,1);assert.equal(calls[0].purpose,'mailing_bundle');assert.equal(calls[0].enabled,true);
  c.choice.data=false;await c.legalAcceptFilm();assert.equal(calls.length,1);
@@ -18,7 +19,13 @@ test('single explicit action records mailing bundle and then continues film',asy
 test('separate mode records two explicit choices without a mailing bundle',async()=>{
  const calls=[];let played=0;
  const c={busy:false,state:{marketing_materials:true,data:false,ads:false,version:'v1'},choice:{data:true,ads:false},run:1,visit:'a',continueFilm:()=>played++,legalRender(){},legalClose(){},legalEvent:async()=>{},sessionStorage:{getItem:()=>'',removeItem(){}},legalRequest:async body=>{calls.push(body);return {...c.state,[body.purpose]:body.enabled,film_token:body.purpose==='ads'?'token':''}},legalSaved:d=>c.state=d};
+ c.window=c;
  vm.runInNewContext(html.slice(html.indexOf('function legalMissingChoice()'),html.indexOf('function legalChoiceLabel('))+html.slice(html.indexOf('async function legalAcceptFilm()'),html.indexOf('async function legalRejectFilm()')),c);
  await c.legalAcceptFilm();assert.equal(calls.length,0);
  c.choice.ads=true;await c.legalAcceptFilm();assert.equal(played,1);assert.deepEqual(calls.map(x=>x.purpose),['data','ads']);
+});
+test('autostart waits for saved consent but not for optional analytics',async()=>{
+ let release,played=0;const c={busy:false,state:{can_receive:false,mailing_version:'v'},choice:{data:true},run:1,visit:'a',continueFilm:()=>played++,legalRender(){},legalClose(){},legalEvent:()=>new Promise(()=>{}),sessionStorage:{getItem:()=>'',removeItem(){}},legalRequest:()=>new Promise(resolve=>release=resolve),legalSaved:d=>c.state=d};c.window=c;
+ vm.runInNewContext(html.slice(html.indexOf('function legalMissingChoice()'),html.indexOf('function legalChoiceLabel('))+html.slice(html.indexOf('async function legalAcceptFilm()'),html.indexOf('async function legalRejectFilm()')),c);
+ const pending=c.legalAcceptFilm();assert.equal(played,0);assert(!c.clubFilmAutoStart);release({can_receive:true,film_token:'fixture'});await pending;assert.equal(played,1);assert.equal(c.clubFilmAutoStart,true);
 });

@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v641'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v642'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15168,6 +15168,12 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     }catch(e){return 'unknown';}
   }
   root.clubMediaStorage=mediaHost;
+  root.clubPublicFilmFetch=function(url,signal){
+    const u=new URL(url);
+    if(!['selectel','timeweb'].includes(root.clubMediaServer(u.href))||!/^\/media\/(?:film-preload|film-start\/[a-f0-9]{32}\/[a-f0-9]{16}\/(?:360|720))$/.test(u.pathname))return Promise.reject(Error('Invalid public film preload'));
+    return probeFetch(u.href,{signal,credentials:'omit',cache:u.pathname==='/media/film-preload'?'default':'force-cache'});
+  };
+
   function allowedMedia(url){
     try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&['selectel','timeweb','railway','selectel_storage','railway_storage'].includes(mediaHost(url));}catch(e){return false;}
   }
@@ -16360,7 +16366,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v641 · 15.11.2026 Фоновая подготовка фильма';
+const APP_BUILD = 'v642 · 15.11.2026 Предзагрузка начала фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -33481,11 +33487,38 @@ function filmEngineReady(force=false){
   return filmEnginePromise;
 }
 
+let filmStartPreload=null;
+function stopClubFilmPreload(){if(filmStartPreload&&!filmStartPreload.complete){filmStartPreload.controller.abort();filmStartPreload=null;}}
+function preloadClubFilmStart(){
+  if(filmStartPreload||!window.clubPublicFilmFetch||navigator.connection?.saveData)return;
+  if(typeof appSettings!=='undefined'&&(appSettings.film_delivery_native===false||appSettings.film_delivery_native==='0'))return;
+  const controller=new AbortController(),state={controller,complete:false,film:''};filmStartPreload=state;
+  const timer=setTimeout(()=>controller.abort(),12000);
+  // Only route-selected public editions, never the viewer name or account data.
+  const query=filmEdition()?'?edition='+encodeURIComponent(filmEdition()):filmNameKey()?'?video_key='+encodeURIComponent(filmNameKey()):'';
+  (async()=>{
+    const response=await clubPublicFilmFetch(API_URL+'/media/film-preload'+query,controller.signal);
+    if(!response.ok)throw Error('preload unavailable');
+    const data=await response.json();
+    if(!/^[a-f0-9]{32}$/.test(data.film)||!/^[a-f0-9]{16}$/.test(data.release)||!Array.isArray(data.urls)||data.urls.length!==2)throw Error('preload catalog');
+    if(controller.signal.aborted)return;
+    state.film=data.film;
+    await Promise.all(data.urls.map(async url=>{
+      if(!new URL(url).pathname.startsWith('/media/film-start/'+data.film+'/'+data.release+'/'))throw Error('preload scope');
+      const part=await clubPublicFilmFetch(url,controller.signal);
+      if(!part.ok||Number(part.headers.get('Content-Length'))>8*1024*1024)throw Error('preload size');
+      const reader=part.body.getReader();let bytes=0;
+      try{while(true){const chunk=await reader.read();if(chunk.done)break;bytes+=chunk.value.byteLength;if(bytes>8*1024*1024)throw Error('preload size');}}finally{reader.cancel().catch(()=>{});}
+    }));
+    state.complete=true;
+  })().catch(()=>{controller.abort();if(filmStartPreload===state)filmStartPreload=null;}).finally(()=>clearTimeout(timer));
+}
 let filmWarmupStarted=false;
 function prepareClubFilm(){
+  preloadClubFilmStart();
   if(filmWarmupStarted)return;
   filmWarmupStarted=true;
-  // Public player assets only: no manifest, media URL, viewer identity or consent mutation.
+  // Decoder preparation is independent of the bounded anonymous startup download.
   filmEngineReady(true).catch(()=>{});
   for(const origin of ['https://selectel-api.youselllikeagod-magazine.ru','https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net']){
     const link=document.createElement('link');link.rel='preconnect';link.href=origin;link.crossOrigin='anonymous';document.head.appendChild(link);
@@ -33516,7 +33549,7 @@ function filmContactName(){
   return filmVkNamePromise;
 }
 function filmManifestQuery(contactName){
-  const permission=(window.clubFilmLegalToken?'&legal_view='+encodeURIComponent(window.clubFilmLegalToken):'');
+  const permission=(window.clubFilmLegalToken?'&legal_view='+encodeURIComponent(window.clubFilmLegalToken):'')+(typeof filmStartPreload!=='undefined'&&filmStartPreload?.film?'&warm_film='+filmStartPreload.film:'');
   if(filmEdition())return '?direct_capable=1&edition='+filmEdition()+permission;
   if(filmNameKey())return '?direct_capable=1&video_key='+filmNameKey()+permission;
   const name=contactName===undefined?(tgContactFields().tg_first_name||''):String(contactName||'');
@@ -33675,6 +33708,7 @@ function startFunnelFilm(){
       });
       filmSeekDone = true;
       filmTakeMediaSession();
+      if(window.clubFilmAutoStart){window.clubFilmAutoStart=false;filmNative.play();}
     }).catch(function(e){
       if (generation !== filmNativeGeneration){diagnostic({event:'closed'});return;}
       diagnostic({event:'manifest_error',http:manifestStatus,server:manifestServer,reason:e.name==='AbortError'?'timeout':'manifest_failed'});
@@ -33689,6 +33723,7 @@ function startFunnelFilm(){
 
 function startBoomstreamFilm(){
   if(!window.ensureClubFilmConsent||!ensureClubFilmConsent(startBoomstreamFilm))return;
+  window.clubFilmAutoStart=false;
   const slot = document.getElementById('funnel-film-slot');
   const cover = document.getElementById('funnel-film');
   if (!slot || !cover) return;
@@ -46008,7 +46043,7 @@ function legalEvent(name,attempt=visit){if(!attempt)return Promise.resolve();ret
 function legalEl(tag,text){const e=document.createElement(tag);if(text)e.textContent=text;return e;}
 function legalButton(text,action,primary=false){const b=legalEl('button',text);b.type='button';b.className='legal-action'+(primary?' legal-primary':'');b.onclick=action;return b;}
 function legalLink(text,url){const a=legalEl('a',text);a.href=url;a.target='_blank';a.rel='noopener';a.onclick=e=>{e.preventDefault();openUrl(url)};return a;}
-function legalClose(record=true){if(record&&mode==='film'&&!declined)legalEvent('dismissed');run++;continueFilm=null;if(filmBackdrop){filmBackdrop.remove();filmBackdrop=null;}if(modal){modal.close();modal.remove();modal=null;}}
+function legalClose(record=true){if((record||declined)&&mode==='film'&&typeof stopClubFilmPreload==='function')stopClubFilmPreload();if(record&&mode==='film'&&!declined)legalEvent('dismissed');run++;continueFilm=null;if(filmBackdrop){filmBackdrop.remove();filmBackdrop=null;}if(modal){modal.close();modal.remove();modal=null;}}
 function legalDocumentUrl(p){return state?.marketing_materials?base+'/archive/2026-11-15-v1/'+(p==='ads'?'marketing':'consent')+'.html':base+'/archive/2026-11-15-mailing-v1/mailing.html';}
 function legalPurposes(){return state?.marketing_materials?['data','ads']:['data'];}
 function legalGranted(p){return state?.marketing_materials?!!state[p]:!!state?.can_receive;}
@@ -46023,7 +46058,7 @@ for(const p of legalPurposes()){const section=legalEl('section');const row=legal
 const status=legalEl('p');status.id='legal-center-status';status.setAttribute('role','status');if(!state)status.textContent=label('loading');content.append(status);const foot=legalEl('footer');foot.append(legalLink(label('policy'),base+'/privacy.html'),legalLink(label('all'),base+'/index.html'));content.append(foot);modal.append(content);}
 function legalSaved(d){state=d;window.clubFilmLegalToken=d.film_token||'';validUntil=d.film_token?Date.now()+30000:0;}
 async function legalSaveChoice(p,on){if(busy||!state)return;const n=run;busy=true;legalRender();try{const d=await legalRequest(state.marketing_materials?{purpose:p,enabled:on,version:state.version}:{purpose:'mailing_bundle',enabled:on,version:state.mailing_version});if(n!==run)return;legalSaved(d);if(!on&&typeof filmHardStop==='function')filmHardStop();busy=false;legalRender();document.getElementById('legal-center-status').textContent=label('saved');}catch(e){if(n===run){busy=false;legalRender();document.getElementById('legal-center-status').textContent=e.message||label('error');}}finally{busy=false;}}
-async function legalAcceptFilm(){if(busy||!state||legalMissingChoice())return;busy=true;legalRender();const n=run;try{if(state.marketing_materials){for(const p of ['data','ads'])if(!state[p])legalSaved(await legalRequest({purpose:p,enabled:true,version:state.version}));}else if(!state.can_receive)legalSaved(await legalRequest({purpose:'mailing_bundle',enabled:true,version:state.mailing_version}));if(n!==run)return;if(!state.film_token)legalSaved(await legalRequest());await legalEvent('accepted');try{const prior=sessionStorage.getItem('club_legal_pending');if(prior&&prior!==visit)await legalEvent('accepted',prior);sessionStorage.removeItem('club_legal_pending');}catch(e){}const next=continueFilm;legalClose(false);if(next)next();}catch(e){if(n===run){busy=false;legalRender();document.getElementById('legal-center-status').textContent=e.message||label('error');}}finally{busy=false;}}
+async function legalAcceptFilm(){if(busy||!state||legalMissingChoice())return;busy=true;legalRender();const n=run;try{if(state.marketing_materials){for(const p of ['data','ads'])if(!state[p])legalSaved(await legalRequest({purpose:p,enabled:true,version:state.version}));}else if(!state.can_receive)legalSaved(await legalRequest({purpose:'mailing_bundle',enabled:true,version:state.mailing_version}));if(n!==run)return;if(!state.film_token)legalSaved(await legalRequest());legalEvent('accepted');try{const prior=sessionStorage.getItem('club_legal_pending');if(prior&&prior!==visit)legalEvent('accepted',prior);sessionStorage.removeItem('club_legal_pending');}catch(e){}const next=continueFilm;window.clubFilmAutoStart=true;legalClose(false);if(next)next();}catch(e){if(n===run){busy=false;legalRender();document.getElementById('legal-center-status').textContent=e.message||label('error');}}finally{busy=false;}}
 async function legalRejectFilm(){if(busy||!state)return;busy=true;legalRender();const n=run;try{legalSaved(await legalRequest({purpose:'mailing_bundle',enabled:false,version:state.mailing_version}));if(n!==run)return;declined=true;await legalEvent('declined');try{sessionStorage.setItem('club_legal_pending',visit);}catch(e){}legalClose(false);}catch(e){if(n===run){busy=false;legalRender();document.getElementById('legal-center-status').textContent=e.message||label('error');}}finally{busy=false;}}
 async function legalOpen(kind='settings',next=null){legalClose(false);const n=run;mode=kind;continueFilm=next;state=null;busy=false;declined=false;choice={data:false,ads:false};if(kind==='film'){if(typeof prepareClubFilm==='function')prepareClubFilm();visit=crypto.randomUUID().replaceAll('-','');if(window.ClubAppRescue)ClubAppRescue.mark('gate');if(typeof hideSplash==='function')hideSplash();filmBackdrop=legalEl('div');filmBackdrop.className='legal-film-stage';const poster=legalEl('img');poster.src='images/film-ya-podumayu.jpg';poster.alt='';filmBackdrop.append(poster,legalEl('span','Я подумаю · фильм о клубе'));document.body.append(filmBackdrop);}modal=legalEl('dialog');modal.className='legal-center';modal.addEventListener('cancel',e=>{e.preventDefault();legalClose();});document.body.append(modal);legalRender();modal.showModal();try{const d=await legalRequest();if(n!==run)return;legalSaved(d);choice={data:d.marketing_materials?d.data:(d.can_receive??(d.data&&d.ads)),ads:d.ads};if(kind==='film'&&(d.can_receive??(d.data&&d.ads))){const cb=continueFilm;legalClose(false);if(cb)cb();return;}legalRender();if(kind==='film')legalEvent('shown');}catch(e){if(n===run){document.getElementById('legal-center-status').textContent=label('error');modal.querySelector('.legal-center-content').append(legalButton(label('retry'),()=>legalOpen(kind,next)));}}}
 // One account-level prompt; it never grants consent or interrupts an open film/dialog.

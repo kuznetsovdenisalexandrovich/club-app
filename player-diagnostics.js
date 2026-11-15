@@ -41,6 +41,12 @@
     }catch(e){return 'unknown';}
   }
   root.clubMediaStorage=mediaHost;
+  root.clubPublicFilmFetch=function(url,signal){
+    const u=new URL(url);
+    if(!['selectel','timeweb'].includes(root.clubMediaServer(u.href))||!/^\/media\/(?:film-preload|film-start\/[a-f0-9]{32}\/[a-f0-9]{16}\/(?:360|720))$/.test(u.pathname))return Promise.reject(Error('Invalid public film preload'));
+    return probeFetch(u.href,{signal,credentials:'omit',cache:u.pathname==='/media/film-preload'?'default':'force-cache'});
+  };
+
   function allowedMedia(url){
     try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&['selectel','timeweb','railway','selectel_storage','railway_storage'].includes(mediaHost(url));}catch(e){return false;}
   }
