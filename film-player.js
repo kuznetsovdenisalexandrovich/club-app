@@ -46,7 +46,7 @@
         this.botFallback=this.button(options.text('film.bot_watch'),'native-film-option native-film-bot',async()=>{
           if(this.botFallback.disabled)return;
           this.botFallback.disabled=true;
-          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
+          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.ready===false)this.botFallback.textContent='Проверить готовность видео';else if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
           catch(e){if(!this.destroyed)this.statusText(e.message||options.text('film.bot_failed'));}
           finally{if(!this.destroyed)this.botFallback.disabled=false;}
         });

@@ -91,6 +91,8 @@
     const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
     const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
     const attempt=[hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-'),started=Date.now();
+    let reloadFrom='';
+    try{const prior=content==='film'&&root.filmReloadState&&root.filmReloadState();if(prior&&prior.automatic&&/^[a-f0-9-]{36}$/.test(prior.diagnostic||''))reloadFrom=prior.diagnostic;}catch(e){}
     let seq=0,queue=[],busy=false,timer=null,closed=false,retries=0,legacySchema=false;
     async function flush(){
       if(busy||!queue.length)return;
@@ -105,7 +107,7 @@
             if(!events.length)return {ok:true};
           }
           return fetch(endpoint()+'/client/player-diagnostics',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({attempt,content,managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events}),keepalive:true,signal:controller.signal});
+            body:JSON.stringify({attempt,content,...(reloadFrom&&!legacySchema?{reload_from:reloadFrom}:{}),managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events}),keepalive:true,signal:controller.signal});
         }
         let r=await send();if(r.status===422&&!legacySchema){legacySchema=true;r=await send();}
         if(!r.ok)throw Error('report');
@@ -129,6 +131,7 @@
     }
     function leave(){if(!closed)emit({event:'closed',reason:'pagehide'});}
     root.addEventListener('pagehide',leave);
+    emit.attempt=attempt;
     emit({event:'attempt'});
     return emit;
   };

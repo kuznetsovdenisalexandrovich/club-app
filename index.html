@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v638'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v639'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15214,6 +15214,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
     const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
     const attempt=[hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-'),started=Date.now();
+    let reloadFrom='';
+    try{const prior=content==='film'&&root.filmReloadState&&root.filmReloadState();if(prior&&prior.automatic&&/^[a-f0-9-]{36}$/.test(prior.diagnostic||''))reloadFrom=prior.diagnostic;}catch(e){}
     let seq=0,queue=[],busy=false,timer=null,closed=false,retries=0,legacySchema=false;
     async function flush(){
       if(busy||!queue.length)return;
@@ -15228,7 +15230,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
             if(!events.length)return {ok:true};
           }
           return fetch(endpoint()+'/client/player-diagnostics',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({attempt,content,managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events}),keepalive:true,signal:controller.signal});
+            body:JSON.stringify({attempt,content,...(reloadFrom&&!legacySchema?{reload_from:reloadFrom}:{}),managed_rescue:!!(managedRescue&&managedRescue()),tg_init:identity?String(identity()||''):'',build:String(build).match(/v[0-9]+/)?.[0]||'unknown',events}),keepalive:true,signal:controller.signal});
         }
         let r=await send();if(r.status===422&&!legacySchema){legacySchema=true;r=await send();}
         if(!r.ok)throw Error('report');
@@ -15252,6 +15254,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     }
     function leave(){if(!closed)emit({event:'closed',reason:'pagehide'});}
     root.addEventListener('pagehide',leave);
+    emit.attempt=attempt;
     emit({event:'attempt'});
     return emit;
   };
@@ -15305,7 +15308,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
         this.botFallback=this.button(options.text('film.bot_watch'),'native-film-option native-film-bot',async()=>{
           if(this.botFallback.disabled)return;
           this.botFallback.disabled=true;
-          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
+          try{const result=await options.onBotFallback();if(!this.destroyed){this.statusText(result.message||'');if(result.ready===false)this.botFallback.textContent='Проверить готовность видео';else if(result.url&&result.status!=='start_bot')this.botFallback.textContent=options.text('mp.bot_chat');}}
           catch(e){if(!this.destroyed)this.statusText(e.message||options.text('film.bot_failed'));}
           finally{if(!this.destroyed)this.botFallback.disabled=false;}
         });
@@ -16353,7 +16356,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v638 · 15.11.2026 Кнопка за пределами видео';
+const APP_BUILD = 'v639 · 15.11.2026 Автовосстановление видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16421,6 +16424,7 @@ async function refreshFilmSources(url){
 function filmDiagnostics(content, canRecover){
   try{
     const report=window.clubPlayerDiagnostics(content,()=>API_URL,APP_BUILD,()=>ivIdent().tg_init,()=>!!(window.ClubAppRescue&&ClubAppRescue.accepted));
+    if(content==='film')window.clubFilmDiagnosticAttempt=report.attempt||'';
     return function(event){
       if(window.ClubAppRescue&&['frame','recovered'].includes(event.event))ClubAppRescue.mark('content');
       if(window.ClubAppRescue&&['unavailable','manifest_error'].includes(event.event)&&!(canRecover&&canRecover(event)))ClubAppRescue.fail('content_error');
@@ -27571,13 +27575,13 @@ async function watchVideoInBot(bonusKey='',itemKey=''){
   const key=(inVk?'vk:'+vkUserId():'tg:'+telegramId)+':'+bonusKey+':'+itemKey;
   if(videoBotDestinations.has(key)){const cached=videoBotDestinations.get(key);openUrl(cached.url);return cached;}
   const d=await apiRequest(inVk?'https://bot.youselllikeagod-magazine.ru/content/watch-in-bot':`${API_URL}/media/watch-in-bot`,{method:'POST',headers:{'Content-Type':'application/json',...(!inVk?sessionHeaders():{})},body:JSON.stringify(inVk?{platform:'vk',launch:vkLaunchQuery(),target:bonusKey?'bi_'+bonusKey+'__'+itemKey:'film'}:{bonus_key:bonusKey,item_key:itemKey})},25000);
-  if(d.url){if(d.status==='queued'||d.status==='check_bot')videoBotDestinations.set(key,d);openUrl(d.url);}
+  if(d.url&&d.ready!==false){if(d.status==='queued'||d.status==='check_bot')videoBotDestinations.set(key,d);openUrl(d.url);}
   return d;
 }
 function addVideoBotFallback(slot,bonusKey='',itemKey=''){
   if(!canWatchVideoInBot())return;
   const b=document.createElement('button');b.className='native-film-option native-film-bot';b.textContent=t('film.bot_watch');
-  b.onclick=async()=>{b.disabled=true;try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=e.message||t('film.bot_failed');}finally{b.disabled=false;}};
+  b.onclick=async()=>{b.disabled=true;b.textContent='Готовим видео в боте…';try{const d=await watchVideoInBot(bonusKey,itemKey);b.textContent=d.ready===false?'Проверить готовность видео':d.url&&d.status!=='start_bot'?t('mp.bot_chat'):(d.message||t('film.bot_watch'));}catch(e){b.textContent=e.message||t('film.bot_failed');}finally{b.disabled=false;}};
   slot.appendChild(b);
 }
 let bonusNativeRequest = null;
@@ -33463,6 +33467,7 @@ function filmEngineReady(force=false){
 
 function filmEdition(){ const id=new URLSearchParams(location.search).get('film_edition')||''; return /^[a-f0-9]{32}$/.test(id)?id:''; }
 var filmResolvedEdition='';
+var filmLegacyDiagnostic=null,filmLegacySample=null,filmLegacyFrame=false;
 function filmNameKey(){
   const raw=appStartParamRaw();const key=raw.match(/(?:^|-)namedfilm_(v[0-9]{1,30})$/);
   return key?key[1]:'';
@@ -33501,21 +33506,28 @@ function filmReloadState(){
     return d&&d.route===filmReloadRoute()&&Date.now()-d.at<600000&&d.at<=Date.now()&&Number.isFinite(d.position)&&d.position>=0?d:null;
   }catch(e){return null;}
 }
-function reloadFilmAndContinue(button){
+function reloadFilmAndContinue(button,automatic=false){
   try{
     const before=filmReloadState();
-    if(before&&Date.now()-before.at<600000){button.textContent='Обновление уже выполнено. Попробуй посмотреть в боте.';return;}
+    if(before&&Date.now()-before.at<600000){button.textContent='Обновление уже выполнено. Попробуй посмотреть в боте.';return false;}
     const current=filmNative&&filmNative.video&&!filmNative.resumePending?Number(filmNative.video.currentTime):0;
     const saved=Number(localStorage.getItem(filmPositionKey()))||0;
     const position=current>0?current:filmLastPos>0?filmLastPos:saved;
-    const record={route:filmReloadRoute(),at:Date.now(),position,edition:filmResolvedEdition||filmEdition(),pending:true};
+    const record={route:filmReloadRoute(),at:Date.now(),position,edition:filmResolvedEdition||filmEdition(),pending:true,automatic,diagnostic:window.clubFilmDiagnosticAttempt||''};
     localStorage.setItem(filmPositionKey(),String(position));
     sessionStorage.setItem('club_film_reload_v1',JSON.stringify(record));
     if(!filmReloadState())throw Error('storage');
     button.disabled=true;
     // Keep launch URL, authorization, choices and app settings intact.
-    location.reload();
-  }catch(e){button.disabled=false;button.textContent='Не удалось сохранить место. Попробуй посмотреть в боте.';}
+    location.reload();return true;
+  }catch(e){button.disabled=false;button.textContent='Не удалось сохранить место. Попробуй посмотреть в боте.';return false;}
+}
+function canAutoReloadFilm(){
+  return !document.hidden&&navigator.onLine!==false&&!filmReloadState();
+}
+function tryAutoReloadFilm(){
+  if(!canAutoReloadFilm())return false;
+  return reloadFilmAndContinue({},true);
 }
 function addFilmReloadButton(slot){
   const b=document.createElement('button');b.type='button';b.className='native-film-retry film-reload';
@@ -33536,6 +33548,7 @@ function resumeReloadedFilm(){
 setTimeout(resumeReloadedFilm,0);
 
 function filmNativeDispose(){
+  if(filmLegacyDiagnostic){filmLegacyDiagnostic({event:'closed'});filmLegacyDiagnostic=null;}
   ++filmNativeGeneration;
   filmNativeLoading = false;
   if (filmNative){ filmNative.destroy(); filmNative = null; }
@@ -33573,7 +33586,7 @@ function startFunnelFilm(){
   const generation = ++filmNativeGeneration;
   slot.textContent = t('film.boot');
   const controller = new AbortController();
-  const diagnostic=filmDiagnostics('film',event=>!filmEdition()&&(event.event==='manifest_error'||!canWatchVideoInBot()));
+  const diagnostic=filmDiagnostics('film',event=>(event.event==='unavailable'&&canAutoReloadFilm())||(!filmEdition()&&(event.event==='manifest_error'||!canWatchVideoInBot())));
   let manifestStatus=0,manifestServer='unknown';
   // Allow the API to try both storage copies before abandoning the manifest.
   const timeout = setTimeout(function(){ controller.abort(); }, 12000);
@@ -33599,7 +33612,8 @@ function startFunnelFilm(){
         onDiagnostic:diagnostic,
         onFault:function(code){
           if(code!=='film_unavailable')return;
-          if(filmEdition()){if(!slot.querySelector('.film-reload'))addFilmReloadButton(slot);return;}
+          if(tryAutoReloadFilm())return;
+          if(filmEdition()){if(window.ClubAppRescue)ClubAppRescue.fail('content_error');if(!slot.querySelector('.film-reload'))addFilmReloadButton(slot);return;}
           // Both own sources were exhausted. Keep Boomstream as the last resort.
           setTimeout(function(){
             if(generation!==filmNativeGeneration)return;
@@ -33639,6 +33653,7 @@ function startBoomstreamFilm(){
   }
   // ⚠️ `allow="autoplay; fullscreen"` — прямое требование их документации,
   // без него плеер не отдаёт часть событий и не уходит в полный экран
+  filmLegacyDiagnostic=filmDiagnostics('film',()=>true);filmLegacySample=null;filmLegacyFrame=false;
   slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + FUNNEL_FILM_CODE
     + '" allow="autoplay; fullscreen" frameborder="0" scrolling="no"></iframe>';
   /* Заглушка — тем же кадром, что и постер: он уже в кэше, ждать нечего */
@@ -33757,6 +33772,17 @@ function filmHandlePlayback(d, native){
 
      `loaded` при этом остаётся полезным событием — просто ничего не делаем. */
 
+  if(!native&&typeof filmLegacyDiagnostic==='function'){
+    if(['loaded','play','pause','stop'].includes(d.method))filmLegacyDiagnostic({event:d.method==='play'?'play':'milestone',reason:'legacy_'+d.method});
+    if(d.method==='progress')filmLegacySample=null;
+    if(d.method==='time'&&Number.isFinite(d.time)){
+      const now=Date.now(),prev=filmLegacySample;
+      if(!filmLegacyFrame&&prev&&now-prev.at>=250&&d.time>prev.position&&d.time-prev.position<=(now-prev.at)/1000+2){
+        filmLegacyFrame=true;filmLegacyDiagnostic({event:'frame',reason:'legacy_progress',position:Math.max(0,Math.min(86400,Math.floor(d.time)))});
+      }
+      filmLegacySample={at:now,position:d.time};
+    }
+  }
   filmMsgCount++;
   if (!filmFirstMsgMs && filmMountedAt) filmFirstMsgMs = Date.now() - filmMountedAt;
   filmLastMethod = d.method || '?';

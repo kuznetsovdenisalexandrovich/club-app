@@ -6,4 +6,6 @@ await c.watchVideoInBot();await c.watchVideoInBot();assert.equal(requests,1);ass
 c.telegramId=88;await c.watchVideoInBot();assert.equal(requests,2);
 let starts=0;c.telegramId=99;c.apiRequest=async()=>{starts++;return {url:'https://t.me/test_bot?start=menu',status:'start_bot'}};await c.watchVideoInBot();await c.watchVideoInBot();assert.equal(starts,2);
 c.isInsideVk=()=>true;let vkRequests=0;c.apiRequest=async(url,o)=>{assert(url.endsWith('/content/watch-in-bot'));assert.equal(JSON.parse(o.body).launch,'signed-fixture');vkRequests++;return {url:'https://vk.me/club123',status:'queued'}};await c.watchVideoInBot();await c.watchVideoInBot();assert.equal(vkRequests,1);
+c.isInsideVk=()=>false;c.telegramId=101;let polls=0;const before=opens.length;c.apiRequest=async()=>({url:'https://t.me/test_bot',status:'queued',ready:++polls>1});
+await c.watchVideoInBot();assert.equal(opens.length,before,'Do not open an empty chat while queued');await c.watchVideoInBot();assert.equal(opens.length,before+1);await c.watchVideoInBot();assert.equal(polls,2,'Confirmed chat reopens from cache without requesting another send');
 console.log('PASS chat reopening does not resend; different identity and initial bot permission are rechecked');})().catch(e=>{console.error(e);process.exit(1)});
