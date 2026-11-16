@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v647'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v648'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15842,6 +15842,7 @@ const API_URL = API_PROD;
    запросу на наш сервер дописывается `_cp=<пропуск>`. Остальной код о пропуске
    не знает и не меняется. Закрытый контент требует пропуск. Перед первым запросом ждём
    подтверждения личности; бесплатный каталог остаётся доступен гостям */
+const clubConnectionProbeFetch = window.fetch.bind(window);
 let clubPass = '', clubPassId = '';
 let clubPassPending = null;
 let accessRestricted = false;
@@ -16400,7 +16401,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v647 · 16.11.2026 Вход по ссылке';
+const APP_BUILD = 'v648 · 16.11.2026 Диагностика доступа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -36398,9 +36399,24 @@ async function openOnPlatform(target){
    повтор после входа, а на успехе — пересборка оболочки, чтобы не остался
    нарисованным демо-режим. */
 
+async function paidClaimConnectionCode(error){
+  const kind=error&&error.name==='AbortError'?'abort':error&&error.name==='TypeError'?'network':error&&error.status?'http'+Number(error.status):'unconfirmed';
+  const endpoints=['https://selectel-api.youselllikeagod-magazine.ru','https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net'];
+  const checks=await Promise.all(endpoints.map(async(base)=>{
+    const ctrl=new AbortController();let expired=false;
+    const timer=setTimeout(()=>{expired=true;ctrl.abort();},5000);
+    try{
+      const r=await clubConnectionProbeFetch(base+'/rf/readiness',{method:'GET',credentials:'omit',cache:'no-store',signal:ctrl.signal});
+      if(!r.ok)return 'http'+r.status;
+      const d=await r.json();return d.protocol===2&&d.ready===true?'ok':'not-ready';
+    }catch(e){return expired?'timeout':'network';}finally{clearTimeout(timer);}
+  }));
+  return '648 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
+}
 var PAID_TOKEN_KEY = 'club_app_paid_token';
 var paidClaimPending = false;
 var paidClaimLastToken = '';
+var paidClaimGeneration = 0;
 function paidClaimRetry(){
   if(paidClaimPending || !paidClaimLastToken)return;
   return claimManualAccess(paidClaimLastToken);
@@ -36440,6 +36456,7 @@ function paidClaimWho(){
 async function claimManualAccess(token){
   if (!token || paidClaimPending) return;
   paidClaimLastToken = token;
+  const claimGeneration=++paidClaimGeneration;
   /* ⚠️ ТОКЕН СОХРАНЯЕМ ДО ЗАПРОСА. Если человека сейчас не опознали, ссылка
      не должна пропасть вместе с закрытым окном: после входа по номеру мы
      повторим попытку сами */
@@ -36494,6 +36511,13 @@ async function claimManualAccess(token){
       (retryable ? '<button class="lec-link-btn access-btn" style="width:100%" onclick="paidClaimRetry()">' + escapeHtml(t('paid.retry_btn')) + '</button>' : '') +
       '<button class="lec-link-btn" style="width:100%" onclick="paidClaimClose()">'
       + escapeHtml(t('paid.fail_btn')) + '</button>');
+    if(uncertain){
+      paidClaimConnectionCode(e).then(code=>{
+        if(claimGeneration!==paidClaimGeneration)return;
+        const el=document.getElementById('paid-claim-text');
+        if(el)el.textContent=t('paid.network_x')+'\n\nКод для поддержки: '+code;
+      }).catch(()=>{});
+    }
   } finally {
     paidClaimPending = false;
   }
