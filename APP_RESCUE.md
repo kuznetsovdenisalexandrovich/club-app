@@ -184,3 +184,9 @@ also call the existing bounded technical reporter; its public endpoint bypasses
 auth waiting. Offline delivery remains dependent on connectivity. Consent dialog
 uses fit-content height and scoped header spacing. Fullscreen control is compact
 and offset to the side; player JS and funnel logic remain unchanged.
+
+2026-11-16 v652: incident mitigation rolls back all v650 resource-economy changes
+(previews, chat, audio UI and optional HLS back buffer) to the previous behavior.
+The v651 cold-auth/profile diagnostic correction and requested CSS remain.
+film-player.js and meeting-recordings.js exactly match yesterday f3221fd.
+This rollback removes an unproven variable; it is not proof of outage cause.

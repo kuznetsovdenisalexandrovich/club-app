@@ -1,0 +1,2 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('fs');
+test('funnel initialization and preload remain byte-identical to yesterday v645',()=>{const html=fs.readFileSync(__dirname+'/../index.html','utf8');const code=html.slice(html.indexOf('let filmNative = null;'),html.indexOf('function filmHandlePlayback(d, native){'));assert.equal(require('crypto').createHash('sha256').update(code).digest('hex'),'062f526b7a7c2631df93f76ab46d2a0d4a7f4fb7fba06d721fc14d70f0fca172');});
