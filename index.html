@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v645'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v646'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16398,7 +16398,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v645 · 15.11.2026 Защищённое видео';
+const APP_BUILD = 'v646 · 16.11.2026 Ручной доступ';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -20818,6 +20818,9 @@ const APP_TEXTS = {
   'paid.who_x': { c:'Доступ', l:'Текст, когда не поняли, кто открыл ссылку', w:'Ссылка «оплатил переводом»', i:false,
     t:'Ссылка рабочая, но приложение не поняло, кто её открыл. Войди по номеру телефона — доступ откроется сразу после этого, ссылку я запомнил.' },
   'paid.who_btn': { c:'Доступ', l:'Кнопка перехода ко входу', w:'Ссылка «оплатил переводом»', i:false, t:'Войти по номеру' },
+  'paid.network_t': { c:'Доступ', l:'Нет подтверждения выдачи', w:'Ссылка «оплатил переводом»', i:false, t:'Не удалось подтвердить доступ' },
+  'paid.network_x': { c:'Доступ', l:'Ответ на выдачу не получен', w:'Ссылка «оплатил переводом»', i:false, t:'Ответ сервера не получен. Это не значит, что ссылка недействительна. Попробуй открыть доступ ещё раз по этой же ссылке.' },
+  'paid.retry_btn': { c:'Доступ', l:'Повторить открытие по той же ссылке', w:'Ссылка «оплатил переводом»', i:false, t:'Попробовать ещё раз' },
   'paid.fail_t': { c:'Доступ', l:'Заголовок при ошибке выдачи', w:'Ссылка «оплатил переводом»', i:false, t:'Ссылка не сработала' },
   'paid.fail_x': { c:'Доступ', l:'Текст при ошибке без причины', w:'Ссылка «оплатил переводом»', i:false,
     t:'Не получилось открыть доступ. Напиши Денису, он выдаст новую ссылку.' },
@@ -36394,6 +36397,12 @@ async function openOnPlatform(target){
    нарисованным демо-режим. */
 
 var PAID_TOKEN_KEY = 'club_app_paid_token';
+var paidClaimPending = false;
+var paidClaimLastToken = '';
+function paidClaimRetry(){
+  if(paidClaimPending || !paidClaimLastToken)return;
+  return claimManualAccess(paidClaimLastToken);
+}
 
 function paidClaimShow(title, text, actionsHtml){
   var ov = document.getElementById('paid-claim-overlay');
@@ -36427,7 +36436,8 @@ function paidClaimWho(){
 }
 
 async function claimManualAccess(token){
-  if (!token) return;
+  if (!token || paidClaimPending) return;
+  paidClaimLastToken = token;
   /* ⚠️ ТОКЕН СОХРАНЯЕМ ДО ЗАПРОСА. Если человека сейчас не опознали, ссылка
      не должна пропасть вместе с закрытым окном: после входа по номеру мы
      повторим попытку сами */
@@ -36448,12 +36458,14 @@ async function claimManualAccess(token){
   }
 
   try {
+    paidClaimPending = true;
     const r = await fetch(`${API_URL}/access/manual/claim`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     const d = await r.json().catch(function(){ return {}; });
-    if (!r.ok) throw new Error(d.detail || ('сервер ответил ' + r.status));
+    if (!r.ok) throw Object.assign(new Error(d.detail || ('сервер ответил ' + r.status)),{status:r.status});
+    if(d.status!=='ok' || d.is_member!==true)throw new Error('Manual access result unconfirmed');
 
     try { localStorage.removeItem(PAID_TOKEN_KEY); } catch(e){}
     isMember = true;
@@ -36473,9 +36485,15 @@ async function claimManualAccess(token){
       + '<button class="lec-link-btn" style="width:100%" onclick="paidClaimFinish()">'
       + escapeHtml(t('paid.ok_go')) + '</button>');
   } catch (e) {
-    paidClaimShow(t('paid.fail_t'), (e && e.message) || t('paid.fail_x'),
-      '<button class="lec-link-btn access-btn" style="width:100%" onclick="paidClaimClose()">'
+    const retryable=!e.status || [409,425,429,500,502,503,504].includes(e.status);
+    const uncertain=!e.status || e.status>=500;
+    paidClaimShow(uncertain ? t('paid.network_t') : t('paid.fail_t'),
+      uncertain ? t('paid.network_x') : ((e && e.message) || t('paid.fail_x')),
+      (retryable ? '<button class="lec-link-btn access-btn" style="width:100%" onclick="paidClaimRetry()">' + escapeHtml(t('paid.retry_btn')) + '</button>' : '') +
+      '<button class="lec-link-btn" style="width:100%" onclick="paidClaimClose()">'
       + escapeHtml(t('paid.fail_btn')) + '</button>');
+  } finally {
+    paidClaimPending = false;
   }
 }
 
