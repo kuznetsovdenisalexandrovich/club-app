@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v648'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v649'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16401,7 +16401,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v648 · 16.11.2026 Диагностика доступа';
+const APP_BUILD = 'v649 · 16.11.2026 Подсказка при ошибке входа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -20822,7 +20822,7 @@ const APP_TEXTS = {
     t:'Ссылка рабочая, но приложение не поняло, кто её открыл. Войди по номеру телефона — доступ откроется сразу после этого, ссылку я запомнил.' },
   'paid.who_btn': { c:'Доступ', l:'Кнопка перехода ко входу', w:'Ссылка «оплатил переводом»', i:false, t:'Войти по номеру' },
   'paid.network_t': { c:'Доступ', l:'Нет подтверждения выдачи', w:'Ссылка «оплатил переводом»', i:false, t:'Не удалось подтвердить доступ' },
-  'paid.network_x': { c:'Доступ', l:'Ответ на выдачу не получен', w:'Ссылка «оплатил переводом»', i:false, t:'Ответ сервера не получен. Это не значит, что ссылка недействительна. Попробуй открыть доступ ещё раз по этой же ссылке.' },
+  'paid.network_x': { c:'Доступ', l:'Ответ на выдачу не получен', w:'Ссылка «оплатил переводом»', i:false, t:'Не удалось получить ответ сервера. Ссылка может быть действительна. Если VPN включён — попробуй выключить его; если выключен — включить. Затем нажми «Попробовать ещё раз» или открой эту же ссылку.' },
   'paid.retry_btn': { c:'Доступ', l:'Повторить открытие по той же ссылке', w:'Ссылка «оплатил переводом»', i:false, t:'Попробовать ещё раз' },
   'paid.fail_t': { c:'Доступ', l:'Заголовок при ошибке выдачи', w:'Ссылка «оплатил переводом»', i:false, t:'Ссылка не сработала' },
   'paid.fail_x': { c:'Доступ', l:'Текст при ошибке без причины', w:'Ссылка «оплатил переводом»', i:false,
@@ -36411,7 +36411,7 @@ async function paidClaimConnectionCode(error){
       const d=await r.json();return d.protocol===2&&d.ready===true?'ok':'not-ready';
     }catch(e){return expired?'timeout':'network';}finally{clearTimeout(timer);}
   }));
-  return '648 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
+  return '649 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
 }
 var PAID_TOKEN_KEY = 'club_app_paid_token';
 var paidClaimPending = false;

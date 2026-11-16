@@ -25,7 +25,7 @@ test('connection diagnostics probe only public readiness without identity or acc
  const {c}=setup(()=>{throw Error('Must not send a claim')});const calls=[];
  c.clubConnectionProbeFetch=async(url,opts)=>{calls.push({url,opts});if(calls.length===1)throw new TypeError('private URL');return {ok:true,json:async()=>({protocol:2,ready:true})};};
  const code=await c.paidClaimConnectionCode({name:'AbortError',message:'secret-token'});
- assert.equal(code,'648 / abort / S:network / T:ok');assert.equal(calls.length,2);
+ assert.equal(code,'649 / abort / S:network / T:ok');assert.equal(calls.length,2);
  for(const {url,opts} of calls){assert(url.endsWith('/rf/readiness'));assert.equal(opts.method,'GET');assert.equal(opts.credentials,'omit');assert(!opts.body&&!opts.headers);}
  assert(!code.includes('secret'));
 });
