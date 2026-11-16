@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v653'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v654'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16004,8 +16004,10 @@ function createRFParallelTransport(config){
     const seq=Number(response.headers.get('x-rf-own-seq'));
     if(index===1 && Number.isSafeInteger(seq)&&seq>=0){returnBarrier=Math.max(returnBarrier,seq);persist();}
   }
-  // Race catalogue/bootstrap and video manifests only. Writes stay serial.
+  // /auth/pass only verifies credentials and signs a capability; it creates no
+  // session or business state. Session creation and all actual writes stay serial.
   function fastRead(path,method){
+    if(method==='POST'&&path.split('?')[0]==='/auth/pass')return true;
     if(['GET','HEAD'].includes(method)&&path.split('?')[0]==='/users/me')return new URL(path,endpoints[0]).searchParams.get('bootstrap')==='1';
     return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding|bonus\/[^/?]+\/[^/?]+|meeting\/[0-9]+\/replay))(?:\?|$)/.test(path));
   }
@@ -16045,7 +16047,7 @@ function createRFParallelTransport(config){
         if(!ready||(target===0&&ready.peer_seq<returnBarrier)){fail();return;}
         send(target);
       };
-      deadline=setTimeout(abort,config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000));
+      deadline=setTimeout(abort,/^\/auth\/pass(?:\?|$)/.test(path)?(config.authTimeoutMs||12000):(config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000)));
       timer=setTimeout(startOther,config.hedgeMs||900);
       send(origin);
     });
@@ -16119,7 +16121,6 @@ function createRFParallelTransport(config){
 if(typeof module==='object'&&module.exports)module.exports={createRFParallelTransport};
 else root.createRFParallelTransport=createRFParallelTransport;
 })(typeof globalThis==='object'?globalThis:this);
-
 window.__rfTransport=createRFParallelTransport({endpoints:["https://selectel-api.youselllikeagod-magazine.ru", "https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net"],aliases:["https://api.youselllikeagod-magazine.ru", "https://reserve-api.youselllikeagod-magazine.ru", "https://club-backend-production-fc7f.up.railway.app"],fetch:window.fetch.bind(window),beforeRead:clubPrepareBootstrapRead,storage:(()=>{try{return localStorage;}catch(e){return null;}})(),onSwitch:index=>{document.body.classList.remove('fo-on');}});
 setInterval(()=>window.__rfTransport.considerReturn().catch(()=>{}),5000);
 
@@ -16431,7 +16432,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v653 · 16.11.2026 Запуск фильма';
+const APP_BUILD = 'v654 · 16.11.2026 Резерв входа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

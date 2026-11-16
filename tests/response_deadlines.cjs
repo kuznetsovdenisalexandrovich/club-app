@@ -72,7 +72,7 @@ test('cold profile read gets its full budget after one shared authentication',as
  c.window=c;vm.createContext(c);vm.runInContext(slice("let clubPass = '', clubPassId = '';",'/* ══ v464 · ПЕРЕХОД')+slice('function clubPrepareBootstrapRead(','function showAccessRestricted(){')+core,c);
  const transport=c.module.exports.createRFParallelTransport({endpoints:['https://primary.test','https://reserve.test'],fetch:c.fetch,timeoutMs:20,requestTimeoutMs:300,readTimeoutMs:70,beforeRead:c.clubPrepareBootstrapRead});c.fetch=transport.request;
  const response=await c.fetch('https://primary.test/users/me?telegram_id=77&bootstrap=1');
- assert.equal(response.status,200);assert.equal(calls.filter(x=>x==='/auth/pass').length,1);assert.equal(calls.filter(x=>x==='/users/me').length,1);assert(calls.includes('/rf/readiness'));
+ assert.equal(response.status,200);assert.equal(calls.filter(x=>x==='/auth/pass').length,1);assert.equal(calls.filter(x=>x==='/users/me').length,1);assert(calls.indexOf('/auth/pass')<calls.indexOf('/users/me'));
 });
 
 test('public film preparation never starts or waits for account authentication',()=>{

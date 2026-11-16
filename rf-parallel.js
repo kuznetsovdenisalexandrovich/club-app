@@ -60,8 +60,10 @@ function createRFParallelTransport(config){
     const seq=Number(response.headers.get('x-rf-own-seq'));
     if(index===1 && Number.isSafeInteger(seq)&&seq>=0){returnBarrier=Math.max(returnBarrier,seq);persist();}
   }
-  // Race catalogue/bootstrap and video manifests only. Writes stay serial.
+  // /auth/pass only verifies credentials and signs a capability; it creates no
+  // session or business state. Session creation and all actual writes stay serial.
   function fastRead(path,method){
+    if(method==='POST'&&path.split('?')[0]==='/auth/pass')return true;
     if(['GET','HEAD'].includes(method)&&path.split('?')[0]==='/users/me')return new URL(path,endpoints[0]).searchParams.get('bootstrap')==='1';
     return ['GET','HEAD'].includes(method) && (/^\/(?:settings|app-texts|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?|media\/(?:film|onboarding|bonus\/[^/?]+\/[^/?]+|meeting\/[0-9]+\/replay))(?:\?|$)/.test(path));
   }
@@ -101,7 +103,7 @@ function createRFParallelTransport(config){
         if(!ready||(target===0&&ready.peer_seq<returnBarrier)){fail();return;}
         send(target);
       };
-      deadline=setTimeout(abort,config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000));
+      deadline=setTimeout(abort,/^\/auth\/pass(?:\?|$)/.test(path)?(config.authTimeoutMs||12000):(config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000)));
       timer=setTimeout(startOther,config.hedgeMs||900);
       send(origin);
     });

@@ -202,3 +202,17 @@ Observed v652 incident: metadata1.95s, first-source discard4.64s, fallback
 recovered17.54s with intervening pause/play events. Those user/browser pauses
 are not attributed to the timer; the premature-discard defect is reproduced
 separately. Regression: native_start_grace, native_async_loading, film_player.
+
+
+2026-11-16 v654: the read-only POST /auth/pass now uses bounded hedged delivery
+like bootstrap reads. The handler verifies signed launch/session credentials and
+issues a signed pass without creating a session or changing business state.
+After 900ms a ready replica may answer; return barriers, final403, one shared
+idempotency key, caller cancellation and the independent12s auth deadline remain.
+Session creation, verification and checkout writes are not hedged. Regression
+reproduces stalled headers/body with a healthy readiness endpoint: v653 waits
+until the profile15s deadline without contacting the reserve; v654 loads the
+profile through the reserve in0.92s in the same browser fault fixture. This is
+not proof of the reported German VPN root cause. All player/preload source bytes
+are unchanged. Tests: auth_pass_reserve, response_deadlines, payment_chain,
+startup_chain, app_rescue, inline_player, funnel_unchanged and playback suites.
