@@ -36,3 +36,26 @@ test('explicit bootstrap and concurrent blocks share a single auth request',asyn
  const s=authSetup();const boot=s.c.clubPassEnsure();const one=s.c.fetch('https://primary.test/users/me'),two=s.c.fetch('https://primary.test/media/bonus/a/b');
  const count=s.calls.filter(u=>u.includes('/auth/pass')).length;s.release();assert.equal(count,1);await Promise.all([boot,one,two]);assert.equal(s.calls.length,3);
 });
+test('readiness never waits for the authentication operation it is checking',async()=>{
+ const s=authSetup();
+ const pending=s.c.clubPassEnsure();
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),30);
+ const result=await s.c.fetch('https://primary.test/rf/readiness',{signal:ctrl.signal}).then(()=> 'ready',e=>e.name);
+ clearTimeout(timer);s.release();await pending;
+ assert.equal(result,'ready');
+ assert(s.calls.some(x=>x.includes('/rf/readiness')));
+});
+test('cold manual claim survives slow auth while healthy RF probes stay independent',async()=>{
+ const calls=[],storage=new Map();
+ const fake=async(url,opts={})=>{
+  const path=new URL(url).pathname;calls.push(path);
+  if(path==='/auth/pass')await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,90);opts.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));},{once:true});});
+  const data=path==='/auth/pass'?{passes:{77:'77.'+(Math.floor(Date.now()/1000)+86400*30)+'.signed'}}:path==='/rf/readiness'?{protocol:2,ready:true,node:url.includes('primary')?'selectel':'timeweb',own_seq:1,peer_seq:1}:{status:'ok',is_member:true};
+  return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
+ };
+ const c={URL,Headers,Request,Response,AbortController,DOMException,setTimeout,clearTimeout,Date,JSON,Promise,crypto:require('crypto').webcrypto,API_PROD:'https://primary.test',API_STANDBY:'https://reserve.test',API_URL:'https://primary.test',telegramId:77,location:{href:'https://app.test/'},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},sessionHeaders:()=>({}),launchIdentity:()=>({}),tgLaunchData:()=>'',showAccessRestricted(){},fetch:fake,module:{exports:{}}};
+ c.window=c;vm.createContext(c);vm.runInContext(slice("let clubPass = '', clubPassId = '';",'/* ══ v464 · ПЕРЕХОД')+slice('function clubPassTgData(){','function showAccessRestricted(){')+core,c);
+ const transport=c.module.exports.createRFParallelTransport({endpoints:['https://primary.test','https://reserve.test'],fetch:c.fetch,timeoutMs:20,requestTimeoutMs:300});c.fetch=transport.request;
+ const response=await c.fetch('https://primary.test/access/manual/claim',{method:'POST',body:JSON.stringify({token:'synthetic',telegram_id:77})});
+ assert.equal(response.status,200);assert.equal(calls.filter(x=>x==='/auth/pass').length,1);assert.equal(calls.filter(x=>x==='/access/manual/claim').length,1);assert(calls.includes('/rf/readiness'));
+});
