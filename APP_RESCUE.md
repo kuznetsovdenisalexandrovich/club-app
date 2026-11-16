@@ -190,3 +190,15 @@ and offset to the side; player JS and funnel logic remain unchanged.
 The v651 cold-auth/profile diagnostic correction and requested CSS remain.
 film-player.js and meeting-recordings.js exactly match yesterday f3221fd.
 This rollback removes an unproven variable; it is not proof of outage cause.
+
+2026-11-16 v653: initial native HLS at position zero may retain its first source
+until 8s (previously 4s) only after valid metadata with NETWORK_LOADING and no
+first playing event. Empty/no-metadata sources still switch at 4s. Explicit
+stallMs, resume/seek, user pause and source exhaustion remain authoritative.
+The whole no-seek native fallback path is bounded at56s in this metadata case,
+otherwise52s. startup_loading_grace is bounded lifecycle evidence. Preload and
+funnel initialization remain byte-identical to v645; no media URL/cache changes.
+Observed v652 incident: metadata1.95s, first-source discard4.64s, fallback
+recovered17.54s with intervening pause/play events. Those user/browser pauses
+are not attributed to the timer; the premature-discard defect is reproduced
+separately. Regression: native_start_grace, native_async_loading, film_player.

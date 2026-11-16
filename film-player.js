@@ -129,6 +129,16 @@
           if(!this.wantsPlay||this.destroyed||this.exhausted||document.hidden||this.sampleProgress())return;
           // WebKit updates networkState asynchronously after load()/play(). Recheck
           // at the short deadline; extend only a loading final source, never forever.
+          // A cold native HLS start can have valid metadata while its first
+          // segment is still arriving. Do not discard that work at four seconds.
+          // Only the first start gets this bounded grace, never seeks/resumes.
+          const firstFrameRemaining=8000-(Date.now()-armedAt);
+          if(!this.options.stallMs&&!this.started&&!this.resumePending&&this.position===0&&
+             this.quality==='auto'&&this.index===0&&this.sources.length>1&&this.engine==='native'&&
+             this.sources[this.index]?.type==='hls'&&!this.video.seeking&&this.video.readyState>=1&&this.video.readyState<3&&this.video.networkState===2&&firstFrameRemaining>0){
+            this.lifecycle('startup_loading_grace');
+            due=Date.now()+firstFrameRemaining;timer=setTimeout(check,firstFrameRemaining);this.timer=timer;return;
+          }
           const remaining=20000-(Date.now()-armedAt);
           if(!this.options.stallMs&&wait<20000&&remaining>0&&this.engine==='native'&&
              this.failedSources.size>=this.sources.length-1&&this.video.readyState<3&&this.video.networkState===2){
