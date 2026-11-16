@@ -59,3 +59,29 @@ test('cold manual claim survives slow auth while healthy RF probes stay independ
  const response=await c.fetch('https://primary.test/access/manual/claim',{method:'POST',body:JSON.stringify({token:'synthetic',telegram_id:77})});
  assert.equal(response.status,200);assert.equal(calls.filter(x=>x==='/auth/pass').length,1);assert.equal(calls.filter(x=>x==='/access/manual/claim').length,1);assert(calls.includes('/rf/readiness'));
 });
+
+test('cold profile read gets its full budget after one shared authentication',async()=>{
+ const calls=[],storage=new Map();
+ const fake=async(url,opts={})=>{
+  const path=new URL(url).pathname;calls.push(path);
+  if(path==='/auth/pass')await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,90);opts.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));},{once:true});});
+  const data=path==='/auth/pass'?{passes:{77:'77.'+(Math.floor(Date.now()/1000)+86400*30)+'.signed'}}:path==='/rf/readiness'?{protocol:2,ready:true,node:url.includes('primary')?'selectel':'timeweb',own_seq:1,peer_seq:1}:{status:'ok',is_member:true};
+  return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
+ };
+ const c={URL,Headers,Request,Response,AbortController,DOMException,setTimeout,clearTimeout,Date,JSON,Promise,crypto:require('crypto').webcrypto,API_PROD:'https://primary.test',API_STANDBY:'https://reserve.test',API_URL:'https://primary.test',telegramId:77,location:{href:'https://app.test/'},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},sessionHeaders:()=>({}),launchIdentity:()=>({}),tgLaunchData:()=>'',showAccessRestricted(){},fetch:fake,module:{exports:{}}};
+ c.window=c;vm.createContext(c);vm.runInContext(slice("let clubPass = '', clubPassId = '';",'/* ══ v464 · ПЕРЕХОД')+slice('function clubPrepareBootstrapRead(','function showAccessRestricted(){')+core,c);
+ const transport=c.module.exports.createRFParallelTransport({endpoints:['https://primary.test','https://reserve.test'],fetch:c.fetch,timeoutMs:20,requestTimeoutMs:300,readTimeoutMs:70,beforeRead:c.clubPrepareBootstrapRead});c.fetch=transport.request;
+ const response=await c.fetch('https://primary.test/users/me?telegram_id=77&bootstrap=1');
+ assert.equal(response.status,200);assert.equal(calls.filter(x=>x==='/auth/pass').length,1);assert.equal(calls.filter(x=>x==='/users/me').length,1);assert(calls.includes('/rf/readiness'));
+});
+
+test('public film preparation never starts or waits for account authentication',()=>{
+ const c={telegramId:77,clubPass:'',clubPassId:'77',clubPassEnsure:()=>{throw Error('Film must not authenticate here');}};
+ vm.createContext(c);vm.runInContext(slice('function clubPrepareBootstrapRead(', 'function clubPassTgData(){'),c);
+ for(const path of ['/media/film','/media/film?quality=auto','/media/onboarding','/settings','/app-texts'])assert.equal(c.clubPrepareBootstrapRead(path),undefined);
+});
+test('public error report does not wait behind a stalled authentication',async()=>{
+ const s=authSetup();const auth=s.c.clubPassEnsure();
+ const result=await Promise.race([s.c.fetch('https://primary.test/client-error',{method:'POST'}).then(r=>r.status),wait(40).then(()=> 'hung')]);
+ s.release();await auth;assert.equal(result,200);
+});

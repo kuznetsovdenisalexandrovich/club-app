@@ -173,3 +173,14 @@ slide. Audio playback continues while the full UI is closed; that UI catches
 up on open/visibility. Browser regressions cover actual native/HLS playback,
 forward/backward seeks beyond the flushed buffer, source switch, audio seeks,
 and preview close/reopen; no physical-phone battery saving percentage claimed.
+
+2026-11-16 v651: authenticated bootstrap/catalogue reads wait for the shared 12s
+account-pass operation before starting their 7s RF read budget. The caller's
+absolute deadline/cancellation still covers both; public film/onboarding manifests
+and preloading bypass the new hook. A scaled cold-login regression reproduced
+profile cancellation before any /users/me request; it now succeeds. This is not
+proof that every reported mobile failure has this cause. Caught profile failures
+also call the existing bounded technical reporter; its public endpoint bypasses
+auth waiting. Offline delivery remains dependent on connectivity. Consent dialog
+uses fit-content height and scoped header spacing. Fullscreen control is compact
+and offset to the side; player JS and funnel logic remain unchanged.

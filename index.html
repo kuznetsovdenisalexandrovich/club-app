@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v650'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v651'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -3659,10 +3659,11 @@ if(window.ClubAppRescue)ClubAppRescue.mark('card_script');
       var кто = null;
       try { кто = window.Telegram.WebApp.initDataUnsafe.user.id; } catch(e){}
       var сборка = '';
-      try { сборка = String(window.APP_BUILD || ''); } catch(e){}
+      try { сборка = String(typeof APP_BUILD!=='undefined'?APP_BUILD:window.APP_BUILD||''); } catch(e){}
       fetch('https://api.youselllikeagod-magazine.ru/client-error', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(12000),
         keepalive: true,   // запрос переживёт закрытие приложения
         body: JSON.stringify({
           message: String(сообщение || '').slice(0, 400),
@@ -6897,20 +6898,22 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .native-film video:fullscreen{width:100vw!important;height:100vh!important;object-fit:contain!important;border-radius:0!important}
 .native-film-fullscreen{display:flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;margin-left:auto;padding:0;border:1px solid var(--border,#d9d1c7);border-radius:12px;background:transparent;color:var(--text,#302b29);cursor:pointer}
 
-/* Reserve a separate row above the picture for the fullscreen control. */
-.native-film-fullscreen{position:absolute;z-index:6;top:-54px;right:0;width:46px;height:46px;min-height:46px;margin:0;border:1px solid #ffffff66;border-radius:13px;background:#201b2ed9;color:#fff;box-shadow:0 0 16px #bda1ed35;backdrop-filter:blur(8px)}
-.native-film:has(>.native-film-fullscreen){margin-top:60px;overflow:visible!important}
-#funnel-film-slot:has(.native-film-fullscreen){margin-top:68px!important}
-#funnel-film-slot>.native-film:has(>.native-film-fullscreen){margin-top:0}
-.native-film:fullscreen,.native-film.club-video-expanded,#funnel-film-slot:fullscreen,#funnel-film-slot.club-video-expanded{margin-top:0!important}
-:fullscreen>.native-film-fullscreen,.club-video-expanded>.native-film-fullscreen{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
-#funnel-screen.pip-mode #funnel-film-slot:has(.native-film-fullscreen){margin-top:0!important}
+/* A quiet control beside the picture; no extra row above the film. */
+.native-film-fullscreen{position:absolute;z-index:6;top:8px;right:-14px;width:44px;height:44px;min-height:44px;margin:0;padding:7px;border:0;border-radius:50%;background:transparent;color:var(--text,#302b29);box-shadow:none}
+.native-film-fullscreen::before{content:"";position:absolute;inset:5px;border:1px solid var(--border,#d9d1c7);border-radius:11px;background:var(--card-bg,#f5efe7);box-shadow:0 2px 8px #0002;z-index:-1}
+.native-film-fullscreen svg{width:18px;height:18px}
+.native-film:has(>.native-film-fullscreen){margin-top:0;overflow:visible!important}
+#funnel-film-slot:has(.native-film-fullscreen){margin-top:14px!important;max-width:calc(100% - 28px)}
+.native-film:fullscreen,.native-film.club-video-expanded,#funnel-film-slot:fullscreen,#funnel-film-slot.club-video-expanded{margin-top:0!important;max-width:none!important}
+:fullscreen>.native-film-fullscreen,.club-video-expanded>.native-film-fullscreen{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));color:#fff}
+:fullscreen>.native-film-fullscreen::before,.club-video-expanded>.native-film-fullscreen::before{background:#302b39}
+#funnel-screen.pip-mode #funnel-film-slot:has(.native-film-fullscreen){margin-top:0!important;max-width:100%}
 .film-permission-wait{height:100%;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text,#eee);font-size:14px;text-align:center}
 .film-permission-spinner{width:30px;height:30px;border:2px solid #a78acb40;border-top-color:#b59bdc;border-radius:50%;box-shadow:0 0 18px #b59bdc20;animation:film-permission-spin 1s linear infinite}
 @keyframes film-permission-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.film-permission-spinner{animation:none}}
 .film-reload{display:block;width:100%;font-size:13px;margin:10px 0}
-.native-film-fullscreen:hover{background:#443451ed}
+.native-film-fullscreen:hover::before{filter:brightness(1.08)}
 .native-film-fullscreen svg{pointer-events:none}
 .club-video-fullscreen-parent{transform:none!important;filter:none!important;perspective:none!important;contain:none!important;overflow:visible!important;z-index:auto!important}
 .club-video-expanded{position:fixed!important;inset:0!important;z-index:2147483000!important;width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;margin:0!important;padding:0!important;border-radius:0!important;aspect-ratio:auto!important;background:#000!important}
@@ -9826,6 +9829,18 @@ function renderMeetingNotice(notice){
 </style>
 <style id="legal-center-css">.legal-center{margin:auto;box-sizing:border-box;width:min(92vw,480px);max-height:88dvh;padding:0;border:1px solid #ffffff90;border-radius:28px;background:linear-gradient(135deg,#f4f0e9,#e6dfd5);color:#39322d;box-shadow:0 24px 90px #2d233b55,0 0 32px #bba8d329}.legal-center::backdrop{background:#201a2c66;backdrop-filter:blur(9px)}.legal-center-content{padding:24px;display:flex;flex-direction:column;gap:16px;overflow-wrap:anywhere}.legal-center header{display:flex;align-items:center;justify-content:space-between;gap:12px}.legal-center h2{font-size:22px;letter-spacing:-.025em;font-weight:650;margin:0}.legal-center h3{font-size:14px;margin:0;font-weight:600}.legal-center p{font-size:13px;line-height:1.65;margin:0;color:#70665f}.legal-center header button{font-size:24px;padding:0;min-width:46px;width:46px;background:transparent;border:0;box-shadow:none}.legal-action{font:inherit;font-size:13px;font-weight:550;line-height:1.4;min-height:46px;padding:12px 16px;border:1px solid #b7a99b66;border-radius:16px;background:#e9e1d6;color:#443b34;cursor:pointer;box-shadow:3px 3px 9px #c9c0b75c,-3px -3px 9px #ffffff8c}.legal-action.legal-primary{background:linear-gradient(130deg,#d9c6eb,#c5afd9);color:#372841;border:1px solid #e8dafa;box-shadow:0 0 20px #bd9cda66,inset 0 1px 0 #ffffff9c}.legal-action:disabled{opacity:.45;cursor:default;box-shadow:none}.legal-center a{font-size:12px;line-height:1.6;color:#756087;text-underline-offset:3px}.legal-center footer{display:flex;flex-wrap:wrap;gap:8px 16px;padding-top:4px}.legal-center section{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid #c8bcb066;border-radius:20px;background:#ffffff20}.legal-setting-title{display:flex;gap:10px;align-items:center;justify-content:space-between}.legal-setting-title span{font-size:11px;color:#756087;white-space:nowrap}.legal-consent-row{padding:14px;border-radius:18px;background:#ffffff30;border:1px solid #c8bcb077}.legal-consent-row label{display:flex;gap:12px;align-items:flex-start;font-size:13px;line-height:1.55}.legal-consent-row input{appearance:auto;-webkit-appearance:auto;width:20px;height:20px;margin:0;flex:0 0 20px;accent-color:#a78cbd}.legal-consent-row a{display:inline-block;margin:10px 0 0 32px}.legal-center button:focus-visible,.legal-center a:focus-visible,.legal-center input:focus-visible{outline:2px solid #9c77bb;outline-offset:3px}#legal-center-status:empty{display:none}[data-theme="dark"] .legal-center{background:linear-gradient(140deg,#302b38,#201e27);border-color:#72627e70;color:#f3edf9;box-shadow:0 28px 90px #0009,0 0 32px #9770bd22}[data-theme="dark"] .legal-center p{color:#c1b6cb}[data-theme="dark"] .legal-center a,[data-theme="dark"] .legal-setting-title span{color:#c4a8dd}[data-theme="dark"] .legal-action{background:#39323f;color:#eee5f7;border-color:#76648075;box-shadow:3px 3px 9px #15111b66,-2px -2px 9px #4c3c5933}[data-theme="dark"] .legal-primary{background:linear-gradient(130deg,#a087ba,#82659d);border-color:#d6b5ee88;color:#fff;box-shadow:0 0 22px #ab77dd44,inset 0 1px 0 #ffffff33}[data-theme="dark"] .legal-center section,[data-theme="dark"] .legal-consent-row{background:#ffffff04;border-color:#9b81b340}@media(max-width:480px){.legal-center-content{padding:20px;gap:14px}.legal-center h2{font-size:20px}}</style>
 <style id="legal-compact-css">.legal-center-content{padding:18px;gap:12px}.legal-center header{align-items:flex-start;position:static;min-height:0;height:auto;padding:0;margin:0;background:none;box-shadow:none;border:0}.legal-center header p{flex:1;color:inherit}.legal-center header button{flex:none;min-height:36px;height:36px;width:36px;min-width:36px;font-size:23px;padding:0}.legal-center h2{font-size:20px}.legal-center::backdrop{background:#17111e66;backdrop-filter:blur(6px)}.legal-consent-row{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:13px}.legal-consent-row label{flex:1;gap:8px;font-size:12px;line-height:1.45;align-items:center}.legal-consent-row input{width:18px;height:18px;flex-basis:18px}.legal-consent-row a{margin:0;font-size:11px;flex:none}.legal-action.legal-decline{background:none!important;border:0;box-shadow:none!important;min-height:36px;font-size:12px;font-weight:400;text-decoration:underline;text-underline-offset:3px;color:inherit;opacity:.8;padding:6px}.legal-center footer{gap:8px 14px;padding:0}.legal-center footer a{font-size:11px}.legal-film-stage{position:fixed;inset:0;z-index:50000;background:#101019;display:flex;align-items:center;justify-content:center;overflow:hidden}.legal-film-stage img{height:100%;max-width:100%;object-fit:cover;opacity:.9}.legal-film-stage span{position:absolute;bottom:7%;font-size:18px;color:#fff;text-shadow:0 2px 10px #000}@media(max-width:480px){.legal-center-content{padding:16px;gap:12px}.legal-center h2{font-size:19px}.legal-center p{font-size:12px}.legal-consent-row{padding:11px 9px;gap:5px}.legal-consent-row label{font-size:11px;gap:7px}}</style>
+<style id="legal-readable-css">
+.legal-center{height:fit-content;min-height:0;border-radius:22px}
+.legal-center .legal-center-content{padding:20px;gap:14px}
+.legal-center .legal-center-content>header{position:static;margin:0;padding:0;min-height:0;height:auto;align-items:flex-start}
+.legal-center .legal-center-content>header p{font-size:16px;line-height:1.5;color:inherit}
+.legal-center .legal-consent-row{padding:12px;gap:10px;flex-wrap:wrap}
+.legal-center .legal-consent-row label{font-size:14px;line-height:1.5;gap:10px;min-width:180px}
+.legal-center .legal-consent-row a{font-size:12px;margin-left:28px}
+.legal-center .legal-action{font-size:15px}
+.legal-center .legal-decline{font-size:14px}
+.legal-center footer a{font-size:12px}
+</style>
 </head>
 <body>
 
@@ -15872,7 +15887,7 @@ function clubPassUse(id){
           if (clubPass && Number(clubPass.split('.')[1]) <= Date.now()/1000+60) clubPass='';
           // Readiness must bypass the auth wait: the auth request itself uses it.
           // Otherwise slow cold login cancels itself before the business request.
-          if (!clubPass && !/^\/(?:auth\/|rf\/readiness$|media\/(?:film|onboarding)(?:$|\/)|settings$|app-texts$)/.test(new URL(input,location.href).pathname)){
+          if (!clubPass && !/^\/(?:auth\/|rf\/readiness$|client-error$|media\/(?:film|onboarding)(?:$|\/)|settings$|app-texts$)/.test(new URL(input,location.href).pathname)){
             await clubPassWait(clubPassEnsure(), init && init.signal);
           }
           if (clubPass){
@@ -16051,7 +16066,12 @@ function createRFParallelTransport(config){
     const retry=options.rfNoRetry!==true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
-    if(retry&&fastRead(path,method))return hedgedRead(path,options,headers);
+    if(retry&&fastRead(path,method)){
+      // Authentication has its own bounded deadline; do not spend the read
+      // budget waiting for it. Caller cancellation still bounds the whole task.
+      if(config.beforeRead)await config.beforeRead(path,options);
+      return hedgedRead(path,options,headers);
+    }
     const original=active;
 
     let response,error;
@@ -16091,7 +16111,7 @@ if(typeof module==='object'&&module.exports)module.exports={createRFParallelTran
 else root.createRFParallelTransport=createRFParallelTransport;
 })(typeof globalThis==='object'?globalThis:this);
 
-window.__rfTransport=createRFParallelTransport({endpoints:["https://selectel-api.youselllikeagod-magazine.ru", "https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net"],aliases:["https://api.youselllikeagod-magazine.ru", "https://reserve-api.youselllikeagod-magazine.ru", "https://club-backend-production-fc7f.up.railway.app"],fetch:window.fetch.bind(window),storage:(()=>{try{return localStorage;}catch(e){return null;}})(),onSwitch:index=>{document.body.classList.remove('fo-on');}});
+window.__rfTransport=createRFParallelTransport({endpoints:["https://selectel-api.youselllikeagod-magazine.ru", "https://kuznetsovdenisalexandrovich-club-backend-3c7e.twc1.net"],aliases:["https://api.youselllikeagod-magazine.ru", "https://reserve-api.youselllikeagod-magazine.ru", "https://club-backend-production-fc7f.up.railway.app"],fetch:window.fetch.bind(window),beforeRead:clubPrepareBootstrapRead,storage:(()=>{try{return localStorage;}catch(e){return null;}})(),onSwitch:index=>{document.body.classList.remove('fo-on');}});
 setInterval(()=>window.__rfTransport.considerReturn().catch(()=>{}),5000);
 
 const FO = { checking: false, okStreak: 0, timer: null, back: false };
@@ -16402,7 +16422,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v650 · 16.11.2026 Экономия ресурсов медиа';
+const APP_BUILD = 'v651 · 16.11.2026 Загрузка и диагностика';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -18624,6 +18644,7 @@ async function loadProfile() {
     if(profileFailureReports++<2){
       const status=Math.max(0,Math.min(599,Number(e&&e.status)||0));
       track(profileResponseReceived?'profile_render_failed':'profile_load_failed',status?'http':e&&e.name==='AbortError'?'timeout':'unknown',status);
+      if(typeof window.__reportError==='function')window.__reportError(profileResponseReceived?'Не удалось отобразить профиль':'Не удалось загрузить профиль','',status?'profile_http_'+status:e&&e.name==='AbortError'?'profile_timeout':'profile_unknown');
     }
     document.getElementById('sub-name').textContent = 'Ошибка загрузки';
   }
@@ -36427,7 +36448,7 @@ async function paidClaimConnectionCode(error){
       const d=await r.json();return d.protocol===2&&d.ready===true?'ok':'not-ready';
     }catch(e){return expired?'timeout':'network';}finally{clearTimeout(timer);}
   }));
-  return '650 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
+  return '651 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
 }
 var PAID_TOKEN_KEY = 'club_app_paid_token';
 var paidClaimPending = false;
@@ -36732,6 +36753,13 @@ function launchIdentity(){
 
 /* Получить пропуск: предъявляем серверу всё, чем площадка подтверждает
    человека. Свежий пропуск есть — сервер не дёргаем. Без подтверждения личности сервер отдаёт только гостевое содержимое */
+function clubPrepareBootstrapRead(path,options={}){
+  // Public media, including the funnel film/preload, retain their exact path.
+  if(!/^\/(?:users\/me|streams(?:\/[^/]+\/lectures)?|lectures(?:\/[^/]+)?)(?:\?|$)/.test(path)||!telegramId)return;
+  if(clubPassId!==String(telegramId))clubPassUse(telegramId);
+  if(clubPass&&Number(clubPass.split('.')[1])>Date.now()/1000+60)return;
+  return clubPassWait(clubPassEnsure(),options.signal);
+}
 function clubPassTgData(){
   let d = '';
   try { d = tgLaunchData(); } catch(e){}

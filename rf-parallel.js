@@ -131,7 +131,12 @@ function createRFParallelTransport(config){
     const retry=options.rfNoRetry!==true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
-    if(retry&&fastRead(path,method))return hedgedRead(path,options,headers);
+    if(retry&&fastRead(path,method)){
+      // Authentication has its own bounded deadline; do not spend the read
+      // budget waiting for it. Caller cancellation still bounds the whole task.
+      if(config.beforeRead)await config.beforeRead(path,options);
+      return hedgedRead(path,options,headers);
+    }
     const original=active;
 
     let response,error;
