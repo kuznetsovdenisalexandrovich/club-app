@@ -20,6 +20,13 @@ class Hls {
 }
 const ctx={Hls,document:Object.assign(new Element('document'),{hidden:false,createElement:t=>new Element(t)}),setTimeout:(fn,ms)=>{timers.set(++timerId,{fn,at:now+ms});return timerId;},clearTimeout:id=>timers.delete(id),globalThis:null};ctx.globalThis=ctx;
 vm.runInNewContext(fs.readFileSync(repo+'/film-player.js','utf8'),ctx);
+// The funnel keeps its exact previous HLS defaults; only callers opting in are bounded.
+for(const seconds of [undefined,30]){
+ const p=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'}],text:k=>k,onEvent:()=>{},...(seconds===undefined?{}:{backBufferSeconds:seconds})});
+ assert.equal(Object.hasOwn(p.hls.config,'backBufferLength'),seconds!==undefined);
+ if(seconds!==undefined)assert.equal(p.hls.config.backBufferLength,30);
+ p.destroy();
+}
 // Android's native decoder can reject an otherwise available HLS stream mid-VOD.
 {
  const original=Element.prototype.canPlayType;const existingTimers=new Set(timers.keys());

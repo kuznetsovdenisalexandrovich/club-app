@@ -63,7 +63,7 @@
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v649'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v650'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -9799,7 +9799,7 @@ async function openMeetingRecording(id){
   const path=API_URL+'/media/meeting/'+id+'/replay?direct_capable=1';
   const media=await apiRequest(path);
   if(gen!==meetingGeneration)return;
-  meetingPlayer=new ClubFilmPlayer(body,{sources:media.sources,text:key=>key==='film.start'?'Смотреть запись':key==='funnel.title'?'Запись занятия':t(key),expiresIn:media.expires_in,refreshSources:()=>refreshFilmSources(path),onEvent:()=>{},onDiagnostic:filmDiagnostics('meeting')});
+  meetingPlayer=new ClubFilmPlayer(body,{sources:media.sources,backBufferSeconds:30,text:key=>key==='film.start'?'Смотреть запись':key==='funnel.title'?'Запись занятия':t(key),expiresIn:media.expires_in,refreshSources:()=>refreshFilmSources(path),onEvent:()=>{},onDiagnostic:filmDiagnostics('meeting')});
  }catch(e){if(gen!==meetingGeneration)return;body.textContent='Не удалось открыть запись. Проверь доступ к клубу и попробуй ещё раз.';const b=document.createElement('button');b.className='lec-link-btn';b.textContent='Повторить';b.onclick=()=>openMeetingRecording(id);body.append(b);}
 }
 let meetingNoticeTimer;
@@ -15550,7 +15550,8 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
         this.engine='hls';
         if(!root.Hls||!root.Hls.isSupported()){this.failure('unsupported');this.switchSource(false);return;}
         const hls=this.hls=new root.Hls({startLevel:0,maxBufferLength:20,maxMaxBufferLength:40,
-          manifestLoadingTimeOut:8000,levelLoadingTimeOut:8000,fragLoadingTimeOut:10000});
+          manifestLoadingTimeOut:8000,levelLoadingTimeOut:8000,fragLoadingTimeOut:10000,
+          ...(Number.isFinite(this.options.backBufferSeconds)?{backBufferLength:Math.max(10,this.options.backBufferSeconds)}:{})});
         hls.on(root.Hls.Events.ERROR,(_,data)=>{if(active()){
           const reason=String(data.details||'hls_error');
           // Never send loader URLs, response bodies, exception messages or signed tokens.
@@ -16401,7 +16402,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v649 · 16.11.2026 Подсказка при ошибке входа';
+const APP_BUILD = 'v650 · 16.11.2026 Экономия ресурсов медиа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27673,7 +27674,7 @@ async function playNativeBonus(bonusKey, itemKey, it){
     let position = 0;
     try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
     bonusNativePlayer = new ClubFilmPlayer(slot, {
-      sources:results[1].sources, position:position, text:t, expiresIn:results[1].expires_in,
+      sources:results[1].sources, position:position, text:t, expiresIn:results[1].expires_in, backBufferSeconds:30,
       onBotFallback:canWatchVideoInBot()?()=>watchVideoInBot(bonusKey,itemKey):null,
       refreshSources:()=>refreshFilmSources(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}?direct_capable=1`),
       onEvent:function(event){
@@ -31035,6 +31036,7 @@ function livePlayPageUrl(){
    Опрос живёт ТОЛЬКО пока открыт полный экран — на главной чат не нужен. */
 const CHAT_POLL_MS = 4000;
 let chatTimer = null;
+let chatActive = false, chatGeneration = 0, chatRequest = null;
 let chatLastId = 0;
 let chatSending = false;
 
@@ -31117,9 +31119,14 @@ function giftCelebrate(m){
 }
 
 async function pollLiveChat(){
+  if (!chatActive || document.hidden || chatRequest) return;
+  clearTimeout(chatTimer);chatTimer=null;
+  const generation=chatGeneration, controller=new AbortController();chatRequest=controller;
+  const deadline=setTimeout(()=>controller.abort(),12000);
   try {
-    const r = await fetch(`${API_URL}/live/chat?since_id=${chatLastId}` + (telegramId ? `&telegram_id=${encodeURIComponent(telegramId)}` : ''));
+    const r = await fetch(`${API_URL}/live/chat?since_id=${chatLastId}` + (telegramId ? `&telegram_id=${encodeURIComponent(telegramId)}` : ''), {signal:controller.signal});
     const d = await r.json();
+    if (generation!==chatGeneration || !chatActive || document.hidden || controller.signal.aborted) return;
     if (d && d.found){
       if ((d.messages || []).length){
         renderChatMessages(d.messages, chatLastId === 0);
@@ -31147,7 +31154,13 @@ async function pollLiveChat(){
       }
     }
   } catch (e) {
-    console.warn('[чат] не смог обновить:', e);
+    if (!controller.signal.aborted) console.warn('[чат] не смог обновить:', e);
+  } finally {
+    clearTimeout(deadline);
+    if (chatRequest===controller){
+      chatRequest=null;
+      if(chatActive && !document.hidden && generation===chatGeneration) chatTimer=setTimeout(pollLiveChat,CHAT_POLL_MS);
+    }
   }
 }
 
@@ -31204,18 +31217,21 @@ function liveGateSecond(){
   }
 }
 
+function suspendLiveChat(){
+  ++chatGeneration;clearTimeout(chatTimer);chatTimer=null;
+  if(chatRequest){chatRequest.abort();chatRequest=null;}
+}
 function startLiveChat(){
+  suspendLiveChat();chatActive=true;
   chatLastId = 0;
   renderChatMessages([], true);
   pollLiveChat();
-  clearInterval(chatTimer);
-  chatTimer = setInterval(pollLiveChat, CHAT_POLL_MS);
 }
-
-function stopLiveChat(){
-  clearInterval(chatTimer);
-  chatTimer = null;
-}
+function stopLiveChat(){chatActive=false;suspendLiveChat();}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)suspendLiveChat();
+  else if(chatActive)pollLiveChat();
+});
 
 async function sendLiveChat(){
   if (chatSending) return;
@@ -36411,7 +36427,7 @@ async function paidClaimConnectionCode(error){
       const d=await r.json();return d.protocol===2&&d.ready===true?'ok':'not-ready';
     }catch(e){return expired?'timeout':'network';}finally{clearTimeout(timer);}
   }));
-  return '649 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
+  return '650 / '+kind+' / S:'+checks[0]+' / T:'+checks[1];
 }
 var PAID_TOKEN_KEY = 'club_app_paid_token';
 var paidClaimPending = false;
@@ -42893,6 +42909,7 @@ function plOpenFull(){
   ov.classList.add('open');
   plRenderList();
   plRenderMarkers();
+  plSyncTimeUI();plSyncBufferUI();
   // Бар уровня стоит выше по z-index и накрыл бы шапку плеера вместе с
   // крестиком — убираем его на время (условия в levelBarMustHide)
   if (typeof renderLevelCard === 'function') renderLevelCard();
@@ -42970,12 +42987,13 @@ function plRenderMarks(wrap){
 }
 
 function plHighlightMark(){
-  if (plTab !== 'marks' || !plAudio) return;
+  if (plTab !== 'marks' || !plAudio || !plFullVisible()) return;
   var rows = document.querySelectorAll('#fp-list .ptc-row');
   if (!rows.length) return;
   var cur = plAudio.currentTime, active = -1;
   rows.forEach(function(r, i){ if (parseFloat(r.dataset.t) <= cur) active = i; });
-  rows.forEach(function(r, i){ r.classList.toggle('ptc-now', i === active); });
+  var previous=document.querySelector('#fp-list .ptc-now'), next=rows[active];
+  if(previous!==next){if(previous)previous.classList.remove('ptc-now');if(next)next.classList.add('ptc-now');}
 }
 
 /* Засечки рисуются в ОБА плеера сразу — одни и те же данные, разный размер
@@ -43047,6 +43065,25 @@ function plGoInsights(){
 
 /* ── Подключение обработчиков ───────────────────────────────────────────── */
 
+function plFullVisible(){return !document.hidden && !!plEl('fp-overlay')?.classList.contains('open');}
+function plSyncTimeUI(){
+  if(!plAudio || document.hidden)return;
+  const cur=plFmt(plAudio.currentTime), pct=(plAudio.duration?plAudio.currentTime/plAudio.duration*100:0)+'%';
+  const prefixes=['mp'];if(plFullVisible())prefixes.push('fp');
+  for(const prefix of prefixes){
+    const label=plEl(prefix+'-cur'),fill=plEl(prefix+'-fill');
+    if(label && label.textContent!==cur)label.textContent=cur;
+    if(fill && fill.style.width!==pct)fill.style.width=pct;
+  }
+  if(plFullVisible())plHighlightMark();
+}
+function plSyncBufferUI(){
+  if(!plAudio || document.hidden || !plAudio.buffered?.length || !plAudio.duration)return;
+  const pct=(plAudio.buffered.end(plAudio.buffered.length-1)/plAudio.duration*100)+'%';
+  const prefixes=['mp'];if(plFullVisible())prefixes.push('fp');
+  for(const prefix of prefixes){const el=plEl(prefix+'-buffered');if(el && el.style.width!==pct)el.style.width=pct;}
+}
+
 function plInit(){
   plAudio = plEl('player-audio');
   if (!plAudio) return;
@@ -43092,22 +43129,10 @@ function plInit(){
     const item=plQueue[plIndex];
     if(item)nurtureOfferSample('audio',item.slug,plAudio.currentTime,!plAudio.paused&&!plAudio.seeking);
     if(item&&!plAudio.paused&&!document.hidden&&nurtureEventToken('lecture_view',item.slug)&&plAudio.currentTime>=(nurtureAudioLast[item.slug]||0)+15){nurtureAudioLast[item.slug]=plAudio.currentTime;nurtureProgress('viewing',item.slug,plAudio.currentTime);}
-    var cur = plFmt(plAudio.currentTime);
-    var pct = (plAudio.duration ? plAudio.currentTime / plAudio.duration * 100 : 0) + '%';
-    plEl('mp-cur').textContent = cur;
-    plEl('fp-cur').textContent = cur;
-    plEl('mp-fill').style.width = pct;
-    plEl('fp-fill').style.width = pct;
-    plHighlightMark();
+    plSyncTimeUI();
   });
-  plAudio.addEventListener('progress', function(){
-    if (!plAudio.buffered || !plAudio.buffered.length || !plAudio.duration) return;
-    var end = plAudio.buffered.end(plAudio.buffered.length - 1);
-    var pct = (end / plAudio.duration * 100) + '%';
-    var a = plEl('mp-buffered'), b = plEl('fp-buffered');
-    if (a) a.style.width = pct;
-    if (b) b.style.width = pct;
-  });
+  plAudio.addEventListener('progress', plSyncBufferUI);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){plSyncTimeUI();plSyncBufferUI();}});
   plAudio.addEventListener('play',  function(){ plSetPlayIcon(true);const item=plQueue[plIndex];if(item)nurtureOfferSample('audio',item.slug,plAudio.currentTime,true); });
   plAudio.addEventListener('playing', function(){ plSetPlayIcon(true); });   // v395: звук пошёл — значит «пауза»
   plAudio.addEventListener('pause', function(){
@@ -45349,7 +45374,7 @@ async function ivOpen(){
     st.style.display = '';
   }
 }
-function ivClose(){ document.getElementById('iv-main').classList.remove('open'); }
+function ivClose(){ ivCloseStand();document.getElementById('iv-main').classList.remove('open'); }
 
 /* Скопировал — значит ссылка ему нужна: тут сервер и заводит карточку */
 async function ivCopyLink(){
@@ -45385,12 +45410,30 @@ function ivSound(box){
   if (!vid.muted){ try { vid.currentTime = 0; } catch(e){} const p = vid.play(); if (p && p.catch) p.catch(function(){}); }
   const b = box.querySelector('.iv-snd'); if (b) b.innerHTML = vid.muted ? IV_ICON_MUTED : IV_ICON_SOUND;
 }
+function ivSyncPreviews(){
+  const open=!!document.getElementById('iv-stand')?.classList.contains('open');
+  document.querySelectorAll('#iv-track .iv-slide').forEach((slide,index)=>{
+    slide.querySelectorAll('video[data-preview-src]').forEach(video=>{
+      const active=open && !document.hidden && index===ivIdx;
+      if(!active){
+        video.muted=true;video.pause();
+        if(!open && video.hasAttribute('src')){video.removeAttribute('src');video.load();}
+        return;
+      }
+      if(!video.hasAttribute('src'))video.src=video.dataset.previewSrc;
+      const playing=video.play();if(playing?.catch)playing.catch(()=>{});
+    });
+  });
+}
+document.addEventListener('visibilitychange',ivSyncPreviews);
+window.addEventListener('pagehide',()=>document.querySelectorAll('#iv-track video').forEach(v=>v.pause()));
+
 function ivMedia(src, video){
   const u = escapeHtml(src || '');
   if (video){
     return (u ? '<div class="iv-bg" style="background-image:url(\'' + u + '\')"></div>' : '')
-      + '<video src="' + escapeHtml(video) + '"' + (u ? ' poster="' + u + '"' : '')
-      + ' muted playsinline loop autoplay preload="metadata" onclick="ivSound(this.parentNode)"></video>'
+      + '<video data-preview-src="' + escapeHtml(video) + '"' + (u ? ' poster="' + u + '"' : '')
+      + ' muted playsinline loop preload="none" onclick="ivSound(this.parentNode)"></video>'
       /* v446: ЗВУК — ПО НАЖАТИЮ. Без звука ролик стартует сам (браузер иначе
          не даст автозапуск), а включить его было нечем: [stated] Denis 07.10
          «у тизера почему-то не было звука». Кнопка-динамик в углу или тап
@@ -45451,6 +45494,7 @@ function ivSlideHtml(v, i){
 function ivRenderSlide(i){
   const el = document.querySelectorAll('#iv-track .iv-slide')[i];
   if (el) el.innerHTML = ivSlideHtml(ivVariants[i], i);
+  ivSyncPreviews();
 }
 function ivOpenStand(){
   if (!ivData) return;
@@ -45461,9 +45505,10 @@ function ivOpenStand(){
   document.getElementById('iv-dots').innerHTML = ivVariants.map((_, i) => '<div class="iv-dot' + (i ? '' : ' on') + '"></div>').join('');
   ivIdx = 0; tr.scrollLeft = 0; ivSetTitle();
   document.getElementById('iv-stand').classList.add('open');
+  ivSyncPreviews();
   try { track('invite2_stand'); } catch(e){}
 }
-function ivCloseStand(){ if (ivEdState) ivEdClose(false); ivSaveEdit(); document.querySelectorAll('#iv-track video').forEach(function(v){ v.muted = true; }); document.getElementById('iv-stand').classList.remove('open'); }
+function ivCloseStand(){ if (ivEdState) ivEdClose(false); ivSaveEdit(); document.querySelectorAll('#iv-track video').forEach(function(v){ v.muted = true; }); document.getElementById('iv-stand').classList.remove('open'); ivSyncPreviews(); }
 function ivSetTitle(){
   const v = ivVariants[ivIdx];
   document.getElementById('iv-vtitle').textContent = v ? v.title : '';
@@ -45475,7 +45520,7 @@ function ivOnScroll(){
   const tr = document.getElementById('iv-track');
   const i = Math.round(tr.scrollLeft / Math.max(tr.clientWidth, 1));
   if (i !== ivIdx){
-    ivSaveEdit(); ivIdx = i; ivSetTitle();
+    ivSaveEdit(); ivIdx = i; ivSetTitle();ivSyncPreviews();
     // ушли с тизера — звук гасим, чтобы не играл из-за края экрана
     document.querySelectorAll('#iv-track video').forEach(function(v){ v.muted = true; });
     document.querySelectorAll('#iv-track .iv-snd').forEach(function(b){ b.innerHTML = IV_ICON_MUTED; });

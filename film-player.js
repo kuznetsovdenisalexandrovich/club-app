@@ -256,7 +256,8 @@
         this.engine='hls';
         if(!root.Hls||!root.Hls.isSupported()){this.failure('unsupported');this.switchSource(false);return;}
         const hls=this.hls=new root.Hls({startLevel:0,maxBufferLength:20,maxMaxBufferLength:40,
-          manifestLoadingTimeOut:8000,levelLoadingTimeOut:8000,fragLoadingTimeOut:10000});
+          manifestLoadingTimeOut:8000,levelLoadingTimeOut:8000,fragLoadingTimeOut:10000,
+          ...(Number.isFinite(this.options.backBufferSeconds)?{backBufferLength:Math.max(10,this.options.backBufferSeconds)}:{})});
         hls.on(root.Hls.Events.ERROR,(_,data)=>{if(active()){
           const reason=String(data.details||'hls_error');
           // Never send loader URLs, response bodies, exception messages or signed tokens.

@@ -159,3 +159,17 @@ pause/visibility suspension or source change, not on a playing callback alone.
 Regression: old player stays loading with repeated seeking; fixed player exhausts
 auto+360 sources within80seconds under that fault. Normal no-seek timeout path
 retains its existing52second bound. No automatic refresh/delivery was added.
+
+2026-11-16 v650: resource cleanup is scoped to invite previews, live-chat polling,
+and hidden audio UI. Bonus and meeting callers explicitly request a 30-second
+HLS back buffer; the funnel caller omits the option and retains the previous
+HLS configuration. Funnel initialization/preload/start/fallback block remains
+byte-identical to v649, protected by resource_economy.cjs. Do not apply the
+buffer option or change preload to the funnel without a new instruction.
+Chat polling is single-flight with a 12-second response/body deadline, aborts
+on close/hide, ignores stale generations and resumes on visibility. Hidden
+invite slides pause; closing unloads sources, reopening plays only the active
+slide. Audio playback continues while the full UI is closed; that UI catches
+up on open/visibility. Browser regressions cover actual native/HLS playback,
+forward/backward seeks beyond the flushed buffer, source switch, audio seeks,
+and preview close/reopen; no physical-phone battery saving percentage claimed.
