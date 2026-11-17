@@ -216,3 +216,17 @@ profile through the reserve in0.92s in the same browser fault fixture. This is
 not proof of the reported German VPN root cause. All player/preload source bytes
 are unchanged. Tests: auth_pass_reserve, response_deadlines, payment_chain,
 startup_chain, app_rescue, inline_player, funnel_unchanged and playback suites.
+
+2026-11-17 v655: the first inline script installs bot-transport.js before rescue
+captures fetch. Only canonical /content/* bot requests are mapped to existing
+direct Selectel /club-bot and Timeweb bot endpoints. Read-only health probes
+select a running main bot; signed requests are sent once, never automatically
+replayed across nodes after an ambiguous response. Health is not writer authority:
+existing fencing, lease, maintenance and receipt protections remain authoritative.
+PDF navigation preserves the signed path/query on the selected direct node.
+Primary Caddy must expose /club-bot/health (rewrite /) and /club-bot/content/*
+(strip /club-bot) to 127.0.0.1:18092 before publishing this frontend. Other bot
+paths are not exposed by this route. No player/preload code changed. This removes
+DNS switching from these application requests, not the safe bot activation delay
+or external provider callbacks. Tests: bot_transport, app_rescue and player/payment
+regressions. Keep inline and standalone bot-transport.js identical.

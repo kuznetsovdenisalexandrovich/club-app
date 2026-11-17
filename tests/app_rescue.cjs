@@ -8,15 +8,15 @@ function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=fals
  const d={body,documentElement:root,hidden:hidden,createElement:tag=>{const n=create(tag);nodes.push(n);return n;},addEventListener:(e,f)=>docEvents[e]=f};
  const w={location:{hash:signed?'#tgWebAppData='+encodeURIComponent('auth_date=1&user=%7B%22id%22%3A123%7D&start_param=film'):'',search:'?startapp=film',reload(){}},
   crypto:{randomUUID:()=> '12345678-abcd-1234-abcd-123456789abc'},
-  fetch:async(url,opts)=>{if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);if(url.endsWith('/diagnostics')){diagCalls.push(data);return diagReply?diagReply(data):{ok:true,json:async()=>({status:'recorded',stored:data.records.length,discarded:0})};}calls.push(data);if(reply)return reply(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
+  fetch:async(url,opts)=>{if(url.endsWith('/health')||url==='https://kuznetsovdenisalexandrovich-club-bot-9e57.twc1.net/')return {ok:true,json:async()=>({service:'club-bot',role:'main',db_ok:true})};if(fetchFailure)throw Error('offline');const data=JSON.parse(opts.body);if(url.endsWith('/diagnostics')){diagCalls.push(data);return diagReply?diagReply(data):{ok:true,json:async()=>({status:'recorded',stored:data.records.length,discarded:0})};}calls.push(data);if(reply)return reply(data);if(legacy&&('stage_ms' in data||data.marks.includes('html')))return {ok:false,status:422};return {ok:true,json:async()=>({status:data.event==='failed'?'sent':'boot',kind:'video',bot_url:'https://t.me/youselllikeagod_bot?start=apprescue_abcdefghijklmnopqrstuvwx'})};},
   addEventListener:(e,f)=>events[e]=f};
  if(storage)w.localStorage=storage;
  if(vk){w.location.hash='#film';w.location.search='?vk_user_id=123&sign=synthetic&vk_ref=other';}
- Object.assign(w,{window:w,document:d,URLSearchParams,Promise,Math,location:w.location,setTimeout:(f,ms)=>{timers.set(++id,{f,ms});return id;},clearTimeout:id=>timers.delete(id)});
+ Object.assign(w,{window:w,document:d,URL,AbortController,URLSearchParams,Promise,Math,location:w.location,setTimeout:(f,ms)=>{timers.set(++id,{f,ms});return id;},clearTimeout:id=>timers.delete(id)});
  vm.createContext(w);vm.runInContext(first,w);
  return {w,d,calls,diagCalls,nodes,timers,events,docEvents,async deadline(){const t=[...timers.values()].find(t=>t.ms===35000);assert(t);t.f();await flush();}};
 }
-async function flush(){for(let i=0;i<15;i++)await Promise.resolve();}
+async function flush(){for(let i=0;i<40;i++)await Promise.resolve();}
 test('rescue is inline and runs before dependencies',()=>{assert.match(first,/APP_RESCUE_V1/);assert(html.indexOf('APP_RESCUE_V1')<html.indexOf('card-motion.js'));});
 test('blank page without SDK or main code raises independent banner and requests delivery',async()=>{
  const s=setup();await s.deadline();assert(s.calls.some(x=>x.event==='failed'));assert(s.nodes.some(x=>x.id==='club-app-rescue'));
