@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v656'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v657'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -6976,7 +6976,17 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 .film-reload{display:block;width:100%;font-size:13px;margin:10px 0}
 .native-film-fullscreen:hover::before{filter:brightness(1.08)}
 .native-film-fullscreen svg{pointer-events:none}
-.club-video-fullscreen-parent{transform:none!important;filter:none!important;perspective:none!important;contain:none!important;overflow:visible!important;z-index:auto!important}
+#login-return-to-app{align-self:flex-start;margin:36px 0 16px;min-height:44px;font-size:14px}
+#login-return-to-app[hidden]{display:none}
+/* Bonus controls have their own header space; do not overlap close/fullscreen. */
+#bonus-video-overlay .fullscreen-popup-card{padding-top:58px}
+#bonus-video-overlay .native-film-start{width:auto;min-width:0;min-height:46px;max-width:calc(100% - 24px);padding:10px 16px;gap:10px;border-radius:12px;font:600 15px/1.3 system-ui}
+#bonus-video-overlay .native-film-help:not(:has(button:not([hidden]))){min-height:0;padding:0}
+html[data-tg-native-back] #bonus-video-overlay .fullscreen-popup-card{padding-top:16px}
+/* Telegram WebView uses CSS fullscreen. Keep its ancestor chain above sibling
+   sheets and remove containing blocks (including animation fill and glass blur).
+   Media stays in place; removing the class restores the original modal layout. */
+.club-video-fullscreen-parent{transform:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;perspective:none!important;contain:none!important;will-change:auto!important;animation:none!important;overflow:visible!important;z-index:2147483000!important}
 .club-video-expanded{position:fixed!important;inset:0!important;z-index:2147483000!important;width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;margin:0!important;padding:0!important;border-radius:0!important;aspect-ratio:auto!important;background:#000!important}
 .club-video-expanded video,.club-video-expanded iframe{width:100%!important;height:100%!important;object-fit:contain!important}
 #funnel-film-slot:fullscreen{width:100vw;height:100dvh;margin:0;background:#000}
@@ -11267,6 +11277,7 @@ function renderMeetingNotice(notice){
 <div class="film-chip" id="film-chip" style="display:none" onclick="filmChipReturn()" data-text="film.chip">Вернуться к фильму</div>
 
 <div class="center-msg" id="web-login-screen" style="display:none">
+  <button type="button" id="login-return-to-app" class="lec-link-btn" hidden onclick="returnFromDemoLogin()">← Вернуться в приложение</button>
   <div class="theme-switch start-theme" onclick="event.stopPropagation();toggleTheme()" aria-label="Тема">
     <div class="theme-switch-thumb start-theme-thumb">☀</div>
   </div>
@@ -16500,7 +16511,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v656 · 17.11.2026 Перемотка фильма';
+const APP_BUILD = 'v657 · 17.11.2026 Перемотка фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27773,7 +27784,7 @@ async function playNativeBonus(bonusKey, itemKey, it){
     let position = 0;
     try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
     bonusNativePlayer = new ClubFilmPlayer(slot, {
-      sources:results[1].sources, position:position, text:t, expiresIn:results[1].expires_in,
+      sources:results[1].sources, position:position, text:key=>key==='film.start'?'Смотреть видео':key==='funnel.title'?(it.title||'Видео мастер-класса'):t(key), expiresIn:results[1].expires_in,
       onBotFallback:canWatchVideoInBot()?()=>watchVideoInBot(bonusKey,itemKey):null,
       refreshSources:()=>refreshFilmSources(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}?direct_capable=1`),
       onEvent:function(event){
@@ -36942,8 +36953,18 @@ function setLoginNotFound(show, message){
   if (help) help.style.display = show ? 'none' : '';
 }
 
+function returnFromDemoLogin(){
+  ++loginDeliveryGeneration;
+  document.getElementById('web-login-screen').style.display='none';
+  document.getElementById('web-requisites-bar').style.display='none';
+  document.getElementById('app-shell').style.display='block';
+  document.getElementById('tabbar').style.display='flex';
+  document.getElementById('login-return-to-app').hidden=true;
+  switchView('profile');
+}
 // Выход из демо обратно на экран входа — человек решил залогиниться
 function exitDemoToLogin(){
+  document.getElementById('login-return-to-app').hidden=false;
   ++loginDeliveryGeneration;loginDeliveryHelp({});
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('tabbar').style.display = 'none';
@@ -46165,7 +46186,7 @@ body:has(#quiz-overlay.open) #film-chip,body:has(#quiz-overlay.open) #funnel-scr
 #bonus-bar .bb-row{padding:15px 18px;gap:14px}#bonus-bar .bb-txt{font-size:14px;white-space:normal;line-height:1.4}#bonus-bar .bb-time{font-size:22px;color:var(--accent);font-weight:700}#bonus-bar .bb-fuse{display:none}
 body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{display:none!important}
 html[data-motion="off"] .bb-time{animation:none!important}
-</style><script src="knowledge-quizzes.js?v=9"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
+</style><script src="knowledge-quizzes.js?v=10"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 
 #pr-stage{--bg:#0d0d18;--card-bg:#191923;--text:#eee8dc;--line:rgba(213,184,125,.25)}

@@ -232,3 +232,12 @@ or external provider callbacks. Tests: bot_transport, app_rescue and player/paym
 regressions. Keep inline and standalone bot-transport.js identical.
 
 2026-11-17 v656: explicit seeks receive a fresh bounded 8s segment-loading window; restoring the saved position after source replacement preserves its existing budget. Real advancing frames clear seek state. Startup/preload selection, cache, media element and authorization are unchanged. Tests cover repeated scrubbing beyond20s, stalled seek fallback, paused seek, and internal restoration. This repairs a reproduced premature-fallback path, not every possible device/network stall.
+
+2026-11-17 v657: CSS fullscreen keeps ancestors above sibling sheets and removes
+animated/filter containing blocks. Media nodes, playback, preload and seek JS
+remain unchanged. Bonus controls have compact labels and separate close space.
+Guest phone login has a direct return; subscription-denied quizzes link to the
+existing access page. No payment/membership changes. Telegram desktop reproduced
+the hidden player; browser CSS regression covers 320/390/844/1440 widths.
+Full suite: 199 passed, one existing stall_probe failure also reproduced on
+unchanged HEAD 6035628. The test was not changed; film_seek_recovery passes.
