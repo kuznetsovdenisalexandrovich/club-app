@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v659'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v660'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16520,7 +16520,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v659 · 17.11.2026 Обложки аудио';
+const APP_BUILD = 'v660 · 17.11.2026 Страница оплаты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -30854,7 +30854,27 @@ function rememberLastLecture(l) {
    Здесь стояло `if (tg && ...)` — и в MAX вызов `openTelegramLink` уходил в
    пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
    Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
+const paymentNavigationPending = new Map();
 function openUrl(url) {
+  if (!ClubPaymentNavigation.isPayment(url)) return openUrlResolved(url);
+  if (paymentNavigationPending.has(url)) return paymentNavigationPending.get(url);
+  // Keep browser user activation while configuration is read. Telegram opens through its SDK.
+  const tg=window.Telegram && window.Telegram.WebApp;
+  const insideTg=(typeof isInsideTelegram==='function' && isInsideTelegram()) || !!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+  let pendingWindow=null;
+  if (!insideTg) { try { pendingWindow=window.open('about:blank','_blank'); if(pendingWindow){pendingWindow.opener=null;pendingWindow.document.title='Оплата · Ты Боженька Продаж';pendingWindow.document.body.textContent='Открываем оплату…';pendingWindow.document.body.style.cssText='margin:0;padding:32px;background:#e8e1d7;color:#332c26;font:18px system-ui';} } catch(e){} }
+  const task=paymentProviderConfig().catch(()=>({portal_enabled:appSettings.payment_portal_enabled===true})).then(config=>{
+    const destination=ClubPaymentNavigation.route(url,config.portal_enabled===true);
+    if(pendingWindow){ if(!pendingWindow.closed){if(window.clubExitExternal)window.clubExitExternal();pendingWindow.location.replace(destination);} return; }
+    openUrlResolved(destination);
+  }).catch(()=>{
+    if(pendingWindow && !pendingWindow.closed)pendingWindow.close();
+    showToast('Не удалось проверить маршрут оплаты. Нажми кнопку ещё раз.');
+  }).finally(()=>paymentNavigationPending.delete(url));
+  paymentNavigationPending.set(url,task);
+  return task;
+}
+function openUrlResolved(url) {
   if(window.clubExitExternal)window.clubExitExternal();
   if (!url) return;
   const tg = window.Telegram && window.Telegram.WebApp;
@@ -34858,11 +34878,15 @@ document.addEventListener('visibilitychange', () => {
 /* index-v493: переключатели только оплаты; Salebot остальных функций не затронут.
    При неизвестном состоянии не создаём заказ у другого провайдера. */
 async function paymentProviderConfig(){
-  const response = await fetch(`${API_URL}/payments/config`, {cache:'no-store'});
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),8000);
+  let response;
+  try { response=await fetch(`${API_URL}/payments/config`, {cache:'no-store',signal:controller.signal}); } finally { clearTimeout(timer); }
   if (!response.ok) throw new Error('Не удалось получить настройки оплаты');
   const config = await response.json();
   if (config.version !== 1 || !['server','salebot'].includes(config.regular)
       || !['server','salebot'].includes(config.campaign)) throw new Error('Неизвестные настройки оплаты');
+  appSettings.payment_portal_enabled=config.portal_enabled===true;
   return config;
 }
 function personalPaymentIdentity(){
@@ -46256,7 +46280,15 @@ html[data-motion="off"] .bb-time{animation:none!important}
 #gg-root .kq-return{justify-self:start;border:0;background:transparent;color:var(--gg-muted);font:500 12px/1.4 var(--gg-font-body);padding:10px 0;min-height:44px;cursor:pointer}
 #gg-root .kq-welcome button:focus-visible{outline:2px solid var(--gg-ink);outline-offset:3px}
 @media(max-width:350px){#gg-root .kq-preview,#gg-root .kq-free{padding:16px}#gg-root .kq-preview-art{width:85px;height:90px}#gg-root #kq-panel .kq-preview h2{font-size:22px}}
-</style><script src="knowledge-quizzes.js?v=11"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
+</style><script>
+(function(root){
+  const PAGE='https://kuznetsovdenisalexandrovich.github.io/club-app/account.html';
+  function isPayment(url){try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&(!u.port||u.port==='443')&&(u.hostname==='payform.ru'||u.hostname.endsWith('.payform.ru'));}catch(e){return false}}
+  function route(url,enabled){return enabled&&isPayment(url)?PAGE+'#pay='+encodeURIComponent(url):url}
+  const api={PAGE,isPayment,route};if(typeof module!=='undefined')module.exports=api;else root.ClubPaymentNavigation=api;
+})(typeof window==='undefined'?globalThis:window);
+
+</script><script src="knowledge-quizzes.js?v=11"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 
 #pr-stage{--bg:#0d0d18;--card-bg:#191923;--text:#eee8dc;--line:rgba(213,184,125,.25)}
