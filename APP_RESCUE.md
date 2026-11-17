@@ -247,3 +247,10 @@ quiz. Purchase navigation dismisses material layers with their own handlers,
 pauses audio without replacing its source and hides mini controls on tariff pages.
 Audio cover fits short screens; magazine dialog scrolls within the viewport.
 Film player, preload, seeking, membership and payment creation are unchanged.
+
+2026-11-17 v659: audio artwork falls back from lesson square/wide image to
+its stream image (same slug-prefix membership as the backend). Reuse the stream
+catalog request; late delivery updates image nodes only. Broken images advance
+through bounded fallbacks. No audio source, playback or seeking changes. Compact
+full-player artwork remains visible on short screens. Catalog audit: 62 lessons,
+23 own covers and 39 stream fallbacks, all selected image URLs loaded.

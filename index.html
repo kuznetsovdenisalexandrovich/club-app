@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v658'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v659'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -12910,7 +12910,7 @@ body.player-open .scroll-fade{height:190px}
 /* Keep playback controls visible before decorative cover art. */
 .fp-cover{width:min(32vw,140px,20dvh);margin:10px auto 12px}
 .fp-progress{margin-top:12px}
-@media(max-height:560px){.fp-cover{display:none}.fp-title{font-size:16px}.fp-progress{margin-top:8px}.fp-controls-row{margin:8px 0 12px}}
+@media(max-height:560px){.fp-cover{width:min(14dvh,80px);margin:4px auto 8px}.fp-title{font-size:16px}.fp-progress{margin-top:8px}.fp-controls-row{margin:8px 0 12px}}
 body:has(#view-access.active) #mini-player,body:has(#view-club-info.active) #mini-player{display:none!important}
 
 .fp-tabs{display:flex;gap:8px;margin:2px 0 12px}
@@ -16520,7 +16520,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v658 · 17.11.2026 Демо и навигация';
+const APP_BUILD = 'v659 · 17.11.2026 Обложки аудио';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -28048,7 +28048,7 @@ async function loadStreams() {
        начало. Поэтому: «Смотреть позже», бонусы и «Журнал» показываем сразу
        (их данные обычно уже загружены при старте аппа), потоки подъезжают
        следом и проявляются каждый сам. */
-    const streamsPromise = fetch(`${API_URL}/streams`).then(r => r.json()).catch(() => []);
+    const streamsPromise = plLoadStreamCovers().catch(() => []);
 
     // Данные журнала и бонусов нужны для обложек фиксированных плиток
     await Promise.all([
@@ -28258,6 +28258,7 @@ async function openStream(key) {
       fetch(`${API_URL}/streams/${key}`).then(r => r.json()),
       fetch(`${API_URL}/streams/${key}/lectures`).then(r => r.json()),
     ]);
+    plRememberStreams([stream]);
     document.getElementById('stream-title').textContent = stream.title || key;
     document.getElementById('stream-desc').textContent = stream.description || '';
     // Обложка потока — существующий <img>, которому меняют src. Наблюдатель
@@ -42720,14 +42721,41 @@ function lecSquareCover(lec){
   return String(lec.image_square_url || '').trim() || String(lec.image_url || '').trim();
 }
 
+// Stream membership follows the same slug-prefix rule as /streams/{key}/lectures.
+var plCoverStreams = [];
+var plCoverStreamsPromise = null;
+function plStreamCover(lec){
+  const slug=String(lec?.slug || '');
+  const stream=plCoverStreams.filter(s=>slug.startsWith(s.stream_key+'_')).sort((a,b)=>b.stream_key.length-a.stream_key.length)[0];
+  return String(stream?.image_url || '').trim();
+}
+function plCoverSources(lec){
+  return [...new Set([String(lec?.image_square_url || '').trim(),String(lec?.image_url || '').trim(),plStreamCover(lec),'images/icon-512.png'].filter(Boolean))];
+}
+function plCoverFailed(img){
+  const rest=JSON.parse(img.dataset.coverRest || '[]');
+  if(!rest.length){img.onerror=null;return;}
+  img.src=rest.shift();img.dataset.coverRest=JSON.stringify(rest);
+}
+function plRememberStreams(streams){
+  if(!Array.isArray(streams))return;
+  for(const s of streams){if(s?.stream_key){plCoverStreams=plCoverStreams.filter(x=>x.stream_key!==s.stream_key);plCoverStreams.push(s);}}
+  // Late catalog delivery updates artwork only, never the audio node or playback.
+  document.querySelectorAll('img[data-player-cover]').forEach(img=>{
+    const lec={slug:img.dataset.playerCover,image_square_url:img.dataset.coverSquare,image_url:img.dataset.coverWide};
+    const sources=plCoverSources(lec);img.dataset.coverRest=JSON.stringify(sources.slice(1));
+    if(img.getAttribute('src')!==sources[0])img.src=sources[0];
+  });
+}
+function plLoadStreamCovers(){
+  if(!plCoverStreamsPromise)plCoverStreamsPromise=fetch(`${API_URL}/streams`).then(r=>{if(!r.ok)throw Error('Stream covers unavailable');return r.json()}).then(rows=>{plRememberStreams(rows);return rows}).catch(e=>{plCoverStreamsPromise=null;throw e});
+  return plCoverStreamsPromise;
+}
 function plCoverHtml(lec){
-  if (!lec) return '';
-  // v439: обложка занятия — та же, что на карточке в библиотеке (поле
-  // image_url из контент-завода), запасной путь — файл по имени слага. Нет ни
-  // того ни другого — картинка убирает себя и остаётся градиентная подложка
-  // v444: сначала квадратная, если анализатор её сделал
-  var src = lecSquareCover(lec) || ('images/lectures/' + lec.slug + '.jpg');
-  return '<img src="' + escapeHtml(src) + '" alt="" loading="lazy" onerror="this.remove()">';
+  if(!lec)return '';
+  if(!plCoverStreams.length)plLoadStreamCovers().catch(()=>{});
+  const sources=plCoverSources(lec);
+  return '<img src="'+escapeHtml(sources[0])+'" alt="" data-player-cover="'+escapeHtml(lec.slug || '')+'" data-cover-square="'+escapeHtml(lec.image_square_url || '')+'" data-cover-wide="'+escapeHtml(lec.image_url || '')+'" data-cover-rest="'+escapeHtml(JSON.stringify(sources.slice(1)))+'" onerror="plCoverFailed(this)">';
 }
 
 /* ── Запуск ─────────────────────────────────────────────────────────────── */
