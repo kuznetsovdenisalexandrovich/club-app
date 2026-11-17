@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v657'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v658'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -6981,7 +6981,7 @@ body.onboarding-bar-visible header{margin-bottom:106px}
 /* Bonus controls have their own header space; do not overlap close/fullscreen. */
 #bonus-video-overlay .fullscreen-popup-card{padding-top:58px}
 #bonus-video-overlay .native-film-start{width:auto;min-width:0;min-height:46px;max-width:calc(100% - 24px);padding:10px 16px;gap:10px;border-radius:12px;font:600 15px/1.3 system-ui}
-#bonus-video-overlay .native-film-help:not(:has(button:not([hidden]))){min-height:0;padding:0}
+#bonus-video-overlay .native-film-help:not(:has(>button:not([hidden]))){min-height:0;padding:0}
 html[data-tg-native-back] #bonus-video-overlay .fullscreen-popup-card{padding-top:16px}
 /* Telegram WebView uses CSS fullscreen. Keep its ancestor chain above sibling
    sheets and remove containing blocks (including animation fill and glass blur).
@@ -9486,6 +9486,7 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 .mag-progress{height:3px;border-radius:2px;background:var(--card2);margin-top:6px;overflow:hidden}
 .mag-progress-bar{height:100%;background:var(--warm);border-radius:2px}
 
+#mag-issue-modal{max-height:calc(100dvh - 48px - var(--safe-top,0px));overflow-y:auto;overscroll-behavior:contain}
 .mag-modal-cover{width:100%;aspect-ratio:3/4;max-height:44vh;object-fit:cover;border-radius:14px;
   display:block;margin-bottom:14px;background:var(--card2)}
 .mag-modal-desc{font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:16px;
@@ -10971,10 +10972,11 @@ function renderMeetingNotice(notice){
   <div class="sched-popup" id="paywall-popup" style="text-align:center">
     <div class="sched-popup-handle"></div>
     <div style="font-size:34px;margin:6px 0 10px">🔒</div>
-    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px" data-text="pay.a2">Вот ёшки, не вижу твоей подписки(</div>
+    <div style="font-family:var(--disp);font-weight:700;font-size:16px;margin-bottom:8px" data-text="paywall.heading">Открой доступ к клубу</div>
     <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px" data-text="pay.a3">Этот контент доступен только участникам клуба</div>
     <button class="lec-link-btn access-btn" onclick="closePaywall();openAccessPage()">Открыть доступ</button>
     <button class="lec-link-btn access-btn" style="background:transparent;border:1px solid var(--border);color:var(--text)" onclick="closePaywall();openClubInfoPage()">Узнать подробнее</button>
+    <button type="button" class="payment-help-link" style="border:0;background:none;padding:10px;min-height:44px" onclick="closePaywall()">Вернуться к материалу</button>
   </div>
 </div>
 
@@ -12889,6 +12891,7 @@ body.player-open .scroll-fade{height:190px}
   display:flex;align-items:center;justify-content:center;color:#fff;
   box-shadow:0 20px 44px -16px rgba(0,0,0,.4);
 }
+
 .fp-cover img{width:100%;height:100%;object-fit:cover;display:block}
 .fp-title{font-family:var(--disp);font-weight:700;font-size:17px;line-height:1.35;text-align:center;padding:0 6px}
 .fp-sub{font-size:12px;color:var(--text-dim);text-align:center;margin-top:6px}
@@ -12903,6 +12906,12 @@ body.player-open .scroll-fade{height:190px}
 .fp-controls-row .mp-btn.skip{width:44px;height:44px;font-size:10.5px}
 .fp-controls-row .mp-btn.big{width:62px;height:62px;font-size:21px}
 .fp-controls-row .mp-side{width:40px;height:40px}
+
+/* Keep playback controls visible before decorative cover art. */
+.fp-cover{width:min(32vw,140px,20dvh);margin:10px auto 12px}
+.fp-progress{margin-top:12px}
+@media(max-height:560px){.fp-cover{display:none}.fp-title{font-size:16px}.fp-progress{margin-top:8px}.fp-controls-row{margin:8px 0 12px}}
+body:has(#view-access.active) #mini-player,body:has(#view-club-info.active) #mini-player{display:none!important}
 
 .fp-tabs{display:flex;gap:8px;margin:2px 0 12px}
 .fp-tab{
@@ -16511,7 +16520,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v657 · 17.11.2026 Перемотка фильма';
+const APP_BUILD = 'v658 · 17.11.2026 Демо и навигация';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -22065,6 +22074,7 @@ const APP_TEXTS = {
   'pay.a1': {
     c:'Вход и оплата', l:'Оплата не из РФ / проблема с оплатой', w:'', i:true,
     t:'Оплата не из РФ / проблема с оплатой' },
+  'paywall.heading': {c:'Доступ',l:'Короткий заголовок закрытого материала',w:'Окно доступа',i:false,t:'Открой доступ к клубу'},
   'pay.a2': {
     c:'Вход и оплата', l:'Вот ёшки, не вижу твоей подписки(', w:'', i:true,
     t:'Вот ёшки, не вижу твоей подписки(' },
@@ -34657,6 +34667,7 @@ function closePauseSheet(){
 }
 
 function openClubInfoPage(){
+  preparePurchasePage();
   switchView('club-info');
   refreshClubInfoButtons();
   track('club_info_open');
@@ -34935,9 +34946,22 @@ async function personalPaymentLinks(plan){
   return links;
 }
 
+// A purchase page must not remain behind the material that offered it.
+// Use existing dismiss handlers; preserve the audio source and saved position.
+function preparePurchasePage(){
+  if (typeof plAudio !== 'undefined' && plAudio) plAudio.pause();
+  const seen = new Set();
+  for(let i=0;i<16;i++){
+    const layer=appBackLayer();
+    if(!layer || seen.has(layer.el)) break;
+    seen.add(layer.el);
+    if(layer.el.id==='dgs')closeDigest();else layer.dismiss();
+  }
+}
 async function openAccessPage(direct){
   if (isPaused){ openPauseSheet(); return; }   // v427
   if (!ensureBotAccess(function(){ openAccessPage(direct); })) return;
+  preparePurchasePage();
   switchView('access');
   track('access_open');
   const el = document.getElementById('access-buttons');
@@ -38255,6 +38279,7 @@ function openMagazineIssue(key){
     ${action}
     <button class="lec-link-btn" style="width:100%;margin-top:8px" onclick="toggleMagazineSaved(${jsArg(key)})">${savedLabel}</button>`;
 
+  modal.scrollTop=0;
   document.getElementById('mag-issue-overlay').classList.add('open');
 }
 
@@ -46186,7 +46211,24 @@ body:has(#quiz-overlay.open) #film-chip,body:has(#quiz-overlay.open) #funnel-scr
 #bonus-bar .bb-row{padding:15px 18px;gap:14px}#bonus-bar .bb-txt{font-size:14px;white-space:normal;line-height:1.4}#bonus-bar .bb-time{font-size:22px;color:var(--accent);font-weight:700}#bonus-bar .bb-fuse{display:none}
 body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{display:none!important}
 html[data-motion="off"] .bb-time{animation:none!important}
-</style><script src="knowledge-quizzes.js?v=10"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
+
+#gg-root .kq-welcome{max-width:600px;margin:4px auto 0;display:grid;gap:16px}
+#gg-root .kq-preview,#gg-root .kq-free{border:1px solid var(--gg-card-brd);background:var(--gg-card);box-shadow:var(--gg-card-sh);border-radius:22px;padding:20px;overflow:hidden}
+#gg-root .kq-preview-lead{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#gg-root .kq-eyebrow{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gg-muted);line-height:1.5}
+#gg-root #kq-panel .kq-preview h2{font-size:25px;line-height:1.15;letter-spacing:-.035em;margin:8px 0 0}
+#gg-root .kq-preview-art{display:block;width:112px;height:100px;object-fit:cover;border-radius:16px;flex:none}
+#gg-root .kq-preview-copy,#gg-root .kq-free p{font-size:14px;line-height:1.6;margin:16px 0;color:var(--gg-ink)}
+#gg-root .kq-access-note{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.5;padding-top:14px;border-top:1px solid var(--gg-pill-brd);color:var(--gg-muted)}
+#gg-root .kq-access-note svg{flex:none;width:16px;height:18px;margin-top:1px}
+#gg-root #kq-panel .kq-join,#gg-root #kq-panel .kq-try{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:46px;padding:12px 14px;margin:16px 0 0;border:1px solid var(--gg-me-brd);border-radius:13px;background:var(--gg-me);color:var(--gg-me-ink);font:600 13px/1.4 var(--gg-font-body);cursor:pointer;text-align:left}
+#gg-root .kq-free h3{font-size:18px;line-height:1.3;margin:7px 0 0;letter-spacing:-.025em}
+#gg-root .kq-free p{margin:8px 0 0}
+#gg-root #kq-panel .kq-try{background:transparent;color:var(--gg-ink);border-color:var(--gg-pill-brd);margin-top:12px}
+#gg-root .kq-return{justify-self:start;border:0;background:transparent;color:var(--gg-muted);font:500 12px/1.4 var(--gg-font-body);padding:10px 0;min-height:44px;cursor:pointer}
+#gg-root .kq-welcome button:focus-visible{outline:2px solid var(--gg-ink);outline-offset:3px}
+@media(max-width:350px){#gg-root .kq-preview,#gg-root .kq-free{padding:16px}#gg-root .kq-preview-art{width:85px;height:90px}#gg-root #kq-panel .kq-preview h2{font-size:22px}}
+</style><script src="knowledge-quizzes.js?v=11"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 
 #pr-stage{--bg:#0d0d18;--card-bg:#191923;--text:#eee8dc;--line:rgba(213,184,125,.25)}

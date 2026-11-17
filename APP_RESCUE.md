@@ -241,3 +241,9 @@ existing access page. No payment/membership changes. Telegram desktop reproduced
 the hidden player; browser CSS regression covers 320/390/844/1440 widths.
 Full suite: 199 passed, one existing stall_probe failure also reproduced on
 unchanged HEAD 6035628. The test was not changed; film_seek_recovery passes.
+
+2026-11-17 v658: guest quiz screen explains access and offers the existing free
+quiz. Purchase navigation dismisses material layers with their own handlers,
+pauses audio without replacing its source and hides mini controls on tariff pages.
+Audio cover fits short screens; magazine dialog scrolls within the viewport.
+Film player, preload, seeking, membership and payment creation are unchanged.
