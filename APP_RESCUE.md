@@ -230,3 +230,5 @@ paths are not exposed by this route. No player/preload code changed. This remove
 DNS switching from these application requests, not the safe bot activation delay
 or external provider callbacks. Tests: bot_transport, app_rescue and player/payment
 regressions. Keep inline and standalone bot-transport.js identical.
+
+2026-11-17 v656: explicit seeks receive a fresh bounded 8s segment-loading window; restoring the saved position after source replacement preserves its existing budget. Real advancing frames clear seek state. Startup/preload selection, cache, media element and authorization are unchanged. Tests cover repeated scrubbing beyond20s, stalled seek fallback, paused seek, and internal restoration. This repairs a reproduced premature-fallback path, not every possible device/network stall.

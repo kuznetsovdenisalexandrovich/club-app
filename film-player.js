@@ -92,7 +92,7 @@
       if(!v||this.resumePending||v.seeking||v.readyState<2)return false;
       const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
       if(!advancing||v.paused)return false;
-      this.lastProgress=Date.now();this.sourceWaitStarted=null;this.failedSources.clear();
+      this.lastProgress=Date.now();this.sourceWaitStarted=null;this.seekLoading=false;this.failedSources.clear();
       if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
       this.progress();this.emit('time');return true;
     }
@@ -114,7 +114,7 @@
       // window as startup. HAVE_METADATA/NETWORK_LOADING is not a media error.
       const loadingNative=this.engine==='native'&&this.video&&this.video.readyState<3&&this.video.networkState===2;
       const lastCandidate=this.failedSources.size>=this.sources.length-1;
-      const wait=this.options.stallMs||(this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
+      const wait=this.options.stallMs||(this.seekLoading?8000:this.quality==='auto'&&this.index===0&&this.sources.length>1?4000:loadingNative&&lastCandidate?20000:8000);
       if(!this.timer){
         // Metadata/seek callbacks may re-arm timers, but cannot restart the
         // continuous foreground wait budget for this source.
@@ -198,7 +198,7 @@
         this.wrapper.className='native-film native-film-failed'+(this.wrapper.className.includes('club-video-expanded')?' club-video-expanded':'');this.status('film.unavailable');if(this.botFallback)this.botFallback.hidden=false;this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;
       }
       this.exhausted=false;this.wrapper.className='native-film'+(this.wrapper.className.includes('club-video-expanded')?' club-video-expanded':'');
-      this.sourceWaitStarted=null;
+      this.sourceWaitStarted=null;this.seekLoading=false;this.restoreSeekTarget=null;
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
@@ -228,7 +228,7 @@
         // The VOD timeline may arrive after loadedmetadata (initial Infinity).
         // Preserve the target through zero-time callbacks and failed source loads.
         this.resumePending=false;
-        try{v.currentTime=target;this.position=target;}
+        try{this.restoreSeekTarget=target;v.currentTime=target;this.position=target;}
         catch(e){this.resumePending=true;}
       };
       on('loadedmetadata',()=>{
@@ -243,7 +243,14 @@
       });
       on('timeupdate',()=>this.sampleProgress());
       on('waiting',()=>{if(this.wantsPlay){this.emit('pause');this.status('film.buffering');this.arm();}});
-      on('seeking',()=>{if(!this.resumePending)this.position=v.currentTime;this.emit('pause');this.clearTimers();this.arm();});
+      on('seeking',()=>{
+        if(!this.resumePending)this.position=v.currentTime;
+        // A new scrub is a new download target, not a continuation of the old
+        // stalled segment. Source restoration keeps its existing bounded budget.
+        const restoring=this.restoreSeekTarget!=null&&Math.abs(v.currentTime-this.restoreSeekTarget)<.1;
+        if(!restoring){this.sourceWaitStarted=null;this.seekLoading=true;}
+        this.restoreSeekTarget=null;this.emit('pause');this.clearTimers();this.arm();
+      });
       on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.sourceWaitStarted=null;this.showStart();this.emit('pause');});
       on('ended',()=>{if(!v.ended)return;this.wantsPlay=false;this.clearTimers();this.position=v.currentTime;this.diagnostic('ended');this.emit('stop');});
       on('error',()=>{
