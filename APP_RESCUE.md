@@ -262,3 +262,10 @@ the next source; one recovered frame no longer resets this short failure history
 Manual quality selection resets it; old unrelated stalls expire. Film funnel,
 preload and seek deadlines are unchanged. This improves repeated-stall recovery;
 it does not establish the network cause of every iOS timeout.
+
+2026-11-18 v663: anonymous refresh does not request
+/users/me with a missing identity and does not emit a false profile_http_401.
+Authenticated failures retain the existing bounded diagnostics. Playback,
+manifest routing, rescue delivery and startup readiness are unchanged.
+Pack entry opens an existing member-only card surface; it does not open a card
+or award points until the participant explicitly chooses one.

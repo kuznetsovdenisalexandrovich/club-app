@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v636 -->
+<!-- FILE_VERSION: index-v663 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v661'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v663'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -9913,6 +9913,27 @@ function renderMeetingNotice(notice){
 .legal-center .legal-decline{font-size:14px}
 .legal-center footer a{font-size:12px}
 </style>
+<style id="participant-card-polish">
+/* Participant route and lightweight card interactions. */
+.nb-route-label{font-size:12px;letter-spacing:.04em;color:var(--text-dim);margin-bottom:8px}
+.nb-route-all{display:block;margin:12px auto 0;border:0;background:none;color:var(--text-dim);font:inherit;font-size:12px;padding:8px;text-decoration:underline;text-underline-offset:3px}
+#pack-banner{position:relative;isolation:isolate;overflow:hidden;border:1px solid rgba(176,143,202,.45);background:linear-gradient(115deg,rgba(175,139,215,.17),rgba(217,185,122,.16),rgba(175,139,215,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 24px rgba(100,71,133,.08)}
+#pack-banner::after{content:"";position:absolute;inset:-100% -50%;z-index:-1;pointer-events:none;background:linear-gradient(110deg,transparent 38%,rgba(255,238,195,.3) 49%,rgba(207,185,244,.2) 53%,transparent 64%);transform:translateX(-65%);animation:giftShimmer 6s ease-in-out infinite}
+@keyframes giftShimmer{0%,25%{transform:translateX(-65%)}80%,100%{transform:translateX(65%)}}
+#pack-banner .pack-banner-dot{display:none}#pack-banner .pack-banner-icon{color:#b58b4c;font-size:30px}
+.reveal-big{position:relative;max-width:100%;padding:0 30px;box-sizing:border-box}
+.reveal-overlay.showcase #reveal-big{width:min(100%,520px)}
+.reveal-overlay.showcase #reveal-big .qr-stack{--qr-w:min(100%,398px);width:100%;max-width:398px;height:auto;aspect-ratio:3/4;margin-inline:auto}
+.card-browse-arrow{position:absolute;top:45%;width:26px;height:48px;padding:0;border:1px solid rgba(180,161,201,.28);background:rgba(150,130,168,.14);color:var(--text);font:28px Georgia,serif;z-index:8;cursor:pointer;backdrop-filter:blur(6px)}
+.card-browse-arrow.prev{left:0;border-radius:0 26px 26px 0}.card-browse-arrow.next{right:0;border-radius:26px 0 0 26px}.card-browse-arrow:disabled{opacity:.2;cursor:default}
+#reveal-big .qr-stack,#pr-stage .pr-card.pr-open{touch-action:none}
+#pr-stage .pr-card.pr-open .pr-front{border:2px solid #c5a56c!important;box-shadow:inset 0 0 0 4px rgba(217,185,122,.25),0 12px 38px rgba(20,12,35,.3)!important}
+#pr-stage .pr-card.pr-open .pr-front::after{content:"";position:absolute;inset:5px;border:1px solid rgba(239,214,163,.6);border-radius:inherit;pointer-events:none;z-index:3}
+#pr-stage .pr-front img.pr-instance-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:2;pointer-events:none}
+#pr-stage #pr-cta{background:linear-gradient(120deg,#c9a66b,#e4cb98 48%,#b99155);color:#282016;border:1px solid #c3a16b;box-shadow:inset 0 1px 0 #f4dfb7,0 5px 20px rgba(116,79,30,.16)}
+#pr-stage #pr-cta::before,#pr-stage #pr-cta::after{background-image:none}
+@media(prefers-reduced-motion:reduce){#pack-banner::after{animation:none}.pr-ambient{display:none}}
+</style>
 </head>
 <body>
 
@@ -10002,7 +10023,7 @@ function renderMeetingNotice(notice){
 
     <div class="pack-banner" id="pack-banner" style="display:none" onclick="openPackReveal()">
       <div class="pack-banner-dot"></div>
-      <div class="pack-banner-icon">🎴</div>
+      <div class="pack-banner-icon" aria-hidden="true">✦</div>
       <div>
         <div class="pack-banner-title" id="pack-banner-title">Тебя ждёт закрытый пак</div>
         <div class="pack-banner-sub" data-text="cards.a1">Три карточки пантеона. Открой →</div>
@@ -11663,7 +11684,7 @@ function renderMeetingNotice(notice){
     <p id="onb-text"></p>
     <div class="onb-acts">
       <button class="lec-link-btn access-btn" id="onb-try" onclick="onbTry()"></button>
-      <button class="lec-link-btn" id="onb-next" onclick="onbNext('skipped')" data-text="onb.next">Дальше</button>
+      <button class="lec-link-btn" id="onb-next" onclick="onbNext('skipped')" data-text="onb.next">Пропустить шаг</button>
     </div>
   </div>
 </div>
@@ -16532,7 +16553,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v662 · 18.11.2026 Возврат подписки';
+const APP_BUILD = 'v663 · 18.11.2026 Первые шаги и подарки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -18575,6 +18596,7 @@ let pausedUntil = '';
 let profileFailureReports = 0;
 const profileVisitsStarted=new Set();
 async function loadProfile() {
+  if (!telegramId) return;
   let profileResponseReceived=false;
   try {
     const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}&bootstrap=1`, {}, 15000);
@@ -21169,7 +21191,7 @@ const APP_TEXTS = {
     t:'С чего начать' },
   'onb.hi_skip': { c:'Знакомство', l:'Отказ от знакомства', w:'Экран после доступов', i:false,
     t:'Разберусь сам' },
-  'onb.next': { c:'Знакомство', l:'Кнопка «дальше»', w:'Окно шага', i:false, t:'Дальше' },
+  'onb.next': { c:'Знакомство', l:'Пропустить действие в обзоре', w:'Окно шага', i:false, t:'Пропустить шаг' },
   'onb.trail': { c:'Знакомство', l:'Полоска обучения', w:'Внизу экрана', i:false, t:'Обучение' },
   'onb.trail_wait': { c:'Знакомство', l:'Полоска, пока человек пробует', w:'Внизу экрана', i:false,
     t:'Как попробуешь — продолжим' },
@@ -22990,7 +23012,7 @@ function shareWithChoice(text, payload){
   const el = document.getElementById('share-where-overlay');
   /* v381: оверлей семейства gg — показывается классом `gg-open`, а не `open`;
      с `open` кнопка «поделиться» в вебе молча не работала */
-  if (el) el.classList.add('gg-open');
+  if (el) { document.body.appendChild(el); el.style.zIndex = '31000'; el.classList.add('gg-open'); }
   else shareSomething(text, shareLink(payload));   /* окно не нашлось — не молчим */
 }
 
@@ -23827,11 +23849,11 @@ function nbRenderBar(card){
   var st = nbState, lvl = st.level || 0, bar = st.bar || {};
   card.style.display = 'block';
   document.body.classList.add('onboarding-bar-visible');
-  document.getElementById('level-card-title').textContent = lvl >= 1 ? (nbT('bar.l2') || 'Уровень 2') : (nbT('bar.l1') || 'Уровень 1');
+  document.getElementById('level-card-title').textContent = 'Знакомство · до уровня ' + (lvl >= 1 ? '2' : '1');
   /* v367: порог набран, но полезного действия нет — шкала стоит на 97 % с подписью */
   var fracTxt = st.gated ? (nbT('bar.gated') || 'закрой обязательное')
               : ((st.need_useful && (bar.frac || 0) >= 0.97) ? (nbT('bar.need_useful') || 'осталось одно действие')
-              : ((bar.in_level || 0) + ' / ' + (bar.of_level || 0)));
+              : ((bar.in_level || 0) + ' / ' + (bar.of_level || 0) + ' очков'));
   document.getElementById('level-card-frac').textContent = fracTxt;
   var fill = document.getElementById('level-bar-fill');
   if (fill) fill.style.width = Math.round((st.gated ? 0.97 : (bar.frac || 0)) * 100) + '%';
@@ -23882,29 +23904,16 @@ function nbRenderStart(){
   /* Следующий шаг — пока знакомство идёт */
   if ((st.level || 0) < 2){
     var n = st.next, all = (st.steps || []).length, dn = (st.steps || []).filter(function(s){ return s.done >= s.cap; }).length;
-    /* v395: КРУПНЫЙ БЛОК — ТОЛЬКО ДЛЯ ПЕРВЫХ ШАГОВ ([stated] Denis 27.09:
-       «Следующий шаг» после трёх шагов «начинает грузить»). Обязательные и
-       шаги с `hero` (встреча, вопрос, первая лекция) — крупно; дальше —
-       маленькое «Что ещё есть в приложении» с одной спокойной кнопкой.
-       «Пропустить знакомство» нет нарочно: галочки просто висят открытыми */
-    if (n && !n.mand && !nbIsHero(n)){
-      var left = (st.steps || []).filter(function(s){ return s.done < s.cap; }).length;
-      h += '<div class="nb-more" onclick="nbOpenSheet()"><div class="nb-more-t"><b>' + esc2(nbT('more.title') || 'Что ещё есть в приложении') + '</b>' +
-        '<div class="nb-sub">' + esc2(nbT('more.sub', {n: left})) + '</div></div>' +
-        '<button class="nb-more-btn" onclick="event.stopPropagation();nbOpenSheet()">' + esc2(nbT('more.btn') || 'Узнать') + '</button></div>';
-    } else if (n){
-      /* v396: БЕЗ ЗАГОЛОВКА «СЛЕДУЮЩИЙ ШАГ», СЧЁТЧИКА, «ОТЛОЖИТЬ» И ССЫЛКИ НА ВСЕ
-         ШАГИ ([stated] Denis 27.09: «давит»). Призыв и кнопка с действием — у
-         каждого шага свои строки в реестре (nb.cta.*, nb.btn.*). Шторка шагов
-         по-прежнему открывается тапом по бару наверху */
+    // Конкретное следующее действие остаётся видимым и после первых шагов.
+    if (n){
       var ck = nbStepKey(n.k);
       var cta = nbT('cta.' + ck) || nbStepName(n);
       var btn = nbT('btn.' + ck) || nbT('next.do') || 'Сделать';
-      h += '<div class="nb-start"><div class="nb-cta">' + esc2(cta) + (n.mand ? '<span class="nb-mand">' + esc2(nbT('next.mand_tag') || 'обязательно') + '</span>' : '') + '</div>' +
+      h += '<div class="nb-start"><div class="nb-route-label">' + (dn <= 1 ? 'С чего начать' : 'Следующий шаг') + ' · ' + dn + ' из ' + all + '</div><div class="nb-cta">' + esc2(cta) + (n.mand ? '<span class="nb-mand">' + esc2(nbT('next.mand_tag') || 'обязательно') + '</span>' : '') + '</div>' +
         (nbStepWhy(n) ? '<div class="nb-sub">' + esc2(nbStepWhy(n)) + '</div>' : '') +
         '<button class="nb-btn" onclick="nbDoStep(\'' + n.k + '\')">' + esc2(btn) + '</button>' +
         ((n.mand && n.gate !== 0) ? '<button class="nb-btn ghost" onclick="nbOpenInBot(\'' + n.k + '\')">' + esc2(nbT('mand.in_bot') || 'Сделать в боте') + '</button>' : '') +
-        '</div>';
+        '<button class="nb-route-all" onclick="nbOpenSheet()">Все шаги и мой прогресс</button></div>';
     } else {
       var soon = (st.steps || []).some(function(s){ return s.soon; });
       h += '<div class="nb-start" onclick="nbOpenSheet()" style="cursor:pointer"><div class="nb-cta">' + esc2(soon ? (nbT('next.done_today') || 'На сегодня всё') : (nbT('next.all') || 'Ты знаешь клуб')) + '</div></div>';
@@ -26848,6 +26857,7 @@ const DEEPLINKS = {
   // — Только для участников: гость упирается в пейвол —
   'schedule':    { go: () => switchView('schedule'),      guests: false },
   'cards':       { go: () => switchView('cards'),         guests: false },
+  'pack':        { go: async () => {switchView('cards');await loadCards();if(myCards && (myCards.unopened_packs||[]).length)openPackReveal();}, guests: false },
   'plan':        { go: () => openPersonalPlan(),          guests: false },
   'rewards':     { go: () => openRewards(),               guests: false },
   'profile':     { go: () => switchView('profile'),       guests: false },
@@ -38694,8 +38704,8 @@ function renderPackBanner(){
       try { if (!PR_PICKED) prPickScreens(); prPrefetchAssets('key'); } catch(e){}
     }
     if (t) t.textContent = packs.length === 1
-      ? 'Тебя ждёт закрытый пак'
-      : ('Тебя ждут закрытые паки: ' + packs.length);
+      ? 'Для тебя — новый пак'
+      : ('Твои подарки · ' + packs.length);
     if (sub) sub.textContent = 'Три карточки пантеона. Открой →';
     el.onclick = openPackReveal;
     el.style.display = 'flex';
@@ -38905,7 +38915,7 @@ async function prLoadScreens(){
     PR_SCREENS = (r && r.screens) ? r.screens : {};
   } catch(e){
     // Молча падаем на зашитые наборы: экран важнее свежести оформления
-    PR_SCREENS = {};
+    return {}; // allow a later opening to retry a transient catalogue failure
   }
   return PR_SCREENS;
 }
@@ -39209,7 +39219,7 @@ function prRefreshBacks(){
   if (!pack) return;
   pack.querySelectorAll('.pr-card').forEach(function(btn){
     const id = Number(btn.dataset.id);
-    PR_THEMES.forEach(function(theme){
+    [prTheme(PR.themeCard || null)].forEach(function(theme){
       const img = btn.querySelector('.pr-backImg.pr-' + theme);
       if (!img) return;
       const src = prPickAsset('back', theme);
@@ -39234,12 +39244,12 @@ function prWarm(src){
    заставка. Всё прочее (плашки кнопок, крестик, орнамент, постамент) человек
    видит уже НА открытом экране, значит и качать их можно после показа. */
 const PR_KEY_KINDS  = ['stage','back'];
-const PR_REST_KINDS = ['idle','plate','close','ornament','pedestal'];
-const PR_REST_STRICT = ['plateStart','plateNext','plateDone'];
+const PR_REST_KINDS = ['idle','ornament','pedestal'];
+const PR_REST_STRICT = []; // controls are CSS, no unused button bitmaps
 
 function prPrefetchAssets(level){
   const key  = (level === 'key');
-  PR_THEMES.forEach(function(theme){
+  [prTheme(PR.themeCard || null)].forEach(function(theme){
     PR_KEY_KINDS.forEach(function(kind){ prWarm(prPickAsset(kind, theme)); });
     if (key) return;
     PR_REST_KINDS.forEach(function(kind){ prWarm(prPickAsset(kind, theme)); });
@@ -39273,7 +39283,7 @@ function prLoadOne(src, timeoutMs){
     img.onload = function(){ finish(true); };
     img.onerror = function(){ finish(false); };   // не дошла — не повод держать экран
     img.src = src;
-    if (img.complete) finish(true);               // уже в кэше
+    if (img.complete) finish(img.naturalWidth > 0);               // уже в кэше
     setTimeout(function(){ finish(false); }, timeoutMs);
   });
 }
@@ -39306,11 +39316,18 @@ let PR_LOADING_HINT = null;
 /* Ждём задник и рубашку выбранного набора. Адреса берём ТЕМ ЖЕ выбирателем,
    каким одевается экран, — иначе ждали бы одни картинки, а показывали другие. */
 async function prWaitAssets(){
-  const theme = prTheme(null);
-  const wanted = [prPickAsset('stage', theme), prPickAsset('back', theme)]
-    .filter(function(u){ return !!u; });
-  if (!wanted.length) return;
-  await Promise.all(wanted.map(function(u){ return prLoadOne(u, PR_LOADING_CAP_MS); }));
+  const theme = prTheme(PR.themeCard || null), session = prSession;
+  await Promise.all(PR_KEY_KINDS.map(async function(kind){
+    const src=prPickAsset(kind,theme);
+    const ok=await prLoadOne(src,PR_LOADING_CAP_MS);
+    if(ok || session!==prSession) return;
+    const pool=(PR_ASSETS[theme]||PR_ASSETS.dark)[kind]||PR_ASSETS.dark[kind]||[];
+    if(!pool.length)return;
+    if(!PR_PICKED)PR_PICKED={};
+    if(!PR_PICKED[theme])PR_PICKED[theme]={};
+    PR_PICKED[theme][kind]='images/reveal/screens/'+pool[0];
+    prRefreshBacks();prApplyAssets(PR.themeCard || null);
+  }));
 }
 
 var prSession = 0;
@@ -39327,6 +39344,8 @@ function openPackReveal(demoCards){
     if (!packs.length) return;
     ids = packs[packs.length - 1].card_ids.slice();   // самый старый: он же первым уйдёт на автовскрытие
   }
+  PR_PICKED = null; PR_FB = {};
+  if (PR_SCREENS && Object.keys(PR_SCREENS).length) prPickScreens();
   PR.ids = ids;
   PR.opened = []; PR.hero = null; PR.busy = false; PR.cards = {}; PR.extra = {};
   PR.themeCard = null;
@@ -39353,7 +39372,7 @@ function openPackReveal(demoCards){
        раз, лишнего веса от этого нет. */
     const backs = PR_THEMES.map(function(theme){
       const src = prPickAsset('back', theme);
-      return src ? ('<img class="pr-backImg pr-' + theme + '" src="' + src
+      return src ? ('<img class="pr-backImg pr-' + theme + '" ' + (theme === 'dark' ? 'src' : 'data-src') + '="' + src
                     + '" alt="" decoding="async" data-nofade>') : '';
     }).join('');
     return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
@@ -39380,7 +39399,7 @@ function openPackReveal(demoCards){
   prApplyAssets(null);          // нейтральное состояние: тёмный набор
   prLoadScreens().then(async function(){
     if (session !== prSession) return;
-    prPickScreens();
+    if (!PR_PICKED) prPickScreens();
     prRefreshBacks();           // рубашки уже нарисованы — перевесить адреса
     prApplyAssets(PR.themeCard || null);   // чья тема на экране, а не «кто герой»
     /* ⚠️ ЗАСТАВКУ СНИМАЕМ ПОСЛЕ того, как одеты И загружены ключевые картинки.
@@ -39397,7 +39416,8 @@ function openPackReveal(demoCards){
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(prDiag);
   else setTimeout(prDiag, 16);
   prSeedAmbient('#d9b97a', '#9f8ad2');
-  prShowLoading();              // до появления сцены, а не после
+  prShowLoading();
+  setTimeout(function(){if(session===prSession)prHideLoading()}, PR_LOADING_CAP_MS);
   stage.classList.add('pr-shown');
   /* ⚠️ ЧТЕНИЕ РАЗМЕРА — НЕ ЛИШНЯЯ СТРОКА. Браузер объединяет включение
      элемента и смену прозрачности в один пересчёт, и перехода не случается
@@ -39444,15 +39464,14 @@ function prHoloStop(){
 function prHoloStart(el, card){
   prHoloStop();
   if (liteOn() || !el || !window.HoloFX) return;
-  const holo = cardHoloOf(card);
-  if (!holo) return;
+  const holo = cardHoloOf(card) || {pattern:'foil', intensity:0.08, glare:0.22};
   const face = el.querySelector('.pr-face.pr-front');
   if (!face) return;
   const tilt = el.querySelector('.pr-tilt');
   try {
     if (tilt) el.style.perspective = '900px';
     prHoloCard = el;
-    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: true, touch: false,
+    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: true, touch: true,
                                                           tiltEl: tilt || null });
   } catch(e){ prHoloStop(); }
 }
@@ -39576,6 +39595,7 @@ function prApplyTheme(card){
   // кадр. Теперь в каждой рубашке лежат обе картинки, а тема их перекрещивает
   // прозрачностью — тем же способом, что текстуру и рамку панели
   prSeedAmbient(mood.accent, mood.secondary);
+  prRefreshBacks();
   prApplyAssets(card);   // задник, сигил и плашка — из пула той же темы
 }
 
@@ -39632,6 +39652,8 @@ async function prOpenCard(id){
   if (PR.busy) return;
   const session = prSession;
   PR.busy = true;
+  prEl('pr-sub').textContent='Открываем карту…';
+  prEl('pr-cta').setAttribute('aria-busy','true');
   prHoloStop();   // v497: перелив был у прошлой раскрытой карты
 
   let data = null;
@@ -39649,6 +39671,7 @@ async function prOpenCard(id){
     } catch(e){
       if (session !== prSession) return;
       PR.busy = false;
+      prEl('pr-cta').removeAttribute('aria-busy');
       const msg = e.message || 'Не получилось открыть карточку';
       showToast(msg);
       prEl('pr-sub').textContent = msg;   // подсказка живёт полторы секунды, а человек стоит перед рубашкой
@@ -39665,6 +39688,8 @@ async function prOpenCard(id){
   const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
   if (!el) { PR.busy = false; return; }
   const front = el.querySelector('.pr-face.pr-front img');
+  const frameUrl=card.frame_url || '';
+  if(frameUrl){const frame=document.createElement('img');frame.className='pr-instance-frame';frame.src=frameUrl;frame.alt='';frame.decoding='async';frame.onerror=function(){this.remove()};frame.setAttribute('data-nofade','');el.querySelector('.pr-front').appendChild(frame);}
   prApplyTheme(card);
   // Ждём готовности арта до начала хореографии, чтобы переворот не показал
   // пустую коробку. Сигилов здесь больше нет — их прогрев уехал вместе с ними
@@ -39713,6 +39738,7 @@ async function prOpenCard(id){
     prLayout();
     prHoloStart(el, card);   // v497: перелив, когда переворот закончился
     PR.busy = false;
+    prEl('pr-cta').removeAttribute('aria-busy');
   }, 1380);
 }
 
@@ -39776,6 +39802,7 @@ function prFxGodSrc(card, theme){
    когда пришли данные карты, а если к вспышке файл не готов — играем общий,
    он уже в кэше. Человек в худшем случае увидит то же, что видел раньше. */
 function prPrefetchFx(card){
+  if (!PR_FX.fxVideo || !prHeavyEffectsAllowed()) return;
   const src = prFxGodSrc(card, prFxTheme(card));
   if (!src || PR_FX_LOADED[src]) return;
   const img = new Image();
@@ -39789,7 +39816,7 @@ function prPrefetchFx(card){
    обратно. Файл уже в кэше, сеть при этом не дёргается. */
 function prPlayFxVideo(){
   const el = prEl('pr-fx-video');
-  if (!el || !PR_FX.fxVideo) return;
+  if (!el || !PR_FX.fxVideo || !prHeavyEffectsAllowed()) return;
   if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
   const card  = PR.cards[PR.hero] || null;
   const theme = prFxTheme(card);
@@ -39833,6 +39860,8 @@ function prCta(){
    то не учитываем: Safari, например, не отдаёт deviceMemory вовсе. */
 function prHeavyEffectsAllowed(){
   if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return false;
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return false;
+  if (navigator.connection && navigator.connection.saveData) return false;
   const mem = navigator.deviceMemory || 0;
   const cpu = navigator.hardwareConcurrency || 0;
   if (mem && mem < 4) return false;
@@ -39852,7 +39881,7 @@ function prImpact(el, mood){
   // На телефоне частиц вдвое меньше: каждая это отдельный анимируемый элемент
   // со свечением и режимом наложения
   const full = prTheme(PR.cards[PR.hero] || null) === 'light' ? 68 : 58;
-  const count = prHeavyEffectsAllowed() ? full : Math.round(full / 2);
+  const count = prHeavyEffectsAllowed() ? full : 12;
   for (let i = 0; i < count; i++){
     const p = document.createElement('span');
     const a = Math.random() * Math.PI * 2, d = 72 + Math.random() * 190;
@@ -39874,7 +39903,7 @@ function prSeedAmbient(a, b){
   scene.querySelectorAll('.pr-ambient').forEach(function(x){ x.remove(); });
   if (!a || !PR_FX.ambient) return;
   if (liteOn() || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-  for (let i = 0; i < 18; i++){
+  for (let i = 0, count = prHeavyEffectsAllowed() ? 18 : 6; i < count; i++){
     const s = document.createElement('span');
     s.className = 'pr-ambient';
     s.style.left = (12 + Math.random() * 76) + '%';
@@ -39979,7 +40008,7 @@ function cardArtSrc(card){
    каталога полем `holo` (null — у серии перелива нет или он выключен).
    Движок HoloFX тот же, что в дашборде и песочнице. Перелив ведёт наклон
    телефона (Telegram 8.0+ и Android — без вопроса) и мышь на компьютере;
-   палец НЕ ведёт — им здесь листают карточки. В коллекции перелива нет:
+   палец ведёт наклон, переключение карт вынесено в боковые стрелки. В коллекции перелива нет:
    он только на одной открытой карте, чтобы не грузить телефон */
 let cardHoloFx = null;
 let cardHoloStack = null;
@@ -40007,15 +40036,14 @@ function cardHoloOf(card){
 }
 function cardHoloStart(card, big){
   cardHoloStop();
-  if (!card || !big || !window.HoloFX) return;
-  const holo = cardHoloOf(card);
-  if (!holo) return;
+  if (liteOn() || !card || !big || !window.HoloFX) return;
+  const holo = cardHoloOf(card) || {pattern:'foil', intensity:0.08, glare:0.22};
   const art = big.querySelector('.qr-card-art');
   if (!art) return;
   const stack = big.querySelector('.qr-stack');
   const tilt = big.querySelector('.qr-card');
   try {
-    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: true, touch: false,
+    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: true, touch: true,
                                                           tiltEl: tilt || null });
     if (stack && tilt){ stack.classList.add('hfx-tilting'); cardHoloStack = stack; }
   } catch(e){ cardHoloFx = null; }
@@ -40574,13 +40602,14 @@ function renderBrowseCard(){
   // Счётчик листания и подсказка про увеличение — как в песочнице
   document.getElementById('reveal-sub').textContent =
     (cardBrowseList.length > 1 ? (cardBrowseIndex + 1) + ' из ' + cardBrowseList.length + ' · ' : '')
-    + 'нажми на карточку, чтобы увеличить';
+    + 'Наклоняй пальцем или телефоном · нажми для увеличения';
   // Если у этой карточки есть незабранная копия — из витрины тоже можно забрать
   const pending = ((myCards && myCards.unclaimed) || []).find(function(u){ return u.card_key === c.key; });
   // `pending` — незабранный ЭКЗЕМПЛЯР из /cards/my. Он и есть источник правды
   // про награду: каталог считает `needs_claim` по типу карты и подарок за тест
   // пропускает
   showCardDetail(c, 0, pending ? pending.id : null, false, n, !!pending);
+  wireBrowseSwipe();
 }
 
 function browseCard(delta){
@@ -40642,60 +40671,22 @@ function browseCommit(dir){
   }, 200);
 }
 
-// Свайп влево/вправо между своими карточками — только в режиме витрины
-// (showcase), не во время вскрытия нового пака. Ось определяем по тому, что
-// преобладает: |dx| или |dy| — вертикаль отдаём прокрутке страницы
-let browseSwipeWired = false;
-let browseSwipeMoved = false;   // гасит клик по карточке (зум) после жеста
+// Legacy entry point: side arrows now own navigation; gestures only tilt.
+let browseSwipeMoved = false; // retained for existing zoom callers
 function wireBrowseSwipe(){
-  if (browseSwipeWired) return;
-  browseSwipeWired = true;
-  const ov = document.getElementById('reveal-overlay');
-  if (!ov) return;
-  let sx = 0, sy = 0, tracking = false, axis = null, busy = false;
-
-  ov.addEventListener('touchstart', function(e){
-    if (busy || !ov.classList.contains('showcase') || e.touches.length !== 1) return;
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-    tracking = true; axis = null; browseSwipeMoved = false;
-  }, { passive: true });
-
-  ov.addEventListener('touchmove', function(e){
-    if (!tracking || !ov.classList.contains('showcase')) return;
-    let dx = e.touches[0].clientX - sx;
-    const dy = e.touches[0].clientY - sy;
-    if (axis === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)){
-      axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    }
-    if (axis !== 'h') return;
-    e.preventDefault();   // ведём сами, не отдаём жест прокрутке
-    browseSwipeMoved = true;
-    // На краях списка идти некуда — упругое сопротивление вместо пустого хода,
-    // чтобы палец сразу чувствовал, что дальше карточек нет
-    const atEdge = (dx > 0 && cardBrowseIndex === 0)
-                || (dx < 0 && cardBrowseIndex >= cardBrowseList.length - 1);
-    if (atEdge) dx = dx / 3.5;
-    browseSetShift(dx, false);
-  }, { passive: false });
-
-  ov.addEventListener('touchend', function(e){
-    if (!tracking) return;
-    tracking = false;
-    if (!ov.classList.contains('showcase') || axis !== 'h') return;
-    const dx = e.changedTouches[0].clientX - sx;
-    const dir = dx < 0 ? 1 : -1;                       // влево — следующая
-    const canGo = (dir === 1)
-      ? cardBrowseIndex < cardBrowseList.length - 1
-      : cardBrowseIndex > 0;
-    if (Math.abs(dx) >= 40 && canGo){
-      busy = true;
-      browseCommit(dir);
-      setTimeout(function(){ busy = false; }, 460);
-    } else {
-      browseSetShift(0, true);                          // не дотянул — возвращаем
-      setTimeout(browseResetShift, 240);
-    }
-  }, { passive: true });
+  const big = document.getElementById('reveal-big');
+  if (!big) return;
+  big.querySelectorAll('.card-browse-arrow').forEach(function(el){el.remove()});
+  if (cardBrowseList.length < 2) return;
+  [-1,1].forEach(function(dir){
+    const button=document.createElement('button');
+    button.className='card-browse-arrow '+(dir<0?'prev':'next');
+    button.setAttribute('aria-label',dir<0?'Предыдущая карта':'Следующая карта');
+    button.textContent=dir<0?'‹':'›';
+    button.disabled=dir<0?cardBrowseIndex===0:cardBrowseIndex===cardBrowseList.length-1;
+    button.onclick=function(e){e.stopPropagation();browseCard(dir)};
+    big.appendChild(button);
+  });
 }
 
 function renderDeckRulesChances(){
@@ -46130,14 +46121,15 @@ function ivAutoOpen(){
     },{passive:true});
     on(ownerWindow,"blur",returnHome);
     on(root.ownerDocument,"pointerout",function(e){if(e.pointerType==="mouse"&&!e.relatedTarget)returnHome()});
-    on(input,"pointermove",function(e){if(mode!=="pointer"||e.pointerType==="mouse"||!mine(e)||!e.buttons)return;if(downAt)moved=Math.max(moved,Math.abs(e.clientX-downAt[0])+Math.abs(e.clientY-downAt[1]));fromPointer(e)});
-    on(input,"pointerdown",function(e){if(!mine(e))return;downAt=[e.clientX,e.clientY];moved=0;if(mode==="pointer")fromPointer(e)});
-    on(ownerWindow,"pointerup",function(e){if(!mine(e))return;downAt=null;if(e.pointerType!=="mouse")returnHome()});
+    on(input,"pointermove",function(e){if(e.pointerType==="mouse"||!mine(e)||!downAt)return;if(downAt)moved=Math.max(moved,Math.abs(e.clientX-downAt[0])+Math.abs(e.clientY-downAt[1]));fromPointer(e)});
+    on(input,"pointerdown",function(e){if(!mine(e))return;downAt=[e.clientX,e.clientY];moved=0;if(mode==="pointer"||e.pointerType!=="mouse")fromPointer(e);if(e.pointerType!=="mouse"&&input.setPointerCapture)try{input.setPointerCapture(e.pointerId)}catch(_){};if(opts.gyro&&!tgHandler&&!domHandler)startGyro(true)});
+    function releasePointer(e){if(!mine(e))return;downAt=null;if(e.pointerType!=="mouse"){base=null;returnHome()}}
+    on(ownerWindow,"pointerup",releasePointer);on(ownerWindow,"pointercancel",releasePointer);
     // Провели пальцем по карточке — это не нажатие: не открываем увеличение
     on(input, "click", function(e){ if (moved > 10){ e.stopPropagation(); e.preventDefault(); } moved = 0; }, true);
 
     function fromAngles(beta, gamma){
-      if (dead || !Number.isFinite(beta) || !Number.isFinite(gamma)) return;
+      if (dead || downAt || !Number.isFinite(beta) || !Number.isFinite(gamma)) return;
       if (!base) base = {b:beta, g:gamma};
       target.x = clamp((gamma - base.g) / S.range);
       target.y = clamp((beta - base.b) / S.range);
@@ -46319,10 +46311,10 @@ html[data-motion="off"] .bb-time{animation:none!important}
 </script><script src="knowledge-quizzes.js?v=11"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 
-#pr-stage{--bg:#0d0d18;--card-bg:#191923;--text:#eee8dc;--line:rgba(213,184,125,.25)}
-#pr-stage[data-pr-theme="light"]{--bg:#f2e9db;--card-bg:#f8f1e6;--text:#29251e;--line:rgba(116,94,55,.24)}
+#pr-stage{--pr-scene-veil:rgba(13,13,24,.26);--bg:#0d0d18;--card-bg:#191923;--text:#eee8dc;--line:rgba(213,184,125,.25)}
+#pr-stage[data-pr-theme="light"]{--pr-scene-veil:rgba(242,233,219,.38);--bg:#f2e9db;--card-bg:#f8f1e6;--text:#29251e;--line:rgba(116,94,55,.24)}
 /* Pack content has its own space; ornamental assets stay on the card itself. */
-#pr-stage[data-pr-theme] .pr-shell{max-width:520px;width:100%;height:auto!important;min-height:100dvh;box-sizing:border-box;padding:calc(var(--safe-top,0px) + 24px) 20px 24px!important;background:var(--bg,#0d0d18)!important;border:0!important;border-radius:0;box-shadow:none!important;display:flex;flex-direction:column}
+#pr-stage[data-pr-theme] .pr-shell{max-width:520px;width:100%;height:auto!important;min-height:100dvh;box-sizing:border-box;padding:calc(var(--safe-top,0px) + 24px) 20px 24px!important;background-color:var(--bg,#0d0d18)!important;background-image:linear-gradient(var(--pr-scene-veil),var(--pr-scene-veil)),var(--pr-stage-img)!important;background-size:cover!important;background-position:center!important;border:0!important;border-radius:0;box-shadow:none!important;display:flex;flex-direction:column}
 #pr-stage[data-pr-theme] .pr-shell::after,#pr-stage[data-pr-theme] .pr-shell::before{display:none!important}
 #pr-stage[data-pr-theme] .pr-head{padding:0!important;margin:0!important;position:relative;z-index:6}
 #pr-stage[data-pr-theme] .pr-eyebrow{font:600 11px/1.4 var(--sans);letter-spacing:.18em;margin-bottom:8px;opacity:.65}
@@ -46339,7 +46331,7 @@ html[data-motion="off"] .bb-time{animation:none!important}
 #pr-stage[data-pr-theme] .pr-ability p{font:400 14px/1.5 var(--sans);opacity:.75}
 #pr-stage[data-pr-theme] .pr-ability-icon{display:none}
 #pr-stage[data-pr-theme] #pr-cta,#pr-stage[data-pr-theme] #pr-actions .pr-cta-inline{background:var(--card-bg)!important;border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:none!important;filter:none!important;color:var(--text)!important;text-shadow:none!important;font:600 16px/1.4 var(--sans)!important;letter-spacing:0!important;width:100%!important;height:auto!important;min-height:48px;aspect-ratio:auto!important;padding:14px 18px!important;margin-left:0!important;margin-right:0!important;text-indent:0!important}
-#pr-stage[data-pr-theme] #pr-cta{margin-top:18px!important;background:var(--accent)!important;color:#211b12!important}
+#pr-stage[data-pr-theme] #pr-cta{animation:none!important;opacity:1!important;transform:none!important;margin-top:18px!important;background:linear-gradient(120deg,#c9a66b,#e4cb98 48%,#b99155)!important;box-shadow:inset 0 1px 0 #f4dfb7,0 5px 20px rgba(116,79,30,.16)!important;color:#282016!important}
 #pr-stage[data-pr-theme] #pr-cta::after,#pr-stage[data-pr-theme] #pr-cta::before,#pr-stage[data-pr-theme] #pr-actions .pr-cta-inline::after,#pr-stage[data-pr-theme] #pr-actions .pr-cta-inline::before{display:none!important}
 #pr-stage[data-pr-theme] .pr-close{background:var(--card-bg)!important;border:1px solid var(--line)!important;color:var(--text)!important;width:36px!important;height:36px!important;top:calc(var(--safe-top,0px) + 12px)!important;right:12px!important;font:24px/1 var(--sans)!important;opacity:1}
 
