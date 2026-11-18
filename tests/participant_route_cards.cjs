@@ -36,3 +36,12 @@ test('share picker is attached above the source overlay without closing it',()=>
  const c=context({window:{},localStorage:{getItem:()=>null},SHARE_WHERE_KEY:'key',sharePending:null,document:{getElementById:()=>el,body:{appendChild:()=>attached=true}}});
  vm.runInContext(between('function shareWithChoice(text, payload){','function shareWhereClose'),c);c.shareWithChoice('Идеи','li_test');assert(attached);assert.equal(el.open,'gg-open');assert.equal(el.style.zIndex,'31000');assert.equal(c.sharePending.payload,'li_test');
 });
+test('closed single pack is centered and two-card pack is symmetric',()=>{
+ for(const count of [1,2,3]){
+  const ids=Array.from({length:count},(_,i)=>i+1),els=ids.map(()=>({style:{setProperty(k,v){this[k]=v}}}));
+  const c=context({PR:{ids,hero:null,opened:[]},PR_POS:[[-86,-34,-9],[0,-56,0],[86,-34,9]],prEl:()=>({querySelector:s=>els[Number(s.match(/\d+/)[0])-1]})});
+  vm.runInContext(between('function prLayout(){','function prApplyTheme('),c);c.prLayout();
+  if(count===1){assert.equal(els[0].style['--x'],'0px');assert.equal(els[0].style['--y'],'0px');assert.equal(els[0].style['--r'],'0deg');}
+  if(count===2)assert.equal(parseFloat(els[0].style['--x'])+parseFloat(els[1].style['--x']),0);
+ }
+});

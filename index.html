@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v664 -->
+<!-- FILE_VERSION: index-v665 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v664'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v665'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -9927,7 +9927,6 @@ function renderMeetingNotice(notice){
 .card-browse-arrow{position:absolute;top:45%;width:26px;height:48px;padding:0;border:1px solid rgba(180,161,201,.28);background:rgba(150,130,168,.14);color:var(--text);font:28px Georgia,serif;z-index:8;cursor:pointer;backdrop-filter:blur(6px)}
 .card-browse-arrow.prev{left:0;border-radius:0 26px 26px 0}.card-browse-arrow.next{right:0;border-radius:26px 0 0 26px}.card-browse-arrow:disabled{opacity:.2;cursor:default}
 @media(max-width:640px){.reveal-overlay.showcase #reveal-big{width:100vw;max-width:none;padding-inline:48px;flex-shrink:0}.card-browse-arrow{width:28px}}
-.card-motion-enable{display:block;margin:12px auto;padding:9px 14px;border:1px solid var(--line);border-radius:18px;background:var(--card-bg);color:var(--text-dim);font:inherit;font-size:12px;max-width:100%;white-space:normal}
 #reveal-big .qr-stack,#pr-stage .pr-card.pr-open{touch-action:none}
 #pr-stage .pr-card.pr-open .pr-front{border:2px solid #c5a56c!important;box-shadow:inset 0 0 0 4px rgba(217,185,122,.25),0 12px 38px rgba(20,12,35,.3)!important}
 #pr-stage .pr-card.pr-open .pr-front::after{content:"";position:absolute;inset:5px;border:1px solid rgba(239,214,163,.6);border-radius:inherit;pointer-events:none;z-index:3}
@@ -16555,7 +16554,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v664 · 18.11.2026 Первые шаги и подарки';
+const APP_BUILD = 'v665 · 18.11.2026 Первые шаги и подарки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39380,7 +39379,7 @@ function openPackReveal(demoCards){
     return '<button class="pr-card" data-id="' + id + '" onclick="prOpenCard(' + id + ')">'
       + '<span class="pr-tilt"><span class="pr-flip">'
       + '<span class="pr-face pr-back">' + backs + '</span>'
-      + '<span class="pr-face pr-front"><img alt="" decoding="async"></span>'
+      + '<span class="pr-face pr-front"><span class="pr-art-window"><img alt="" decoding="async"></span></span>'
       + '</span></span></button>';
   }).join('');
 
@@ -39428,12 +39427,14 @@ function openPackReveal(demoCards){
      смена уже становится переходом. */
   void stage.offsetWidth;
   stage.classList.add('pr-in');
+  prFitStart();
   document.body.style.overflow = 'hidden';
   // Греем не в тот же кадр, что показ стопки: сначала человек должен увидеть карты
   setTimeout(function(){ if (session === prSession) prPrefetchAssets(); }, 400);
 }
 
 function closePackReveal(){
+  prFitStop();
   const session = ++prSession;
   PR.busy = false;
   prClearPhase();
@@ -39460,7 +39461,7 @@ function closePackReveal(){
    её класс раскладка переписывает целиком */
 var prHoloFx = null, prHoloCard = null;   // var: автовскрытие может позвать раньше этой строки
 function prHoloStop(){
-  document.querySelector('#pr-details .card-motion-enable')?.remove();
+  cardMotionRelease(prHoloFx);
   if (prHoloFx){ try { prHoloFx.destroy(); } catch(e){} prHoloFx = null; }
   if (prHoloCard){ prHoloCard.style.perspective = ''; prHoloCard = null; }
 }
@@ -39468,15 +39469,15 @@ function prHoloStart(el, card){
   prHoloStop();
   if (liteOn() || !el || !window.HoloFX) return;
   const holo = cardHoloOf(card) || {pattern:'foil', intensity:0.08, glare:0.22};
-  const face = el.querySelector('.pr-face.pr-front');
+  const face = el.querySelector('.pr-art-window');
   if (!face) return;
   const tilt = el.querySelector('.pr-tilt');
   try {
     if (tilt) el.style.perspective = '900px';
     prHoloCard = el;
-    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: true, touch: true,
+    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: cardMotionAuto(), touch: true,
                                                           tiltEl: tilt || null });
-    cardMotionButton(document.getElementById('pr-details'), prHoloFx);
+    cardMotionOffer(prHoloFx);
   } catch(e){ prHoloStop(); }
 }
 
@@ -39533,6 +39534,25 @@ function prDiag(){
     + (over ? ' · ' + over : '');
 }
 
+var prFitObserver = null;
+function prFitScene(){
+  const stage=prEl('pr-stage'),scene=prEl('pr-scene');
+  if(!stage||!scene)return;
+  const height=window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  stage.style.setProperty('--pr-visible-height',Math.round(height)+'px');
+  stage.style.setProperty('--pr-card-limit',Math.max(70,(scene.clientHeight-90)*.75)+'px');
+}
+function prFitStart(){
+  prFitStop();prFitScene();
+  if(window.ResizeObserver){prFitObserver=new ResizeObserver(prFitScene);prFitObserver.observe(prEl('pr-scene'));}
+  window.addEventListener('resize',prFitScene);
+  window.visualViewport?.addEventListener('resize',prFitScene);
+}
+function prFitStop(){
+  if(prFitObserver){prFitObserver.disconnect();prFitObserver=null;}
+  window.removeEventListener('resize',prFitScene);
+  window.visualViewport?.removeEventListener('resize',prFitScene);
+}
 function prLayout(){
   PR.ids.forEach(function(id, i){
     const el = prEl('pr-pack').querySelector('[data-id="' + id + '"]');
@@ -39542,7 +39562,7 @@ function prLayout(){
       el.style.setProperty('--r', r + 'deg'); el.style.setProperty('--s', s);
     };
     if (PR.hero === null){
-      const p = PR_POS[i] || [0,0,0];
+      const p = PR.ids.length === 1 ? [0,0,0] : PR.ids.length === 2 ? [(i ? 1 : -1)*52,-20,(i ? 1 : -1)*6] : (PR_POS[i] || [0,0,0]);
       el.className = 'pr-card'; el.style.opacity = '1'; el.style.pointerEvents = 'auto';
       set(p[0], p[1], p[2], '1');
       return;
@@ -39693,7 +39713,7 @@ async function prOpenCard(id){
   if (!el) { PR.busy = false; return; }
   const front = el.querySelector('.pr-face.pr-front img');
   const frameUrl=card.frame_url || '';
-  if(frameUrl){const frame=document.createElement('img');frame.className='pr-instance-frame';frame.src=frameUrl;frame.alt='';frame.decoding='async';frame.onerror=function(){this.remove()};frame.setAttribute('data-nofade','');el.querySelector('.pr-front').appendChild(frame);}
+  if(frameUrl){el.querySelector('.pr-front').classList.add('pr-framed');const frame=document.createElement('img');frame.className='pr-instance-frame';frame.src=frameUrl;frame.alt='';frame.decoding='async';frame.onerror=function(){this.parentElement.classList.remove('pr-framed');this.remove()};frame.setAttribute('data-nofade','');el.querySelector('.pr-front').appendChild(frame);}
   prApplyTheme(card);
   // Ждём готовности арта до начала хореографии, чтобы переворот не показал
   // пустую коробку. Сигилов здесь больше нет — их прогрев уехал вместе с ними
@@ -40017,7 +40037,7 @@ function cardArtSrc(card){
 let cardHoloFx = null;
 let cardHoloStack = null;
 function cardHoloStop(){
-  document.querySelector('#reveal-big .card-motion-enable')?.remove();
+  cardMotionRelease(cardHoloFx);
   if (cardHoloFx){ try { cardHoloFx.destroy(); } catch(e){} cardHoloFx = null; }
   if (cardHoloStack){ cardHoloStack.classList.remove('hfx-tilting'); cardHoloStack = null; }
 }
@@ -40048,32 +40068,55 @@ function cardHoloStart(card, big){
   const stack = big.querySelector('.qr-stack');
   const tilt = big.querySelector('.qr-card');
   try {
-    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: true, touch: true,
+    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: cardMotionAuto(), touch: true,
                                                           tiltEl: tilt || null });
     if (stack && tilt){ stack.classList.add('hfx-tilting'); cardHoloStack = stack; }
-    cardMotionButton(big, cardHoloFx);
+    cardMotionOffer(cardHoloFx);
   } catch(e){ cardHoloFx = null; }
 }
 
-function cardMotionButton(host, fx){
-  if (!host || !fx || typeof DeviceOrientationEvent === 'undefined') return;
+
+var cardMotionCurrent = null, cardMotionOffered = false;
+function cardMotionAuto(){return !!(window.Telegram?.WebApp?.initData || window.clubMotionGranted);}
+function cardMotionRelease(fx){
+  if (cardMotionCurrent !== fx) return;
+  cardMotionCurrent = null;
+  document.getElementById('card-motion-dialog')?.remove();
+}
+function cardMotionOffer(fx){
+  cardMotionCurrent = fx;
+  if (!fx || typeof DeviceOrientationEvent === 'undefined') return;
   const tg = window.Telegram && window.Telegram.WebApp;
-  if (tg && tg.initData) return;
-  const button = document.createElement('button');
-  button.type = 'button'; button.className = 'card-motion-enable';
-  button.textContent = 'Включить наклон телефона';
-  button.onclick = function(e){
-    e.stopPropagation(); button.disabled = true;
-    fx.startGyro(true, function(ok, reason){
-      if (!button.isConnected) return;
-      button.disabled = false;
-      button.textContent = ok ? 'Наклон включён' : reason === 'denied'
-        ? 'Нет разрешения · наклоняй пальцем'
-        : 'Датчик недоступен · наклоняй пальцем';
-      if (ok) button.disabled = true;
+  if (tg && tg.initData || window.clubMotionGranted || cardMotionOffered) return;
+  try { if (localStorage.getItem('club-card-motion-choice') === 'declined') return; } catch(e){}
+  cardMotionOffered = true;
+  const overlay = document.createElement('div'); overlay.id='card-motion-dialog';
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="card-motion-title" tabindex="-1"><h3 id="card-motion-title">Наклон телефона</h3><p>Карта может крутиться от наклона телефона, разрешишь его включить?</p><div><button type="button" data-choice="yes">Разрешить</button><button type="button" data-choice="no">Не сейчас</button></div><small aria-live="polite"></small></section>';
+  const close=function(){overlay.remove();};
+  overlay.querySelector('[data-choice="no"]').onclick=function(){
+    try { localStorage.setItem('club-card-motion-choice','declined'); } catch(e){} close();
+  };
+  overlay.querySelector('[data-choice="yes"]').onclick=function(){
+    const current=cardMotionCurrent;if(!current){close();return;}
+    this.disabled=true;
+    current.startGyro(true,function(ok,reason){
+      if (!overlay.isConnected) return;
+      if(ok){try{localStorage.setItem('club-card-motion-choice','granted')}catch(e){}close();return;}
+      overlay.querySelector('small').textContent=reason==='denied'?'Разрешение не получено. Карту можно наклонять пальцем.':'Датчик недоступен. Карту можно наклонять пальцем.';
+      overlay.querySelector('[data-choice="yes"]').hidden=true;
+      overlay.querySelector('[data-choice="no"]').textContent='Понятно';
     });
   };
-  host.appendChild(button);
+  overlay.onkeydown=function(e){
+    if(e.key==='Escape'){overlay.querySelector('[data-choice="no"]').click();return;}
+    if(e.key==='Tab'){
+      const buttons=[...overlay.querySelectorAll('button')].filter(b=>!b.hidden&&!b.disabled);
+      if(!buttons.length)return;
+      if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons.at(-1).focus();}
+      else if(!e.shiftKey&&document.activeElement===buttons.at(-1)){e.preventDefault();buttons[0].focus();}
+    }
+  };
+  document.body.appendChild(overlay);overlay.querySelector('section').focus();
 }
 
 function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies, forceClaim){
@@ -46149,7 +46192,7 @@ function ivAutoOpen(){
     on(ownerWindow,"blur",returnHome);
     on(root.ownerDocument,"pointerout",function(e){if(e.pointerType==="mouse"&&!e.relatedTarget)returnHome()});
     on(input,"pointermove",function(e){if(e.pointerType==="mouse"||!mine(e)||!downAt)return;if(downAt)moved=Math.max(moved,Math.abs(e.clientX-downAt[0])+Math.abs(e.clientY-downAt[1]));fromPointer(e)});
-    on(input,"pointerdown",function(e){if(!mine(e))return;downAt=[e.clientX,e.clientY];moved=0;if(mode==="pointer"||e.pointerType!=="mouse")fromPointer(e);if(e.pointerType!=="mouse"&&input.setPointerCapture)try{input.setPointerCapture(e.pointerId)}catch(_){};if(opts.gyro&&!tgHandler&&!domHandler)startGyro(true)});
+    on(input,"pointerdown",function(e){if(!mine(e))return;downAt=[e.clientX,e.clientY];moved=0;if(mode==="pointer"||e.pointerType!=="mouse")fromPointer(e);if(e.pointerType!=="mouse"&&input.setPointerCapture)try{input.setPointerCapture(e.pointerId)}catch(_){};});
     function releasePointer(e){if(!mine(e))return;downAt=null;if(e.pointerType!=="mouse"){base=null;returnHome()}}
     on(ownerWindow,"pointerup",releasePointer);on(ownerWindow,"pointercancel",releasePointer);
     // Провели пальцем по карточке — это не нажатие: не открываем увеличение
@@ -46162,7 +46205,7 @@ function ivAutoOpen(){
       target.y = clamp((beta - base.b) / S.range);
       if (Math.abs(target.x-cur.x) >= .0008 || Math.abs(target.y-cur.y) >= .0008) kick();
     }
-    function useGyro(name){ mode = "gyro"; base = null; if (opts.onInput) opts.onInput(name); kick(); }
+    function useGyro(name){ if(name==="gyro")window.clubMotionGranted=true; mode = "gyro"; base = null; if (opts.onInput) opts.onInput(name); kick(); }
     var tgHandler = null, domHandler = null;
     /* Наклон телефона. Telegram 8.0+ — свой гироскоп без вопроса; иначе событие
        браузера. На iPhone вне Telegram браузер спрашивает разрешение — это
@@ -46190,9 +46233,9 @@ function ivAutoOpen(){
         window.addEventListener("deviceorientation", domHandler);
         setTimeout(function(){ if (!got && !dead) cb(false, "silent"); }, 1500);
       };
-      if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      if (typeof DeviceOrientationEvent.requestPermission === "function" && !window.clubMotionGranted) {
         if (!ask) { cb(false, "needs_tap"); return; }
-        DeviceOrientationEvent.requestPermission().then(function(r){ if (r === "granted") go(); else cb(false, "denied"); })
+        DeviceOrientationEvent.requestPermission().then(function(r){ if (r === "granted") { window.clubMotionGranted=true; go(); } else cb(false, "denied"); })
           .catch(function(){ cb(false, "denied"); });
       } else go();
     }
@@ -46373,6 +46416,32 @@ html[data-motion="off"] .bb-time{animation:none!important}
 #pr-stage[data-pr-theme] .pr-eyebrow,#pr-stage[data-pr-theme] .pr-sub{color:var(--text)!important;text-shadow:none!important}
 #pr-stage[data-pr-theme] #pr-actions{margin:12px 0 0!important;width:100%!important}
 #pr-stage[data-pr-theme] #pr-details .pr-stats,#pr-stage[data-pr-theme] #pr-details .pr-ability{box-shadow:none!important;border:1px solid var(--line)!important}
+/* Keep navigation in a dedicated viewport row; only long card details scroll. */
+#pr-stage[data-pr-theme] .pr-stage{padding:0!important;min-height:0!important;display:block!important}
+#pr-stage[data-pr-theme] .pr-shell{height:var(--pr-visible-height,100dvh)!important;min-height:0!important;display:grid!important;grid-template-rows:auto minmax(100px,1fr) auto auto;gap:0;padding:calc(var(--safe-top,0px) + 16px) 20px max(16px,env(safe-area-inset-bottom,0px))!important;overflow:hidden}
+#pr-stage[data-pr-theme] .pr-head{grid-row:1;padding-inline:32px!important}
+#pr-stage[data-pr-theme] .pr-scene{grid-row:2;height:auto!important;min-height:0!important;align-self:stretch}
+#pr-stage[data-pr-theme] .pr-details{grid-row:3;max-height:28dvh;overflow-y:auto;overscroll-behavior:contain}
+#pr-stage[data-pr-theme] .pr-details:not(.pr-on){display:none!important}
+#pr-stage[data-pr-theme] #pr-cta{grid-row:4;position:relative!important;margin:12px 0 0!important;align-self:end;z-index:20}
+#pr-stage[data-pr-theme] .pr-card{aspect-ratio:3/4!important;width:min(44vw,190px,var(--pr-card-limit,190px))!important}
+#pr-stage[data-pr-theme] .pr-card.pr-hero{width:min(68vw,280px,var(--pr-card-limit,280px))!important}
+#pr-stage .pr-art-window{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+#pr-stage .pr-art-window>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit}
+#pr-stage .pr-card.pr-open .pr-front.pr-framed{background:transparent!important;border:0!important;box-shadow:none!important}
+#pr-stage .pr-front.pr-framed::after{display:none!important}
+#pr-stage .pr-front.pr-framed .pr-art-window{inset:8.19% 10.92% 8.34% 10.93%;border-radius:12px}
+#pr-stage .pr-front img.pr-instance-frame{inset:0;width:100%;height:100%;border-radius:0;object-fit:fill;z-index:5}
+#card-motion-dialog{position:fixed;inset:0;z-index:50000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(18,15,24,.48);backdrop-filter:blur(8px)}
+#card-motion-dialog section{width:min(100%,340px);padding:24px;border:1px solid var(--line,#cbbca6);border-radius:24px;background:var(--card-bg,#f5eddf);color:var(--text,#29251e);box-shadow:0 18px 60px #0003}
+#card-motion-dialog section:focus{outline:2px solid rgba(194,161,106,.6);outline-offset:3px}
+#card-motion-dialog h3{margin:0 0 12px;font:600 24px/1.2 Georgia,serif}
+#card-motion-dialog p{margin:0 0 20px;font-size:16px;line-height:1.5}
+#card-motion-dialog section>div{display:flex;gap:10px;flex-wrap:wrap}
+#card-motion-dialog button{flex:1;min-height:44px;padding:10px 16px;border:1px solid var(--line,#cbbca6);border-radius:14px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+#card-motion-dialog button[data-choice=yes]{background:linear-gradient(120deg,#c9a66b,#e4cb98);color:#29251e;border-color:#c3a16b}
+#card-motion-dialog small{display:block;margin-top:10px;line-height:1.5}
+
 </style><div id="mp-overlay" class="mp-overlay" hidden><section id="mp-sheet" class="mp-sheet" role="dialog" aria-modal="true" aria-label="Профиль участника" tabindex="-1"></section></div>
 <script id="legal-center-js">
 /* Separate voluntary choices; closing is never consent. */

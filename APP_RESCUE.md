@@ -274,3 +274,10 @@ or award points until the participant explicitly chooses one.
 Web users can explicitly request browser sensor permission; denied or absent
 sensors retain pointer tilt. Card navigation reaches the mobile viewport edges.
 No changes to startup, identity, video playback, or payment routes.
+
+2026-11-18 v665: pack navigation occupies its own viewport row. Card size
+tracks the available scene height; long details scroll independently. Framed
+art uses the same inset window as the collection. Single/two-card packs use
+their actual count. Web sensor consent is one shared dialog per app session,
+with persisted decline and session-cached browser permission, never a button
+under each card. Startup, payments and material playback remain unchanged.
