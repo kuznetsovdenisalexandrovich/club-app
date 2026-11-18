@@ -254,3 +254,11 @@ catalog request; late delivery updates image nodes only. Broken images advance
 through bounded fallbacks. No audio source, playback or seeking changes. Compact
 full-player artwork remains visible on short screens. Catalog audit: 62 lessons,
 23 own covers and 39 stream fallbacks, all selected image URLs loaded.
+
+
+2026-11-18 v661: bonus player alone opts into adaptiveRecovery. Two native
+progress timeouts within five minutes retain the position and choose 360p on
+the next source; one recovered frame no longer resets this short failure history.
+Manual quality selection resets it; old unrelated stalls expire. Film funnel,
+preload and seek deadlines are unchanged. This improves repeated-stall recovery;
+it does not establish the network cause of every iOS timeout.

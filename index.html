@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v660'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v661'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15458,7 +15458,19 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     }
     lifecycle(reason){if(this.lifecycleReports++<12)this.diagnostic('milestone',{reason});}
     lateWatchdog(due){if(Date.now()>due+2000&&this.lateReports++<4)this.diagnostic('milestone',{reason:'watchdog_late'});}
-    failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
+    failure(reason,extra={}){
+      this.diagWaiting=true;this.diagnostic('error',{reason,...extra});
+      // Master-class opt-in only. A single recovered frame does not establish
+      // that auto-quality is sustainable after repeated native HLS stalls.
+      if(this.options.adaptiveRecovery&&this.started&&this.quality==='auto'&&this.engine==='native'&&reason==='progress_timeout'){
+        const now=Date.now();this.recentStalls=(this.recentStalls||[]).filter(at=>now-at<300000);this.recentStalls.push(now);
+        if(this.recentStalls.length>=2&&this.sources.some(s=>s.lowUrl)){
+          this.quality='360';this.failedSources.clear();
+          this.sources.forEach((s,i)=>{if(!s.lowUrl)this.failedSources.add(i);});
+          this.diagnostic('milestone',{reason:'repeated_stall_low'});
+        }
+      }
+    }
     fault(code){
       if((code==='film_unavailable'||code==='film_stall')&&!this.probed&&root.clubProbeVideo){
         this.probed=true;const position=this.position;
@@ -15677,7 +15689,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       if(this.wantsPlay)this.play();else this.showStart();
       this.arm();
     }
-    setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
+    setQuality(quality){this.recentStalls=[];this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
       if(!this.diagStarted){this.lastProgress=Date.now();this.diagStarted=true;this.diagnostic('play');}
@@ -16520,7 +16532,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v660 · 17.11.2026 Страница оплаты';
+const APP_BUILD = 'v661 · 18.11.2026 Восстановление мастер-класса';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27794,6 +27806,7 @@ async function playNativeBonus(bonusKey, itemKey, it){
     let position = 0;
     try { position = Number(localStorage.getItem(positionKey)) || 0; } catch(e){}
     bonusNativePlayer = new ClubFilmPlayer(slot, {
+      adaptiveRecovery:true,
       sources:results[1].sources, position:position, text:key=>key==='film.start'?'Смотреть видео':key==='funnel.title'?(it.title||'Видео мастер-класса'):t(key), expiresIn:results[1].expires_in,
       onBotFallback:canWatchVideoInBot()?()=>watchVideoInBot(bonusKey,itemKey):null,
       refreshSources:()=>refreshFilmSources(`${API_URL}/media/bonus/${encodeURIComponent(bonusKey)}/${encodeURIComponent(itemKey)}?direct_capable=1`),

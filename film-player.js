@@ -68,7 +68,19 @@
     }
     lifecycle(reason){if(this.lifecycleReports++<12)this.diagnostic('milestone',{reason});}
     lateWatchdog(due){if(Date.now()>due+2000&&this.lateReports++<4)this.diagnostic('milestone',{reason:'watchdog_late'});}
-    failure(reason,extra={}){this.diagWaiting=true;this.diagnostic('error',{reason,...extra});}
+    failure(reason,extra={}){
+      this.diagWaiting=true;this.diagnostic('error',{reason,...extra});
+      // Master-class opt-in only. A single recovered frame does not establish
+      // that auto-quality is sustainable after repeated native HLS stalls.
+      if(this.options.adaptiveRecovery&&this.started&&this.quality==='auto'&&this.engine==='native'&&reason==='progress_timeout'){
+        const now=Date.now();this.recentStalls=(this.recentStalls||[]).filter(at=>now-at<300000);this.recentStalls.push(now);
+        if(this.recentStalls.length>=2&&this.sources.some(s=>s.lowUrl)){
+          this.quality='360';this.failedSources.clear();
+          this.sources.forEach((s,i)=>{if(!s.lowUrl)this.failedSources.add(i);});
+          this.diagnostic('milestone',{reason:'repeated_stall_low'});
+        }
+      }
+    }
     fault(code){
       if((code==='film_unavailable'||code==='film_stall')&&!this.probed&&root.clubProbeVideo){
         this.probed=true;const position=this.position;
@@ -287,7 +299,7 @@
       if(this.wantsPlay)this.play();else this.showStart();
       this.arm();
     }
-    setQuality(quality){this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
+    setQuality(quality){this.recentStalls=[];this.wantsPlay=this.wantsPlay||this.exhausted;this.quality=quality;this.panel.hidden=true;this.switchSource(true,true);}
     showStart(){if(!this.exhausted&&!this.destroyed){this.start.hidden=false;this.start.disabled=false;this.start.textContent=this.options.text(this.started?'film.resume':'film.start');}}
     play(){
       if(!this.diagStarted){this.lastProgress=Date.now();this.diagStarted=true;this.diagnostic('play');}
