@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v666 -->
+<!-- FILE_VERSION: index-v667 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v666'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v667'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16554,7 +16554,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v666 · 18.11.2026 Первые шаги и подарки';
+const APP_BUILD = 'v667 · 18.11.2026 Первые шаги и подарки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -16898,6 +16898,7 @@ function appBackLayer(){
   choices.sort((a,b)=>b.z-a.z||b.i-a.i);return choices[0]||null;
 }
 function appSyncNavigation(){
+  document.documentElement.toggleAttribute('data-tg-native-back',hasNativeTgBack());
   const active=document.querySelector('.view.active');const name=active?.id.replace(/^view-/,'')||'portal';
   const slot=document.getElementById(name==='games'?'games-level-slot':'app-level-slot');
   for(const id of ['level-card','reward-level-badge']){
@@ -16908,7 +16909,7 @@ function appSyncNavigation(){
   const layer=appBackLayer();
   document.documentElement.toggleAttribute('data-app-layer',!!layer);
   document.querySelectorAll('.app-native-close-handle').forEach(b=>b.classList.remove('app-native-close-handle'));
-  if(layer&&hasRealTg())layer.el.querySelectorAll('button.icon-btn[onclick],button[class*="close"][onclick]').forEach(b=>{if(/^\s*(?:close\w*|\w*Close)\s*\([^)]*\)\s*;?\s*$/.test(b.getAttribute('onclick')||''))b.classList.add('app-native-close-handle')});
+  if(layer&&hasNativeTgBack())layer.el.querySelectorAll('button.icon-btn[onclick],button[class*="close"][onclick]').forEach(b=>{if(/^\s*(?:close\w*|\w*Close)\s*\([^)]*\)\s*;?\s*$/.test(b.getAttribute('onclick')||''))b.classList.add('app-native-close-handle')});
   syncTgBackButton(name);
   const fab=document.getElementById('qa-fab');if(fab)qaFabPlace(fab);
 }
@@ -16923,7 +16924,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 function syncTgBackButton(name){
   const tg = window.Telegram && window.Telegram.WebApp;
-  if (!tg || !tg.BackButton) return;
+  if (!hasNativeTgBack()) return;
   try {
     /* В партии кнопка нужна: она возвращает к списку игр */
     const inGame = document.documentElement.hasAttribute('data-gg-play');
@@ -16998,7 +16999,7 @@ function tgBackHandler(){
 }
 function bindTgBackButton(){
   const tg = window.Telegram && window.Telegram.WebApp;
-  if (!tg || tgBackBound) return;
+  if (!hasNativeTgBack() || tgBackBound) return;
   tgBackBound = true;
   tgBackHow = '';
   try { if (tg.BackButton && tg.BackButton.onClick){ tg.BackButton.onClick(tgBackHandler); tgBackHow += 'onClick'; } }
@@ -35972,7 +35973,7 @@ let tgLateTries = 0;
 let tgSdkWhen = 'не доехал';
 function tgSetupWhenReady(){
   const tg = window.Telegram && window.Telegram.WebApp;
-  if (!tg) return false;
+  if (!tg || !tg.initData) { document.documentElement.removeAttribute('data-tg-native-back'); return false; }
   if (tgLateDone) return true;
   tgLateDone = true;
   tgSdkWhen = tgLateTries ? ('доехал позже, попыток ' + tgLateTries) : 'доехал сразу';
@@ -35982,7 +35983,7 @@ function tgSetupWhenReady(){
   } catch(e){}
   bindTgBackButton();
   /* Признак «у нас есть штатная кнопка назад» — по нему прячется своя */
-  document.documentElement.toggleAttribute('data-tg-native-back', true);
+  document.documentElement.toggleAttribute('data-tg-native-back', hasNativeTgBack());
   /* ⚠️ КНОПКА «НАСТРОЙКИ» В МЕНЮ TELEGRAM (три точки справа). Бесплатный вход
      в профиль, который иначе стоит человеку двух нажатий. Есть с Bot API 6.10,
      на клиентах постарше вызов просто ничего не сделает */
@@ -36898,6 +36899,10 @@ function currentPlatformId(){
    Telegram сервер выдаёт заменитель −vk_id, чтобы апп работал как есть. Но всё,
    что относится именно к Telegram (ворота канала, шаги регистрации, рукопожатие),
    должно смотреть на этот признак, а не на «telegramId непустой» */
+function hasNativeTgBack(){
+  const tg=window.Telegram?.WebApp;
+  return !!(tg?.initData && tg.BackButton?.show && tg.BackButton?.onClick && (!tg.isVersionAtLeast || tg.isVersionAtLeast('6.1')));
+}
 function hasRealTg(){ return Number(telegramId) > 0; }
 
 /* Данные запуска площадки, где открыт апп, — к входу по номеру. Сервер проверит
@@ -44743,7 +44748,8 @@ function dgsOpenLayer(){
   hideSplash();            // человек мог прийти по ссылке, минуя оболочку
   ov.classList.add('open');
   document.documentElement.setAttribute('data-digest-open','');
-  if(hasRealTg()) { ov.classList.add('native-back'); Telegram.WebApp.BackButton.show(); }
+  ov.classList.toggle('native-back',hasNativeTgBack());
+  if(hasNativeTgBack()) Telegram.WebApp.BackButton.show();
   ov.scrollTop = 0;
   document.body.style.overflow = 'hidden';
   return ov;
@@ -44976,13 +44982,12 @@ function dgsRender(d){
     dgsPages.map(function(p){ return dgsPage(p, месяц); }).join('');
   ov.scrollTop = 0;
   dgsCount(1);
-  /* ⚠️ СЧЁТЧИК СЧИТАЕМ ОТ ПРОКРУТКИ СЛОЯ, А НЕ ОТ ПРИЛИПАНИЯ. У браузера нет
-     события «полоса прилипла», а IntersectionObserver на полноэкранных блоках
-     срабатывает дважды на границе. Деление высоты — ровно то же число и без
-     наблюдателей. */
+  /* Обложка и длинные полосы имеют разную высоту: считаем по реальным границам. */
   ov.onscroll = function(){
-    const шаг = ov.clientHeight || 1;
-    dgsCount(Math.min(dgsPages.length, Math.floor(ov.scrollTop / шаг + 0.5) + 1));
+    const pages=[...ov.querySelectorAll('.dgs-page')], top=ov.getBoundingClientRect().top+parseFloat(getComputedStyle(ov).scrollPaddingTop||0);
+    let current=0;pages.forEach((page,i)=>{if(page.getBoundingClientRect().top<=top+ov.clientHeight*.25)current=i;});
+    if(ov.scrollTop>0 && ov.scrollTop+ov.clientHeight>=ov.scrollHeight-2) current=pages.length-1;
+    dgsCount(current+1);
   };
 }
 function dgsCount(n){
@@ -44991,7 +44996,8 @@ function dgsCount(n){
 }
 function dgsGoto(num){
   const ov = document.getElementById('dgs');
-  if (ov) ov.scrollTo({ top: (num - 1) * ov.clientHeight, behavior: 'smooth' });
+  const page=ov?.querySelectorAll('.dgs-page')[num-1];
+  if(page) ov.scrollTo({top:ov.scrollTop+page.getBoundingClientRect().top-ov.getBoundingClientRect().top-parseFloat(getComputedStyle(ov).scrollPaddingTop||0),behavior:'smooth'});
 }
 
 const DGS_ART = ['', 'b', 'c'];
@@ -46315,7 +46321,14 @@ html[data-kq-screen="intro"][data-games-category="quizzes"] #gg-root .gg-head,ht
 html[data-kq-screen="intro"] #gg-root #kq-panel h2{font-size:21px;line-height:1.35}
 #gg-root #kq-panel{scroll-margin-top:16px}
 </style><style>
-#dgs.issue-mode .dgs-brand{top:calc(var(--safe-top,0px) + 70px)}
+#dgs.issue-mode{--dgs-toolbar:calc(var(--safe-top,0px) + 54px);scroll-padding-top:var(--dgs-toolbar)}
+#dgs.issue-mode:not(:has(iframe)) #dgs-pages{padding-top:var(--dgs-toolbar)}
+#dgs.issue-mode .dgs-page{box-sizing:border-box;min-height:calc(100dvh - var(--dgs-toolbar));padding-top:24px}
+#dgs.issue-mode .dgs-cover{padding-top:0}
+#dgs.issue-mode:not(.native-back) .dgs-cover{min-height:min(calc(100dvh - var(--dgs-toolbar)),150vw)}
+#dgs.issue-mode .dgs-cover .dgs-art img{object-position:center top!important}
+#dgs.issue-mode .dgs-brand{top:18px}
+#dgs.issue-mode:not(.native-back) .dgs-cover-layer{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 32px)}
 #dgs.issue-mode::before{content:"";position:fixed;inset:0 0 auto;height:calc(var(--safe-top,0px) + 54px);background:var(--dgs-paper);border-bottom:1px solid var(--dgs-rule);z-index:3;pointer-events:none}
 #dgs.issue-mode>.dgs-close,#dgs.issue-mode>.dgs-share-btn,#dgs.issue-mode>.dgs-count{z-index:4}
 #dgs.issue-mode>.dgs-pdf-sheet{z-index:5}
