@@ -281,3 +281,8 @@ art uses the same inset window as the collection. Single/two-card packs use
 their actual count. Web sensor consent is one shared dialog per app session,
 with persisted decline and session-cached browser permission, never a button
 under each card. Startup, payments and material playback remain unchanged.
+
+2026-11-18 v666: both motion choices survive app reload. Saved approval starts
+passive sensor listening without requesting browser permission again. It is
+not evidence that OS permission is still granted: if events are unavailable,
+pointer tilt remains active. No repeated consent popup on entry.
