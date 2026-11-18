@@ -16532,7 +16532,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v661 · 18.11.2026 Восстановление мастер-класса';
+const APP_BUILD = 'v662 · 18.11.2026 Возврат подписки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19172,9 +19172,9 @@ function renderDemoBanner(){
   const tourInvite = document.getElementById('guest-tour-banner');
   if (tourInvite) tourInvite.style.display = 'none';
   guestRouteRender();
-  // Управление подпиской показываем только участникам: не-участнику нечем управлять
+  // Бывшему участнику тоже нужен доступ к проверке и восстановлению подписки.
   const subManageBtn = document.getElementById('sub-manage-btn');
-  if (subManageBtn) subManageBtn.style.display = asMember ? 'block' : 'none';
+  if (subManageBtn) subManageBtn.style.display = (asMember || telegramId) ? 'block' : 'none';
   const salesVideo = document.getElementById('sales-video-banner');
   if (salesVideo) salesVideo.style.display = 'none';
   // Карточка в профиле: оплатить или войти. Кнопку входа показываем только вне
@@ -19305,7 +19305,11 @@ function renderSubManage(){
   const body = document.getElementById('sub-manage-body');
   if (!body) return;
   if (!s || !s.found || !s.is_member){
-    body.innerHTML = '<div class="sm-hint" style="padding:24px 0;text-align:center">Активной подписки не нашлось.</div>';
+    const r = (s && s.restoration) || {};
+    body.innerHTML = '<div class="sm-hint">'+escapeHtml(r.message || 'Активной подписки не нашлось.')+'</div>'+
+      (r.allowed ? '<div class="sm-hint">Вернутся доступ и прежнее автопродление. Дата списания не изменится; знакомство сохранится.</div><button class="sm-btn" onclick="reactivateSubscription(this)">Восстановить подписку</button>' :
+       (['user_cancelled','expired'].includes(r.code) ? '<button class="sm-btn" onclick="closeSubManage();openAccessPage()">Оформить новую подписку</button>' : ''));
+
     return;
   }
 
@@ -20446,6 +20450,13 @@ async function showPostCancelOffer(){
   document.getElementById('postcancel-overlay').classList.add('open');
   body.innerHTML='<div class="sm-hint">Подписка остановлена. Загружаю предложение…</div>';
   try{
+    const status=await apiRequest(`${API_URL}/subscription/status?telegram_id=${telegramId}`,{},10000);
+    if (!(status.restoration || {}).allowed){
+      const r=status.restoration || {};
+      body.innerHTML='<div class="sm-hint">'+escapeHtml(r.message || 'Не удалось подтвердить возможность восстановления.')+'</div>'+
+        (['user_cancelled','expired'].includes(r.code)?'<button class="sm-btn" onclick="closePostCancelOffer();openAccessPage()">Оформить новую подписку</button>':'<button class="sm-btn" onclick="showPostCancelOffer()">Проверить ещё раз</button>');
+      return;
+    }
     const flow=await loadWinbackFlow();
     body.innerHTML='<div class="sm-hint">'+escapeHtml(flow.post_cancel.text)+'</div><div class="sm-row" style="margin-top:10px">'+flow.post_cancel.choices.map(ch=>'<button class="sm-btn" onclick="acceptPostCancelOffer('+(ch.key==='accept_discount')+')">'+escapeHtml(ch.label)+'</button>').join('')+'</div><div class="sm-hint" style="margin-top:10px">'+escapeHtml(flow.bonus_note)+'</div><button class="sm-btn" onclick="openPostCancelFeedback()">Дать обратную связь</button>';
   }catch(e){body.innerHTML='<div class="sm-hint">Подписка остановлена. Предложение сейчас недоступно.</div><button class="sm-btn" onclick="showPostCancelOffer()">Попробовать ещё раз</button>'}
@@ -20462,9 +20473,9 @@ async function acceptPostCancelOffer(withDiscount){
     const restored=await apiRequest(`${API_URL}/subscription/reactivate`,{method:'POST',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({telegram_id:telegramId})},20000);
     resumed=true;reactivationBonus=Number(restored.bonus)||0;
     const d=await submitWinback('post_cancel',withDiscount?'accept_discount':'accept_no_discount',{});
-    body.innerHTML='<div class="sm-hint">Подписка возобновлена. '+(reactivationBonus?'За возвращение начислено '+reactivationBonus+' баллов. ':'')+escapeHtml(d.message)+'</div>'+winbackResultActions(d)+'<button class="sm-btn" onclick="closePostCancelOffer();loadProfile();loadSubStatus()">Готово</button>';
+    body.innerHTML='<div class="sm-hint">Подписка возобновлена. '+(reactivationBonus?'За возвращение начислено '+reactivationBonus+' баллов. ':'')+escapeHtml(d.message)+'</div>'+restoredAccessHtml()+winbackResultActions(d)+'<button class="sm-btn" onclick="closePostCancelOffer();loadProfile();loadSubStatus()">Готово</button>';
   }catch(e){
-    body.innerHTML='<div class="sm-hint">'+escapeHtml(resumed?'Подписка уже возобновлена'+(reactivationBonus?'; начислено '+reactivationBonus+' баллов за возвращение':'')+'. Но получить результат предложения не удалось: '+e.message:'Возобновить подписку не удалось: '+e.message)+'</div>'+(resumed?'<button class="sm-btn" onclick="retryPostCancelGift('+withDiscount+')">Проверить подарок</button>':'')+'<button class="sm-btn" onclick="closePostCancelOffer();loadSubStatus()">Закрыть</button>';
+    body.innerHTML='<div class="sm-hint">'+escapeHtml(resumed?'Подписка уже возобновлена'+(reactivationBonus?'; начислено '+reactivationBonus+' баллов за возвращение':'')+'. Но получить результат предложения не удалось: '+e.message:'Возобновить подписку не удалось: '+e.message)+'</div>'+(resumed?restoredAccessHtml()+'<button class="sm-btn" onclick="retryPostCancelGift('+withDiscount+')">Проверить подарок</button>':'')+'<button class="sm-btn" onclick="closePostCancelOffer();loadSubStatus()">Закрыть</button>';
   }
 }
 async function retryPostCancelGift(withDiscount){
@@ -20512,6 +20523,9 @@ function renderCancelStep3(){
     <button class="sm-quiet" onclick="closeCancelFunnel()">Я остаюсь</button>`;
 }
 
+function restoredAccessHtml(){
+  return '<div class="sm-block"><div class="sm-title">Доступ восстановлен</div><div class="sm-hint">Вступи в канал и чат заново. Твоя карта и знакомство с приложением сохранены.</div><div class="sm-row"><button class="sm-btn" onclick="openClubChannelTile()">Вступить в канал</button><button class="sm-btn" onclick="openClubChatTile()">Вступить в чат</button></div></div>';
+}
 async function reactivateSubscription(btn){
   btn.disabled = true;
   btn.textContent = 'Возвращаю…';
@@ -20524,6 +20538,7 @@ async function reactivateSubscription(btn){
     showToast(d.bonus ? `С возвращением! Держи ${d.bonus} баллов` : 'С возвращением!');
     await loadProfile();
     await loadSubStatus();
+    document.getElementById('sub-manage-body').insertAdjacentHTML('afterbegin',restoredAccessHtml());
   } catch (e) {
     showToast(e.message || 'Не получилось');
     btn.disabled = false;
@@ -26762,7 +26777,7 @@ const DEEPLINKS = {
   'stay':        { go: () => openWinbackMenu(),           guests: false },
   // v424: справка ссылается на «раздел Подписка» — его не было в таблице,
   // и ссылка в статье «Управление подпиской» рисовалась простым текстом
-  'subscription':{ go: () => openSubManage(),             guests: false },
+  'subscription':{ go: () => openSubManage(),             guests: true },
   // v420: режим стороннего тестера — любому, кто открыл ссылку
   'tester':      { go: () => qaSetOn(true),               guests: true  },
   'testeroff':   { go: () => qaSetOn(false),              guests: true  },
@@ -26836,7 +26851,7 @@ const DEEPLINKS = {
   'plan':        { go: () => openPersonalPlan(),          guests: false },
   'rewards':     { go: () => openRewards(),               guests: false },
   'profile':     { go: () => switchView('profile'),       guests: false },
-  'subscription':{ go: () => openSubManage(),             guests: false },
+  'subscription':{ go: () => openSubManage(),             guests: true },
   'notifications':{ go: () => openNotificationsSection(), guests: false },
   'howto':       { go: () => openHowToUsePopup(),         guests: false },
   'tour':        { go: () => onbRestart(),                guests: false },
