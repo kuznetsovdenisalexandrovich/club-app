@@ -269,3 +269,8 @@ Authenticated failures retain the existing bounded diagnostics. Playback,
 manifest routing, rescue delivery and startup readiness are unchanged.
 Pack entry opens an existing member-only card surface; it does not open a card
 or award points until the participant explicitly chooses one.
+
+2026-11-18 v664: card motion uses Telegram sensors only with signed initData.
+Web users can explicitly request browser sensor permission; denied or absent
+sensors retain pointer tilt. Card navigation reaches the mobile viewport edges.
+No changes to startup, identity, video playback, or payment routes.

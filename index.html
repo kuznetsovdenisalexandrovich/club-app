@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v663 -->
+<!-- FILE_VERSION: index-v664 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v663'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v664'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -9926,6 +9926,8 @@ function renderMeetingNotice(notice){
 .reveal-overlay.showcase #reveal-big .qr-stack{--qr-w:min(100%,398px);width:100%;max-width:398px;height:auto;aspect-ratio:3/4;margin-inline:auto}
 .card-browse-arrow{position:absolute;top:45%;width:26px;height:48px;padding:0;border:1px solid rgba(180,161,201,.28);background:rgba(150,130,168,.14);color:var(--text);font:28px Georgia,serif;z-index:8;cursor:pointer;backdrop-filter:blur(6px)}
 .card-browse-arrow.prev{left:0;border-radius:0 26px 26px 0}.card-browse-arrow.next{right:0;border-radius:26px 0 0 26px}.card-browse-arrow:disabled{opacity:.2;cursor:default}
+@media(max-width:640px){.reveal-overlay.showcase #reveal-big{width:100vw;max-width:none;padding-inline:48px;flex-shrink:0}.card-browse-arrow{width:28px}}
+.card-motion-enable{display:block;margin:12px auto;padding:9px 14px;border:1px solid var(--line);border-radius:18px;background:var(--card-bg);color:var(--text-dim);font:inherit;font-size:12px;max-width:100%;white-space:normal}
 #reveal-big .qr-stack,#pr-stage .pr-card.pr-open{touch-action:none}
 #pr-stage .pr-card.pr-open .pr-front{border:2px solid #c5a56c!important;box-shadow:inset 0 0 0 4px rgba(217,185,122,.25),0 12px 38px rgba(20,12,35,.3)!important}
 #pr-stage .pr-card.pr-open .pr-front::after{content:"";position:absolute;inset:5px;border:1px solid rgba(239,214,163,.6);border-radius:inherit;pointer-events:none;z-index:3}
@@ -16553,7 +16555,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v663 · 18.11.2026 Первые шаги и подарки';
+const APP_BUILD = 'v664 · 18.11.2026 Первые шаги и подарки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39458,6 +39460,7 @@ function closePackReveal(){
    её класс раскладка переписывает целиком */
 var prHoloFx = null, prHoloCard = null;   // var: автовскрытие может позвать раньше этой строки
 function prHoloStop(){
+  document.querySelector('#pr-details .card-motion-enable')?.remove();
   if (prHoloFx){ try { prHoloFx.destroy(); } catch(e){} prHoloFx = null; }
   if (prHoloCard){ prHoloCard.style.perspective = ''; prHoloCard = null; }
 }
@@ -39473,6 +39476,7 @@ function prHoloStart(el, card){
     prHoloCard = el;
     prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: true, touch: true,
                                                           tiltEl: tilt || null });
+    cardMotionButton(document.getElementById('pr-details'), prHoloFx);
   } catch(e){ prHoloStop(); }
 }
 
@@ -40013,6 +40017,7 @@ function cardArtSrc(card){
 let cardHoloFx = null;
 let cardHoloStack = null;
 function cardHoloStop(){
+  document.querySelector('#reveal-big .card-motion-enable')?.remove();
   if (cardHoloFx){ try { cardHoloFx.destroy(); } catch(e){} cardHoloFx = null; }
   if (cardHoloStack){ cardHoloStack.classList.remove('hfx-tilting'); cardHoloStack = null; }
 }
@@ -40046,7 +40051,29 @@ function cardHoloStart(card, big){
     cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: true, touch: true,
                                                           tiltEl: tilt || null });
     if (stack && tilt){ stack.classList.add('hfx-tilting'); cardHoloStack = stack; }
+    cardMotionButton(big, cardHoloFx);
   } catch(e){ cardHoloFx = null; }
+}
+
+function cardMotionButton(host, fx){
+  if (!host || !fx || typeof DeviceOrientationEvent === 'undefined') return;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && tg.initData) return;
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'card-motion-enable';
+  button.textContent = 'Включить наклон телефона';
+  button.onclick = function(e){
+    e.stopPropagation(); button.disabled = true;
+    fx.startGyro(true, function(ok, reason){
+      if (!button.isConnected) return;
+      button.disabled = false;
+      button.textContent = ok ? 'Наклон включён' : reason === 'denied'
+        ? 'Нет разрешения · наклоняй пальцем'
+        : 'Датчик недоступен · наклоняй пальцем';
+      if (ok) button.disabled = true;
+    });
+  };
+  host.appendChild(button);
 }
 
 function showCardDetail(card, pointsAwarded, cardId, alreadyClaimed, copies, forceClaim){
@@ -46143,8 +46170,8 @@ function ivAutoOpen(){
     function startGyro(ask, cb){
       cb = cb || function(){};
       var TG = root.ownerDocument.defaultView.Telegram && root.ownerDocument.defaultView.Telegram.WebApp;
-      if (TG && TG.DeviceOrientation && TG.isVersionAtLeast && TG.isVersionAtLeast("8.0")) {
-        if(tgHandler)return;
+      if (TG && TG.initData && TG.DeviceOrientation && TG.isVersionAtLeast && TG.isVersionAtLeast("8.0")) {
+        if(tgHandler){ cb(true, "tg"); return; }
         gyroUsers++;
         tgHandler = function(){ var o = TG.DeviceOrientation; fromAngles(o.beta*180/Math.PI, o.gamma*180/Math.PI); };
         TG.onEvent("deviceOrientationChanged", tgHandler);
@@ -46157,6 +46184,7 @@ function ivAutoOpen(){
       if (typeof DeviceOrientationEvent === "undefined") { cb(false, "no_sensor"); return; }
       var go = function(){
         if (dead) return;
+        if (domHandler) window.removeEventListener("deviceorientation", domHandler);
         var got = false;
         domHandler = function(e){ if (e.beta == null) return; if (!got){ got = true; useGyro("gyro"); cb(true, "gyro"); } fromAngles(e.beta, e.gamma); };
         window.addEventListener("deviceorientation", domHandler);
