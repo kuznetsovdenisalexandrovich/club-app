@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v673 -->
+<!-- FILE_VERSION: index-v674 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v673'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v674'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16580,7 +16580,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v673 · 20.11.2026 Наклон карт';
+const APP_BUILD = 'v674 · 20.11.2026 Автоматический наклон карт';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -46286,15 +46286,24 @@ function ivAutoOpen(){
         window.addEventListener("deviceorientation", domHandler);
         setTimeout(function(){ if (!got && !dead) cb(false, "silent"); }, 1500);
       };
-      // Saved consent permits passive listening, not another permission prompt.
-      // The browser still controls event delivery; silence retains pointer tilt.
+      // Probe the browser's retained grant without a gesture. If permission
+      // is prompt, browsers reject this call; the normal tap remains a fallback.
       var rememberedConsent = typeof cardMotionChoice === 'function' && cardMotionChoice()==='granted';
-      if (typeof DeviceOrientationEvent.requestPermission === "function" && !window.clubMotionGranted && (ask || !rememberedConsent)) {
-        if (!ask) { cb(false, "needs_tap"); return; }
-        DeviceOrientationEvent.requestPermission().then(function(r){ if (r === "granted") { window.clubMotionGranted=true; go(); } else cb(false, "denied"); })
-          .catch(function(){ cb(false, "denied"); });
+      if (typeof DeviceOrientationEvent.requestPermission === "function" && !window.clubMotionGranted) {
+        if (!ask && !rememberedConsent) { cb(false, "needs_tap"); return; }
+        if (!ask) go(); // Keep listening on browsers already delivering events.
+        try {
+          var permission = !ask && window.clubMotionAutoPermission;
+          if (!permission) {
+            permission = DeviceOrientationEvent.requestPermission();
+            if (!ask) window.clubMotionAutoPermission = permission;
+          }
+          permission.then(function(r){ if (r === "granted") { window.clubMotionGranted=true; go(); } else cb(false, "denied"); })
+            .catch(function(){ cb(false, ask ? "denied" : "needs_tap"); });
+        } catch(e) { cb(false, ask ? "denied" : "needs_tap"); }
       } else go();
     }
+
     function stopGyro(){
       var TG = root.ownerDocument.defaultView.Telegram && root.ownerDocument.defaultView.Telegram.WebApp;
       if (tgHandler && TG){ try { TG.offEvent("deviceOrientationChanged", tgHandler); gyroUsers=Math.max(0,gyroUsers-1); if(!gyroUsers)TG.DeviceOrientation.stop(); } catch(e) {} tgHandler = null; }
