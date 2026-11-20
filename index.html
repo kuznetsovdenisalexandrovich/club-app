@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v674 -->
+<!-- FILE_VERSION: index-v675 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v674'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v675'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16580,7 +16580,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v674 · 20.11.2026 Автоматический наклон карт';
+const APP_BUILD = 'v675 · 20.11.2026 Подсказка наклона карт';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39514,7 +39514,7 @@ function prHoloStart(el, card){
   try {
     if (tilt) el.style.perspective = '900px';
     prHoloCard = el;
-    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: cardMotionAuto(), touch: true,
+    prHoloFx = HoloFX.mount(face, cardHoloSettings(holo), { z: 2, input: el, gyro: cardMotionAuto(), motionHint: true, touch: true,
                                                           tiltEl: tilt || null });
     cardMotionOffer(prHoloFx);
   } catch(e){ prHoloStop(); }
@@ -40107,7 +40107,7 @@ function cardHoloStart(card, big){
   const stack = big.querySelector('.qr-stack');
   const tilt = big.querySelector('.qr-card');
   try {
-    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: cardMotionAuto(), touch: true,
+    cardHoloFx = HoloFX.mount(art, cardHoloSettings(holo), { z: 2, input: stack || art, gyro: cardMotionAuto(), motionHint: true, touch: true,
                                                           tiltEl: tilt || null });
     if (stack && tilt){ stack.classList.add('hfx-tilting'); cardHoloStack = stack; }
     cardMotionOffer(cardHoloFx);
@@ -46258,7 +46258,24 @@ function ivAutoOpen(){
       target.y = clamp((beta - base.b) / S.range);
       if (Math.abs(target.x-cur.x) >= .0008 || Math.abs(target.y-cur.y) >= .0008) kick();
     }
-    function useGyro(name){ if(name==="gyro")window.clubMotionGranted=true; mode = "gyro"; base = null; if (opts.onInput) opts.onInput(name); kick(); }
+    function useGyro(name){ removeMotionHint(); if(name==="gyro")window.clubMotionGranted=true; mode = "gyro"; base = null; if (opts.onInput) opts.onInput(name); kick(); }
+    var motionHint=null;
+    function removeMotionHint(){if(motionHint){motionHint.remove();motionHint=null;}}
+    var hintTimer=setTimeout(function(){
+      if(dead || !opts.motionHint || mode==='gyro' || typeof DeviceOrientationEvent==='undefined' ||
+         typeof DeviceOrientationEvent.requestPermission!=='function' ||
+         typeof cardMotionChoice!=='function' || cardMotionChoice()!=='granted' ||
+         window.Telegram?.WebApp?.initData) return;
+      motionHint=document.createElement('span');motionHint.className='card-motion-hint';
+      motionHint.textContent='Коснись карты, чтобы включить наклон';
+      host.appendChild(motionHint);
+    },1800);
+    on(input,'click',function(e){
+      if(!motionHint)return;
+      // The document gesture handler restores motion first. Keep this touch
+      // on the card instead of also opening/closing its detail overlay.
+      e.preventDefault();e.stopImmediatePropagation();removeMotionHint();
+    },true);
     var tgHandler = null, domHandler = null;
     /* Наклон телефона. Telegram 8.0+ — свой гироскоп без вопроса; иначе событие
        браузера. На iPhone вне Telegram браузер спрашивает разрешение — это
@@ -46328,7 +46345,7 @@ function ivAutoOpen(){
       startGyro: startGyro,
       recenter: function(){ base = null; },
       destroy: function(){
-        dead = true; stopGyro(); offs.forEach(function(f){ f(); }); offs = [];
+        dead = true; clearTimeout(hintTimer); removeMotionHint(); stopGyro(); offs.forEach(function(f){ f(); }); offs = [];
         if (ro) ro.disconnect();
         if (tiltEl) tiltEl.style.transform = "";
         if (root.parentNode) root.parentNode.removeChild(root);
@@ -46504,6 +46521,7 @@ html[data-motion="off"] .bb-time{animation:none!important}
 #pr-stage .pr-front.pr-framed::after{display:none!important}
 #pr-stage .pr-front.pr-framed .pr-art-window{inset:8.19% 10.92% 8.34% 10.93%;border-radius:12px}
 #pr-stage .pr-front img.pr-instance-frame{inset:0;width:100%;height:100%;border-radius:0;object-fit:fill;z-index:5}
+.card-motion-hint{position:absolute;left:8%;right:8%;bottom:10%;z-index:20;padding:9px 12px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(24,20,30,.58);color:#fff;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font:500 12px/1.4 system-ui,sans-serif;text-align:center;pointer-events:none;box-sizing:border-box;text-shadow:0 1px 2px #0004}
 #card-motion-dialog{position:fixed;inset:0;z-index:50000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(18,15,24,.48);backdrop-filter:blur(8px)}
 #card-motion-dialog section{width:min(100%,340px);padding:24px;border:1px solid var(--line,#cbbca6);border-radius:24px;background:var(--card-bg,#f5eddf);color:var(--text,#29251e);box-shadow:0 18px 60px #0003}
 #card-motion-dialog section:focus{outline:2px solid rgba(194,161,106,.6);outline-offset:3px}
