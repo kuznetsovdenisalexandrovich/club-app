@@ -104,7 +104,7 @@
       if(!v||this.resumePending||v.seeking||v.readyState<2)return false;
       const advancing=v.currentTime>this.position+.02;this.position=v.currentTime;
       if(!advancing||v.paused)return false;
-      this.lastProgress=Date.now();this.sourceWaitStarted=null;this.seekLoading=false;this.failedSources.clear();
+      this.lastProgress=Date.now();this.sourceWaitStarted=null;this.seekLoading=false;this.lastUserSeekTarget=null;this.failedSources.clear();
       if(!this.diagFrame||this.diagWaiting){this.diagnostic(this.diagWaiting?'recovered':'frame');this.diagWaiting=false;this.diagFrame=true;}
       this.progress();this.emit('time');return true;
     }
@@ -231,7 +231,7 @@
         this.wrapper.className='native-film native-film-failed'+(this.wrapper.className.includes('club-video-expanded')?' club-video-expanded':'');this.status('film.unavailable');if(this.botFallback)this.botFallback.hidden=false;this.retry.hidden=false;this.panel.hidden=false;this.start.hidden=true;return;
       }
       this.exhausted=false;this.wrapper.className='native-film'+(this.wrapper.className.includes('club-video-expanded')?' club-video-expanded':'');
-      this.sourceWaitStarted=null;this.seekLoading=false;this.restoreSeekTarget=null;
+      this.sourceWaitStarted=null;this.seekLoading=false;this.restoreSeekTarget=null;this.lastUserSeekTarget=null;
       if(!same)this.index=next;
       this.engine='unknown';this.diagFrame=false;this.hlsReports={};this.diagnostic('source',{reason:automaticLow?'automatic_low':manual?'manual':same?'quality':'automatic'});
       const generation=++this.generation;
@@ -281,7 +281,9 @@
         // A new scrub is a new download target, not a continuation of the old
         // stalled segment. Source restoration keeps its existing bounded budget.
         const restoring=this.restoreSeekTarget!=null&&Math.abs(v.currentTime-this.restoreSeekTarget)<.1;
-        if(!restoring){this.sourceWaitStarted=null;this.seekLoading=true;}
+        if(!restoring&&(this.lastUserSeekTarget==null||Math.abs(v.currentTime-this.lastUserSeekTarget)>.1)){
+          this.lastUserSeekTarget=v.currentTime;this.sourceWaitStarted=null;this.seekLoading=true;
+        }
         this.restoreSeekTarget=null;this.emit('pause');this.clearTimers();this.arm();
       });
       on('pause',()=>{if(!v.paused||v.error)return;this.lifecycle('paused');this.wantsPlay=false;this.clearTimers();this.sourceWaitStarted=null;this.showStart();this.emit('pause');});
