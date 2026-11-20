@@ -191,3 +191,43 @@ let startupSeeks=0;Object.defineProperty(startSeek.video,'currentTime',{get:()=>
 startSeek.video.fire('loadedmetadata');startSeek.video.fire('durationchange');startSeek.video.fire('canplay');
 assert.equal(startupSeeks,0);startSeek.destroy();
 console.log('OK replacement of subsecond startup avoids redundant native seek');
+
+// Android can stop advancing with media buffered and no native error event.
+setImmediate(()=>{
+ const canPlay=Element.prototype.canPlayType;
+ Element.prototype.canPlayType=()=> 'probably';
+ ctx.navigator={userAgent:'Android Telegram'};
+ function stalled(extra={}){
+  const trace=[];
+  const p=new ctx.ClubFilmPlayer(new Element('div'),{sources:[{url:'https://a.test/master',type:'hls'},{url:'https://b.test/master',type:'hls'}],text:k=>k,onEvent:()=>{},onDiagnostic:e=>trace.push(e)});
+  const v=p.video;v.readyState=4;v.networkState=2;
+  p.play();v.fire('playing');v.currentTime=12;v.fire('timeupdate');
+  v.buffered={length:1,start:()=>0,end:()=>24};
+  Object.assign(v,extra);v.fire('waiting');
+  return {p,v,trace};
+ }
+ let {p,v,trace}=stalled();
+ advance(4000);
+ assert.equal(p.engine,'hls','Buffered native Android stall must try another decoder');
+ assert.equal(p.index,0,'Decoder fallback must retain the source');
+ assert.equal(p.position,12);assert.strictEqual(p.video,v);
+ assert(!trace.some(e=>e.event==='recovered'),'Switching engine is not recovery');
+ v.fire('loadedmetadata');assert.equal(v.currentTime,12);
+ v.fire('playing');assert(!trace.some(e=>e.event==='recovered'));
+ v.currentTime=13;v.fire('timeupdate');assert(trace.some(e=>e.event==='recovered'));
+ p.action('pause');advance(30000);assert(!p.wantsPlay);
+ p.play();v.fire('waiting');advance(4000);
+ assert.equal(trace.filter(e=>e.reason==='buffered_native_to_hls').length,1,'Decoder recovery must not loop');
+ p.destroy();
+ for(const extra of [{seeking:true},{buffered:{length:0}},{paused:true}]){
+  ({p}=stalled(extra));advance(4000);assert(!p.forceHls);p.destroy();
+ }
+ ({p}=stalled());ctx.document.hidden=true;ctx.document.fire('visibilitychange');advance(30000);assert(!p.forceHls);p.destroy();ctx.document.hidden=false;
+ ctx.navigator={userAgent:'iPhone'};
+ ({p}=stalled());advance(4000);assert(!p.forceHls);p.destroy();
+ ctx.navigator={userAgent:'Android'};
+ const supported=Hls.isSupported;Hls.isSupported=()=>false;
+ ({p}=stalled());advance(4000);assert(!p.forceHls);p.destroy();Hls.isSupported=supported;
+ Element.prototype.canPlayType=canPlay;delete ctx.navigator;
+ console.log('OK bounded Android buffered-stall decoder recovery, position, pause, seek, background, iOS and unsupported guards');
+});

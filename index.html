@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v668 -->
+<!-- FILE_VERSION: index-v669 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v668'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v669'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -15569,11 +15569,32 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
             due=Date.now()+remaining;timer=setTimeout(check,remaining);this.timer=timer;return;
           }
           this.lateWatchdog(due);
-          this.failure('progress_timeout');this.switchSource(false);
+          this.failure('progress_timeout');
+          if(!this.recoverBufferedNativeStall())this.switchSource(false);
         };
         timer=setTimeout(check,delay);
         this.timer=timer;
       }
+    }
+    recoverBufferedNativeStall(){
+      const v=this.video;
+      // Only a previously advancing Android native decoder with data ahead.
+      // Leave startup/preload, user seeks, iOS and network starvation unchanged.
+      if(this.forceHls||this.engine!=='native'||!this.diagFrame||!this.wantsPlay||
+         document.hidden||!v||v.paused||v.seeking||this.resumePending||
+         this.sources[this.index]?.type!=='hls'||!/Android/i.test(root.navigator?.userAgent||'')||
+         !root.Hls?.isSupported())return false;
+      let buffered=false;
+      try{
+        for(let i=0;i<v.buffered.length;i++){
+          if(v.buffered.start(i)<=v.currentTime&&v.buffered.end(i)-v.currentTime>=3){buffered=true;break;}
+        }
+      }catch(e){return false;}
+      if(!buffered)return false;
+      this.forceHls=true;
+      this.diagnostic('milestone',{reason:'buffered_native_to_hls'});
+      this.switchSource(false,true);
+      return true;
     }
     async refreshSources(){
       if(this.refreshing||this.destroyed)return;
@@ -16554,7 +16575,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v668 · 18.11.2026 Первые шаги и подарки';
+const APP_BUILD = 'v669 · 20.11.2026 Восстановление видео Android';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

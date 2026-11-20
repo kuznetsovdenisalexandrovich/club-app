@@ -157,11 +157,32 @@
             due=Date.now()+remaining;timer=setTimeout(check,remaining);this.timer=timer;return;
           }
           this.lateWatchdog(due);
-          this.failure('progress_timeout');this.switchSource(false);
+          this.failure('progress_timeout');
+          if(!this.recoverBufferedNativeStall())this.switchSource(false);
         };
         timer=setTimeout(check,delay);
         this.timer=timer;
       }
+    }
+    recoverBufferedNativeStall(){
+      const v=this.video;
+      // Only a previously advancing Android native decoder with data ahead.
+      // Leave startup/preload, user seeks, iOS and network starvation unchanged.
+      if(this.forceHls||this.engine!=='native'||!this.diagFrame||!this.wantsPlay||
+         document.hidden||!v||v.paused||v.seeking||this.resumePending||
+         this.sources[this.index]?.type!=='hls'||!/Android/i.test(root.navigator?.userAgent||'')||
+         !root.Hls?.isSupported())return false;
+      let buffered=false;
+      try{
+        for(let i=0;i<v.buffered.length;i++){
+          if(v.buffered.start(i)<=v.currentTime&&v.buffered.end(i)-v.currentTime>=3){buffered=true;break;}
+        }
+      }catch(e){return false;}
+      if(!buffered)return false;
+      this.forceHls=true;
+      this.diagnostic('milestone',{reason:'buffered_native_to_hls'});
+      this.switchSource(false,true);
+      return true;
     }
     async refreshSources(){
       if(this.refreshing||this.destroyed)return;
