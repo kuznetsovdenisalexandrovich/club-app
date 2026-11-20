@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v672 -->
+<!-- FILE_VERSION: index-v673 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -124,7 +124,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v672'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v673'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -16580,7 +16580,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v672 · 20.11.2026 Записи эфира и телемоста';
+const APP_BUILD = 'v673 · 20.11.2026 Наклон карт';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -40116,6 +40116,16 @@ function cardHoloStart(card, big){
 
 
 var cardMotionCurrent = null, cardMotionOffered = false;
+var cardMotionReconnectAttempted = false;
+function cardMotionReconnect(){
+  if(cardMotionReconnectAttempted || window.clubMotionGranted || cardMotionChoice()!=='granted' || !cardMotionCurrent) return;
+  if(window.Telegram?.WebApp?.initData) return;
+  cardMotionReconnectAttempted=true;
+  cardMotionCurrent.startGyro(true,function(){});
+}
+// A saved preference is not a browser permission for this document.
+// Reconnect from a real gesture, once per page, without a per-card prompt.
+document.addEventListener('click',cardMotionReconnect,true);
 function cardMotionChoice(){
   try { return localStorage.getItem('club-card-motion-choice') || ''; } catch(e){return '';}
 }
@@ -46272,14 +46282,14 @@ function ivAutoOpen(){
         if (dead) return;
         if (domHandler) window.removeEventListener("deviceorientation", domHandler);
         var got = false;
-        domHandler = function(e){ if (e.beta == null) return; if (!got){ got = true; useGyro("gyro"); cb(true, "gyro"); } fromAngles(e.beta, e.gamma); };
+        domHandler = function(e){ if (!Number.isFinite(e.beta) || !Number.isFinite(e.gamma)) return; if (!got){ got = true; useGyro("gyro"); cb(true, "gyro"); } fromAngles(e.beta, e.gamma); };
         window.addEventListener("deviceorientation", domHandler);
         setTimeout(function(){ if (!got && !dead) cb(false, "silent"); }, 1500);
       };
       // Saved consent permits passive listening, not another permission prompt.
       // The browser still controls event delivery; silence retains pointer tilt.
       var rememberedConsent = typeof cardMotionChoice === 'function' && cardMotionChoice()==='granted';
-      if (typeof DeviceOrientationEvent.requestPermission === "function" && !window.clubMotionGranted && !rememberedConsent) {
+      if (typeof DeviceOrientationEvent.requestPermission === "function" && !window.clubMotionGranted && (ask || !rememberedConsent)) {
         if (!ask) { cb(false, "needs_tap"); return; }
         DeviceOrientationEvent.requestPermission().then(function(r){ if (r === "granted") { window.clubMotionGranted=true; go(); } else cb(false, "denied"); })
           .catch(function(){ cb(false, "denied"); });
