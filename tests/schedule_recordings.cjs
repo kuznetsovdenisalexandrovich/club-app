@@ -1,0 +1,6 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const html=fs.readFileSync('index.html','utf8');
+const start=html.indexOf('function schedEventActionsHtml('),end=html.indexOf('async function openScheduleLiveRecording(',start);assert(start>0&&end>start);
+function render(member,event){const ctx={isMember:member,isPaused:false};vm.createContext(ctx);vm.runInContext(html.slice(start,end),ctx);return ctx.schedEventActionsHtml(event,0,'2026-11-19');}
+test('two independent recordings keep their own destinations',()=>{const value=render(true,{id:29,replay_state:'recording',live_record_id:23});assert(value.includes('openMeetingRecording(29)'));assert(value.includes('openScheduleLiveRecording(23)'));assert(value.includes('Запись телемоста'));assert(value.includes('Запись эфира · Kinescope'));});
+test('Kinescope-only day has no fake Telemost recording',()=>{const value=render(true,{id:29,live_record_id:23});assert(value.includes('openScheduleLiveRecording(23)'));assert(!value.includes('openMeetingRecording'));});
+test('free user retains purchase gate',()=>{const value=render(false,{id:29,replay_state:'recording',live_record_id:23});assert(value.includes('openPaywall()'));assert(!value.includes('openScheduleLiveRecording'));});
