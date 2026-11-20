@@ -140,7 +140,7 @@
         let r=await send();if(r.status===422&&!legacySchema){legacySchema=true;r=await send();}
         if(!r.ok)throw Error('report');
         const accepted=new Set(batch.map(e=>e.seq));queue=queue.filter(e=>!accepted.has(e.seq));retries=0;
-      }catch(e){retries++;}finally{clearTimeout(deadline);busy=false;if(queue.length&&retries<3)timer=setTimeout(flush,2000);}
+      }catch(e){retries++;try{if(retries===1&&root.ClubClientDiagnostics){root.ClubClientDiagnostics.emit({attempt,kind:'transport',event:'failed',route:'player_api',outcome:'network'});root.ClubClientDiagnostics.probe();}}catch(ignore){}}finally{clearTimeout(deadline);busy=false;if(queue.length&&retries<3)timer=setTimeout(flush,2000);}
     }
     function environment(){
       try{
@@ -152,6 +152,7 @@
     function emit(data){
       if(data.event==='closed'){closed=true;root.removeEventListener('pagehide',leave);}
       if(seq>=120||(seq>=118&&!['closed','unavailable','recovered'].includes(data.event)))return;
+      try{if(root.ClubClientDiagnostics&&['attempt','source','frame','stall','error','unavailable','recovered','closed'].includes(data.event)){root.ClubClientDiagnostics.emit({attempt,kind:'player',event:data.event,content,elapsed:Date.now()-started,position:data.position,buffer_ms:data.buffer_ms,frames:data.frames,http:data.http});if(['stall','unavailable'].includes(data.event))root.ClubClientDiagnostics.probe();}}catch(e){}
       queue.push({...environment(),...data,seq:++seq,elapsed:Math.max(0,Math.min(86400000,Date.now()-started))});
       if(queue.length>40)queue.shift();
       clearTimeout(timer);timer=setTimeout(flush,250);

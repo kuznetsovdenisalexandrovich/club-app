@@ -125,3 +125,18 @@ test('storage failures do not prevent ready; queue is capped and expired evidenc
  const storage=memoryStorage(),many=setup({storage});for(let i=0;i<20;i++){many.events.pagehide();await flush();}const records=JSON.parse(storage.getItem(diagKey));assert.equal(records.length,12);
  storage.setItem(diagKey,JSON.stringify([{...records[0],at:Date.now()-86400001,secret:'untrusted'}, {...records[1],secret:'untrusted'}]));const clean=setup({storage});await flush();fireTimer(clean,250);await flush();assert.equal(clean.diagCalls[0].records.length,1);assert(!JSON.stringify(clean.diagCalls[0]).includes('untrusted'));
 });
+
+test('first frame after ready reaches server exactly once without rearming rescue',async()=>{
+ const s=setup();['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();
+ const before=s.calls.length;s.w.ClubAppRescue.mark('content');await flush();s.w.ClubAppRescue.mark('content');await flush();
+ assert.equal(s.calls.length,before+1);assert.equal(s.calls.at(-1).event,'ready');assert(s.calls.at(-1).marks.includes('content'));
+ assert(![...s.timers.values()].some(t=>t.ms===35000));assert(!s.calls.some(c=>c.event==='failed'));
+});
+
+test('content snapshot retains terminal retry after a lost shell-ready',async()=>{
+ let reject=true;const s=setup({reply:data=>data.event==='ready'&&reject?{ok:false,status:503}:{ok:true,status:200,json:async()=>({status:data.event})}});
+ ['settings','profile','rendered'].forEach(x=>s.w.ClubAppRescue.mark(x));await flush();
+ s.w.ClubAppRescue.mark('content');await flush();reject=false;
+ for(const t of [...s.timers.values()].filter(t=>t.ms===1250))t.f();await flush();
+ assert.equal(s.calls.at(-1).event,'ready');assert(s.calls.at(-1).marks.includes('content'));
+});

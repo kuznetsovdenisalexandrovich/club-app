@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v676 -->
+<!-- FILE_VERSION: index-v677 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -64,6 +64,58 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
 })(typeof window==='object'?window:globalThis);
 /* END_BOT_DIRECT_TRANSPORT_V1 */
 
+/* CLIENT_DIAGNOSTICS_V1: independent, anonymous, bounded, never blocks startup. */
+(function(w,d){
+ 'use strict';
+ if(!w.fetch||!w.AbortController)return;
+ var fetcher=w.fetch.bind(w),endpoint='https://club-bot-production-2b38.up.railway.app/client-diagnostics';
+ var queue=[],sent=0,total=0,busy=false,timer=null,checks=false,parent='',disabled=false;
+ try{disabled=new URLSearchParams(w.location.search).has('view');}catch(e){}
+ function bounded(n,max){return Number.isFinite(n)?Math.max(0,Math.min(max,Math.round(n))):0;}
+ function emit(fact){
+  try{
+   if(disabled||total>=40||!fact||!/^[a-f0-9-]{16,40}$/.test(fact.attempt||''))return;
+   var item={attempt:fact.attempt,build:'app-v677',kind:fact.kind,event:fact.event,at:Date.now(),visible:!d.hidden,online:!w.navigator||w.navigator.onLine!==false};
+   ['elapsed','http','duration','position','buffer_ms','frames','line','column'].forEach(function(k){if(fact[k]!==undefined)item[k]=bounded(fact[k],k==='http'?599:k==='duration'?60000:k==='position'?86400:k==='frames'?100000000:k==='line'||k==='column'?1000000:86400000);});
+   ['route','outcome','error','content'].forEach(function(k){if(fact[k])item[k]=fact[k];});
+   if(fact.marks)item.marks=fact.marks.filter(function(m){return /^(html|card_script|sdk|player_script|main|dom|settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);}).slice(0,16);
+   if(parent&&fact.attempt!==parent)item.parent=parent;
+   queue.push(item);total++;if(queue.length>24)queue.shift();
+   if(!timer)timer=setTimeout(flush,400);
+  }catch(e){}
+ }
+ function flush(){
+  timer=null;if(disabled||busy||!queue.length||sent>=12)return;
+  busy=true;sent++;
+  var batch=queue.slice(0,12),ctrl=new w.AbortController(),timeout=setTimeout(function(){ctrl.abort();},4000);
+  fetcher(endpoint,{method:'POST',headers:{'Content-Type':'text/plain'},credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',keepalive:true,signal:ctrl.signal,body:JSON.stringify({records:batch})}).then(function(r){if(r.ok)queue=queue.filter(function(x){return batch.indexOf(x)<0;});}).catch(function(){}).then(function(){clearTimeout(timeout);busy=false;});
+ }
+ function probe(){
+  if(disabled||checks||!parent)return;checks=true;
+  [['selectel_api','https://selectel-api.youselllikeagod-magazine.ru/rf/readiness'],['selectel_bot','https://selectel-api.youselllikeagod-magazine.ru/club-bot/health'],['railway',endpoint+'/ping']].forEach(function(plan){
+   var began=Date.now(),ctrl=new w.AbortController(),expired=false;
+   var timeout=setTimeout(function(){expired=true;ctrl.abort();},3500);
+   fetcher(plan[1],{signal:ctrl.signal,credentials:'omit',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer'}).then(function(r){
+    return r.text().then(function(){return {http:r.status,outcome:r.ok?'ok':'http'};});
+   }).catch(function(){return {http:0,outcome:expired?'timeout':'network'};}).then(function(result){
+    clearTimeout(timeout);emit(Object.assign({attempt:parent,kind:'probe',event:'check',route:plan[0],duration:Date.now()-began},result));
+   });
+  });
+ }
+ w.ClubClientDiagnostics={emit:emit,probe:probe,bind:function(id){parent=id;},parent:function(){return parent;}};
+ function error(event,rejection){
+  if(!parent)return;
+  var resource=!rejection&&event.target&&event.target!==w;
+  var value=rejection?event.reason:event.error,name=value&&value.name;
+  emit({attempt:parent,kind:'javascript',event:resource?'resource':rejection?'rejection':'error',error:/^(TypeError|ReferenceError|SyntaxError|RangeError|AbortError|Error)$/.test(name||'')?name:'unknown',line:event.lineno,column:event.colno});
+ }
+ w.addEventListener('error',function(e){error(e,false);},true);
+ w.addEventListener('unhandledrejection',function(e){error(e,true);});
+ w.addEventListener('online',flush);
+ w.addEventListener('pagehide',function(){if(timer)clearTimeout(timer);flush();});
+})(window,document);
+/* END_CLIENT_DIAGNOSTICS_V1 */
+
 /* APP_RESCUE_V1 — must be the first executable HTML. See APP_RESCUE.md.
    No SDK, stylesheet, player or main application dependency. */
 (function(w,d){
@@ -88,6 +140,9 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   disabled=query.has('view');
   attempt=w.crypto&&w.crypto.randomUUID?w.crypto.randomUUID():('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);}));
  }catch(e){}
+ function evidence(kind,event,extra){
+  try{if(w.ClubClientDiagnostics){w.ClubClientDiagnostics.bind(attempt);w.ClubClientDiagnostics.emit(Object.assign({attempt:attempt,kind:kind,event:event,elapsed:Math.min(86400000,Date.now()-startedAt),marks:Object.keys(marks)},extra||{}));}}catch(e){}
+ }
  function signedLaunch(){
   return launch||(w.Telegram&&w.Telegram.WebApp&&w.Telegram.WebApp.initData)||'';
  }
@@ -123,8 +178,9 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  w.addEventListener('online',scheduleDiagnostics);
  function signal(event,reason){
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
+  evidence('startup',event);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v676'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v677'};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -153,6 +209,8 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
    return data;
   }).catch(function(err){
    recordTransport(payload,tries,began,http,timedOut?'timeout':http?(http>=400?'http':'decode'):'network',responseReason);
+   evidence('transport',event,{http:http,duration:Date.now()-began,outcome:timedOut?'timeout':http?(http>=400?'http':'decode'):'network'});
+   try{if(w.ClubClientDiagnostics)w.ClubClientDiagnostics.probe();}catch(e){}
    // A busy restore/state barrier can reject a healthy page's acknowledgement.
    // Retry only terminal observations, never delivery requests. Same seq/body;
    // newer state or a different target invalidates every outstanding retry.
@@ -187,15 +245,19 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  }
  function fail(reason){
   if(disabled||d.hidden||failed)return;
+  try{if(w.ClubClientDiagnostics)w.ClubClientDiagnostics.probe();}catch(e){}
   failed=true;clearTimeout(progressTimer);progressTimer=null;failureReason=reason||'content_error';clearTimeout(timer);show(reason);signal('failed',reason||'content_error').then(poll);
  }
  function mark(name){
   if(!/^(html|card_script|sdk|player_script|main|dom|settings|profile|guest|rendered|gate|content|scriptError)$/.test(name))return;
+  var firstMark=!marks[name];
   marks[name]=true;if(stageTimes[name]===undefined)stageTimes[name]=Math.min(86400000,Math.max(0,Date.now()-startedAt));
   var useful=marks.content||marks.gate||(marks.settings&&(marks.profile||marks.guest)&&marks.rendered);
   if(useful&&(!ready||failed)&&(!failed||failureReason!=='content_error'||name==='content')){
    ready=true;failed=false;failureReason='';clearTimeout(progressTimer);progressTimer=null;lastState='ready';polls=0;clearTimeout(timer);clearTimeout(poller);
    if(panel){panel.remove();panel=null;statusNode=null;botLink=null;}
+   signal('ready');
+  }else if(ready&&!failed&&firstMark&&name==='content'){
    signal('ready');
   }else if(!ready&&!failed&&!d.hidden&&!progressTimer&&progressReports<6){
    progressTimer=setTimeout(function(){progressTimer=null;if(!ready&&!failed&&!d.hidden){progressReports++;signal('status');}},1000);
@@ -213,6 +275,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  }
  w.ClubAppRescue={mark:mark,fail:fail,signal:signal,target:setTarget,version:1,accepted:false};
  w.__leadMaterialBoot={code:target,attempt:attempt};
+ evidence('startup','boot');
  w.addEventListener('pagehide',function(){clearTimeout(progressTimer);progressTimer=null;clearTimeout(timer);clearTimeout(poller);if(!failed)signal('closed');});
  d.addEventListener('visibilitychange',function(){
   if(d.hidden){clearTimeout(progressTimer);progressTimer=null;clearTimeout(timer);clearTimeout(poller);if(!ready&&!failed)signal('closed');}
@@ -15388,7 +15451,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
         let r=await send();if(r.status===422&&!legacySchema){legacySchema=true;r=await send();}
         if(!r.ok)throw Error('report');
         const accepted=new Set(batch.map(e=>e.seq));queue=queue.filter(e=>!accepted.has(e.seq));retries=0;
-      }catch(e){retries++;}finally{clearTimeout(deadline);busy=false;if(queue.length&&retries<3)timer=setTimeout(flush,2000);}
+      }catch(e){retries++;try{if(retries===1&&root.ClubClientDiagnostics){root.ClubClientDiagnostics.emit({attempt,kind:'transport',event:'failed',route:'player_api',outcome:'network'});root.ClubClientDiagnostics.probe();}}catch(ignore){}}finally{clearTimeout(deadline);busy=false;if(queue.length&&retries<3)timer=setTimeout(flush,2000);}
     }
     function environment(){
       try{
@@ -15400,6 +15463,7 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
     function emit(data){
       if(data.event==='closed'){closed=true;root.removeEventListener('pagehide',leave);}
       if(seq>=120||(seq>=118&&!['closed','unavailable','recovered'].includes(data.event)))return;
+      try{if(root.ClubClientDiagnostics&&['attempt','source','frame','stall','error','unavailable','recovered','closed'].includes(data.event)){root.ClubClientDiagnostics.emit({attempt,kind:'player',event:data.event,content,elapsed:Date.now()-started,position:data.position,buffer_ms:data.buffer_ms,frames:data.frames,http:data.http});if(['stall','unavailable'].includes(data.event))root.ClubClientDiagnostics.probe();}}catch(e){}
       queue.push({...environment(),...data,seq:++seq,elapsed:Math.max(0,Math.min(86400000,Date.now()-started))});
       if(queue.length>40)queue.shift();
       clearTimeout(timer);timer=setTimeout(flush,250);
@@ -16580,7 +16644,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v676 · 20.11.2026 Подсказка под картой';
+const APP_BUILD = 'v677 · 21.11.2026 Диагностика соединения';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

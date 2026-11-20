@@ -286,3 +286,11 @@ under each card. Startup, payments and material playback remain unchanged.
 passive sensor listening without requesting browser permission again. It is
 not evidence that OS permission is still granted: if events are unavailable,
 pointer tilt remains active. No repeated consent popup on entry.
+
+2026-11-21 v677 / bot v224: a first content frame after shell-ready sends one
+new ready snapshot (with the same bounded ready retry policy). Previously
+content stayed only in memory, so permission_film could miss real playback.
+Permission-triggered quiet_film delivery no longer creates a false app-failure
+incident; actual delivery failures and real rescue watchdog alerts remain.
+Independent anonymous Railway evidence is described in CLIENT_DIAGNOSTICS.md.
+No playback, source, preload, seek or payment behavior changes.
