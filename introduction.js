@@ -31,7 +31,7 @@ window.ClubIntroduction = (function(){
     if(Number.isFinite(state.points))points=state.points;
     renderLevelCard();
     bar.innerHTML='<span>Знакомство '+Number(state.percent||0)+'%</span><i style="width:'+Math.min(100,Math.max(0,state.percent||0))+'%"></i>';
-    if(host){host.dataset.ciOwned='1';host.innerHTML='<button class="ci-start" data-ci="start">С чего начать <span aria-hidden="true">↗</span></button>';}
+    if(host){host.dataset.ciOwned='1';const game=state.result&&state.steps.some(s=>s.action==='profile'&&s.done)&&state.steps.some(s=>s.action==='game'&&!s.done);host.innerHTML='<button class="ci-start" data-ci="'+(game?'game':'start')+'">'+(game?'Узнать своего бога продаж':'С чего начать')+' <span aria-hidden="true">↗</span></button>'; }
   }
   async function ciStart(){
     if(!active()){if(!await ciLoad())return showToast('Не удалось открыть знакомство. Попробуй ещё раз.');}
@@ -62,6 +62,7 @@ window.ClubIntroduction = (function(){
     const s=state.steps.find(x=>x.id===id);if(!s)return;
     if(s.action==='first')return ciStart();
     if(s.action==='profile')return profile();
+    if(s.action==='game'){ciClose();openQuiz(false,'member');return;}
     if(s.done)return;
     ciClose();
     if(s.action==='custom'){
@@ -93,7 +94,7 @@ window.ClubIntroduction = (function(){
   }
   async function ciAction(button){
     if(busy)return;const name=button.dataset.ci;
-    if(name==='close')return ciClose();if(name==='start')return ciStart();if(name==='steps')return steps();if(name==='submit')return submit();if(name==='profile')return profile();if(name==='gift')return gift();
+    if(name==='game'){ciClose();openQuiz(false,'member');return;}if(name==='close')return ciClose();if(name==='start')return ciStart();if(name==='steps')return steps();if(name==='submit')return submit();if(name==='profile')return profile();if(name==='gift')return gift();
     if(name==='step')return doStep(button.dataset.id);
     if(name==='custom-open'){const step=state.steps.find(s=>s.id===button.dataset.id);ciClose();if(step?.target)runAppRoute(step.target);return;}
     if(name==='perks'){const el=document.getElementById('ci-perks');el.hidden=!el.hidden;return;}

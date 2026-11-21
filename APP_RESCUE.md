@@ -315,3 +315,16 @@ cover native/denied API,320/390/1440,iframe/video identity,cleanup and guest wal
 Real masterclass/i1 plays/seeks and expands with both mechanisms after this patch.
 Physical Telegram/iPhone behavior remains unverified. Rollback by reverting this
 frontend-only commit; no DB, access, chain or media changes to undo.
+
+
+2026-11-21 app v682 / backend v719 (prepared): quiz recommendations use existing
+lecture l_<safe-slug> link adapters, never claim native video delivery. Final video
+unavailability and audio failure report content_error for this lecture. Public
+media manifests sign only immutable, verified, physically short learning-preview
+objects; no full-file fallback. Shared new guest keeps the film bridge; existing
+funnel completion selects post-film context, and members get a lecture. Active
+media survives delayed gift/result rendering. New recommendation cards are additive
+to the personal plan: frozen seed, marks, ordering and old scoring are unchanged.
+Disable learning_recommendations_config.enabled first for a quick rollback; preserve
+user documents and restore app v681/backend v718 with release-specific reverts.
+Physical iPhone/Telegram and native bot delivery of the new clips are not tested.
