@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v680 -->
+<!-- FILE_VERSION: index-v681 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v680';
+window.CLUB_BUILD_ID = 'app-v681';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -7072,6 +7072,18 @@ html[data-tg-native-back] #bonus-video-overlay .fullscreen-popup-card{padding-to
 .club-video-fullscreen-parent{transform:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;perspective:none!important;contain:none!important;will-change:auto!important;animation:none!important;overflow:visible!important;z-index:2147483000!important}
 .club-video-expanded{position:fixed!important;inset:0!important;z-index:2147483000!important;width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;margin:0!important;padding:0!important;border-radius:0!important;aspect-ratio:auto!important;background:#000!important}
 .club-video-expanded video,.club-video-expanded iframe{width:100%!important;height:100%!important;object-fit:contain!important}
+.club-video-surface{position:relative}
+.club-video-surface>.native-film-fullscreen{right:8px;z-index:20}
+.club-video-surface:fullscreen{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;background:#000;aspect-ratio:auto!important}
+.club-video-surface:fullscreen iframe,.club-video-surface:fullscreen video{width:100%!important;height:100%!important;max-height:none!important;object-fit:contain!important;margin:0!important}
+.club-video-expanded video{max-height:none!important;margin:0!important}
+#live-full-video{position:relative;width:100%;flex:0 0 auto;aspect-ratio:16/9}
+#live-full-video:fullscreen,#live-full-video.club-video-expanded{aspect-ratio:auto}
+#live-full-video>#live-full-frame{display:block;width:100%;height:100%;aspect-ratio:auto}
+#live-record-wrap:fullscreen #live-record-api,#live-record-wrap.club-video-expanded #live-record-api{width:100%;height:100%;aspect-ratio:auto}
+#live-frame-wrap.club-video-expanded .live-tap-catch,#live-frame-wrap:fullscreen .live-tap-catch{display:none}
+.hd-video{position:relative;margin:20px 0}
+.hd-video video{display:block;width:100%;max-height:70vh;object-fit:contain;background:#080910;border-radius:16px}
 #funnel-film-slot:fullscreen{width:100vw;height:100dvh;margin:0;background:#000}
 #funnel-film-slot:fullscreen iframe{width:100%;height:100%}
 
@@ -15508,17 +15520,22 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
   function addClubVideoFullscreen(target,getVideo){
     const b=document.createElement('button');b.type='button';b.className='native-film-fullscreen';
     b.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9 3 3m0 5V3h5M15 9l6-6m-5 0h5v5M9 15l-6 6m0-5v5h5M15 15l6 6m-5 0h5v-5"/></svg>';
-    let expanded=false,ancestors=[];
+    let expanded=false,ancestors=[],disposed=false,generation=0;
     const sync=()=>{const on=expanded||document.fullscreenElement===target;b.setAttribute('aria-label',on?'Выйти из полного экрана':'На весь экран');b.title=on?'Выйти из полного экрана':'На весь экран';b.setAttribute('aria-pressed',String(on));};
-    const close=()=>{if(!expanded)return;expanded=false;target.classList.remove('club-video-expanded');ancestors.forEach(e=>e.classList.remove('club-video-fullscreen-parent'));ancestors=[];sync();};
-    const fallback=()=>{expanded=true;target.classList.add('club-video-expanded');for(let e=target.parentElement;e&&e!==document.documentElement;e=e.parentElement){e.classList.add('club-video-fullscreen-parent');ancestors.push(e);}sync();};
-    b.onclick=async e=>{e.stopPropagation();if(expanded){close();return;}if(document.fullscreenElement===target){await document.exitFullscreen();return;}
-      try{if(target.requestFullscreen){await target.requestFullscreen();return;}const v=getVideo&&getVideo();if(v&&v.webkitEnterFullscreen){v.webkitEnterFullscreen();return;}}catch(error){}fallback();};
-    const key=e=>{if(e.key==='Escape'&&expanded){close();b.focus();}};
-    document.addEventListener('fullscreenchange',sync);document.addEventListener('keydown',key);sync();target.append(b);
-    return ()=>{close();document.removeEventListener('fullscreenchange',sync);document.removeEventListener('keydown',key);b.remove();};
+    const exitNative=()=>{if(document.fullscreenElement&&(document.fullscreenElement===target||target.contains?.(document.fullscreenElement))&&document.exitFullscreen)Promise.resolve(document.exitFullscreen()).catch(()=>{});};
+    const close=()=>{generation++;if(expanded){expanded=false;target.classList.remove('club-video-expanded');ancestors.forEach(e=>e.classList.remove('club-video-fullscreen-parent'));ancestors=[];}exitNative();sync();};
+    const fallback=()=>{if(disposed)return;expanded=true;target.classList.add('club-video-expanded');for(let e=target.parentElement;e&&e!==document.documentElement;e=e.parentElement){e.classList.add('club-video-fullscreen-parent');ancestors.push(e);}sync();};
+    b.onclick=async e=>{e.stopPropagation();if(expanded||document.fullscreenElement===target){close();return;}const attempt=++generation;
+      try{if(target.requestFullscreen){await target.requestFullscreen();if(disposed||attempt!==generation)exitNative();return;}const v=getVideo&&getVideo();if(v&&v.webkitEnterFullscreen){v.webkitEnterFullscreen();return;}}catch(error){}if(attempt===generation)fallback();};
+    const key=e=>{if(e.key==='Escape'&&expanded){e.preventDefault();e.stopImmediatePropagation();close();b.focus();}};
+    document.addEventListener('fullscreenchange',sync);document.addEventListener('keydown',key,true);sync();target.append(b);
+    const remove=()=>{disposed=true;close();document.removeEventListener('fullscreenchange',sync);document.removeEventListener('keydown',key,true);b.remove();};
+    remove.close=close;return remove;
   }
   root.addClubVideoFullscreen=addClubVideoFullscreen;
+  root.mountClubVideoFullscreen=(target,getVideo)=>{if(!target)return;target.classList.add('club-video-surface');if(!target.clubRemoveFullscreen)target.clubRemoveFullscreen=addClubVideoFullscreen(target,getVideo);};
+  root.closeClubVideoFullscreen=target=>{if(target?.clubRemoveFullscreen?.close)target.clubRemoveFullscreen.close();};
+  root.removeClubVideoFullscreen=target=>{if(target?.clubRemoveFullscreen){target.clubRemoveFullscreen();target.clubRemoveFullscreen=null;}target?.classList.remove('club-video-surface');};
   class ClubFilmPlayer {
     constructor(slot,options){
       this.options=options; this.slot=slot;
@@ -16668,7 +16685,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v680 · 21.11.2026 Диагностика загрузки';
+const APP_BUILD = 'v681 · 21.11.2026 Полный экран видео';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27534,7 +27551,7 @@ async function openLeadMaterial(code){
  const startUrl=platform==='vk'?'https://vk.ru/app54827669#'+encodeURIComponent(code):'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code);
  let signalChain=Promise.resolve();
  const signal=event=>{if(event==='error'&&window.ClubAppRescue)ClubAppRescue.fail('content_error');return signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event,platform,managed_rescue:!!(window.ClubAppRescue&&ClubAppRescue.accepted)}),keepalive:true,signal:AbortSignal.timeout(15000)}).catch(()=>null):Promise.resolve(null));};
- leadMaterialClose=()=>{if(closed)return;closed=true;nurtureOfferCollapsed();signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
+ leadMaterialClose=()=>{if(closed)return;closed=true;removeClubVideoFullscreen(box);nurtureOfferCollapsed();signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
  close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
  const button=(label,action)=>{const b=document.createElement('button');b.className='lec-link-btn';b.textContent=label;b.style.cssText='white-space:normal;min-height:46px;width:100%;box-sizing:border-box';b.onclick=action;return b};
  const anchor=(label,url)=>{const a=document.createElement('a');a.className='lec-link-btn';a.textContent=label;a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;min-height:46px;box-sizing:border-box;text-decoration:none';return a};
@@ -27590,12 +27607,12 @@ async function openLeadMaterial(code){
     video.addEventListener('playing',()=>signal('playing'));
     video.addEventListener('error',()=>{note.textContent=t('lead.error');signal('error')});
     video.addEventListener('ended',()=>{nurtureProgress('completed',code,video.duration||0);note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
-    player={destroy:()=>{video.pause();video.removeAttribute('src');video.load()}};leadMaterialPlayer=player;box.append(video);video.src=data.video_url;
+    player={destroy:()=>{video.pause();video.removeAttribute('src');video.load()}};leadMaterialPlayer=player;box.append(video);mountClubVideoFullscreen(box,()=>video);video.src=data.video_url;
     return;
    }
    const factory=await kinescopeApi();if(closed)return;
    player=await factory.create(box.id,{url:'https://kinescope.io/'+data.kinescope_id,size:{width:'100%',height:'100%'},behavior:{autoPlay:false,preload:'metadata'}});
-   if(closed){player.destroy();return}leadMaterialPlayer=player;nurtureOfferWatchKinescope(player,data.id);signal('ready');
+   if(closed){player.destroy();return}leadMaterialPlayer=player;mountClubVideoFullscreen(box);nurtureOfferWatchKinescope(player,data.id);signal('ready');
    if(player.Events.Playing)player.on(player.Events.Playing,()=>signal('playing'));
    if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
    if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');signal('error')});
@@ -31588,6 +31605,8 @@ function reloadLivePlayer(){
 }
 
 function expandLiveFull(){
+  closeClubVideoFullscreen(document.getElementById('live-frame-wrap'));
+  mountClubVideoFullscreen(document.getElementById('live-full-video'));
   syncLiveJoinButtons();
   const url = livePlayPageUrl();
   if (!url) return;
@@ -31627,6 +31646,7 @@ function expandLiveFull(){
 }
 
 function collapseLiveFull(){
+  removeClubVideoFullscreen(document.getElementById('live-full-video'));
   liveFullOpen = false;
   renderLevelCard();   // вернуть бар
   stopLiveChat();
@@ -31969,6 +31989,9 @@ function syncLiveJoinButtons(){
 }
 
 function renderLiveBlock(){
+  const videoSurface=document.getElementById('live-frame-wrap');
+  mountClubVideoFullscreen(videoSurface);
+  if(!liveNow?.found||!liveNow?.is_live||liveDismissed||(liveNow.free_open===false&&!isMember))closeClubVideoFullscreen(videoSurface);
   syncLiveJoinButtons();
   const host = liveHostEl(), slot = liveSlotEl();
   if (!host || !slot) return;
@@ -32104,6 +32127,7 @@ async function openLiveEntry(){
 }
 
 function closeLiveEntryPopup(){
+  removeClubVideoFullscreen(document.getElementById('live-record-wrap'));
   nurtureOfferCollapsed();
   document.getElementById('live-entry-overlay').classList.remove('open');
   /* v426: плеер записи для гостя (IFrame API) — снимаем целиком, иначе звук останется */
@@ -32118,6 +32142,7 @@ function closeLiveEntryPopup(){
 }
 
 function openLiveRecord(d){
+  mountClubVideoFullscreen(document.getElementById('live-record-wrap'));
   document.getElementById('live-entry-title').textContent = d.title || t('live.title.default');
   const days = d.days_left || 0;
   document.getElementById('live-entry-text').textContent =
@@ -32216,6 +32241,7 @@ function kinescopeApi(){
   return window.__kinescopeApi;
 }
 async function openLiveRecordGuest(d){
+  mountClubVideoFullscreen(document.getElementById('live-record-wrap'));
   const lim = Number(d.free_sec) || 0;
   document.getElementById('live-entry-title').textContent = d.title || t('live.title.default');
   document.getElementById('live-entry-text').textContent = lim > 0
@@ -32281,6 +32307,7 @@ async function openLiveRecordGuest(d){
   }
 }
 function liveRecordWall(player, lim){
+  closeClubVideoFullscreen(document.getElementById('live-record-wrap'));
   // Из полного экрана — наружу: и у плеера (его API), и у страницы
   try { if (player && player.setFullscreen) player.setFullscreen(false); } catch(e){}
   try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch(e){}
@@ -34575,6 +34602,7 @@ async function videoPopupMount(which){
   slot.innerHTML = '<iframe src="' + BOOMSTREAM_ORIGIN + '/' + code +
     '" allow="autoplay; fullscreen" frameborder="0" scrolling="no" ' +
     'style="width:100%;height:100%;border:0;display:block;background:#000"></iframe>';
+  mountClubVideoFullscreen(slot);
 }
 
 function videoPopupUnmount(which){
@@ -34583,6 +34611,7 @@ function videoPopupUnmount(which){
     if(onboardingPopupPlayer){onboardingPopupPlayer.destroy();onboardingPopupPlayer=null;}
   }
   const slot = document.getElementById('video-slot-' + which);
+  removeClubVideoFullscreen(slot);
   if (slot) slot.innerHTML = '';   // иначе ролик продолжает звучать под закрытым окном
 }
 
@@ -38083,6 +38112,7 @@ function openHelpDocs(){
 
 function closeHelpDocs(){
   helpDocsPauseVideos();
+  document.querySelectorAll('#hd-main .hd-video').forEach(closeClubVideoFullscreen);
   helpDocsToggleSide(false);
   document.getElementById('hd-overlay').classList.remove('open');
 }
@@ -38120,10 +38150,13 @@ function helpDocsFindArticle(secKey, artKey){
 function helpDocsPauseVideos(except){
   document.querySelectorAll('#hd-main video').forEach(v=>{if(v!==except)v.pause()});
 }
+function helpDocsVideoControls(remove){
+  document.querySelectorAll('#hd-main .hd-video').forEach(box=>remove?removeClubVideoFullscreen(box):mountClubVideoFullscreen(box,()=>box.querySelector('video')));
+}
 function helpDocsVideoHtml(url){
   try{if(new URL(url).protocol!=='https:')return '';}catch(e){return '';}
   const safe=url.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
-  return '<video controls playsinline preload="none" onplay="helpDocsPauseVideos(this)" style="display:block;width:100%;max-height:70vh;object-fit:contain;background:#080910;border-radius:16px;margin:20px 0" src="'+safe+'">Видео недоступно в этом браузере.</video>';
+  return '<div class="hd-video"><video controls playsinline preload="none" onplay="helpDocsPauseVideos(this)" src="'+safe+'">Видео недоступно в этом браузере.</video></div>';
 }
 function helpDocsRenderBody(src){
   const lines = (src || '').trim().split('\n');
@@ -38238,6 +38271,7 @@ function helpDocsSearch(q){
 
 /* Стартовый экран: вступление плюс список разделов строками */
 function helpDocsRenderHub(){
+  helpDocsPauseVideos();helpDocsVideoControls(true);
   hdCurrentSection = null; hdCurrentArticle = null;
   const sections = (hdData && hdData.sections) || [];
   let html = `<div class="article"><h1>${t('helpdocs.intro_title')}</h1><p class="lede">${t('helpdocs.intro_body')}</p></div>`;
@@ -38253,6 +38287,7 @@ function helpDocsRenderHub(){
 }
 
 function helpDocsGo(secKey, artKey){
+  helpDocsPauseVideos();helpDocsVideoControls(true);
   const found = helpDocsFindArticle(secKey, artKey);
   if (!found){ helpDocsRenderHub(); return; }
   hdCurrentSection = secKey; hdCurrentArticle = found.art.key;
@@ -38271,6 +38306,7 @@ function helpDocsGo(secKey, artKey){
   document.getElementById('hd-main').innerHTML =
     `<div class="crumb"><span onclick="helpDocsRenderHub()">${t('helpdocs.back_to_list')}</span> · ${found.sec.label}</div>
      <div class="article"><h1>${found.art.title}</h1>${helpDocsRenderBody(found.art.body)}</div>${nextHtml}`;
+  helpDocsVideoControls(false);
   helpDocsRenderSide();
   const ov = document.getElementById('hd-overlay');
   if (ov) ov.scrollTop = 0;
@@ -45589,7 +45625,7 @@ function openDigestFromHome(){
   <!-- «Картинка в картинке» РАЗРЕШАЕТСЯ ТОЛЬКО ВНЕ TELEGRAM — атрибут
        проставляется в expandLiveFull. Внутри мини-аппа их кнопка не просто
        не срабатывала, а роняла весь плеер с ошибкой (Denis поймал 08.08) -->
-  <iframe id="live-full-frame" allow="autoplay; fullscreen; clipboard-write" allowfullscreen frameborder="0"></iframe>
+  <div id="live-full-video"><iframe id="live-full-frame" allow="autoplay; fullscreen; clipboard-write" allowfullscreen frameborder="0"></iframe></div>
 
   <!-- ЧАТ. Свой, а не встроенный у Kinescope: человек здесь уже опознан и
        входить повторно на каждом устройстве не надо -->

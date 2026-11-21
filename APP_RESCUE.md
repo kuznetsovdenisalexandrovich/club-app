@@ -303,3 +303,15 @@ no signed URL/query/error body. Pending telemetry retries every2s within existin
 response/render; a manual retry repeats only the existing bootstrap flow. No
 player, payment, rescue-delivery or bot-chain changes. Historical unknown failures
 remain unknown; a successful new launch does not prove the previous screen loaded.
+
+2026-11-21 v681: existing fullscreen control now covers live mini/full iframe,
+legacy replay (member/guest), legacy sales popup, lead magnets and help videos.
+Media nodes stay in place. Close/paywall exits CSS/native expansion; cleanup
+invalidates a pending fullscreen request. Escape handles only CSS expansion in
+capture phase. Shared native film/bonus/meeting playback/source/preload logic is
+unchanged. 51 focused tests; full suite243/245 passes with the same two existing
+fixture failures (film_share, participant_route_cards). 30 Chrome browser cases
+cover native/denied API,320/390/1440,iframe/video identity,cleanup and guest wall.
+Real masterclass/i1 plays/seeks and expands with both mechanisms after this patch.
+Physical Telegram/iPhone behavior remains unverified. Rollback by reverting this
+frontend-only commit; no DB, access, chain or media changes to undo.

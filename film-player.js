@@ -5,17 +5,22 @@
   function addClubVideoFullscreen(target,getVideo){
     const b=document.createElement('button');b.type='button';b.className='native-film-fullscreen';
     b.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9 3 3m0 5V3h5M15 9l6-6m-5 0h5v5M9 15l-6 6m0-5v5h5M15 15l6 6m-5 0h5v-5"/></svg>';
-    let expanded=false,ancestors=[];
+    let expanded=false,ancestors=[],disposed=false,generation=0;
     const sync=()=>{const on=expanded||document.fullscreenElement===target;b.setAttribute('aria-label',on?'Выйти из полного экрана':'На весь экран');b.title=on?'Выйти из полного экрана':'На весь экран';b.setAttribute('aria-pressed',String(on));};
-    const close=()=>{if(!expanded)return;expanded=false;target.classList.remove('club-video-expanded');ancestors.forEach(e=>e.classList.remove('club-video-fullscreen-parent'));ancestors=[];sync();};
-    const fallback=()=>{expanded=true;target.classList.add('club-video-expanded');for(let e=target.parentElement;e&&e!==document.documentElement;e=e.parentElement){e.classList.add('club-video-fullscreen-parent');ancestors.push(e);}sync();};
-    b.onclick=async e=>{e.stopPropagation();if(expanded){close();return;}if(document.fullscreenElement===target){await document.exitFullscreen();return;}
-      try{if(target.requestFullscreen){await target.requestFullscreen();return;}const v=getVideo&&getVideo();if(v&&v.webkitEnterFullscreen){v.webkitEnterFullscreen();return;}}catch(error){}fallback();};
-    const key=e=>{if(e.key==='Escape'&&expanded){close();b.focus();}};
-    document.addEventListener('fullscreenchange',sync);document.addEventListener('keydown',key);sync();target.append(b);
-    return ()=>{close();document.removeEventListener('fullscreenchange',sync);document.removeEventListener('keydown',key);b.remove();};
+    const exitNative=()=>{if(document.fullscreenElement&&(document.fullscreenElement===target||target.contains?.(document.fullscreenElement))&&document.exitFullscreen)Promise.resolve(document.exitFullscreen()).catch(()=>{});};
+    const close=()=>{generation++;if(expanded){expanded=false;target.classList.remove('club-video-expanded');ancestors.forEach(e=>e.classList.remove('club-video-fullscreen-parent'));ancestors=[];}exitNative();sync();};
+    const fallback=()=>{if(disposed)return;expanded=true;target.classList.add('club-video-expanded');for(let e=target.parentElement;e&&e!==document.documentElement;e=e.parentElement){e.classList.add('club-video-fullscreen-parent');ancestors.push(e);}sync();};
+    b.onclick=async e=>{e.stopPropagation();if(expanded||document.fullscreenElement===target){close();return;}const attempt=++generation;
+      try{if(target.requestFullscreen){await target.requestFullscreen();if(disposed||attempt!==generation)exitNative();return;}const v=getVideo&&getVideo();if(v&&v.webkitEnterFullscreen){v.webkitEnterFullscreen();return;}}catch(error){}if(attempt===generation)fallback();};
+    const key=e=>{if(e.key==='Escape'&&expanded){e.preventDefault();e.stopImmediatePropagation();close();b.focus();}};
+    document.addEventListener('fullscreenchange',sync);document.addEventListener('keydown',key,true);sync();target.append(b);
+    const remove=()=>{disposed=true;close();document.removeEventListener('fullscreenchange',sync);document.removeEventListener('keydown',key,true);b.remove();};
+    remove.close=close;return remove;
   }
   root.addClubVideoFullscreen=addClubVideoFullscreen;
+  root.mountClubVideoFullscreen=(target,getVideo)=>{if(!target)return;target.classList.add('club-video-surface');if(!target.clubRemoveFullscreen)target.clubRemoveFullscreen=addClubVideoFullscreen(target,getVideo);};
+  root.closeClubVideoFullscreen=target=>{if(target?.clubRemoveFullscreen?.close)target.clubRemoveFullscreen.close();};
+  root.removeClubVideoFullscreen=target=>{if(target?.clubRemoveFullscreen){target.clubRemoveFullscreen();target.clubRemoveFullscreen=null;}target?.classList.remove('club-video-surface');};
   class ClubFilmPlayer {
     constructor(slot,options){
       this.options=options; this.slot=slot;
