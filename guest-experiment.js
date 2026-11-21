@@ -32,7 +32,7 @@ window.GuestExperiment=(function(){
  async function showLesson(slug){
   surface('<div id="gx-media"></div><p id="gx-status" role="status">Открываем занятие…</p>');const ticket=generation;
   try{const data=await request('/lesson/'+encodeURIComponent(slug));if(ticket!==generation)return;await showMedia({slug,title:data.lecture.title});}
-  catch(e){if(ticket===generation)surface('<p>Не удалось открыть занятие.</p>'+button('Попробовать ещё раз','retry')+'<p id="gx-status" role="status"></p>');mediaSpec={slug};}
+  catch(e){if(ticket!==generation)return;surface('<p>Не удалось открыть занятие.</p>'+button('Попробовать ещё раз','retry')+'<p id="gx-status" role="status"></p>');mediaSpec={slug,title:'Занятие по твоей задаче'};}
  }
  async function showMedia(spec){
   mediaSpec=spec;

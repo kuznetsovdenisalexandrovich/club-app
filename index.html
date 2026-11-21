@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v686 -->
+<!-- FILE_VERSION: index-v687 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v686';
+window.CLUB_BUILD_ID = 'app-v687';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16763,7 +16763,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v686 · 21.11.2026 Четыре ветки после фильма';
+const APP_BUILD = 'v687 · 22.11.2026 Четыре ветки после фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47273,7 +47273,7 @@ window.GuestExperiment=(function(){
  async function showLesson(slug){
   surface('<div id="gx-media"></div><p id="gx-status" role="status">Открываем занятие…</p>');const ticket=generation;
   try{const data=await request('/lesson/'+encodeURIComponent(slug));if(ticket!==generation)return;await showMedia({slug,title:data.lecture.title});}
-  catch(e){if(ticket===generation)surface('<p>Не удалось открыть занятие.</p>'+button('Попробовать ещё раз','retry')+'<p id="gx-status" role="status"></p>');mediaSpec={slug};}
+  catch(e){if(ticket!==generation)return;surface('<p>Не удалось открыть занятие.</p>'+button('Попробовать ещё раз','retry')+'<p id="gx-status" role="status"></p>');mediaSpec={slug,title:'Занятие по твоей задаче'};}
  }
  async function showMedia(spec){
   mediaSpec=spec;
