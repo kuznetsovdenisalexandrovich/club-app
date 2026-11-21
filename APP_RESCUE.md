@@ -371,3 +371,10 @@ CSS overrode the browser hidden rule and displayed a dead next-content link
 on the finished experiment. Native Telegram and browser regression reproduced
 the visible link; only the experiment selector is changed. Rollback: revert
 this commit to v690 / 8e5359e. No media, transport or payment changes.
+
+2026-11-22 v692: replace the legacy guest home panel with its single existing
+film/resume button. Remove the heading, instructions and parallel library,
+games, quiz and tour actions from this panel; main navigation remains. Reuse
+the existing introduction button styling, retaining guestRouteFilm, saved film
+position, replay and member/paused visibility guards. No film player or
+experiment assignment changes. Rollback: revert this commit to v691 / eff7acb.

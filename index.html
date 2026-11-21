@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v691 -->
+<!-- FILE_VERSION: index-v692 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v691';
+window.CLUB_BUILD_ID = 'app-v692';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -10271,20 +10271,9 @@ function renderMeetingNotice(notice){
       </div>
     </div>
 
-    <section id="guest-route" class="guest-route" style="display:none" aria-labelledby="guest-route-title">
-      <h2 id="guest-route-title" data-text="guest.route_title">С чего начать</h2>
-      <p data-text="guest.route_intro">Посмотри фильм или выбери, что интересно в клубе. К фильму можно вернуться в любой момент.</p>
-      <div class="guest-route-film">
-        <div data-text="guest.route_film">Как закрывать «Я подумаю»</div>
-        <button class="lec-link-btn access-btn" id="guest-route-watch" onclick="guestRouteFilm()" data-text="guest.route_watch">Смотреть фильм</button>
-      </div>
-      <div class="guest-route-links">
-        <button class="lec-link-btn" onclick="guestRouteOpen('library')" data-text="guest.route_library">Библиотека лекций</button>
-        <button class="lec-link-btn" onclick="guestRouteOpen('games')" data-text="guest.route_games">Игры и тренажёры</button>
-        <button class="lec-link-btn" onclick="guestRouteOpen('quiz')" data-text="guest.route_quiz">Кто ты из богов продаж</button>
-      </div>
-      <button class="guest-route-tour" onclick="gtStart()" data-text="guest.route_tour">Показать, что здесь есть</button>
-    </section>
+    <div id="guest-route" style="display:none">
+      <button class="ci-start" id="guest-route-watch" onclick="guestRouteFilm()" data-text="guest.route_watch">Смотреть фильм</button>
+    </div>
     <!-- Приглашение в тур — вместо тура «без спроса» после фильма
          ([stated] Denis 24.08). Тот же стиль, что у плашки демо -->
     <div class="demo-banner" id="guest-tour-banner" style="display:none;margin-top:-14px" onclick="gtStart('about')">
@@ -16771,7 +16760,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v691 · 22.11.2026 Завершение четырёх веток';
+const APP_BUILD = 'v692 · 22.11.2026 Главная без старой развилки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
