@@ -17,3 +17,8 @@ test('canonical inlining and network/player hot path keep exact diagnostics opti
  const html=fs.readFileSync('index.html','utf8');assert(html.includes(code.trim()));assert(html.includes(fs.readFileSync('client-diagnostics.js','utf8').trim()));assert(html.includes(fs.readFileSync('film-player.js','utf8')));
  assert(!/\.preventDefault\s*\(/.test(code));assert(!code.includes('fetch('));assert(!code.includes('.play('));assert(!code.includes('.pause('));
 });
+
+test('scene labels use actual film, live and replay elements without layout measurement',()=>{
+ const {root,d}=setup();for(const [id,el,name] of [['funnel-screen',{style:{display:'flex'}},'film'],['live-full',{style:{display:'flex'}},'meeting'],['meeting-recording',{},'meeting'],['view-library',{classList:{contains:()=>true}},'library']]){root.document.getElementById=key=>key===id?el:null;assert.equal(d.snapshot(null).scene,name);}
+ root.document.getElementById=key=>key==='funnel-screen'?{style:{display:'none'}}:null;assert.equal(d.snapshot(null).scene,'other');
+});

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v683 -->
+<!-- FILE_VERSION: index-v684 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v683';
+window.CLUB_BUILD_ID = 'app-v684';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -98,7 +98,9 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   }
   function abortDiagScene(){
     const d=root.document;if(!d)return 'boot';
-    for(const [id,name] of [['bonus-video-overlay','bonus'],['quiz-overlay','quiz'],['funnel-overlay','film'],['live-overlay','meeting']])if(d.getElementById(id)?.classList.contains('open'))return name;
+    for(const [id,name] of [['bonus-video-overlay','bonus'],['quiz-overlay','quiz'],['live-entry-overlay','meeting']])if(d.getElementById(id)?.classList.contains('open'))return name;
+    if(d.getElementById('meeting-recording'))return 'meeting';
+    for(const [id,name] of [['funnel-screen','film'],['live-full','meeting']]){const el=d.getElementById(id);if(el?.style.display&&el.style.display!=='none')return name;}
     for(const name of ['library','profile'])if(d.getElementById('view-'+name)?.classList.contains('active'))return name;
     return root.__APP_READY?'other':'boot';
   }
@@ -16756,7 +16758,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v683 · 21.11.2026 Источник отмены операций';
+const APP_BUILD = 'v684 · 21.11.2026 Диагностика отмены операций';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые

@@ -31,7 +31,9 @@
   }
   function abortDiagScene(){
     const d=root.document;if(!d)return 'boot';
-    for(const [id,name] of [['bonus-video-overlay','bonus'],['quiz-overlay','quiz'],['funnel-overlay','film'],['live-overlay','meeting']])if(d.getElementById(id)?.classList.contains('open'))return name;
+    for(const [id,name] of [['bonus-video-overlay','bonus'],['quiz-overlay','quiz'],['live-entry-overlay','meeting']])if(d.getElementById(id)?.classList.contains('open'))return name;
+    if(d.getElementById('meeting-recording'))return 'meeting';
+    for(const [id,name] of [['funnel-screen','film'],['live-full','meeting']]){const el=d.getElementById(id);if(el?.style.display&&el.style.display!=='none')return name;}
     for(const name of ['library','profile'])if(d.getElementById('view-'+name)?.classList.contains('active'))return name;
     return root.__APP_READY?'other':'boot';
   }
