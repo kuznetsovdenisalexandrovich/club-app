@@ -328,3 +328,5 @@ to the personal plan: frozen seed, marks, ordering and old scoring are unchanged
 Disable learning_recommendations_config.enabled first for a quick rollback; preserve
 user documents and restore app v681/backend v718 with release-specific reverts.
 Physical iPhone/Telegram and native bot delivery of the new clips are not tested.
+
+2026-11-21 v683: bounded AbortError evidence records exact exception identity for owned play/fetch/API operations, sanitized source locations, and passive recent media context. Unknown identity stays unknown; temporal neighbors do not establish cause. Existing player behavior and global error delivery are unchanged. The independent Railway receiver accepts optional strict trace metadata (abort_trace:1); ship receiver before client. No tokens, signed URLs or free text in trace. Roll back frontend first to v682/085f3b1; receiver remains backward compatible.

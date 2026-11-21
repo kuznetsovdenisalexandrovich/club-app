@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v682 -->
+<!-- FILE_VERSION: index-v683 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v682';
+window.CLUB_BUILD_ID = 'app-v683';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -65,21 +65,83 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
 })(typeof window==='object'?window:globalThis);
 /* END_BOT_DIRECT_TRANSPORT_V1 */
 
+/* ABORT_DIAGNOSTICS_V1: passive evidence; never retries, suppresses or controls media. */
+(function(root){
+  'use strict';
+  const errors=new WeakMap(),recent=[];
+  const ops=new Set(['unknown','media_play','media_pause','media_seek','media_source','media_close','fetch','api','visibility']);
+  const files=new Set(['index.html','film-player.js','abort-diagnostics.js','client-diagnostics.js','player-diagnostics.js','quiz-recommendations.js','meeting-recordings.js','rf-parallel-transport.js']);
+  let seq=0;
+  const num=(v,max)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.round(v))):0;
+  function abortDiagFrames(stack){
+    const found=[];
+    for(const match of String(stack||'').matchAll(/(?:https?:\/\/|file:\/\/\/)[^\s)]+/g)){
+      const at=match[0].match(/^(.*):(\d+):(\d+)$/);if(!at)continue;
+      try{const file=new URL(at[1]).pathname.split('/').pop();if(files.has(file)){found.push(file+':'+num(Number(at[2]),1000000)+':'+num(Number(at[3]),1000000));if(found.length===4)break;}}catch(e){}
+    }
+    return found;
+  }
+  function abortDiagState(video){
+    if(!video)return {};
+    return {position:num(video.currentTime,86400),ready:num(video.readyState,4),network:num(video.networkState,3),paused:!!video.paused};
+  }
+  function abortDiagRoute(url){
+    try{const path=new URL(typeof url==='string'?url:url?.url||'',root.location?.href).pathname;
+      return /^\/auth\//.test(path)?'auth':/^\/users\/me$/.test(path)?'profile':/^\/(?:media\/|learning\/media\/)/.test(path)?'media_manifest':/^\/(?:lectures|streams)(?:\/|$)/.test(path)?'catalog':/^\/(?:client|events|rf\/readiness)/.test(path)?'diagnostics':'other';
+    }catch(e){return 'unknown';}
+  }
+  function abortDiagBegin(op,video,url){
+    try{const item={id:seq=seq%1000000+1,op:ops.has(op)?op:'unknown',route:op==='api'||op==='fetch'?abortDiagRoute(url):'unknown',at:Date.now(),...abortDiagState(video),frames:abortDiagFrames(new Error().stack)};recent.push(item);if(recent.length>8)recent.shift();return item;}catch(e){return null;}
+  }
+  function abortDiagFail(error,ticket,cause='unknown'){
+    try{if(ticket&&error&&(typeof error==='object'||typeof error==='function'))errors.set(error,{...ticket,failedAt:Date.now(),cause:['caller','deadline','interrupted','error'].includes(cause)?cause:'unknown'});}catch(e){}
+  }
+  function abortDiagScene(){
+    const d=root.document;if(!d)return 'boot';
+    for(const [id,name] of [['bonus-video-overlay','bonus'],['quiz-overlay','quiz'],['funnel-overlay','film'],['live-overlay','meeting']])if(d.getElementById(id)?.classList.contains('open'))return name;
+    for(const name of ['library','profile'])if(d.getElementById('view-'+name)?.classList.contains('active'))return name;
+    return root.__APP_READY?'other':'boot';
+  }
+  function abortDiagSnapshot(error){
+    try{
+      const match=error&&(typeof error==='object'||typeof error==='function')?errors.get(error):null,now=Date.now();
+      const compact=x=>({id:x.id,op:x.op,age:num(now-x.at,86400000),...(x.position!==undefined?{position:x.position,ready:x.ready,network:x.network,paused:x.paused}:{})});
+      return {version:1,exact:!!match,scene:abortDiagScene(),op:match?.op||'unknown',route:match?.route||'unknown',cause:match?.cause||'unknown',id:match?.id||0,age:match?num(now-match.at,86400000):0,
+        frames:abortDiagFrames(error?.stack),origin:match?.frames||[],recent:recent.filter(x=>now-x.at<30000).slice(-6).map(compact)};
+    }catch(e){return null;}
+  }
+  function abortDiagDescribe(error){
+    const s=abortDiagSnapshot(error);if(!s)return '';
+    return 'trace1 '+s.scene+' '+(s.exact?'exact':'unattributed')+' '+s.op+'/'+s.route+' '+s.cause+' #'+s.id+' '+s.age+'ms\n'+
+      'origin '+s.origin.join(',')+'; error '+s.frames.join(',')+'\n'+
+      'attempt '+String(root.ClubClientDiagnostics?.parent()||'').replace(/[^a-f0-9-]/g,'').slice(0,40)+'\nrecent '+s.recent.map(x=>x.op+'#'+x.id+'@'+x.age+(x.position!==undefined?' p'+x.position+' r'+x.ready+' n'+x.network+(x.paused?' paused':''):'' )).join(';');
+  }
+  root.ClubAbortDiagnostics={begin:abortDiagBegin,fail:abortDiagFail,snapshot:abortDiagSnapshot,describe:abortDiagDescribe};
+  // Capturing listeners observe native controls too; no preventDefault or play/pause calls.
+  try{for(const [event,op] of [['play','media_play'],['pause','media_pause'],['seeking','media_seek'],['emptied','media_source']])root.document.addEventListener(event,e=>{
+    try{if(e.target?.tagName==='VIDEO'&&e.target.closest('.native-film'))abortDiagBegin(op,e.target);}catch(ignore){}
+  },true);}catch(e){}
+})(window);
+/* END_ABORT_DIAGNOSTICS_V1 */
+
 /* CLIENT_DIAGNOSTICS_V1: independent, anonymous, bounded, never blocks startup. */
 (function(w,d){
  'use strict';
  if(!w.fetch||!w.AbortController)return;
  var fetcher=w.fetch.bind(w),endpoint='https://club-bot-production-2b38.up.railway.app/client-diagnostics';
  var queue=[],sent=0,total=0,busy=false,timer=null,checks=false,parent='',disabled=false;
- var resources=[],resourceSeen={};
+ var resources=[],resourceSeen={},abortReports=0;
  try{disabled=new URLSearchParams(w.location.search).has('view');}catch(e){}
  function bounded(n,max){return Number.isFinite(n)?Math.max(0,Math.min(max,Math.round(n))):0;}
  function emit(fact){
   try{
    if(disabled||total>=40||!fact||!/^[a-f0-9-]{16,40}$/.test(fact.attempt||''))return;
+   var isAbort=fact.kind==='javascript'&&fact.error==='AbortError';
+   if(isAbort){if(abortReports>=4)return;abortReports++;}else if(total>=36)return;
    var item={attempt:fact.attempt,build:w.CLUB_BUILD_ID||'app-v0',kind:fact.kind,event:fact.event,at:Date.now(),visible:!d.hidden,online:!w.navigator||w.navigator.onLine!==false};
    ['elapsed','http','duration','position','buffer_ms','frames','line','column'].forEach(function(k){if(fact[k]!==undefined)item[k]=bounded(fact[k],k==='http'?599:k==='duration'?60000:k==='position'?86400:k==='frames'?100000000:k==='line'||k==='column'?1000000:86400000);});
    ['route','outcome','error','content'].forEach(function(k){if(fact[k])item[k]=fact[k];});
+   if(fact.trace)item.trace=fact.trace;
    if(fact.marks)item.marks=fact.marks.filter(function(m){return /^(html|card_script|sdk|player_script|main|dom|settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);}).slice(0,16);
    if(parent&&fact.attempt!==parent)item.parent=parent;
    queue.push(item);total++;if(queue.length>24)queue.shift();
@@ -122,7 +184,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   if(resource){var asset=resourceName(event.target);if(asset&&!resourceSeen[asset]&&Object.keys(resourceSeen).length<4){resourceSeen[asset]=true;resources.push(asset);reportResources();}}
   if(!parent)return;
   var value=rejection?event.reason:event.error,name=value&&value.name;
-  emit({attempt:parent,kind:'javascript',event:resource?'resource':rejection?'rejection':'error',error:/^(TypeError|ReferenceError|SyntaxError|RangeError|AbortError|Error)$/.test(name||'')?name:'unknown',line:event.lineno,column:event.colno});
+  emit({attempt:parent,kind:'javascript',event:resource?'resource':rejection?'rejection':'error',error:/^(TypeError|ReferenceError|SyntaxError|RangeError|AbortError|Error)$/.test(name||'')?name:'unknown',line:event.lineno,column:event.colno,...(name==='AbortError'&&w.ClubAbortDiagnostics?{trace:w.ClubAbortDiagnostics.snapshot(value)}:{})});
  }
  w.addEventListener('error',function(e){error(e,false);},true);
  w.addEventListener('unhandledrejection',function(e){error(e,true);});
@@ -3858,6 +3920,7 @@ if(window.ClubAppRescue)ClubAppRescue.mark('card_script');
   window.addEventListener('unhandledrejection', function(ev){
     var r = ev && ev.reason;
     var текст = (r && (r.stack || r.message)) || String(r);
+    try{if(r && r.name==='AbortError' && window.ClubAbortDiagnostics){текст=window.ClubAbortDiagnostics.describe(r);}}catch(ignore){}
     донести('Необработанный сбой: ' + ((r && r.message) || String(r)), текст, 'unhandledrejection');
     var запустилось = false;
     try { запустилось = !!window.__APP_READY; } catch(e){}
@@ -15850,8 +15913,10 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
       if(this.options.refreshSources&&Date.now()>=this.sourcesExpireAt&&Date.now()-this.lastRefresh>60000){this.wantsPlay=true;this.refreshSources();return;}
       if(this.exhausted){this.wantsPlay=true;this.switchSource(true);return;}
       this.wantsPlay=true;this.start.disabled=true;const generation=this.generation;
+      let trace;try{trace=root.ClubAbortDiagnostics?.begin('media_play',this.video);}catch(ignore){}
       const p=this.video.play();
       if(p&&p.catch)p.catch(e=>{
+        try{root.ClubAbortDiagnostics?.fail(e,trace,e.name==='AbortError'?'interrupted':'error');}catch(ignore){}
         if(this.destroyed||generation!==this.generation)return;
         this.diagnostic('play_rejected',{reason:e.name==='NotAllowedError'?'autoplay_denied':e.name==='AbortError'?'play_interrupted':'play_failed'});
         if(e.name==='NotAllowedError'){this.wantsPlay=false;this.clearTimers();this.status('film.tap_play');this.showStart();}
@@ -16383,7 +16448,13 @@ const FO = { checking: false, okStreak: 0, timer: null, back: false };
   const orig = window.fetch.bind(window);
   window.__foFetch = orig;
   window.fetch = function(input, init){
-  if(window.__rfTransport)return window.__rfTransport.request(input,init);
+  if(window.__rfTransport){
+    let trace;try{trace=window.ClubAbortDiagnostics?.begin('fetch',null,input);}catch(ignore){}
+    return window.__rfTransport.request(input,init).catch(error=>{
+      try{window.ClubAbortDiagnostics?.fail(error,trace,init?.signal?.aborted?'caller':'unknown');}catch(ignore){}
+      throw error;
+    });
+  }
     const p = orig(input, init);
     try {
       const url = typeof input === 'string' ? input : ((input && input.url) || '');
@@ -16685,7 +16756,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v682 · 21.11.2026 Занятие после игры';
+const APP_BUILD = 'v683 · 21.11.2026 Источник отмены операций';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -18036,15 +18107,19 @@ function stopVideoHeartbeat(){
 
 async function apiRequest(url, options={}, timeoutMs = 15000){
   const controller=new AbortController(),parent=options&&options.signal;
+  let expired=false,trace;try{trace=window.ClubAbortDiagnostics?.begin('api',null,url);}catch(ignore){}
   const abort=()=>controller.abort();
   if(parent&&parent.aborted)throw new DOMException('Aborted','AbortError');
   if(parent)parent.addEventListener('abort',abort,{once:true});
-  const timer=setTimeout(abort,timeoutMs);
+  const timer=setTimeout(()=>{expired=true;abort();},timeoutMs);
   try{
     const r=await fetch(url,{...options,signal:controller.signal});
     const data=await r.json().catch(e=>{if(controller.signal.aborted)throw e;return {};});
     if(!r.ok){const err=new Error(data.detail||`сервер ответил ${r.status}`);err.status=r.status;throw err;}
     return data;
+  }catch(error){
+    try{window.ClubAbortDiagnostics?.fail(error,trace,expired?'deadline':parent?.aborted?'caller':'unknown');}catch(ignore){}
+    throw error;
   }finally{clearTimeout(timer);if(parent)parent.removeEventListener('abort',abort);}
 }
 

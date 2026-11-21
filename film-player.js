@@ -335,8 +335,10 @@
       if(this.options.refreshSources&&Date.now()>=this.sourcesExpireAt&&Date.now()-this.lastRefresh>60000){this.wantsPlay=true;this.refreshSources();return;}
       if(this.exhausted){this.wantsPlay=true;this.switchSource(true);return;}
       this.wantsPlay=true;this.start.disabled=true;const generation=this.generation;
+      let trace;try{trace=root.ClubAbortDiagnostics?.begin('media_play',this.video);}catch(ignore){}
       const p=this.video.play();
       if(p&&p.catch)p.catch(e=>{
+        try{root.ClubAbortDiagnostics?.fail(e,trace,e.name==='AbortError'?'interrupted':'error');}catch(ignore){}
         if(this.destroyed||generation!==this.generation)return;
         this.diagnostic('play_rejected',{reason:e.name==='NotAllowedError'?'autoplay_denied':e.name==='AbortError'?'play_interrupted':'play_failed'});
         if(e.name==='NotAllowedError'){this.wantsPlay=false;this.clearTimers();this.status('film.tap_play');this.showStart();}
