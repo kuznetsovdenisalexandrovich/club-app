@@ -365,3 +365,9 @@ No player, payment, assignment, or rescue changes. Native A→C issue reproduced
 in Chrome at 390×600 before this change (scrollTop85); regression is in
 club-continuation-2026-11-20/work/mac-guest-pilot-22/route-browser.cjs.
 Rollback: revert this commit to v689 / a851778.
+
+2026-11-22 v691: honor #gx-next[hidden] explicitly. The generic quiet-button
+CSS overrode the browser hidden rule and displayed a dead next-content link
+on the finished experiment. Native Telegram and browser regression reproduced
+the visible link; only the experiment selector is changed. Rollback: revert
+this commit to v690 / 8e5359e. No media, transport or payment changes.
