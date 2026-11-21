@@ -378,3 +378,10 @@ games, quiz and tour actions from this panel; main navigation remains. Reuse
 the existing introduction button styling, retaining guestRouteFilm, saved film
 position, replay and member/paused visibility guards. No film player or
 experiment assignment changes. Rollback: revert this commit to v691 / eff7acb.
+
+2026-11-22 v693: guest branch screens and learning recommendations use the
+existing carton/deep-glass backgrounds, raised cards and orange glowing CTAs.
+The compact guest home button uses the same orange treatment. CSS-only visual
+change plus build markers: no player, routing, assignment or payment changes.
+No transformed/filtered player ancestor; lite/reduced-motion disable animation.
+Rollback: revert this commit to v692 / 940416e.
