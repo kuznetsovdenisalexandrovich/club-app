@@ -66,6 +66,8 @@ window.GuestExperiment=(function(){
  }
  async function gxRender(){
   disposeMedia();window.QuizRecommendations?.dispose();if(!state?.active)return false;active=true;gxSignal('shown');
+  // A new branch starts at its heading; chat replies keep their local scroll.
+  document.getElementById('quiz-overlay').scrollTop=0;
   if(state.finished){surface('<h2>Остаёмся на связи?</h2><p>В открытом канале — ещё идеи и разборы. А демо клуба можно изучать дальше в своём темпе.</p>'+button('Открыть бесплатный канал','channel')+button('Изучить демо приложения','demo',true));return true;}
   if(state.current==='A'){
    if(state.quiz_code&&QUIZ_RESULTS[state.quiz_code]){openQuiz(true,'post_film');quizResult={code:state.quiz_code};renderQuizResult();}

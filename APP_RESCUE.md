@@ -357,3 +357,11 @@ reopened home despite a saved assignment. No assignment is created by resume;
 member and explicit-target guards remain in maybeResume. Splash deadline is
 unchanged. Tested full page reload with an existing guest profile and reserve
 settings, plus native Telegram testing. Rollback: revert this commit to v688.
+
+2026-11-22 v690: reset the shared quiz overlay scroll only when rendering a
+new/resumed guest branch, so A's long recommendation does not hide C's heading
+and initial conversation. Individual trainer replies keep their current scroll.
+No player, payment, assignment, or rescue changes. Native A→C issue reproduced
+in Chrome at 390×600 before this change (scrollTop85); regression is in
+club-continuation-2026-11-20/work/mac-guest-pilot-22/route-browser.cjs.
+Rollback: revert this commit to v689 / a851778.
