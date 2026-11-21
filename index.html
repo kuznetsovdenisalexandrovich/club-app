@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v687 -->
+<!-- FILE_VERSION: index-v688 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v687';
+window.CLUB_BUILD_ID = 'app-v688';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16402,6 +16402,14 @@ function createRFParallelTransport(config){
     const retry=options.rfNoRetry!==true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
+    // These additive APIs are not installed on the pinned reserve runtime.
+    // Keep the ordinary route unchanged; never replay their writes on that node.
+    if(/^\/(?:guest-experiment|learning)(?:\/|$)/.test(u.pathname) || (u.pathname==='/settings'&&options.rfPrimaryOnly===true)){
+      const ready=await readiness(0);
+      if(options.signal&&options.signal.aborted)throw new DOMException('Aborted','AbortError');
+      if(!ready||ready.peer_seq<returnBarrier)throw new Error('Feature server is not ready');
+      return send(0);
+    }
     if(retry&&fastRead(path,method)){
       // Authentication has its own bounded deadline; do not spend the read
       // budget waiting for it. Caller cancellation still bounds the whole task.
@@ -16763,7 +16771,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v687 · 22.11.2026 Четыре ветки после фильма';
+const APP_BUILD = 'v688 · 22.11.2026 Маршрут новых веток';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47319,13 +47327,21 @@ window.GuestExperiment=(function(){
   return true;
  }
  async function begin(create){
-  if(!appSettings.guest_experiment_available)return false;
+  if(appSettings.guest_experiment_available===false)return false;
   if(opening)return opening;
-  if(create){surface('<p role="status">Открываем следующий материал…</p>');document.getElementById('gx-next').hidden=true;}
-  const ticket=generation;opening=(async()=>{try{
+  let ticket=generation,opened=false;opening=(async()=>{try{
+   // Older reserve settings omit this key. Discover only this feature flag on
+   // its serving node; do not replace unrelated settings or switch global RF.
+   if(appSettings.guest_experiment_available===undefined){
+    const settings=await apiRequest(API_URL+'/settings',{rfPrimaryOnly:true},8000);
+    if(ticket!==generation)return true;
+    appSettings.guest_experiment_available=settings.guest_experiment_available===true;
+   }
+   if(!appSettings.guest_experiment_available)return false;
+   if(create){surface('<p role="status">Открываем следующий материал…</p>');document.getElementById('gx-next').hidden=true;ticket=generation;opened=true;}
    const d=await request(create?'/start':'/state',create?{}:undefined);if(ticket!==generation)return true;if(!d.active||(!create&&d.finished)){if(create)closeQuiz();return false;}
    state=d;bootChecked=true;if(typeof bwClose==='function')bwClose();funnelLeave(false);enterDemoMode();await gxRender();return true;
-  }catch(e){if(ticket!==generation)return true;if(create)closeQuiz();return false;}finally{opening=null;}})();return opening;
+  }catch(e){if(ticket!==generation)return true;if(opened)closeQuiz();return false;}finally{opening=null;}})();return opening;
  }
  async function next(){
   if(busy||!state?.current)return;busy=true;nav();const branch=state.current,ticket=generation;

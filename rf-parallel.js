@@ -133,6 +133,14 @@ function createRFParallelTransport(config){
     const retry=options.rfNoRetry!==true;
     const path=u.pathname+u.search;
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
+    // These additive APIs are not installed on the pinned reserve runtime.
+    // Keep the ordinary route unchanged; never replay their writes on that node.
+    if(/^\/(?:guest-experiment|learning)(?:\/|$)/.test(u.pathname) || (u.pathname==='/settings'&&options.rfPrimaryOnly===true)){
+      const ready=await readiness(0);
+      if(options.signal&&options.signal.aborted)throw new DOMException('Aborted','AbortError');
+      if(!ready||ready.peer_seq<returnBarrier)throw new Error('Feature server is not ready');
+      return send(0);
+    }
     if(retry&&fastRead(path,method)){
       // Authentication has its own bounded deadline; do not spend the read
       // budget waiting for it. Caller cancellation still bounds the whole task.

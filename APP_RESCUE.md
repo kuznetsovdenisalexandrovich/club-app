@@ -338,3 +338,14 @@ changes. D uses bi_masterclass__i1, B/C use l_<safe-slug> rescue targets already
 supported by the bot. A retains existing quiz-to-lecture rescue. No native copy
 is promised. Disable guest_experiment_config.enabled and clear pilot_ids to
 stop assignments and restore the old flow; preserve experiment documents.
+
+2026-11-22 v688: the pinned Timeweb runtime lacks /guest-experiment and /learning.
+Those namespaces use Selectel only, after readiness and the existing peer-sequence
+barrier, without changing the global active route. Mutations retain one operation
+key and are not replayed on the older node. Missing experiment availability in
+reserve settings is discovered on Selectel for this feature only; other settings
+are retained. A closed screen cannot reopen after late discovery. If Selectel is
+unavailable, the experiment falls back to the old post-film flow; no reserve
+feature support is claimed. Playback/preload, payment routing and DB are unchanged.
+Rollback: stop the experiment via versioned config, then revert this frontend
+commit to v687; preserve assignments and test history.

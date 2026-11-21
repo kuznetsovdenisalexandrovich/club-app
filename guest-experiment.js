@@ -78,13 +78,21 @@ window.GuestExperiment=(function(){
   return true;
  }
  async function begin(create){
-  if(!appSettings.guest_experiment_available)return false;
+  if(appSettings.guest_experiment_available===false)return false;
   if(opening)return opening;
-  if(create){surface('<p role="status">Открываем следующий материал…</p>');document.getElementById('gx-next').hidden=true;}
-  const ticket=generation;opening=(async()=>{try{
+  let ticket=generation,opened=false;opening=(async()=>{try{
+   // Older reserve settings omit this key. Discover only this feature flag on
+   // its serving node; do not replace unrelated settings or switch global RF.
+   if(appSettings.guest_experiment_available===undefined){
+    const settings=await apiRequest(API_URL+'/settings',{rfPrimaryOnly:true},8000);
+    if(ticket!==generation)return true;
+    appSettings.guest_experiment_available=settings.guest_experiment_available===true;
+   }
+   if(!appSettings.guest_experiment_available)return false;
+   if(create){surface('<p role="status">Открываем следующий материал…</p>');document.getElementById('gx-next').hidden=true;ticket=generation;opened=true;}
    const d=await request(create?'/start':'/state',create?{}:undefined);if(ticket!==generation)return true;if(!d.active||(!create&&d.finished)){if(create)closeQuiz();return false;}
    state=d;bootChecked=true;if(typeof bwClose==='function')bwClose();funnelLeave(false);enterDemoMode();await gxRender();return true;
-  }catch(e){if(ticket!==generation)return true;if(create)closeQuiz();return false;}finally{opening=null;}})();return opening;
+  }catch(e){if(ticket!==generation)return true;if(opened)closeQuiz();return false;}finally{opening=null;}})();return opening;
  }
  async function next(){
   if(busy||!state?.current)return;busy=true;nav();const branch=state.current,ticket=generation;
