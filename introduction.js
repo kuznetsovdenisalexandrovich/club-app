@@ -28,6 +28,8 @@ window.ClubIntroduction = (function(){
     bar.hidden=!active();
     const host=document.getElementById('nb-start-host');
     if(!active()){if(host?.dataset.ciOwned){host.innerHTML='';delete host.dataset.ciOwned;}return;}
+    if(Number.isFinite(state.points))points=state.points;
+    renderLevelCard();
     bar.innerHTML='<span>Знакомство '+Number(state.percent||0)+'%</span><i style="width:'+Math.min(100,Math.max(0,state.percent||0))+'%"></i>';
     if(host){host.dataset.ciOwned='1';host.innerHTML='<button class="ci-start" data-ci="start">С чего начать <span aria-hidden="true">↗</span></button>';}
   }
