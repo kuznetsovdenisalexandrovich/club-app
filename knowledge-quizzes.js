@@ -15,7 +15,7 @@ function kqSubscriptionGate(){return `<div class="kq-welcome">
     <div class="kq-preview-lead"><div><span class="kq-eyebrow">Квизы по занятиям</span><h2>Закрепи<br>знания</h2></div>${gameCoverMarkup('','quizzes','kq-preview-art')}</div>
     <p class="kq-preview-copy">Проверь, что запомнилось, и разбери ответы. Если что-то упустил — можно попробовать снова.</p>
     <div class="kq-access-note">${KQ_LOCK}<span>Для участников клуба. Доступ к квизам зависит от уровня.</span></div>
-    <button type="button" class="kq-join" onclick="openAccessPage()">Посмотреть условия доступа <span aria-hidden="true">→</span></button>
+    <button type="button" class="kq-join" onclick="openAccessPage()">Получить полный доступ <span aria-hidden="true">→</span></button>
   </section>
   <section class="kq-free"><span class="kq-eyebrow">Можно попробовать бесплатно</span><h3>Кто ты из богов продаж?</h3><p>Узнай свой стиль продаж, сильные стороны и то, что стоит развить.</p><button type="button" class="kq-try" onclick="openQuiz()">Пройти тест <span aria-hidden="true">→</span></button></section>
   <button type="button" class="kq-return" onclick="kqHome()">← Вернуться к играм</button>

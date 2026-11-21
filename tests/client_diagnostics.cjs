@@ -10,6 +10,14 @@ function setup({down=false,view=false}={}){
  return {w,calls,events,timers,async flush(){const item=[...timers].find(([k,t])=>t.ms===400);if(item){timers.delete(item[0]);item[1].fn();}for(let i=0;i<20;i++)await Promise.resolve();}};
 }
 const attempt='aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+test('external resource failures have fixed distinct names without media IDs or secrets',()=>{
+ const s=setup(),reports=[];s.w.URL=URL;s.w.location.href='https://example.test/';s.w.__reportError=(...args)=>reports.push(args);
+ const urls=['https://play.boomstream.com/assets/javascripts/biframesdk.js?v=SECRET','https://play.boomstream.com/PRIVATE/config.jsonp?secret=SECRET','https://player.kinescope.io/latest/iframe.player.js?token=SECRET','https://example.test/vendor/hls-1.7.3.min.js?token=SECRET'];
+ for(const url of [...urls,...urls])s.events.error({target:{tagName:'SCRIPT',src:url}});
+ assert.equal(reports.length,4);
+ for(const label of ['boomstream_sdk','boomstream_config','kinescope_sdk','hls_js'])assert(reports.some(r=>r[0].endsWith(label)));
+ assert(!JSON.stringify(reports).match(/SECRET|PRIVATE|https:/));
+});
 test('independent channel records failed RF probes without identity or raw errors',async()=>{
  const s=setup(),d=s.w.ClubClientDiagnostics;d.bind(attempt);
  d.emit({attempt,kind:'startup',event:'ready',launch:'secret',url:'secret',peer:123});await s.flush();

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v684 -->
+<!-- FILE_VERSION: index-v685 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v684';
+window.CLUB_BUILD_ID = 'app-v685';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -175,6 +175,11 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  function resourceName(target){
   if(!target||!/^SCRIPT$|^LINK$/.test(target.tagName||''))return '';
   try{var url=new URL(target.src||target.href,w.location.href),name=url.pathname.split('/').pop();
+   // Fixed labels only: never transmit media IDs, query strings or signed URLs.
+   if(url.hostname==='play.boomstream.com'&&url.pathname==='/assets/javascripts/biframesdk.js')return 'boomstream_sdk';
+   if(url.hostname==='play.boomstream.com'&&/^\/[^/]+\/config\.jsonp$/.test(url.pathname))return 'boomstream_config';
+   if(url.hostname==='player.kinescope.io'&&url.pathname==='/latest/iframe.player.js')return 'kinescope_sdk';
+   if(/^hls-[\d.]+\.min\.js$/.test(name))return 'hls_js';
    if(!/^(telegram-web-app\.js|vk-bridge(?:\.min)?\.js|card-motion\.js|personal-digest\.js|exit-presence\.js|knowledge-quizzes\.js|game-sharing\.js|sales-timer\.js|film-player\.js|player-diagnostics\.js|meeting-recordings\.(?:js|css))$/.test(name))name='other_'+target.tagName.toLowerCase();
    return name;
   }catch(e){return 'unknown_resource';}
@@ -11709,7 +11714,7 @@ function renderMeetingNotice(notice){
       <div class="gg-modal-h" data-text="games.member_h">Эта игра — для участников</div>
       <div class="gg-modal-p" data-text="games.member_p">Первую игру можно пройти бесплатно. Остальные открываются вместе с клубом — вместе с разбором каждого хода по базе занятий.</div>
       <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
-              onclick="ggClose('gg-m-member');rsGamePay('member')" data-text="games.member_pay">Открыть за 1 ₽</button>
+              onclick="ggClose('gg-m-member');rsGamePay('member')">Получить полный доступ</button>
       <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggClose('gg-m-member');switchView('club-info')" data-text="games.member_cta">Что в клубе</button>
     </div>
   </div>
@@ -11745,7 +11750,7 @@ function renderMeetingNotice(notice){
       <div class="gg-modal-h" data-text="games.note_h">Разбор хода — у участников</div>
       <div class="gg-modal-p" data-text="games.note_p">Играть можно и так. А в клубе после каждой твоей реплики видно, что сработало, что клиента оттолкнуло и какое занятие разбирает ровно этот момент.</div>
       <button class="gg-btn gg-btn-primary gg-btn-md" style="margin-bottom:10px"
-              onclick="ggClose('gg-m-note');rsGamePay('note')" data-text="games.note_pay">Открыть разбор за 1 ₽</button>
+              onclick="ggClose('gg-m-note');rsGamePay('note')">Получить полный доступ</button>
       <button class="gg-btn gg-btn-quiet gg-btn-md" onclick="ggClose('gg-m-note')" data-text="games.note_back">Доиграть</button>
     </div>
   </div>
@@ -16758,7 +16763,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v684 · 21.11.2026 Диагностика отмены операций';
+const APP_BUILD = 'v685 · 21.11.2026 Из игры сразу к оплате';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -34856,7 +34861,7 @@ function rsInvite(){
 }
 /* Замок игры или разбора: окно уже есть (своё у игр), здесь только место и оплата */
 function rsGamePay(which){
-  const key = which === 'note' ? ((ggS && ggS.game_key) || '') : rsGameKey;
+  const key = which === 'note' || which === 'final' ? ((ggS && ggS.game_key) || '') : rsGameKey;
   const g = key && typeof ggFind === 'function' ? (ggFind(key) || {}) : {};
   rsSave({ k: 'game', ref: key, title: g.title || '' });
   track('game_wall_pay', which + (key ? ':' + key : ''));
@@ -42530,6 +42535,7 @@ function renderQuizResult(){
     + allyHtml
     + godLink
     + '<div class="qr-actions">'
+      + (isMember ? '' : '<button class="learning-primary" onclick="openQuizFullAccess()">Получить полный доступ</button>')
       + '<div class="qr-tertiary">'
         // Действующему участнику рассказывать, что за клуб, незачем — он внутри
         + ((typeof isMember !== 'undefined' && isMember)
@@ -42817,6 +42823,13 @@ function openQuizAfterCta(){
   const shellHidden = !shell || shell.style.display === 'none' || shell.style.display === '';
   if (shellHidden && typeof enterDemoMode === 'function') enterDemoMode();
   switchView('club-info');
+}
+
+function openQuizFullAccess(){
+  closeQuiz();
+  const shell = document.getElementById('app-shell');
+  if ((!shell || !shell.style.display || shell.style.display === 'none') && typeof enterDemoMode === 'function') enterDemoMode();
+  return openAccessPage();
 }
 
 /* Пришёл по ссылке с чужим результатом — показываем его и зовём пройти свой */
@@ -44753,20 +44766,17 @@ function ggFinal(f){
       + '</div></div>';
   }
 
-  if (f.upsell){
-    h += '<div class="gg-upsell"><div class="gg-upsell-h">' + escapeHtml(t('games.upsell_h') || 'Это была бесплатная версия') + '</div>'
-      + '<div class="gg-upsell-p">' + escapeHtml(f.upsell) + '</div>'
-      + '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="switchView(\'club-info\')">'
-      + escapeHtml(t('games.upsell_cta') || 'Посмотреть, что в клубе') + '</button></div>';
+  if (!isMember){
+    h += '<button class="gg-btn gg-btn-primary gg-btn-md" style="width:100%" onclick="rsGamePay(\'final\')">Получить полный доступ</button>';
   }
 
   h += '<div class="gg-btn-row">'
     + '<button class="gg-btn gg-btn-ghost gg-btn-md" onclick="ggAfterFinal()">' + escapeHtml(t('games.to_list') || 'К играм') + '</button>';
   if (f.next_game){
-    h += '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggNext(' + jsArg(f.next_game.key) + ')">'
+    h += '<button class="gg-btn '+(isMember?'gg-btn-primary':'gg-btn-quiet')+' gg-btn-md" onclick="ggNext(' + jsArg(f.next_game.key) + ')">'
       + escapeHtml(f.next_game.title || 'Дальше') + '</button>';
   } else {
-    h += '<button class="gg-btn gg-btn-primary gg-btn-md" onclick="ggRetry()">' + escapeHtml(t('games.again') || 'Сыграть ещё') + '</button>';
+    h += '<button class="gg-btn '+(isMember?'gg-btn-primary':'gg-btn-quiet')+' gg-btn-md" onclick="ggRetry()">' + escapeHtml(t('games.again') || 'Сыграть ещё') + '</button>';
   }
   h += '</div>';
 
@@ -46706,7 +46716,7 @@ html[data-motion="off"] .bb-time{animation:none!important}
   const api={PAGE,isPayment,route};if(typeof module!=='undefined')module.exports=api;else root.ClubPaymentNavigation=api;
 })(typeof window==='undefined'?globalThis:window);
 
-</script><script src="knowledge-quizzes.js?v=11"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
+</script><script src="knowledge-quizzes.js?v=12"></script><script src="game-sharing.js?v=8"></script><script src="sales-timer.js?v=1"></script><style>
 #game-share-overlay.open{display:flex;z-index:30000;padding:calc(var(--tg-content-safe-top,0px) + 20px) 16px 24px;box-sizing:border-box;overflow-y:auto;align-items:flex-start;background:rgba(12,10,25,.86)}.game-share-dialog{position:relative;margin:auto;width:min(100%,420px);padding:24px;box-sizing:border-box;background:var(--card-bg,#211e35);color:var(--text,#fff);border:1px solid #80749b;border-radius:24px}.game-share-dialog h2{font-size:22px;margin:0 32px 18px 0}.game-share-dialog p{font-size:14px;line-height:1.5}.game-share-preview{display:block;height:min(42dvh,360px);width:auto;max-width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:14px;margin:0 auto}.game-share-dialog .kq-options button{min-height:46px}
 
 #pr-stage{--pr-scene-veil:rgba(13,13,24,.26);--bg:#0d0d18;--card-bg:#191923;--text:#eee8dc;--line:rgba(213,184,125,.25)}
@@ -47100,7 +47110,7 @@ window.QuizRecommendations=(function(){
   async function qrRender(data,context,ticket){
     const l=data.lecture,member=!!isMember;
     window.ClubAppRescue?.target('l_'+safeContentKey(l.slug));
-    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[data.code]?.god||'По твоему вопросу')+' · следующий шаг</p><h2>'+esc(l.title)+'</h2><p>'+esc(data.reason)+'</p><div id="learning-slot"></div><p id="learning-note" role="status"></p><button class="learning-quiet" data-learning="result">Мой результат игры</button></div>';
+    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[data.code]?.god||'По твоему вопросу')+' · следующий шаг</p><h2>'+esc(l.title)+'</h2><p>'+esc(data.reason)+'</p><div id="learning-slot"></div><p id="learning-note" role="status"></p>'+(member?'':'<button class="learning-primary" data-learning="join">'+(data.video_ready?'Смотреть полное видео':'Получить полный доступ')+'</button><button class="learning-quiet" data-learning="more">Хочу ещё контента</button>')+'<button class="learning-quiet" data-learning="result">Мой результат игры</button></div>';
     if(data.video_ready){
       try{const [manifest]=await Promise.all([api('/media/'+encodeURIComponent(l.slug)),filmEngineReady()]);if(ticket!==generation)return;
         player=new ClubFilmPlayer(document.getElementById('learning-slot'),{sources:manifest.sources,expiresIn:manifest.expires_in,text:k=>k==='film.start'?'Смотреть фрагмент':t(k),refreshSources:()=>api('/media/'+encodeURIComponent(l.slug)),onEvent:e=>{if(e.method==='play'&&typeof rememberLastLecture==='function')rememberLastLecture(l);if(e.method==='stop')qrEnded(data,context);},onFault:code=>{if(code==='film_unavailable')window.ClubAppRescue?.fail('content_error');},onDiagnostic:filmDiagnostics('bonus')});
@@ -47124,6 +47134,12 @@ window.QuizRecommendations=(function(){
   }
   function qrEnded(data,context){
     const member=!!isMember;
+    // Keep the guest's fragment and its existing payment action on the same screen.
+    if(!member){
+      if(player?.removeFullscreen?.close)player.removeFullscreen.close();
+      qrNote('Фрагмент закончился. Полное занятие доступно в клубе.');
+      return;
+    }
     if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}
     document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'Мой результат игры':'Хочу ещё контента')+'</button></div>';
   }
@@ -47140,12 +47156,11 @@ window.QuizRecommendations=(function(){
     if(action==='result')return qrOriginal();
     if(action==='retry'&&owned?.data){const data=owned.data,ctx=owned.context;qrDispose();owned={code:data.code,context:ctx,data};return qrRender(data,ctx,generation);}
     if(action==='map'){closeQuiz();await qrLoadPersonal();renderPersonalPlanBody();return openPersonalPlan();}
-    if(action==='join'){closeQuiz();return openAccessPage();}
+    if(action==='join')return openQuizFullAccess();
     if(action==='more'){closeQuiz();if(window.GuestExperiment?.next)return GuestExperiment.next();switchView('library');}
   });
   return {show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
 })();
-
 </script>
 </body>
 

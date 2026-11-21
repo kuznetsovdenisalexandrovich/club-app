@@ -47,6 +47,11 @@
  function resourceName(target){
   if(!target||!/^SCRIPT$|^LINK$/.test(target.tagName||''))return '';
   try{var url=new URL(target.src||target.href,w.location.href),name=url.pathname.split('/').pop();
+   // Fixed labels only: never transmit media IDs, query strings or signed URLs.
+   if(url.hostname==='play.boomstream.com'&&url.pathname==='/assets/javascripts/biframesdk.js')return 'boomstream_sdk';
+   if(url.hostname==='play.boomstream.com'&&/^\/[^/]+\/config\.jsonp$/.test(url.pathname))return 'boomstream_config';
+   if(url.hostname==='player.kinescope.io'&&url.pathname==='/latest/iframe.player.js')return 'kinescope_sdk';
+   if(/^hls-[\d.]+\.min\.js$/.test(name))return 'hls_js';
    if(!/^(telegram-web-app\.js|vk-bridge(?:\.min)?\.js|card-motion\.js|personal-digest\.js|exit-presence\.js|knowledge-quizzes\.js|game-sharing\.js|sales-timer\.js|film-player\.js|player-diagnostics\.js|meeting-recordings\.(?:js|css))$/.test(name))name='other_'+target.tagName.toLowerCase();
    return name;
   }catch(e){return 'unknown_resource';}
