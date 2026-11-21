@@ -7,7 +7,7 @@ test('anonymous refresh avoids authenticated profile and false incident',async()
  let requests=0;const c=context({telegramId:null,apiRequest:()=>{requests++;throw Error('unexpected')}});vm.runInContext(profile,c);await c.loadProfile();assert.equal(requests,0);
 });
 test('identified profile failures are still reported',async()=>{
- const reports=[];const c=context({telegramId:77,API_URL:'https://api.invalid',profileFailureReports:0,apiRequest:async()=>{throw {status:401}},track:()=>{},window:{__reportError:(...v)=>reports.push(v)},document:{getElementById:()=>({})}});
+ const reports=[];const c=context({telegramId:77,API_URL:'https://api.invalid',profileFailureReports:0,apiRequest:async()=>{throw {status:401}},track:()=>{},window:{__reportError:(...v)=>reports.push(v)},document:{getElementById:()=>({appendChild:()=>{}}),createElement:()=>({})}});
  vm.runInContext(profile,c);await c.loadProfile();assert.equal(reports.length,1);assert.equal(reports[0][2],'profile_http_401');
 });
 test('every unfinished stage keeps a concrete action and progress entry',()=>{

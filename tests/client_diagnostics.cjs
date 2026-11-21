@@ -36,3 +36,16 @@ test('JS evidence strips exception message, stack and URL; preview emits nothing
  const v=setup({view:true});v.w.ClubClientDiagnostics.bind(attempt);v.w.ClubClientDiagnostics.emit({attempt,kind:'startup',event:'ready'});v.w.ClubClientDiagnostics.probe();await v.flush();assert.equal(v.calls.length,0);
 });
 test('inline module exactly matches canonical source',()=>assert(fs.readFileSync('index.html','utf8').includes(source.trim())));
+test('early build is used and resource reports never leak signed URLs',async()=>{
+ const s=setup();s.w.CLUB_BUILD_ID='app-v680';s.w.URL=URL;s.w.location.href='https://example.test/';const d=s.w.ClubClientDiagnostics;d.bind(attempt);
+ s.events.error({target:{tagName:'SCRIPT',src:'https://cdn.test/film-player.js?token=SECRET'}});
+ const reports=[];s.w.__reportError=(...args)=>reports.push(args);d.reportResources();
+ assert.equal(reports.length,1);assert(reports[0][0].includes('film-player.js'));assert(!JSON.stringify(reports).includes('SECRET'));
+ s.events.error({target:{tagName:'SCRIPT',src:'https://cdn.test/film-player.js?token=SECRET'}});assert.equal(reports.length,1);
+ await s.flush();assert.equal(JSON.parse(s.calls[0].options.body).records[0].build,'app-v680');
+});
+test('failed telemetry schedules bounded retry without requiring another user event',async()=>{
+ const s=setup({down:true}),d=s.w.ClubClientDiagnostics;d.bind(attempt);d.emit({attempt,kind:'startup',event:'closed'});await s.flush();
+ for(let i=0;i<20;i++){const t=[...s.timers].find(([k,v])=>v.ms===2000);if(!t)break;s.timers.delete(t[0]);t[1].fn();for(let j=0;j<20;j++)await Promise.resolve();}
+ assert.equal(s.calls.length,12);assert(![...s.timers.values()].some(x=>x.ms===2000));
+});

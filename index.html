@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v679 -->
+<!-- FILE_VERSION: index-v680 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
+window.CLUB_BUILD_ID = 'app-v680';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -70,12 +71,13 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  if(!w.fetch||!w.AbortController)return;
  var fetcher=w.fetch.bind(w),endpoint='https://club-bot-production-2b38.up.railway.app/client-diagnostics';
  var queue=[],sent=0,total=0,busy=false,timer=null,checks=false,parent='',disabled=false;
+ var resources=[],resourceSeen={};
  try{disabled=new URLSearchParams(w.location.search).has('view');}catch(e){}
  function bounded(n,max){return Number.isFinite(n)?Math.max(0,Math.min(max,Math.round(n))):0;}
  function emit(fact){
   try{
    if(disabled||total>=40||!fact||!/^[a-f0-9-]{16,40}$/.test(fact.attempt||''))return;
-   var item={attempt:fact.attempt,build:'app-v677',kind:fact.kind,event:fact.event,at:Date.now(),visible:!d.hidden,online:!w.navigator||w.navigator.onLine!==false};
+   var item={attempt:fact.attempt,build:w.CLUB_BUILD_ID||'app-v0',kind:fact.kind,event:fact.event,at:Date.now(),visible:!d.hidden,online:!w.navigator||w.navigator.onLine!==false};
    ['elapsed','http','duration','position','buffer_ms','frames','line','column'].forEach(function(k){if(fact[k]!==undefined)item[k]=bounded(fact[k],k==='http'?599:k==='duration'?60000:k==='position'?86400:k==='frames'?100000000:k==='line'||k==='column'?1000000:86400000);});
    ['route','outcome','error','content'].forEach(function(k){if(fact[k])item[k]=fact[k];});
    if(fact.marks)item.marks=fact.marks.filter(function(m){return /^(html|card_script|sdk|player_script|main|dom|settings|profile|guest|rendered|gate|content|scriptError)$/.test(m);}).slice(0,16);
@@ -88,7 +90,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   timer=null;if(disabled||busy||!queue.length||sent>=12)return;
   busy=true;sent++;
   var batch=queue.slice(0,12),ctrl=new w.AbortController(),timeout=setTimeout(function(){ctrl.abort();},4000);
-  fetcher(endpoint,{method:'POST',headers:{'Content-Type':'text/plain'},credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',keepalive:true,signal:ctrl.signal,body:JSON.stringify({records:batch})}).then(function(r){if(r.ok)queue=queue.filter(function(x){return batch.indexOf(x)<0;});}).catch(function(){}).then(function(){clearTimeout(timeout);busy=false;});
+  fetcher(endpoint,{method:'POST',headers:{'Content-Type':'text/plain'},credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',keepalive:true,signal:ctrl.signal,body:JSON.stringify({records:batch})}).then(function(r){if(r.ok)queue=queue.filter(function(x){return batch.indexOf(x)<0;});}).catch(function(){}).then(function(){clearTimeout(timeout);busy=false;if(queue.length&&sent<12&&!timer)timer=setTimeout(flush,2000);});
  }
  function probe(){
   if(disabled||checks||!parent)return;checks=true;
@@ -102,10 +104,23 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
    });
   });
  }
- w.ClubClientDiagnostics={emit:emit,probe:probe,bind:function(id){parent=id;},parent:function(){return parent;}};
+ function reportResources(){
+  if(typeof w.__reportError!=='function')return;
+  resources.splice(0).forEach(function(name){try{w.__reportError('Не загрузился ресурс приложения: '+name,'','resource_load');}catch(e){}});
+ }
+ function resourceName(target){
+  if(!target||!/^SCRIPT$|^LINK$/.test(target.tagName||''))return '';
+  try{var url=new URL(target.src||target.href,w.location.href),name=url.pathname.split('/').pop();
+   if(!/^(telegram-web-app\.js|vk-bridge(?:\.min)?\.js|card-motion\.js|personal-digest\.js|exit-presence\.js|knowledge-quizzes\.js|game-sharing\.js|sales-timer\.js|film-player\.js|player-diagnostics\.js|meeting-recordings\.(?:js|css))$/.test(name))name='other_'+target.tagName.toLowerCase();
+   return name;
+  }catch(e){return 'unknown_resource';}
+ }
+ w.ClubClientDiagnostics={reportResources:reportResources,emit:emit,probe:probe,bind:function(id){parent=id;},parent:function(){return parent;}};
  function error(event,rejection){
-  if(!parent)return;
+  if(disabled)return;
   var resource=!rejection&&event.target&&event.target!==w;
+  if(resource){var asset=resourceName(event.target);if(asset&&!resourceSeen[asset]&&Object.keys(resourceSeen).length<4){resourceSeen[asset]=true;resources.push(asset);reportResources();}}
+  if(!parent)return;
   var value=rejection?event.reason:event.error,name=value&&value.name;
   emit({attempt:parent,kind:'javascript',event:resource?'resource':rejection?'rejection':'error',error:/^(TypeError|ReferenceError|SyntaxError|RangeError|AbortError|Error)$/.test(name||'')?name:'unknown',line:event.lineno,column:event.colno});
  }
@@ -180,7 +195,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   if(disabled||!nativeFetch||!signedLaunch())return Promise.resolve(null);
   evidence('startup',event);
   var requestAttempt=attempt;
-  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:'app-v677'};
+  var payload={launch:signedLaunch(),platform:platform,attempt:attempt,target:target,event:event,seq:++sequence,reason:reason||'',marks:Object.keys(marks),stage_ms:Object.assign({},stageTimes),elapsed_ms:Math.min(86400000,Math.max(0,Date.now()-startedAt)),build:window.CLUB_BUILD_ID};
   var tries=0;
   function sendAttempt(){
    tries++;
@@ -3784,6 +3799,7 @@ if(window.ClubAppRescue)ClubAppRescue.mark('card_script');
       try { кто = window.Telegram.WebApp.initDataUnsafe.user.id; } catch(e){}
       var сборка = '';
       try { сборка = String(typeof APP_BUILD!=='undefined'?APP_BUILD:window.APP_BUILD||''); } catch(e){}
+      if(!сборка)сборка=window.CLUB_BUILD_ID||'';
       var reportController = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var reportTimer = reportController ? setTimeout(function(){reportController.abort();},12000) : null;
       function finishReport(){if(reportTimer!==null)clearTimeout(reportTimer);}
@@ -3801,7 +3817,8 @@ if(window.ClubAppRescue)ClubAppRescue.mark('card_script');
       }).then(finishReport,finishReport);
     } catch(e){}
   }
-  window.__reportError = донести;   // чтобы звать и из основного кода
+  window.__reportError = донести;
+  if(window.ClubClientDiagnostics)window.ClubClientDiagnostics.reportResources();   // чтобы звать и из основного кода
 
   window.addEventListener('error', function(ev){
     // Ошибки загрузки картинок и прочих ресурсов не показываем: они не мешают
@@ -16651,7 +16668,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v679 · 21.11.2026 Премиум из профиля';
+const APP_BUILD = 'v680 · 21.11.2026 Диагностика загрузки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -18699,6 +18716,7 @@ async function loadProfile() {
   let profileResponseReceived=false;
   try {
     const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}&bootstrap=1`, {}, 15000);
+    if(!u||typeof u.found!=='boolean'){const err=new Error('Invalid profile response');err.code='invalid_response';throw err;}
     profileResponseReceived=true;
     if(typeof u.found==='boolean'&&window.ClubAppRescue)ClubAppRescue.mark('profile');
     if(u.found&&!profileVisitsStarted.has(String(telegramId))){
@@ -18874,10 +18892,18 @@ async function loadProfile() {
   } catch (e) {
     if(profileFailureReports++<2){
       const status=Math.max(0,Math.min(599,Number(e&&e.status)||0));
-      track(profileResponseReceived?'profile_render_failed':'profile_load_failed',status?'http':e&&e.name==='AbortError'?'timeout':'unknown',status);
-      if(typeof window.__reportError==='function')window.__reportError(profileResponseReceived?'Не удалось отобразить профиль':'Не удалось загрузить профиль','',status?'profile_http_'+status:e&&e.name==='AbortError'?'profile_timeout':'profile_unknown');
+      const category=status?'http':e&&e.code==='invalid_response'?'invalid_response':e&&e.name==='AbortError'?'timeout':!profileResponseReceived&&e&&e.name==='TypeError'?'network':profileResponseReceived?'render':'unknown';
+      const errorName=/^(TypeError|ReferenceError|SyntaxError|RangeError|AbortError|Error)$/.test(e&&e.name||'')?e.name:'unknown';
+      track(profileResponseReceived?'profile_render_failed':'profile_load_failed',category,status);
+      const diagnostics=window.ClubClientDiagnostics;
+      if(diagnostics){diagnostics.emit({attempt:diagnostics.parent(),kind:'transport',event:'failed',route:'unknown',http:status,error:errorName,outcome:status?'http':category==='timeout'?'timeout':category==='network'?'network':category==='invalid_response'?'decode':'unknown'});diagnostics.probe();}
+      if(typeof window.__reportError==='function')window.__reportError(profileResponseReceived?'Не удалось отобразить профиль':'Не удалось загрузить профиль','category='+category+'; error='+errorName+'; endpoint=users/me/bootstrap',status?'profile_http_'+status:'profile_'+category);
     }
-    document.getElementById('sub-name').textContent = 'Ошибка загрузки';
+    const profileError=document.getElementById('sub-name');
+    profileError.textContent='Не удалось загрузить профиль. ';
+    const retry=document.createElement('button');retry.type='button';retry.className='mp-button';retry.textContent='Повторить';
+    retry.onclick=async()=>{retry.disabled=true;try{await loadProfile();}finally{if(retry.isConnected)retry.disabled=false;}};
+    profileError.appendChild(retry);
   }
 }
 

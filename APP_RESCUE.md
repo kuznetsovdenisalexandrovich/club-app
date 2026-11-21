@@ -294,3 +294,12 @@ Permission-triggered quiet_film delivery no longer creates a false app-failure
 incident; actual delivery failures and real rescue watchdog alerts remain.
 Independent anonymous Railway evidence is described in CLIENT_DIAGNOSTICS.md.
 No playback, source, preload, seek or payment behavior changes.
+
+2026-11-21 v680: one early CLUB_BUILD_ID feeds startup and independent diagnostics;
+parity test checks the release marker/display build. Resource failures retain only
+allowlisted asset names (otherwise a fixed tag category), at most4 distinct/page,
+no signed URL/query/error body. Pending telemetry retries every2s within existing
+12-request/40-fact caps. Profile errors distinguish HTTP/network/timeout/invalid
+response/render; a manual retry repeats only the existing bootstrap flow. No
+player, payment, rescue-delivery or bot-chain changes. Historical unknown failures
+remain unknown; a successful new launch does not prove the previous screen loaded.
