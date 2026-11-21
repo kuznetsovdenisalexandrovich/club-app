@@ -23810,6 +23810,7 @@ function nbApplyState(st){
 
 /* ── события ── */
 async function nbEvent(key, note){
+  if(window.ClubIntroduction?.active())return ClubIntroduction.record(key);
   if (!nbState || !nbState.active || !telegramId) return;
   var step = (nbState.steps || []).find(function(s){ return s.k === key; });
   /* v395: шага нет в списке (снят в настройке — например, отдельная игра) —
@@ -46859,6 +46860,14 @@ window.ClubIntroduction = (function(){
     if(s.action==='intro'){nbDoStep(s.action);state=await ciApi('/complete',{step_id:s.id});ciRender();return;}
     nbDoStep(s.action);
   }
+  async function record(key){
+    if(!active())return;
+    const action=key.startsWith('game_')?'game':key;
+    const step=state.steps.find(s=>s.action===action&&!s.done);
+    if(!step)return;
+    if(!['game','chat','intro'].includes(action)){await ciLoad();return;}
+    try{state=await ciApi('/complete',{step_id:step.id,platform:nbPlatform()});ciRender();}catch(e){await ciLoad();}
+  }
   function profile(){ciClose();profileNext=true;MemberProfiles.openEditor();}
   async function profileSaved(){if(!profileNext)return;profileNext=false;await ciLoad();if(!active())return;await gift();}
   async function gift(){
@@ -46881,7 +46890,7 @@ window.ClubIntroduction = (function(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-ci]');if(b)ciAction(b).catch(()=>status('Не удалось выполнить действие. Попробуй ещё раз.'));});
   document.addEventListener('keydown',e=>{const o=document.getElementById('ci-overlay');if(!o||o.hidden)return;if(e.key==='Escape')ciClose();if(e.key==='Tab'){const list=[...o.querySelectorAll('button:not(:disabled),textarea,a[href]')].filter(x=>x.offsetParent!==null);const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('focus',()=>{if(active())ciLoad();});
-  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,profileSaved};
+  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,profileSaved,record};
 })();
 
 </script>
