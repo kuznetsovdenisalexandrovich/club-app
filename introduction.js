@@ -85,6 +85,12 @@ window.ClubIntroduction = (function(){
     const g=state.gift;
     ciShow('<div class="ci-eyebrow">Для тебя</div><h2>'+(g?.amount?'Твои 1000 баллов':'Подарок уже на твоём счёте')+'</h2><p>'+(g?.amount?'А вот и мой подарок за твою решительность — 1000 баллов.':'Ты уже получал 1000 приветственных баллов за знакомство с клубом.')+' Можешь использовать их, чтобы сделать свой аккаунт «Премиум» на месяц. Это даст тебе <button class="ci-inline" data-ci="perks">кучу ничтяков</button>.</p><div id="ci-perks" hidden><ul><li>Заметная аватарка и более крупный текст в чате эфиров.</li><li>Особое оформление профиля.</li><li>Возможность представить себя на бирже специалистов.</li><li>Три карты за продление вместо одной.</li></ul></div><div class="ci-sticky"><button class="ci-primary ci-shimmer" data-ci="premium">Хочу премиум</button><small>1000 баллов · один месяц · без автосписания</small></div>');
   }
+  async function premium(){
+    // Opening the offer never grants the welcome gift or spends points.
+    await ciLoad();
+    if(!active()){ciShow('<h2>Премиум в клубе</h2><p>Сейчас предложение недоступно. Попробуй открыть его позже.</p>');return;}
+    ciShow('<div class="ci-eyebrow">Для участников клуба</div><h2>Премиум на месяц</h2><p>Заметная аватарка и более крупный текст в чате эфиров, особое оформление профиля, размещение на бирже специалистов и три карты за продление вместо одной.</p><p>На твоём счёте: <strong>'+Number(state.points||0)+' баллов</strong>.</p><div class="ci-sticky"><button class="ci-primary ci-shimmer" data-ci="premium">Хочу премиум</button><small>1000 баллов · один месяц · без автосписания</small></div>');
+  }
   async function ciAction(button){
     if(busy)return;const name=button.dataset.ci;
     if(name==='close')return ciClose();if(name==='start')return ciStart();if(name==='steps')return steps();if(name==='submit')return submit();if(name==='profile')return profile();if(name==='gift')return gift();
@@ -100,5 +106,5 @@ window.ClubIntroduction = (function(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-ci]');if(b)ciAction(b).catch(()=>status('Не удалось выполнить действие. Попробуй ещё раз.'));});
   document.addEventListener('keydown',e=>{const o=document.getElementById('ci-overlay');if(!o||o.hidden)return;if(e.key==='Escape')ciClose();if(e.key==='Tab'){const list=[...o.querySelectorAll('button:not(:disabled),textarea,a[href]')].filter(x=>x.offsetParent!==null);const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('focus',()=>{if(active())ciLoad();});
-  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,profileSaved,record};
+  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,premium,profileSaved,record};
 })();

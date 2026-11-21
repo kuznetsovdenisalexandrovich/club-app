@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v678 -->
+<!-- FILE_VERSION: index-v679 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
@@ -16651,7 +16651,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v678 · 21.11.2026 Знакомство с клубом';
+const APP_BUILD = 'v679 · 21.11.2026 Премиум из профиля';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -46754,7 +46754,7 @@ function projectEdit(){const p=state.project||{};const labels={draft:'Черно
 async function directory(kind='people',append=false){const n=++sequence;if(!append){open('<h2>'+(kind==='people'?'Участники клуба':kind==='specialists'?'Биржа специалистов':'Проекты участников')+'</h2>'+(kind!=='catalog'?'<p class="mp-muted">Ищи по имени, описанию или тегам. Здесь только действующие участники, включившие видимость в поиске.</p><label class="mp-field">Поиск специалиста<input id="mp-search" maxlength="80" placeholder="Например, дизайнер"></label><button class="mp-button" data-mp="search">Найти</button>':'<p class="mp-muted">Проекты премиальных участников, одобренные Денисом.</p>')+'<button class="mp-button" data-mp="specialists">Биржа специалистов</button><div id="mp-results"></div><div class="mp-actions"><button id="mp-more" data-mp="more" hidden>Показать ещё</button><button data-mp="close">Закрыть</button></div>');sheet().dataset.kind=kind;sheet().dataset.offset='0';}
  const q=document.getElementById('mp-search')?.value||'';try{status('Загружаю…');const data=await api('/'+kind+'?offset='+(append?sheet().dataset.offset:'0')+'&q='+encodeURIComponent(q));if(n!==sequence||overlay().hidden)return;const results=document.getElementById('mp-results');if(!append)results.innerHTML='';results.insertAdjacentHTML('beforeend',data.items.map(p=>'<article class="mp-person '+theme(p)+'">'+card(p)+'<div class="mp-actions"><button data-mp="person" data-id="'+Number(p.id)+'">Посмотреть профиль</button></div></article>').join(''));const more=document.getElementById('mp-more');more.hidden=data.next_offset===null;sheet().dataset.offset=String(data.next_offset||0);status(results.children.length?'':'Пока никого не найдено.');}catch(e){if(n===sequence)status(e.message);}}
 async function person(path){const n=++sequence;open('<h2>Профиль участника</h2><div id="mp-person-view"></div><div class="mp-actions"><button data-mp="people">Все участники</button><button data-mp="close">Закрыть</button></div>');status('Загружаю…');try{const p=await api(path);if(n!==sequence||overlay().hidden)return;document.getElementById('mp-person-view').innerHTML='<article class="mp-person '+theme(p)+'">'+card(p)+'</article>';status('');}catch(e){if(n===sequence)status(e.message);}}
-async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium')return open('<h2>'+esc(tx('mp.premium_title'))+'</h2><p class="mp-bio">'+esc(tx('mp.premium_pending'))+'</p><button class="mp-button" data-mp="close">'+esc(tx('mp.close'))+'</button>');if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='specialists')return directory('specialists');if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
+async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium'){close();return ClubIntroduction.premium();}if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='specialists')return directory('specialists');if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
  if(name==='save'&&photoLoading){status(tx('mp.photo_loading'));return;}
  if(name==='save')return mutate(async()=>{const values=draft();if(crop)state=await api('/me/avatar','PUT',{revision:state.revision,image:cropData()});else if(avatarDraft==='remove')state=await api('/me/avatar','DELETE',{revision:state.revision});crop=null;avatarDraft=null;state=await api('/me','PUT',{...values,revision:state.revision});if(typeof onbDone==='function')onbDone('profile');},true);
  if(name==='remove-avatar'){crop=null;avatarDraft='remove';photoSequence++;photoLoading=false;document.getElementById('mp-crop-wrap').hidden=true;const file=document.getElementById('mp-avatar-file');if(file)file.value='';const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar({...state,avatar:''});status(tx('mp.photo_staged'));return;}
@@ -46878,6 +46878,12 @@ window.ClubIntroduction = (function(){
     const g=state.gift;
     ciShow('<div class="ci-eyebrow">Для тебя</div><h2>'+(g?.amount?'Твои 1000 баллов':'Подарок уже на твоём счёте')+'</h2><p>'+(g?.amount?'А вот и мой подарок за твою решительность — 1000 баллов.':'Ты уже получал 1000 приветственных баллов за знакомство с клубом.')+' Можешь использовать их, чтобы сделать свой аккаунт «Премиум» на месяц. Это даст тебе <button class="ci-inline" data-ci="perks">кучу ничтяков</button>.</p><div id="ci-perks" hidden><ul><li>Заметная аватарка и более крупный текст в чате эфиров.</li><li>Особое оформление профиля.</li><li>Возможность представить себя на бирже специалистов.</li><li>Три карты за продление вместо одной.</li></ul></div><div class="ci-sticky"><button class="ci-primary ci-shimmer" data-ci="premium">Хочу премиум</button><small>1000 баллов · один месяц · без автосписания</small></div>');
   }
+  async function premium(){
+    // Opening the offer never grants the welcome gift or spends points.
+    await ciLoad();
+    if(!active()){ciShow('<h2>Премиум в клубе</h2><p>Сейчас предложение недоступно. Попробуй открыть его позже.</p>');return;}
+    ciShow('<div class="ci-eyebrow">Для участников клуба</div><h2>Премиум на месяц</h2><p>Заметная аватарка и более крупный текст в чате эфиров, особое оформление профиля, размещение на бирже специалистов и три карты за продление вместо одной.</p><p>На твоём счёте: <strong>'+Number(state.points||0)+' баллов</strong>.</p><div class="ci-sticky"><button class="ci-primary ci-shimmer" data-ci="premium">Хочу премиум</button><small>1000 баллов · один месяц · без автосписания</small></div>');
+  }
   async function ciAction(button){
     if(busy)return;const name=button.dataset.ci;
     if(name==='close')return ciClose();if(name==='start')return ciStart();if(name==='steps')return steps();if(name==='submit')return submit();if(name==='profile')return profile();if(name==='gift')return gift();
@@ -46893,7 +46899,7 @@ window.ClubIntroduction = (function(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-ci]');if(b)ciAction(b).catch(()=>status('Не удалось выполнить действие. Попробуй ещё раз.'));});
   document.addEventListener('keydown',e=>{const o=document.getElementById('ci-overlay');if(!o||o.hidden)return;if(e.key==='Escape')ciClose();if(e.key==='Tab'){const list=[...o.querySelectorAll('button:not(:disabled),textarea,a[href]')].filter(x=>x.offsetParent!==null);const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('focus',()=>{if(active())ciLoad();});
-  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,profileSaved,record};
+  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,premium,profileSaved,record};
 })();
 
 </script>
