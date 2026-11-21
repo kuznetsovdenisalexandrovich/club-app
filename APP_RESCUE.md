@@ -349,3 +349,11 @@ unavailable, the experiment falls back to the old post-film flow; no reserve
 feature support is claimed. Playback/preload, payment routing and DB are unchanged.
 Rollback: stop the experiment via versioned config, then revert this frontend
 commit to v687; preserve assignments and test history.
+
+2026-11-22 v689: normal signed Telegram/VK startup now calls the existing guest
+experiment resume hook after profile/settings/portal settle, while still on home.
+Previously only enterDemoMode/web fallback called it, so an existing guest profile
+reopened home despite a saved assignment. No assignment is created by resume;
+member and explicit-target guards remain in maybeResume. Splash deadline is
+unchanged. Tested full page reload with an existing guest profile and reserve
+settings, plus native Telegram testing. Rollback: revert this commit to v688.

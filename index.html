@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v688 -->
+<!-- FILE_VERSION: index-v689 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v688';
+window.CLUB_BUILD_ID = 'app-v689';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16771,7 +16771,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v688 · 22.11.2026 Маршрут новых веток';
+const APP_BUILD = 'v689 · 22.11.2026 Возврат к ветке после фильма';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -36402,6 +36402,11 @@ function startApp(){
      показываем что есть. Лучше неполный экран, чем застрявшая заставка. */
   const SPLASH_CAP = 1600;
   const boot = Promise.allSettled([loadAppSettings(),loadProfile(),bootNeedsPortal()?loadPortalData():Promise.resolve()]);
+  // Signed Telegram/VK profiles enter through startApp, not enterDemoMode.
+  // Restore an assigned guest branch only after identity/settings, on home.
+  boot.then(function(){
+    if(document.getElementById('view-portal')?.classList.contains('active'))window.GuestExperiment?.maybeResume();
+  });
   const cap = new Promise(function(resolve){ setTimeout(resolve, SPLASH_CAP); });
   Promise.race([boot, cap]).then(function(){
     // ещё кадр на раскладку — иначе снимаем заставку ровно в момент вставки

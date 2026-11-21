@@ -57,3 +57,15 @@ test('closing while discovering availability cannot reopen experiment',async()=>
  const pending=c.GuestExperiment.afterFilm();c.GuestExperiment.dispose();release({guest_experiment_available:true});
  await pending;assert.equal(calls.length,1);assert.equal(c.GuestExperiment.active(),false);
 });
+test('signed profile bootstrap restores an existing guest branch after loading, only on home',async()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const start=html.indexOf('  const boot = Promise.allSettled(',html.indexOf('function startApp(){'));
+ const code=html.slice(start,html.indexOf('\n  const cap',start));
+ for(const onHome of [true,false]){
+  let resume=0,releaseProfile,releaseSettings;
+  const c={Promise,loadProfile:()=>new Promise(r=>releaseProfile=r),loadAppSettings:()=>new Promise(r=>releaseSettings=r),bootNeedsPortal:()=>false,document:{getElementById:()=>({classList:{contains:()=>onHome}})},window:{GuestExperiment:{maybeResume:()=>resume++}}};
+  vm.createContext(c);vm.runInContext(code,c);await Promise.resolve();assert.equal(resume,0);
+  releaseProfile();await Promise.resolve();assert.equal(resume,0);releaseSettings();
+  await vm.runInContext('boot',c);await Promise.resolve();assert.equal(resume,onHome?1:0);
+ }
+});

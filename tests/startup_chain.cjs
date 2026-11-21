@@ -3,7 +3,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../index.html'),'utf8
 const slice=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
 const flush=async()=>{for(let i=0;i<15;i++)await Promise.resolve()};
 test('deep-link boot loads identity/settings, portal loads once when opened',async()=>{
- const calls=[],c={Promise,appStartParamRaw:()=> 'film_ig',startLiveWatch:()=>calls.push('live')};
+ const calls=[],c={Promise,appStartParamRaw:()=> 'film_ig',startLiveWatch:()=>calls.push('live'),document:{getElementById:()=>null},window:{}};
  for(const name of ['loadAppSettings','loadProfile','loadContinueWidget','loadNews','loadWidgetMonth','loadSavedSlugs','loadCards','loadRaffle','loadDigestBlock','loadStories'])c[name]=()=>{calls.push(name);return Promise.resolve()};
  vm.createContext(c);vm.runInContext(slice('let portalDataPending=','function startApp(){'),c);
  const start=html.indexOf('  const boot = Promise.allSettled(',html.indexOf('function startApp(){')),end=html.indexOf('\n  const cap',start);
