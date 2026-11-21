@@ -330,3 +330,11 @@ user documents and restore app v681/backend v718 with release-specific reverts.
 Physical iPhone/Telegram and native bot delivery of the new clips are not tested.
 
 2026-11-21 v683: bounded AbortError evidence records exact exception identity for owned play/fetch/API operations, sanitized source locations, and passive recent media context. Unknown identity stays unknown; temporal neighbors do not establish cause. Existing player behavior and global error delivery are unchanged. The independent Railway receiver accepts optional strict trace metadata (abort_trace:1); ship receiver before client. No tokens, signed URLs or free text in trace. Roll back frontend first to v682/085f3b1; receiver remains backward compatible.
+
+2026-11-22 v686: post-film experiment is opt-in via one server config. An absent
+public availability flag preserves the old flow without additional requests.
+New guest branches reuse ClubFilmPlayer; no playback/preload/source algorithm
+changes. D uses bi_masterclass__i1, B/C use l_<safe-slug> rescue targets already
+supported by the bot. A retains existing quiz-to-lecture rescue. No native copy
+is promised. Disable guest_experiment_config.enabled and clear pilot_ids to
+stop assignments and restore the old flow; preserve experiment documents.

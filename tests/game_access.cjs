@@ -3,7 +3,7 @@ const html=fs.readFileSync('index.html','utf8');
 function fn(name){const start=html.search(new RegExp('^(?:async )?function '+name+'\\(','m'));assert(start>=0);const next=html.slice(start+1).search(/\n(?:async )?function /);return html.slice(start,start+1+next);}
 test('quiz purchase opens payment directly and restores a hidden entry shell',()=>{
  for(const display of ['none','','block']){
-  const calls=[],c={document:{getElementById:()=>({style:{display}})},closeQuiz:()=>calls.push('close'),enterDemoMode:()=>calls.push('shell'),openAccessPage:()=>calls.push('payment')};
+  const calls=[],c={window:{},document:{getElementById:()=>({style:{display}})},closeQuiz:()=>calls.push('close'),enterDemoMode:()=>calls.push('shell'),openAccessPage:()=>calls.push('payment')};
   vm.runInNewContext(fn('openQuizFullAccess'),c);c.openQuizFullAccess();
   assert.deepEqual(calls,display==='block'?['close','payment']:['close','shell','payment']);
  }
