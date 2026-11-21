@@ -55,7 +55,7 @@ window.ClubIntroduction = (function(){
     if(r.search_status==='unavailable')card+='<p class="ci-muted">Сейчас не удалось проверить библиотеку. Это не помешало записать твой вопрос.</p>';
     ciShow('<div class="ci-eyebrow">Твой вопрос записан</div><p class="ci-response">'+text+'</p>'+card+'<button class="ci-primary ci-continue" data-ci="profile">Продолжить знакомство</button>');
   }
-  function steps(){if(!active())return;ciShow('<div class="ci-eyebrow">Необязательно · в любом порядке</div><h2>Знакомство с клубом</h2><div class="ci-steps">'+state.steps.map(s=>'<button class="ci-step" data-ci="step" data-id="'+esc(s.id)+'"><span class="ci-step-icon">'+(s.done?'✓':'↗')+'</span><span><strong>'+esc(s.title)+'</strong><small>'+esc(s.description)+'</small></span><b>'+(s.done?'Готово':'+'+s.reward)+'</b></button>').join('')+'</div>');}
+  async function steps(){if(!active()&&!await ciLoad())return;ciShow('<div class="ci-eyebrow">Необязательно · в любом порядке</div><h2>Знакомство с клубом</h2><div class="ci-steps">'+state.steps.map(s=>'<button class="ci-step" data-ci="step" data-id="'+esc(s.id)+'"><span class="ci-step-icon">'+(s.done?'✓':'↗')+'</span><span><strong>'+esc(s.title)+'</strong><small>'+esc(s.description)+'</small></span><b>'+(s.done?'Готово':'+'+s.reward)+'</b></button>').join('')+'</div>');}
   async function doStep(id){
     const s=state.steps.find(x=>x.id===id);if(!s)return;
     if(s.action==='first')return ciStart();
