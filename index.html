@@ -287,6 +287,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
       data.status==='unknown'?'Бот не подтвердил результат отправки. Проверь переписку — повторно материал не отправляем.':
       data.status==='blocked'?'Бот сейчас не может написать тебе. Открой переписку и проверь, не заблокирован ли он.':
       data.status==='consent_required'?'Для рекламного фильма нужно твоё разрешение. Открой «Данные и рассылки» в боте.':
+      data.status==='data_consent_required'?'Подтверди согласие на обработку данных в боте — он выдаст выбранный материал.':
       data.status==='failed'?'Отправка не подтвердилась. Открой бота или попробуй перезагрузить страницу.':'Готовим продолжение в боте…';
     }
    }
@@ -324,7 +325,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   (d.body||d.documentElement).appendChild(panel);
  }
  function poll(){
-  if(!failed||d.hidden||++polls>18||/^(sent|blocked|unknown|start_required|consent_required)$/.test(lastState))return;
+  if(!failed||d.hidden||++polls>18||/^(sent|blocked|unknown|start_required|consent_required|data_consent_required)$/.test(lastState))return;
   signal('status').then(function(){poller=setTimeout(poll,4000);});
  }
  function fail(reason){
