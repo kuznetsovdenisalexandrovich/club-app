@@ -1,0 +1,22 @@
+v697 — Demo locks and quiz result restored, 22.11.2026.
+Locked TG/VK lecture buttons invoke existing openPaywall immediately; no
+showSingleLecture, preview banner or delayed scroll. Paused membership still
+uses openPauseSheet. Shared/free deep links retain their preview route.
+Locked audio when preview=0 also opens paywall before player/tip setup.
+
+Quiz result is now shown before the recommendation: original god/card/text,
+axes/second nature plus explicit primary risk (shadow). A single lecture CTA
+follows this explanation. The lesson player opens only after that CTA.
+Gift callbacks cannot replace an already-open lesson. Result restore reuses
+local axes/secondCode only if code equals server's canonical result.
+
+Member recommendation is saved from the result, after original quizSavePending,
+without requiring video click. Frozen route untouched; backend receipts still
+idempotent. Closed screens/changed owners ignore late responses. Shared cold
+guests retain existing game-to-film logic. Quiz scoring and experiment order
+are unchanged; general experiment remains disabled and pilot remains intact.
+
+Tests/evidence/final publication: continuation2026-11-20/work/guest-fixes-22,
+outputs/GUEST-FIXES-2026-11-22.txt. Backend/admin/Timeweb unchanged.
+Rollback: revert this commit, publish and verify Pages. Previous app696/69960cc.
+Do not reset user progress, experiment assignment or database.

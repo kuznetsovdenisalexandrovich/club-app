@@ -1,12 +1,13 @@
 /* Additive recommendations. The frozen route, quiz scoring and member receipts remain authoritative. */
 window.QuizRecommendations=(function(){
   'use strict';
+  let prepared=null;
   let generation=0,owned=null,bypass=false,player=null,audio=null,personal=[],personalOwner='',personalRequest=null;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const owner=()=>isMember&&telegramId?'member:'+telegramId:'';
   const api=(path,body)=>apiRequest(API_URL+'/learning'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{},15000);
   function qrDispose(){generation++;if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}owned=null;}
-  function qrReset(){qrDispose();bypass=false;}
+  function qrReset(){qrDispose();bypass=false;prepared=null;}
   async function qrLoadPersonal(){
     const who=owner();if(!who){personal=[];personalOwner='';return;}
     if(personalRequest?.who===who)return personalRequest.promise;
@@ -18,18 +19,36 @@ window.QuizRecommendations=(function(){
     return '<section class="learning-map" aria-label="Твои рекомендации"><h3>Под твои задачи</h3>'+rows.map(x=>'<button class="learning-map-item" data-learning="lesson" data-slug="'+esc(x.slug)+'"><span>'+esc(x.lecture.title)+'</span><small>'+esc(x.reasons.join(' · '))+'</small></button>').join('')+'</section>';
   }
   function qrNote(text){const el=document.getElementById('learning-note');if(el)el.textContent=text;}
+  function qrOffer(data){
+    const el=document.getElementById('quiz-learning-offer');if(!el)return;
+    el.innerHTML='<div class="quiz-offer-text">Это занятие поможет проработать твою теневую сторону.</div><h3>'+esc(data.lecture.title)+'</h3><p>'+esc(data.reason)+'</p><button class="learning-primary" data-learning="open-recommendation">Смотреть занятие</button>';
+  }
+  function qrPrepare(result,context){
+    if(!result||!['member','post_film'].includes(context))return;
+    const who=owner();
+    if(prepared?.code===result.code&&prepared.context===context&&prepared.who===who){if(prepared.data)qrOffer(prepared.data);return;}
+    const ticket=generation,p={code:result.code,context,who};prepared=p;
+    api('/quiz/'+encodeURIComponent(result.code)).then(async data=>{
+      if(ticket!==generation||prepared!==p||owner()!==who)return;
+      p.data=data;qrOffer(data);
+      if(who){
+        try{await(window.quizSavePending||Promise.resolve());if(ticket!==generation||owner()!==who)return;await api('/quiz',{code:result.code});if(owner()!==who)return;p.saved=true;await qrLoadPersonal();if(ticket===generation&&typeof renderPersonalPlanBody==='function')renderPersonalPlanBody();}
+        catch(e){/* Result and lecture offer remain usable; explicit opening retries save. */}
+      }
+    }).catch(()=>{if(ticket!==generation||prepared!==p)return;prepared=null;const el=document.getElementById('quiz-learning-offer');if(el)el.innerHTML='<p>Твой результат остаётся здесь. Сейчас не удалось подобрать занятие.</p><button class="learning-primary" data-learning="prepare-retry">Повторить подбор</button>';});
+  }
   function qrShow(result,context){
     if(bypass||!result||!['member','post_film'].includes(context))return false;
     if(owned?.code===result.code&&owned.context===context)return true;
     qrDispose();owned={code:result.code,context};const ticket=generation,startedOwner=owner();
     if(typeof quizPauseFilm==='function')quizPauseFilm();if(typeof quizHoloStop==='function')quizHoloStop();
     document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[result.code]?.god||'Твой результат')+'</p><div id="learning-slot" aria-busy="true">Подбираем занятие…</div><p id="learning-note" role="status"></p></div>';
-    api('/quiz/'+encodeURIComponent(result.code)).then(async data=>{
+    (prepared?.code===result.code&&prepared.who===startedOwner&&prepared.data?Promise.resolve(prepared.data):api('/quiz/'+encodeURIComponent(result.code))).then(async data=>{
       if(ticket!==generation||owner()!==startedOwner)return;
       owned.data=data;
       await qrRender(data,context,ticket);
       if(ticket!==generation)return;
-      if(startedOwner&&owner()===startedOwner){
+      if(startedOwner&&owner()===startedOwner&&!(prepared?.saved&&prepared.code===result.code&&prepared.who===startedOwner)){
         const who=startedOwner;try{await (window.quizSavePending||Promise.resolve());if(ticket!==generation||owner()!==who)return;await api('/quiz',{code:result.code});if(owner()!==who)return;await qrLoadPersonal();if(ticket===generation&&typeof renderPersonalPlanBody==='function')renderPersonalPlanBody();}catch(e){if(ticket===generation)qrNote('Занятие открыто. Сохранить рекомендацию на карте пока не удалось.');}
       }
     }).catch(()=>{if(ticket!==generation)return;qrDispose();bypass=true;renderQuizResult();});
@@ -81,6 +100,8 @@ window.QuizRecommendations=(function(){
   document.addEventListener('click',async e=>{
     const button=e.target.closest('[data-learning]');if(!button)return;
     const action=button.dataset.learning;
+    if(action==='open-recommendation'){bypass=false;return qrShow(quizResult,quizEntryContext);}
+    if(action==='prepare-retry')return qrPrepare(quizResult,quizEntryContext);
     if(action==='lesson')return qrOpenLesson(button.dataset.slug);
     if(action==='result')return qrOriginal();
     if(action==='retry'&&owned?.data){const data=owned.data,ctx=owned.context;qrDispose();owned={code:data.code,context:ctx,data};return qrRender(data,ctx,generation);}
@@ -88,5 +109,5 @@ window.QuizRecommendations=(function(){
     if(action==='join')return openQuizFullAccess();
     if(action==='more'){if(window.GuestExperiment?.active())return GuestExperiment.next();closeQuiz();switchView('library');}
   });
-  return {show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
+  return {prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
 })();

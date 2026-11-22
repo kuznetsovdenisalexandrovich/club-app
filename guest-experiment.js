@@ -70,7 +70,7 @@ window.GuestExperiment=(function(){
   document.getElementById('quiz-overlay').scrollTop=0;
   if(state.finished){surface('<h2>Остаёмся на связи?</h2><p>В открытом канале — ещё идеи и разборы. А демо клуба можно изучать дальше в своём темпе.</p>'+button('Открыть бесплатный канал','channel')+button('Изучить демо приложения','demo',true));return true;}
   if(state.current==='A'){
-   if(state.quiz_code&&QUIZ_RESULTS[state.quiz_code]){openQuiz(true,'post_film');quizResult={code:state.quiz_code};renderQuizResult();}
+   if(state.quiz_code&&QUIZ_RESULTS[state.quiz_code]){openQuiz(true,'post_film');const saved=savedQuizResult();quizResult=saved?.code===state.quiz_code?saved:{code:state.quiz_code};renderQuizResult();}
    else openQuiz(true,'post_film');
    active=true;document.getElementById('quiz-overlay').classList.add('gx-open');nav();return true;
   }
