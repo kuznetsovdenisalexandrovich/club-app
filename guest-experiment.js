@@ -1,7 +1,7 @@
 /* Four post-film branches. Server owns assignment/order; no payment or member writes here. */
 window.GuestExperiment=(function(){
  'use strict';
- let state=null,active=false,busy=false,generation=0,player=null,audio=null,mediaSpec=null,opening=null,bootChecked=false;
+ let state=null,active=false,busy=false,generation=0,player=null,audio=null,mediaSpec=null,opening=null,bootChecked=false,questionDraft='';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const request=(path,body,timeout=8000)=>apiRequest(API_URL+'/guest-experiment'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),rfNoRetry:true}:{},timeout);
  const button=(text,action,quiet=false)=>'<button class="'+(quiet?'learning-quiet':'learning-primary')+'" data-gx="'+action+'">'+text+'</button>';
@@ -23,10 +23,10 @@ window.GuestExperiment=(function(){
   document.getElementById('quiz-inner').innerHTML='<div class="gx-content">'+html+'</div>';nav();appSyncNavigation();
  }
  function note(text){const el=document.getElementById('gx-status');if(el)el.textContent=text;}
- function showQuestion(){surface('<h2>Что хочется изменить в продажах прямо сейчас?</h2><p>Опиши одну задачу — подберём короткий фрагмент занятия.</p><form id="gx-question-form"><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Например: спрашивают цену и пропадают"></textarea>'+button('Подобрать занятие','search')+'</form><p id="gx-status" role="status"></p>');}
+ function showQuestion(){surface('<div class="gx-search-heading"><span class="gx-eyebrow">Занятие под твою задачу</span><h2>Что хочется изменить?</h2><p>В продажах, маркетинге или бизнесе.</p></div><form id="gx-question-form" class="gx-compose"><label for="gx-question">Твой вопрос</label><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Клиенты спрашивают цену и пропадают">'+esc(questionDraft)+'</textarea>'+button('Найти занятие','search')+'</form><p id="gx-status" role="status"></p>');}
  function showChat(){
   const d=game();if(d.done||state.completed.C)return showLesson('texting_p01_l11_lecture');
-  surface('<h2>Обещал оплатить.<br>И пропал на неделю.</h2><div class="gx-chat" role="log">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form"><textarea id="gx-reply" maxlength="600" required placeholder="Попробуй напомнить об оплате">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true)+'<small>Сценарный тренажёр · собеседник вымышленный.</small>');
+  surface('<div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true));
   const list=document.querySelector('.gx-chat');list.scrollTop=list.scrollHeight;
  }
  async function showLesson(slug){
@@ -36,7 +36,8 @@ window.GuestExperiment=(function(){
  }
  async function showMedia(spec){
   mediaSpec=spec;
-  surface('<h2>'+esc(spec.title||'Продажи — это секс')+'</h2><div id="gx-media"></div><p id="gx-status" role="status">Загружаем видео…</p>'+button(spec.masterclass?'Получить полный доступ':'Смотреть полное видео','pay')+(!spec.masterclass?button('Слушать как подкаст','audio',true):''));
+  surface((state.current==='C'&&game().done?'<p class="gx-outcome">'+esc(game().coach)+'</p>':'')+'<h2>'+esc(spec.title||'Продажи — это секс')+'</h2><div id="gx-media"></div><p id="gx-status" role="status">Загружаем видео…</p>'+button(spec.masterclass?'Получить полный доступ':'Смотреть полное видео','pay')+(!spec.masterclass?button('Слушать как подкаст','audio',true):'')+(state.current==='B'?button('Изменить вопрос','edit-question',true):''));
+  document.getElementById('quiz-overlay').scrollTop=0;
   const ticket=generation,branch=state.current;
   const path=spec.masterclass?'/media/bonus/masterclass/i1?direct_capable=1':'/learning/media/'+encodeURIComponent(spec.slug);
   window.ClubAppRescue?.target(spec.masterclass?'bi_masterclass__i1':'l_'+safeContentKey(spec.slug));
@@ -115,12 +116,13 @@ window.GuestExperiment=(function(){
   if(result.state.done){state.completed.C=true;gxSignal('game_completed');}showChat();
  }
  document.addEventListener('submit',e=>{if(e.target.id==='gx-question-form'){e.preventDefault();submitQuestion();}if(e.target.id==='gx-reply-form'){e.preventDefault();submitReply();}});
- document.addEventListener('input',e=>{if(e.target.id==='gx-reply'){const d=game();d.draft=e.target.value;saveGame(d);}});
+ document.addEventListener('input',e=>{if(e.target.id==='gx-question')questionDraft=e.target.value;if(e.target.id==='gx-reply'){const d=game();d.draft=e.target.value;saveGame(d);}});
  document.addEventListener('click',e=>{
   const action=e.target.closest('[data-gx]')?.dataset.gx;if(!action||!active)return;
   if(action==='search'||action==='reply')return; // Native form submit also supports keyboard.
   if(action==='next')return next();
   if(action==='hint'){const d=game();d.draft=IgnoreGameCore.hints[d.step];saveGame(d);showChat();document.getElementById('gx-reply')?.focus();}
+  if(action==='edit-question'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;document.getElementById('gx-question')?.focus();return;}
   if(action==='retry')return showMedia(mediaSpec);
   if(action==='audio')return toggleAudio();
   if(action==='pay'){gxSignal('payment_open');openQuizFullAccess();}

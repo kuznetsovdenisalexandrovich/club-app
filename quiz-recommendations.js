@@ -41,6 +41,7 @@ window.QuizRecommendations=(function(){
     if(bypass||!result||!['member','post_film'].includes(context))return false;
     if(owned?.code===result.code&&owned.context===context)return true;
     qrDispose();owned={code:result.code,context};const ticket=generation,startedOwner=owner();
+    document.getElementById('quiz-overlay').scrollTop=0;
     if(typeof quizPauseFilm==='function')quizPauseFilm();if(typeof quizHoloStop==='function')quizHoloStop();
     document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[result.code]?.god||'Твой результат')+'</p><div id="learning-slot" aria-busy="true">Подбираем занятие…</div><p id="learning-note" role="status"></p></div>';
     (prepared?.code===result.code&&prepared.who===startedOwner&&prepared.data?Promise.resolve(prepared.data):api('/quiz/'+encodeURIComponent(result.code))).then(async data=>{

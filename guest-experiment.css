@@ -40,3 +40,31 @@ body:has(#quiz-overlay.open){overflow:hidden}
 .quiz-question-footer{flex:none;min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px 0;box-sizing:border-box}
 #quiz-overlay:has(.quiz-question-body) #gx-next{flex:none;margin:0 auto;padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;max-width:100%}
 #quiz-overlay:not(.gx-open) .quiz-question-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+
+/* Compact conversational surfaces; reuse the app's materials and orange light. */
+#quiz-overlay.gx-open:not(:has(.quiz-question-body)) .quiz-inner{flex:1 0 auto}
+#quiz-overlay.gx-open:not(:has(.quiz-question-body)) #gx-next{flex:none;margin-top:auto}
+.quiz-details{margin:16px 0;color:var(--text-dim);font-size:14px}
+.quiz-details summary{cursor:pointer;padding:12px 0;min-height:44px;box-sizing:border-box}
+.quiz-details .quiz-text{margin-top:14px}
+#quiz-inner>.learning-primary{width:100%;min-height:56px;margin-top:16px}
+#quiz-inner>.learning-quiet{margin:12px auto}
+.gx-eyebrow{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--warm);font-weight:700}
+.gx-search-heading{padding:22px 0 12px}
+.gx-search-heading h2{font-size:32px;line-height:1.08;margin:12px 0}
+.gx-search-heading p{margin:0 0 16px}
+.gx-conversation{border-radius:24px;background:var(--card);border:1px solid var(--border);box-shadow:var(--sh-sm);overflow:hidden}
+.gx-chat-heading{display:flex;justify-content:flex-start;text-align:left;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.gx-avatar{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:50%;background:linear-gradient(145deg,#f58c6f,#dd5139);color:white;font-weight:700;box-shadow:0 3px 16px #e8614a35}
+.gx-chat-heading h2{font-size:17px;margin:0 0 4px;letter-spacing:0}
+.gx-chat-heading span:not(.gx-avatar){font-size:12px;color:var(--text-dim)}
+.gx-conversation .gx-chat{border:0;border-radius:0;box-shadow:none;background:none;padding:14px 16px 20px;max-height:240px}
+.gx-message{width:fit-content;max-width:92%;box-sizing:border-box;border-radius:16px 16px 16px 4px;line-height:1.45}
+.gx-message.you{border-radius:16px 16px 4px 16px}
+.gx-content .gx-coach{font-size:14px;line-height:1.5;padding:0 2px;border:0;background:none;box-shadow:none;margin:18px 0 14px}
+.gx-compose{padding:14px;border-radius:22px;background:var(--card);border:1px solid var(--border);box-shadow:var(--sh-sm)}
+.gx-compose label{display:block;font-size:12px;color:var(--text-dim);margin:0 4px 8px}
+.gx-compose textarea{display:block;min-height:76px;height:76px;border:0;border-radius:8px;box-shadow:none;background:transparent;padding:4px;font-size:16px;resize:vertical}
+.gx-compose .learning-primary{margin-top:12px;min-height:50px}
+.gx-content #gx-status:empty{display:none}
+.gx-content .gx-outcome{font-size:14px;border-left:2px solid var(--warm);padding-left:12px}

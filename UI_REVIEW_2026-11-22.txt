@@ -1,0 +1,31 @@
+APP v700 — UI review, 22.11.2026
+Baseline / rollback: app v699 / 8237bf2.
+
+Reviewed four post-film branches, result/shadow/lecture returns, search retry,
+question editing, game completion, media/payment navigation, short/narrow screens.
+Changes:
+- Chat composition now presents client identity, conversation, compact guidance,
+  and a labeled reply composer. Search uses a compact matching composer.
+- Result prioritizes shadow CTA; sharing is secondary. Removed duplicate textual
+  shadow invitation and technical result code in member/post-film contexts.
+  Axes and secondary details are available via disclosure, not additional screens.
+- Shadow shows relevant weakness and lecture offer before optional detail.
+- Returning from shadow or player starts at the result top. Lecture starts at top.
+  Late gift rendering preserves scroll while staying on the same result.
+- B supports editing the question without leaving the branch. Draft retained in
+  session memory; no new storage or telemetry of question text.
+- C preserves its concluding coach explanation above the lecture.
+- Secondary next-content action stays below short surfaces. Long answer scrolling
+  and fixed question footer retain their previous behavior.
+
+Validation: 60 focused Node tests; six Chrome fixture journeys across all four
+branches, 320/390/1440 and light/dark. Tests include forced search failure/retry,
+question preservation/edit, result return, late render guards, long answers,
+audio/video switching, fullscreen, direct payment route, resume and completion.
+No production account mutation or orders created by fixtures. Physical iPhone
+and OS keyboard/native Telegram are not covered by browser fixtures.
+No server, assignment, scoring, payments, or player algorithms changed.
+
+Rollback: revert this release commit and publish frontend to main; verify Pages
+against resulting index.html. Keep experiment state and user progress intact.
+Evidence: club-continuation-2026-11-20/work/interface-audit-22.

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v699 -->
+<!-- FILE_VERSION: index-v700 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v699';
+window.CLUB_BUILD_ID = 'app-v700';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16767,7 +16767,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v699 · 22.11.2026 Устойчивый экран игры';
+const APP_BUILD = 'v700 · 22.11.2026 Понятные переходы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -42487,6 +42487,7 @@ function renderQuizResult(){
   if(window.QuizRecommendations?.isOpen())return;
   quizPauseFilm();
   quizHoloStop();
+  const returningToResult = !!document.getElementById("quiz-shadow-scene") || !document.querySelector("#quiz-inner > .quiz-hero");
   const r = quizResult;
   if (!r || !QUIZ_RESULTS[r.code]){ renderQuizIntro(); return; }
   const me = QUIZ_RESULTS[r.code];
@@ -42553,29 +42554,32 @@ function renderQuizResult(){
   document.getElementById('quiz-inner').innerHTML =
       '<div class="quiz-hero">'
       + sceneHtml
-      + '<button class="quiz-share-btn" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>'
-      + (second ? '<div class="qr-hint">'
+      + (withLesson ? '' : '<button class="quiz-share-btn" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button>')
+      + (second && !withLesson ? '<div class="qr-hint">'
                   + 'Нажми на теневую карточку, чтобы увидеть вторую натуру</div>' : '')
       + quizGiftNoteHtml(gift)
-      + '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>'
+      + (withLesson ? '' : '<div class="quiz-kicker">Ты — ' + escapeHtml(r.code) + '</div>')
       + '</div>'
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
     + (withLesson ? '<button class="learning-primary" data-quiz-shadow onclick="openQuizShadow()">Узнать теневую сторону</button>' : quizAdviceHtml(r.code))
+    + (withLesson ? '<button class="learning-quiet" id="quiz-img-btn" onclick="shareQuizImage()">' + escapeHtml(t('share.quiz')) + '</button><details class="quiz-details"><summary>Подробнее о результате</summary>' : '')
     + '<div class="quiz-axes">' + axesHtml + '</div>'
-    + allyHtml
+    + (withLesson ? '' : allyHtml)
     + godLink
+    + (withLesson ? '</details>' : '')
     + '<div class="qr-actions">'
       + (isMember || withLesson ? '' : '<button class="learning-primary" onclick="openQuizFullAccess()">Получить полный доступ</button>')
       + '<div class="qr-tertiary">'
         // Действующему участнику рассказывать, что за клуб, незачем — он внутри
-        + ((typeof isMember !== 'undefined' && isMember)
+        + ((withLesson || typeof isMember !== 'undefined' && isMember)
             ? ''
             : '<span class="payment-help-link" onclick="openQuizAfterCta()">Что за клуб?</span>')
         + '<span class="payment-help-link" onclick="openQuiz(true,quizEntryContext)">Пройти заново</span>'
       + '</div>'
     + '</div>';
   quizHoloStart(gift);
+  if(returningToResult)document.getElementById('quiz-overlay').scrollTop=0;
   if(withLesson)window.QuizRecommendations?.prepare(r,quizEntryContext);
 }
 
@@ -42936,23 +42940,13 @@ function openQuizShadow(){
       + quizCardSceneHtml(second.god, gift, { role: second.role, shadow: true })
       + '<div class="quiz-kicker">' + escapeHtml(t('shadow.kicker')) + '</div>'
     + '</div>'
-    + '<div class="quiz-text">' + escapeHtml(second.text) + '</div>'
-    + (second.risk
-        ? '<div class="quiz-block"><div class="quiz-block-title">Что мешает</div>'
-          + '<div class="quiz-block-text">' + escapeHtml(second.risk) + '</div></div>'
-        : '')
-    + (second.growth
-        ? '<div class="quiz-block"><div class="quiz-block-title warm">Что станет силой</div>'
-          + '<div class="quiz-block-text">' + escapeHtml(second.growth) + '</div></div>'
-        : '')
-    + (me && me.risk && second !== me
-        ? '<div class="quiz-block"><div class="quiz-block-title">Слабое место ' + escapeHtml(me.god) + '</div>'
-          + '<div class="quiz-block-text">' + escapeHtml(me.risk) + '</div></div>'
-        : '')
+    + '<div class="quiz-block"><div class="quiz-block-title">Что мешает в продажах</div><div class="quiz-block-text">' + escapeHtml(me?.risk || second.risk || '') + '</div></div>'
     + (withLesson ? '<div id="quiz-learning-offer" class="quiz-offer" role="status">Подбираем занятие, которое поможет с этой стороной…</div>'
         : '<button class="learning-primary" onclick="quizAdviceFilm()">' + escapeHtml(t('quiz.advice.film')) + '</button>')
-    + godLink
-    + '<div class="payment-help-link" style="margin-top:2px" onclick="renderQuizResult()">← К результату</div>';
+    + '<details class="quiz-details"><summary>Подробнее о теневой стороне</summary>'
+    + '<div class="quiz-text">' + escapeHtml(second.text) + '</div>'
+    + (second.growth ? '<div class="quiz-block"><div class="quiz-block-title">Что станет силой</div><div class="quiz-block-text">' + escapeHtml(second.growth) + '</div></div>' : '')
+    + godLink + '</details>';
   quizHoloStart(gift);
   if(!wasShadow)document.getElementById('quiz-overlay').scrollTop=0;
   if(withLesson)window.QuizRecommendations?.prepare(r,quizEntryContext);
@@ -47165,6 +47159,7 @@ window.QuizRecommendations=(function(){
     if(bypass||!result||!['member','post_film'].includes(context))return false;
     if(owned?.code===result.code&&owned.context===context)return true;
     qrDispose();owned={code:result.code,context};const ticket=generation,startedOwner=owner();
+    document.getElementById('quiz-overlay').scrollTop=0;
     if(typeof quizPauseFilm==='function')quizPauseFilm();if(typeof quizHoloStop==='function')quizHoloStop();
     document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[result.code]?.god||'Твой результат')+'</p><div id="learning-slot" aria-busy="true">Подбираем занятие…</div><p id="learning-note" role="status"></p></div>';
     (prepared?.code===result.code&&prepared.who===startedOwner&&prepared.data?Promise.resolve(prepared.data):api('/quiz/'+encodeURIComponent(result.code))).then(async data=>{
@@ -47282,6 +47277,34 @@ body:has(#quiz-overlay.open){overflow:hidden}
 #quiz-overlay:has(.quiz-question-body) #gx-next{flex:none;margin:0 auto;padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;max-width:100%}
 #quiz-overlay:not(.gx-open) .quiz-question-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 
+/* Compact conversational surfaces; reuse the app's materials and orange light. */
+#quiz-overlay.gx-open:not(:has(.quiz-question-body)) .quiz-inner{flex:1 0 auto}
+#quiz-overlay.gx-open:not(:has(.quiz-question-body)) #gx-next{flex:none;margin-top:auto}
+.quiz-details{margin:16px 0;color:var(--text-dim);font-size:14px}
+.quiz-details summary{cursor:pointer;padding:12px 0;min-height:44px;box-sizing:border-box}
+.quiz-details .quiz-text{margin-top:14px}
+#quiz-inner>.learning-primary{width:100%;min-height:56px;margin-top:16px}
+#quiz-inner>.learning-quiet{margin:12px auto}
+.gx-eyebrow{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--warm);font-weight:700}
+.gx-search-heading{padding:22px 0 12px}
+.gx-search-heading h2{font-size:32px;line-height:1.08;margin:12px 0}
+.gx-search-heading p{margin:0 0 16px}
+.gx-conversation{border-radius:24px;background:var(--card);border:1px solid var(--border);box-shadow:var(--sh-sm);overflow:hidden}
+.gx-chat-heading{display:flex;justify-content:flex-start;text-align:left;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.gx-avatar{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:50%;background:linear-gradient(145deg,#f58c6f,#dd5139);color:white;font-weight:700;box-shadow:0 3px 16px #e8614a35}
+.gx-chat-heading h2{font-size:17px;margin:0 0 4px;letter-spacing:0}
+.gx-chat-heading span:not(.gx-avatar){font-size:12px;color:var(--text-dim)}
+.gx-conversation .gx-chat{border:0;border-radius:0;box-shadow:none;background:none;padding:14px 16px 20px;max-height:240px}
+.gx-message{width:fit-content;max-width:92%;box-sizing:border-box;border-radius:16px 16px 16px 4px;line-height:1.45}
+.gx-message.you{border-radius:16px 16px 4px 16px}
+.gx-content .gx-coach{font-size:14px;line-height:1.5;padding:0 2px;border:0;background:none;box-shadow:none;margin:18px 0 14px}
+.gx-compose{padding:14px;border-radius:22px;background:var(--card);border:1px solid var(--border);box-shadow:var(--sh-sm)}
+.gx-compose label{display:block;font-size:12px;color:var(--text-dim);margin:0 4px 8px}
+.gx-compose textarea{display:block;min-height:76px;height:76px;border:0;border-radius:8px;box-shadow:none;background:transparent;padding:4px;font-size:16px;resize:vertical}
+.gx-compose .learning-primary{margin-top:12px;min-height:50px}
+.gx-content #gx-status:empty{display:none}
+.gx-content .gx-outcome{font-size:14px;border-left:2px solid var(--warm);padding-left:12px}
+
 </style>
 <script data-club-bundle="ignore-game-core.js">
 /* Scenario trainer, v1. No AI, remote calls, payment claims or participant writes. */
@@ -47343,7 +47366,7 @@ body:has(#quiz-overlay.open){overflow:hidden}
 /* Four post-film branches. Server owns assignment/order; no payment or member writes here. */
 window.GuestExperiment=(function(){
  'use strict';
- let state=null,active=false,busy=false,generation=0,player=null,audio=null,mediaSpec=null,opening=null,bootChecked=false;
+ let state=null,active=false,busy=false,generation=0,player=null,audio=null,mediaSpec=null,opening=null,bootChecked=false,questionDraft='';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const request=(path,body,timeout=8000)=>apiRequest(API_URL+'/guest-experiment'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),rfNoRetry:true}:{},timeout);
  const button=(text,action,quiet=false)=>'<button class="'+(quiet?'learning-quiet':'learning-primary')+'" data-gx="'+action+'">'+text+'</button>';
@@ -47365,10 +47388,10 @@ window.GuestExperiment=(function(){
   document.getElementById('quiz-inner').innerHTML='<div class="gx-content">'+html+'</div>';nav();appSyncNavigation();
  }
  function note(text){const el=document.getElementById('gx-status');if(el)el.textContent=text;}
- function showQuestion(){surface('<h2>Что хочется изменить в продажах прямо сейчас?</h2><p>Опиши одну задачу — подберём короткий фрагмент занятия.</p><form id="gx-question-form"><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Например: спрашивают цену и пропадают"></textarea>'+button('Подобрать занятие','search')+'</form><p id="gx-status" role="status"></p>');}
+ function showQuestion(){surface('<div class="gx-search-heading"><span class="gx-eyebrow">Занятие под твою задачу</span><h2>Что хочется изменить?</h2><p>В продажах, маркетинге или бизнесе.</p></div><form id="gx-question-form" class="gx-compose"><label for="gx-question">Твой вопрос</label><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Клиенты спрашивают цену и пропадают">'+esc(questionDraft)+'</textarea>'+button('Найти занятие','search')+'</form><p id="gx-status" role="status"></p>');}
  function showChat(){
   const d=game();if(d.done||state.completed.C)return showLesson('texting_p01_l11_lecture');
-  surface('<h2>Обещал оплатить.<br>И пропал на неделю.</h2><div class="gx-chat" role="log">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form"><textarea id="gx-reply" maxlength="600" required placeholder="Попробуй напомнить об оплате">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true)+'<small>Сценарный тренажёр · собеседник вымышленный.</small>');
+  surface('<div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true));
   const list=document.querySelector('.gx-chat');list.scrollTop=list.scrollHeight;
  }
  async function showLesson(slug){
@@ -47378,7 +47401,8 @@ window.GuestExperiment=(function(){
  }
  async function showMedia(spec){
   mediaSpec=spec;
-  surface('<h2>'+esc(spec.title||'Продажи — это секс')+'</h2><div id="gx-media"></div><p id="gx-status" role="status">Загружаем видео…</p>'+button(spec.masterclass?'Получить полный доступ':'Смотреть полное видео','pay')+(!spec.masterclass?button('Слушать как подкаст','audio',true):''));
+  surface((state.current==='C'&&game().done?'<p class="gx-outcome">'+esc(game().coach)+'</p>':'')+'<h2>'+esc(spec.title||'Продажи — это секс')+'</h2><div id="gx-media"></div><p id="gx-status" role="status">Загружаем видео…</p>'+button(spec.masterclass?'Получить полный доступ':'Смотреть полное видео','pay')+(!spec.masterclass?button('Слушать как подкаст','audio',true):'')+(state.current==='B'?button('Изменить вопрос','edit-question',true):''));
+  document.getElementById('quiz-overlay').scrollTop=0;
   const ticket=generation,branch=state.current;
   const path=spec.masterclass?'/media/bonus/masterclass/i1?direct_capable=1':'/learning/media/'+encodeURIComponent(spec.slug);
   window.ClubAppRescue?.target(spec.masterclass?'bi_masterclass__i1':'l_'+safeContentKey(spec.slug));
@@ -47457,12 +47481,13 @@ window.GuestExperiment=(function(){
   if(result.state.done){state.completed.C=true;gxSignal('game_completed');}showChat();
  }
  document.addEventListener('submit',e=>{if(e.target.id==='gx-question-form'){e.preventDefault();submitQuestion();}if(e.target.id==='gx-reply-form'){e.preventDefault();submitReply();}});
- document.addEventListener('input',e=>{if(e.target.id==='gx-reply'){const d=game();d.draft=e.target.value;saveGame(d);}});
+ document.addEventListener('input',e=>{if(e.target.id==='gx-question')questionDraft=e.target.value;if(e.target.id==='gx-reply'){const d=game();d.draft=e.target.value;saveGame(d);}});
  document.addEventListener('click',e=>{
   const action=e.target.closest('[data-gx]')?.dataset.gx;if(!action||!active)return;
   if(action==='search'||action==='reply')return; // Native form submit also supports keyboard.
   if(action==='next')return next();
   if(action==='hint'){const d=game();d.draft=IgnoreGameCore.hints[d.step];saveGame(d);showChat();document.getElementById('gx-reply')?.focus();}
+  if(action==='edit-question'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;document.getElementById('gx-question')?.focus();return;}
   if(action==='retry')return showMedia(mediaSpec);
   if(action==='audio')return toggleAudio();
   if(action==='pay'){gxSignal('payment_open');openQuizFullAccess();}
