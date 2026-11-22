@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v704 -->
+<!-- FILE_VERSION: index-v705 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v704';
+window.CLUB_BUILD_ID = 'app-v705';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16792,7 +16792,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v704 · 22.11.2026 Ритм экранов';
+const APP_BUILD = 'v705 · 22.11.2026 Лекция после покупки';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -26777,6 +26777,7 @@ function flushPendingAttribution(){
    telegram_id ещё нет, а событие без него не пишется */
 function rememberEntrySource(src){
   if (!src) return;
+  window.__checkoutLectureSource = src;
   try { localStorage.setItem('club_app_entry_source', src); } catch(e){}
   track('entry_source', src);
 }
@@ -26953,7 +26954,7 @@ async function promoServerLink(){
     const r = await fetch(`${API_URL}/payments/checkouts`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': rid },
       body: JSON.stringify({ request_id: rid, plan: 'promo', source: 'app', promo: promoCode, guest_key:ggGuestKey(),
-                             tg_init: iv.tg_init, vk_query: iv.vk_query })
+                             tg_init: iv.tg_init, vk_query: iv.vk_query, entry_source: saved.record.entry_source || '' })
     });
     const d = await r.json().catch(() => ({}));
     if (r.ok && d.payment_url){
@@ -27618,7 +27619,7 @@ function nurtureOfferModal(o){
   if(!remaining()||sending)return;
   if(!o.eligible){dismiss();openInvitePopup();return;}
   if(!checkbox.checked)return;sending=true;redraw();
-  try{const ident=ivIdent();const r=await fetch(`${API_URL}/nurture/offers/checkout`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:window.__nurtureToken,offer_id:o.id,accept_terms:true,tg_init:ident.tg_init,vk_query:ident.vk_query})});const d=await r.json();if(!r.ok)throw new Error(d.detail||t('nurture.error'));if(!/^https:\/\//.test(d.payment_url||''))throw new Error(t('nurture.error'));openUrl(d.payment_url);}catch(e){status.textContent=e.message}finally{sending=false;redraw();}
+  try{const ident=ivIdent();const r=await fetch(`${API_URL}/nurture/offers/checkout`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:window.__nurtureToken,offer_id:o.id,accept_terms:true,tg_init:ident.tg_init,vk_query:ident.vk_query,entry_source:checkoutLectureSource()})});const d=await r.json();if(!r.ok)throw new Error(d.detail||t('nurture.error'));if(!/^https:\/\//.test(d.payment_url||''))throw new Error(t('nurture.error'));openUrl(d.payment_url);}catch(e){status.textContent=e.message}finally{sending=false;redraw();}
  };
  box.showModal();
 }
@@ -27716,6 +27717,7 @@ async function openLeadMaterial(code){
    if(links.firstElementChild)links.firstElementChild.className='learning-primary';
    return;
   }
+  window.__checkoutLectureSource=code;
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}sendAttributionTouch(code);
   const materialActions=Array.isArray(data.actions)?data.actions:['full','pdf','film'];
   if(materialActions.includes('full')){note.textContent='Открытый фрагмент занятия';const buy=button('Смотреть полное занятие',()=>openAccessPage());buy.className='learning-primary';buy.dataset.leadBuy='1';links.append(buy);}else note.textContent=data.note||'';
@@ -35274,17 +35276,22 @@ function personalPaymentIdentity(){
   return {platform,id};
 }
 const personalPaymentMemory = new Map();
+function checkoutLectureSource(){
+  const code=String(globalThis.__checkoutLectureSource||'');
+  return /^(ig|tt|yt|tg|vk|web|email)_[a-z0-9_-]{1,54}$/.test(code)?code:'';
+}
 function personalPaymentRecord(plan){
   const identity = personalPaymentIdentity();
   const person = identity.platform + ':' + identity.id;
-  const key = 'club_personal_order_v1:' + person + ':' + plan;
+  const entrySource=checkoutLectureSource();
+  const key = 'club_personal_order_v1:' + person + ':' + plan + (entrySource ? ':' + entrySource : '');
   let record = personalPaymentMemory.get(key);
   if (!record) {
     try { record = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e){}
   }
   if (!record || !/^[A-Za-z0-9-]{8,80}$/.test(record.request_id || '')
       || (record.expires_at && Number.isFinite(Date.parse(record.expires_at)) && Date.parse(record.expires_at) <= Date.now())) {
-    record = {request_id: 'app-' + crypto.randomUUID()};
+    record = {request_id: 'app-' + crypto.randomUUID(),entry_source:entrySource};
   }
   personalPaymentMemory.set(key, record);
   try { localStorage.setItem(key, JSON.stringify(record)); } catch(e){}
@@ -35327,7 +35334,7 @@ async function personalPaymentLinks(plan){
     const saved = personalPaymentRecord(plan);
     const response = await fetch(`${API_URL}/payments/checkouts`, {
       method:'POST', headers:{'Content-Type':'application/json','Idempotency-Key':saved.record.request_id},
-      body:JSON.stringify({request_id:saved.record.request_id,plan,source:'app',tg_init:iv.tg_init,vk_query:iv.vk_query})
+      body:JSON.stringify({request_id:saved.record.request_id,plan,source:'app',tg_init:iv.tg_init,vk_query:iv.vk_query,entry_source:saved.record.entry_source||''})
     });
     const data = await response.json();
     if (!response.ok) {

@@ -25,6 +25,15 @@ for(const platform of ['telegram','vk'])test(platform+': only selected tariff is
  const s=setup('ok',platform);assert((await s.c.personalPaymentLinks('monthly')).monthly_link);await s.c.personalPaymentLinks('monthly');
  const bodies=s.calls.map(x=>JSON.parse(x.opt.body));assert.deepEqual(bodies.map(x=>x.plan),['monthly','monthly']);assert.equal(bodies[0].request_id,bodies[1].request_id);
 });
+for(const platform of ['telegram','vk'])test(platform+': lesson source is explicit and each material keeps its own order',async()=>{
+ const s=setup('ok',platform);
+ s.c.__checkoutLectureSource='tg_pain_offer';await s.c.personalPaymentLinks('monthly');
+ s.c.__checkoutLectureSource='tg_price_offer';await s.c.personalPaymentLinks('monthly');
+ s.c.__checkoutLectureSource='tg_pain_offer';await s.c.personalPaymentLinks('monthly');
+ const bodies=s.calls.map(x=>JSON.parse(x.opt.body));
+ assert.deepEqual(bodies.map(x=>x.entry_source),['tg_pain_offer','tg_price_offer','tg_pain_offer']);
+ assert.equal(bodies[0].request_id,bodies[2].request_id);assert.notEqual(bodies[0].request_id,bodies[1].request_id);
+});
 test('provider 502 is not replayed on second node',async()=>{const s=setup('provider');await assert.rejects(s.c.personalPaymentLinks('monthly'));assert.equal(s.provider(),1);assert.equal(s.calls.length,1);});
 test('ambiguous network result is not automatically replayed',async()=>{const s=setup('lost');await assert.rejects(s.c.personalPaymentLinks('monthly'));assert.equal(s.calls.length,1);});
 test('425 rejection before execution can safely use reserve',async()=>{const s=setup('route');assert((await s.c.personalPaymentLinks('monthly')).monthly_link);assert.equal(s.provider(),1);assert.equal(s.calls.filter(x=>x.url.includes('checkouts')).length,2);});
