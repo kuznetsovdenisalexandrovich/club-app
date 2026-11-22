@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v703 -->
+<!-- FILE_VERSION: index-v704 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v703';
+window.CLUB_BUILD_ID = 'app-v704';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -9630,6 +9630,16 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 .lead-material-dialog [hidden]{display:none!important}
 html[data-tg-native-back] .lead-back{display:none}
 @media(max-width:480px){.lead-material-dialog{width:100%;max-width:100%;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px));border-radius:22px}}
+
+/* Shared vertical rhythm: 8px within controls, 16px between related blocks. */
+.lead-material-dialog h2{margin:0 0 16px}
+.lead-material-dialog .lead-back{margin:0 0 16px}
+.lead-material-dialog .lead-note{margin:12px 0 16px}
+.lead-material-dialog .lead-actions{gap:8px}
+.lead-material-dialog .learning-quiet,.lead-material-dialog .learning-primary{margin:0}
+.lead-material-dialog .lead-extras{margin:8px 0 0}
+.lead-material-dialog .lead-extras button,.lead-material-dialog .lead-extras a{margin:0}
+.lead-pdf-gate p:first-child{margin-top:0}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -16782,7 +16792,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v703 · 22.11.2026 Экраны лид-магнитов';
+const APP_BUILD = 'v704 · 22.11.2026 Ритм экранов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47404,6 +47414,23 @@ body:has(#quiz-overlay.open){overflow:hidden}
 #quiz-overlay.gx-open .quiz-close{display:none}
 #quiz-overlay.gx-open #quiz-inner>[onclick="quizNavigateBack()"],#quiz-overlay.gx-open [data-learning="result"]{display:none}
 html[data-tg-native-back] #gx-back,html[data-tg-native-back] .access-back,html[data-tg-native-back] #quiz-inner>[onclick="quizNavigateBack()"]{display:none}
+
+/* Avoid accumulated default paragraph/button margins on guest surfaces. */
+.gx-content h2{margin:0 0 16px}
+.gx-content>p{margin:0 0 16px}
+.gx-content .gx-coach{margin:16px 0}
+.gx-content .learning-quiet{margin:8px auto 0;min-height:44px;box-sizing:border-box}
+.gx-content #gx-status{margin:12px 0 16px}
+.gx-search-heading{padding:16px 0}
+.gx-search-heading h2{margin:12px 0}
+.gx-search-heading p{margin:0}
+.gx-compose .learning-primary{margin-top:16px}
+#quiz-overlay .learning-result{padding:0 0 16px}
+#quiz-overlay .learning-result h2{margin:0 0 16px}
+#quiz-overlay .learning-result p{margin:0 0 16px}
+#quiz-overlay .learning-result .learning-kicker{margin-bottom:8px}
+#quiz-overlay .learning-result #learning-note{margin:12px 0 16px}
+#quiz-overlay .learning-result .learning-quiet{margin:8px auto 0;min-height:44px;box-sizing:border-box}
 
 </style>
 <script data-club-bundle="ignore-game-core.js">

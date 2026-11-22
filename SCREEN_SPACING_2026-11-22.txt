@@ -1,0 +1,14 @@
+APP v704 — Vertical spacing follow-up, 22.11.2026
+User requested consistent spacing while v703 publication was completing.
+Lead dialog and guest branches now override accumulated default button/paragraph
+margins:8px within action groups,16px between related blocks;12px for media notes.
+Existing bottom-pinned question controls retained. Short lead dialog stays compact,
+without stretching it to manufacture empty screen space. No new navigation logic.
+
+Validation:85 focused Node tests;6 native/iframe lead fixture journeys and6 full
+four-branch browser journeys at320/390/1440 in both themes. Physical iPhone remains
+unverified. Evidence work/lead-layout-22/{spacing,guest-spacing}.txt.
+
+Rollback spacing only: revert this commit to v703/e2c2c06.
+Rollback full lead redesign: revert this commit then e2c2c06 to v702/6372f45;
+publish and verify Pages. No DB or user state rollback.
