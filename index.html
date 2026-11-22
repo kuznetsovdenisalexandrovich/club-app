@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v693 -->
+<!-- FILE_VERSION: index-v694 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v693';
+window.CLUB_BUILD_ID = 'app-v694';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16393,7 +16393,7 @@ function createRFParallelTransport(config){
     const send=async i=>{if(i===0&&returnBarrier)headers.set('x-rf-min-timeweb',String(returnBarrier));else headers.delete('x-rf-min-timeweb');const r=await timed(endpoints[i]+path,{...options,headers,redirect:'error'},i);remember(r,i);return r;};
     // These additive APIs are not installed on the pinned reserve runtime.
     // Keep the ordinary route unchanged; never replay their writes on that node.
-    if(/^\/(?:guest-experiment|learning)(?:\/|$)/.test(u.pathname) || (u.pathname==='/settings'&&options.rfPrimaryOnly===true)){
+    if(/^\/(?:guest-experiment|learning|assistant)(?:\/|$)/.test(u.pathname) || (u.pathname==='/settings'&&options.rfPrimaryOnly===true)){
       const ready=await readiness(0);
       if(options.signal&&options.signal.aborted)throw new DOMException('Aborted','AbortError');
       if(!ready||ready.peer_seq<returnBarrier)throw new Error('Feature server is not ready');
@@ -16760,7 +16760,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v693 · 22.11.2026 Единый стиль гостевых экранов';
+const APP_BUILD = 'v694 · 22.11.2026 Помощник по материалам клуба';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -21054,7 +21054,7 @@ const APP_TEXTS = {
   /* v428: ИИ-помощник — разговор */
   'ai.title':         { c:'ИИ-помощник', l:'Заголовок окна', w:'Окно помощника', i:false, t:'Помощник клуба' },
   'ai.btn':           { c:'ИИ-помощник', l:'Кнопка в «Что посмотреть»', w:'Библиотека', i:false, t:'Спросить ИИ-помощника своими словами' },
-  'ai.hello_member':  { c:'ИИ-помощник', l:'Приветствие участнику', w:'Первое сообщение в окне', i:true, t:'Привет! Помогу найти занятие под твою задачу, узнать, когда следующая встреча, или разобраться с ситуацией в продажах. Например, как вытащить клиента из игнора.' },
+  'ai.hello_member':  { c:'ИИ-помощник', l:'Приветствие участнику', w:'Первое сообщение в окне', i:true, t:'Привет! Подберу занятие Дениса под твою задачу, найду информацию о клубе, приложении или ближайшей встрече. Если ответа нет — помогу передать вопрос в поддержку.' },
   'ai.hello_guest':   { c:'ИИ-помощник', l:'Приветствие гостю', w:'Первое сообщение в окне', i:true, t:'Привет! Я помощник клуба «Ты Боженька Продаж». Расскажу, что внутри и сколько стоит, и подберу занятия под твою задачу.' },
   'ai.hello_paused':  { c:'ИИ-помощник', l:'Приветствие на паузе', w:'Первое сообщение в окне', i:true, t:'Привет! Ты сейчас на паузе. Могу рассказать, когда она закончится, как её продлить и что открыто на паузе.' },
   'ai.chips_member':  { c:'ИИ-помощник', l:'Подсказки участнику (через |)', w:'Под приветствием', i:false, t:'Когда следующее занятие?|Что посмотреть?|Как вытащить клиента из игнора?' },
@@ -35778,6 +35778,7 @@ async function aiRenderExtra(d){
   }
   if ((d.actions || []).length){
     h += '<div class="ai-acts">' + d.actions.map(function(a){
+      if(a.do === 'support' && d.support_inline && d.turn_id) return '<button class="ai-act" data-turn="' + Number(d.turn_id) + '" data-feedback-token="' + escapeHtml(d.feedback_token || '') + '" onclick="aiSupport(this)">Передать в поддержку</button>';
       return '<button class="ai-act" onclick="aiDo(' + jsArg(a.do) + ')">' + escapeHtml(a.label) + '</button>';
     }).join('') + '</div>';
   }
@@ -35787,6 +35788,18 @@ async function aiRenderExtra(d){
   }
   if (h) aiPush(h, 'ai-extra');
   if (tourActive && (d.lectures || '').length) tourAdvanceOn('ai_asked');
+}
+
+async function aiSupport(button){
+  if(button.disabled)return;
+  button.disabled=true;button.textContent='Передаю…';
+  const body=Object.assign({turn_id:Number(button.dataset.turn),feedback_token:button.dataset.feedbackToken||''},aiIdent());
+  if(!body.telegram_id&&!body.vk_id){try{body.guest_key=ggGuestKey();}catch(e){}}
+  try{
+    const d=await apiRequest(API_URL+'/assistant/support',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},20000);
+    if(!d||d.saved!==true||!d.message_id)throw Error('Support was not saved');
+    button.textContent='Передано в поддержку · №'+d.message_id;
+  }catch(e){button.disabled=false;button.textContent='Не удалось передать — повторить';}
 }
 
 function aiFeedback(el, v){
