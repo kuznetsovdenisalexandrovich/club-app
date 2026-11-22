@@ -58,7 +58,7 @@ window.QuizRecommendations=(function(){
   async function qrRender(data,context,ticket){
     const l=data.lecture,member=!!isMember;
     window.ClubAppRescue?.target('l_'+safeContentKey(l.slug));
-    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[data.code]?.god||'По твоему вопросу')+' · следующий шаг</p><h2>'+esc(l.title)+'</h2><p>'+esc(data.reason)+'</p><div id="learning-slot"></div><p id="learning-note" role="status"></p>'+(member?'':'<button class="learning-primary" data-learning="join">'+(data.video_ready?'Смотреть полное видео':'Получить полный доступ')+'</button><button class="learning-quiet" data-learning="more">Хочу ещё контента</button>')+'<button class="learning-quiet" data-learning="result">Мой результат игры</button></div>';
+    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[data.code]?.god||'По твоему вопросу')+' · следующий шаг</p><h2>'+esc(l.title)+'</h2><p>'+esc(data.reason)+'</p><div id="learning-slot"></div><p id="learning-note" role="status"></p>'+(member?'':'<button class="learning-primary" data-learning="join">'+(data.video_ready?'Смотреть полное видео':'Получить полный доступ')+'</button><button class="learning-quiet" data-learning="more">Хочу ещё контента</button>')+'<button class="learning-quiet" data-learning="result">← К теневой стороне</button></div>';
     if(!member&&window.GuestExperiment?.branch()==='A')GuestExperiment.signal('access_shown');
     if(data.video_ready){
       try{const [manifest]=await Promise.all([api('/media/'+encodeURIComponent(l.slug)),filmEngineReady()]);if(ticket!==generation)return;
@@ -90,9 +90,9 @@ window.QuizRecommendations=(function(){
       return;
     }
     if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}
-    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'Мой результат игры':'Хочу ещё контента')+'</button></div>';
+    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'← К теневой стороне':'Хочу ещё контента')+'</button></div>';
   }
-  function qrOriginal(){qrDispose();bypass=true;renderQuizResult();}
+  function qrOriginal(){qrDispose();bypass=true;openQuizShadow();}
   async function qrOpenLesson(slug){
     const item=qrItems().find(x=>x.slug===slug);if(!item)return;
     // Use the existing library route for the complete member lesson.
@@ -110,5 +110,5 @@ window.QuizRecommendations=(function(){
     if(action==='join')return openQuizFullAccess();
     if(action==='more'){if(window.GuestExperiment?.active())return GuestExperiment.next();closeQuiz();switchView('library');}
   });
-  return {prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
+  return {pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},back:qrOriginal,prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
 })();

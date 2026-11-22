@@ -5,7 +5,7 @@ test('quiz purchase opens payment directly and restores a hidden entry shell',()
  for(const display of ['none','','block']){
   const calls=[],c={window:{},document:{getElementById:()=>({style:{display}})},closeQuiz:()=>calls.push('close'),enterDemoMode:()=>calls.push('shell'),openAccessPage:()=>calls.push('payment')};
   vm.runInNewContext(fn('openQuizFullAccess'),c);c.openQuizFullAccess();
-  assert.deepEqual(calls,display==='block'?['close','payment']:['close','shell','payment']);
+  assert.deepEqual(calls,display==='block'?['payment']:['shell','payment']);
  }
 });
 test('AI game final keeps one primary guest action; members keep next-game action',()=>{

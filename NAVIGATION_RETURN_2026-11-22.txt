@@ -1,0 +1,31 @@
+APP v702 — Contextual back navigation, 22.11.2026
+Rollback baseline: v701 / f423cc8.
+
+Problem: purchase preparation destroyed the quiz surface, while both payment
+page and native Telegram Back defaulted to portal. Native quiz Back dismissed
+all substeps instead of following their visible parent.
+
+Changes:
+- Capture origin view and quiz scroll before purchase. Pause media/exit fullscreen,
+  hide quiz while retaining DOM, players, drafts and game state. Payment Back
+  restores this same surface without autoplay. Ordinary payment entry restores
+  its source view. No return snapshot survives reload (existing server resume
+  remains authoritative). Leaving payment via another section discards snapshot.
+- Native and web Back use common handlers. Hide redundant local Back with native
+  Telegram navigation; keep local Back for normal browsers.
+- A video → shadow → result; question Back uses existing previous-question action.
+  B media → editable question. C media → completed transcript with a direct
+  return to the lecture, no answer form on a finished game. D Back exits material.
+- The server-assigned next-content order/seen list is unchanged. Back does not
+  assign earlier branches again or undo server progress.
+
+Validation: 77 Node tests; 6 browser journeys (320/390/1440, light/dark) through
+all four branches, both Back handlers, purchase from chat/result/shadow/video,
+same media node/position paused on return, fullscreen exit, question draft,
+completed transcript, abandoning payment and ordinary view return. No page errors.
+Tests invoke the Telegram handler in Chrome; physical Telegram/iPhone not tested.
+No real account actions/orders, backend/DB/experiment changes or player algorithm
+changes. Snapshot exists only in current page memory.
+
+Rollback: revert release commit to v701; publish frontend and verify Pages bytes.
+Evidence: club-continuation-2026-11-20/work/navigation-return-22.

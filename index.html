@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v701 -->
+<!-- FILE_VERSION: index-v702 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v701';
+window.CLUB_BUILD_ID = 'app-v702';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -11075,7 +11075,7 @@ function renderMeetingNotice(notice){
   <!-- ── Получить доступ (персональные ссылки на оплату) ── -->
   <div class="view" id="view-access">
     <div class="section-label" style="display:flex;align-items:center;gap:8px">
-      <span onclick="switchView('portal')" style="cursor:pointer;font-size:16px">←</span>
+      <span onclick="accessNavigateBack()" class="access-back" style="cursor:pointer;font-size:16px">←</span>
       <span>Получить доступ</span>
     </div>
     <div class="card">
@@ -16767,7 +16767,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v701 · 22.11.2026 Гостевой маршрут';
+const APP_BUILD = 'v702 · 22.11.2026 Возврат к материалу';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17097,7 +17097,7 @@ function comingSoon() {
 const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
 /* Native Back follows the top dismissible layer, including dialogs above games. */
 function appBackLayer(){
-  const explicit={'dgs':()=>dgsBack(),'quiz-share-offer':()=>closeQuizShareOffer(),'quiz-overlay':()=>closeQuiz(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
+  const explicit={'dgs':()=>dgsBack(),'quiz-share-offer':()=>closeQuizShareOffer(),'quiz-overlay':()=>quizNavigateBack(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
   const layers=Array.from(document.querySelectorAll('[id].open,[id].gg-open')).filter(el=>el.offsetWidth&&el.offsetHeight);
   const choices=layers.map((el,i)=>{
     let dismiss=explicit[el.id];
@@ -17172,6 +17172,7 @@ function tgBackHandler(){
   tgBackLast = now;
   tgBackFired++;
   const layer=appBackLayer(); if(layer){layer.dismiss(); return;}
+  if(document.getElementById('view-access')?.classList.contains('active')){accessNavigateBack();return;}
   if(document.getElementById("dgs")?.classList.contains("open")){closeDigest();return;}
   try {
     /* Партия — первым делом: из неё возвращаемся к списку игр, а не на портал */
@@ -17281,6 +17282,7 @@ async function refreshScreenData(name, force){
 }
 
 function switchView(name) {
+  if(name!=='access' && purchaseReturn && document.getElementById('view-access')?.classList.contains('active'))discardPurchaseReturn();
   if(name==='profile' && window.MemberProfiles)MemberProfiles.load();
   if(typeof pdFeatureOpened==='function')pdFeatureOpened(name);
   if (typeof isMember !== 'undefined' && isMember) track('member_section', name);
@@ -35306,6 +35308,39 @@ async function personalPaymentLinks(plan){
   return links;
 }
 
+// A temporary purchase detour keeps the exact material DOM and media position.
+let purchaseReturn=null;
+function rememberPurchaseReturn(){
+  if(purchaseReturn)return;
+  const view=document.querySelector('.view.active')?.id.replace('view-','')||'portal';
+  if(view==='access')return;
+  const overlay=document.getElementById('quiz-overlay');
+  const quiz=overlay?.classList.contains('open');
+  purchaseReturn={view,quiz,scroll:quiz?overlay.scrollTop:window.scrollY};
+  if(quiz){
+    window.GuestExperiment?.pauseMedia();window.QuizRecommendations?.pauseMedia();
+    overlay.querySelectorAll('video,audio').forEach(m=>m.pause());
+    overlay.classList.add('quiz-purchase-suspended');overlay.classList.remove('open');
+  }
+}
+function discardPurchaseReturn(){
+  const saved=purchaseReturn;purchaseReturn=null;
+  if(saved?.quiz){document.getElementById('quiz-overlay').classList.remove('quiz-purchase-suspended');closeQuiz();}
+}
+function accessNavigateBack(){
+  const saved=purchaseReturn;purchaseReturn=null;
+  switchView(saved?.view||'portal');
+  if(saved?.quiz){const el=document.getElementById('quiz-overlay');el.classList.remove('quiz-purchase-suspended');el.classList.add('open');el.scrollTop=saved.scroll;}
+  else if(saved)window.scrollTo(0,saved.scroll);
+  appSyncNavigation();
+}
+function quizNavigateBack(){
+  if(window.QuizRecommendations?.isOpen()){QuizRecommendations.back();return;}
+  if(document.getElementById('quiz-shadow-scene')){renderQuizResult();return;}
+  if(document.querySelector('.quiz-question-body')&&quizIndex>0){backQuiz();return;}
+  if(window.GuestExperiment?.back())return;
+  closeQuiz();
+}
 // A purchase page must not remain behind the material that offered it.
 // Use existing dismiss handlers; preserve the audio source and saved position.
 function preparePurchasePage(){
@@ -35315,12 +35350,13 @@ function preparePurchasePage(){
     const layer=appBackLayer();
     if(!layer || seen.has(layer.el)) break;
     seen.add(layer.el);
-    if(layer.el.id==='dgs')closeDigest();else layer.dismiss();
+    if(layer.el.id==='dgs')closeDigest();else if(layer.el.id==='quiz-overlay')closeQuiz();else layer.dismiss();
   }
 }
 async function openAccessPage(direct){
   if (isPaused){ openPauseSheet(); return; }   // v427
   if (!ensureBotAccess(function(){ openAccessPage(direct); })) return;
+  rememberPurchaseReturn();
   preparePurchasePage();
   switchView('access');
   track('access_open');
@@ -42889,7 +42925,6 @@ function openQuizAfterCta(){
 
 function openQuizFullAccess(){
   window.GuestExperiment?.payment();
-  closeQuiz();
   const shell = document.getElementById('app-shell');
   if ((!shell || !shell.style.display || shell.style.display === 'none') && typeof enterDemoMode === 'function') enterDemoMode();
   return openAccessPage();
@@ -42959,7 +42994,7 @@ function openQuizShadow(){
     : '';
 
   document.getElementById('quiz-inner').innerHTML =
-      '<div class="payment-help-link" style="margin:0 0 14px;text-align:left" onclick="renderQuizResult()">← К результату</div>'
+      '<div class="payment-help-link" style="margin:0 0 14px;text-align:left" onclick="quizNavigateBack()">← К результату</div>'
     + '<div class="quiz-hero" id="quiz-shadow-scene">'
       // Имя и роль печатаются НА карте, как на экране результата: под картой
       // они были бы дублем и ослабляли бы саму карту
@@ -47203,7 +47238,7 @@ window.QuizRecommendations=(function(){
   async function qrRender(data,context,ticket){
     const l=data.lecture,member=!!isMember;
     window.ClubAppRescue?.target('l_'+safeContentKey(l.slug));
-    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[data.code]?.god||'По твоему вопросу')+' · следующий шаг</p><h2>'+esc(l.title)+'</h2><p>'+esc(data.reason)+'</p><div id="learning-slot"></div><p id="learning-note" role="status"></p>'+(member?'':'<button class="learning-primary" data-learning="join">'+(data.video_ready?'Смотреть полное видео':'Получить полный доступ')+'</button><button class="learning-quiet" data-learning="more">Хочу ещё контента</button>')+'<button class="learning-quiet" data-learning="result">Мой результат игры</button></div>';
+    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><p class="learning-kicker">'+esc(QUIZ_RESULTS[data.code]?.god||'По твоему вопросу')+' · следующий шаг</p><h2>'+esc(l.title)+'</h2><p>'+esc(data.reason)+'</p><div id="learning-slot"></div><p id="learning-note" role="status"></p>'+(member?'':'<button class="learning-primary" data-learning="join">'+(data.video_ready?'Смотреть полное видео':'Получить полный доступ')+'</button><button class="learning-quiet" data-learning="more">Хочу ещё контента</button>')+'<button class="learning-quiet" data-learning="result">← К теневой стороне</button></div>';
     if(!member&&window.GuestExperiment?.branch()==='A')GuestExperiment.signal('access_shown');
     if(data.video_ready){
       try{const [manifest]=await Promise.all([api('/media/'+encodeURIComponent(l.slug)),filmEngineReady()]);if(ticket!==generation)return;
@@ -47235,9 +47270,9 @@ window.QuizRecommendations=(function(){
       return;
     }
     if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}
-    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'Мой результат игры':'Хочу ещё контента')+'</button></div>';
+    document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'← К теневой стороне':'Хочу ещё контента')+'</button></div>';
   }
-  function qrOriginal(){qrDispose();bypass=true;renderQuizResult();}
+  function qrOriginal(){qrDispose();bypass=true;openQuizShadow();}
   async function qrOpenLesson(slug){
     const item=qrItems().find(x=>x.slug===slug);if(!item)return;
     // Use the existing library route for the complete member lesson.
@@ -47255,7 +47290,7 @@ window.QuizRecommendations=(function(){
     if(action==='join')return openQuizFullAccess();
     if(action==='more'){if(window.GuestExperiment?.active())return GuestExperiment.next();closeQuiz();switchView('library');}
   });
-  return {prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
+  return {pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},back:qrOriginal,prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
 })();
 
 </script>
@@ -47332,6 +47367,12 @@ body:has(#quiz-overlay.open){overflow:hidden}
 .gx-content #gx-status:empty{display:none}
 .gx-content .gx-outcome{font-size:14px;border-left:2px solid var(--warm);padding-left:12px}
 
+.quiz-purchase-suspended{display:none!important}
+#gx-back{align-self:flex-start;position:relative;margin:12px 20px 0;min-height:40px;flex:none;z-index:3}
+#quiz-overlay.gx-open .quiz-close{display:none}
+#quiz-overlay.gx-open #quiz-inner>[onclick="quizNavigateBack()"],#quiz-overlay.gx-open [data-learning="result"]{display:none}
+html[data-tg-native-back] #gx-back,html[data-tg-native-back] .access-back,html[data-tg-native-back] #quiz-inner>[onclick="quizNavigateBack()"]{display:none}
+
 </style>
 <script data-club-bundle="ignore-game-core.js">
 /* Scenario trainer, v1. No AI, remote calls, payment claims or participant writes. */
@@ -47401,12 +47442,13 @@ window.GuestExperiment=(function(){
  function game(){try{const d=JSON.parse(localStorage.getItem(storageKey()));if(IgnoreGameCore.valid(d))return d;}catch(e){}return IgnoreGameCore.fresh();}
  function saveGame(d){try{localStorage.setItem(storageKey(),JSON.stringify(d));}catch(e){}}
  function disposeMedia(){generation++;if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}}
- function dispose(){disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
+ function dispose(){document.getElementById('gx-back')?.remove();disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
  function gxSignal(event,code=''){
   if(!state?.active)return Promise.resolve();
   const snapshot=state;return request('/event',{branch:state.current||state.seen[state.seen.length-1],event,code}).then(d=>{if(!d.active&&active&&state===snapshot){dispose();closeQuiz();}}).catch(()=>{});
  }
  function nav(){
+  if(!document.getElementById('gx-back')){const b=document.createElement('button');b.id='gx-back';b.className='learning-quiet';b.textContent='← Назад';b.onclick=()=>quizNavigateBack();document.getElementById('quiz-overlay').prepend(b);}
   let el=document.getElementById('gx-next');if(!el){el=document.createElement('button');el.id='gx-next';el.className='learning-quiet';el.dataset.gx='next';document.getElementById('quiz-overlay').appendChild(el);}
   el.textContent='Хочу ещё контента';el.disabled=busy;el.hidden=state?.finished;
  }
@@ -47416,9 +47458,10 @@ window.GuestExperiment=(function(){
  }
  function note(text){const el=document.getElementById('gx-status');if(el)el.textContent=text;}
  function showQuestion(){surface('<div class="gx-search-heading"><span class="gx-eyebrow">Занятие под твою задачу</span><h2>Что хочется изменить?</h2><p>В продажах, маркетинге или бизнесе.</p></div><form id="gx-question-form" class="gx-compose"><label for="gx-question">Твой вопрос</label><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Клиенты спрашивают цену и пропадают">'+esc(questionDraft)+'</textarea>'+button('Найти занятие','search')+'</form><p id="gx-status" role="status"></p>');}
- function showChat(){
-  const d=game();if(d.done||state.completed.C)return showLesson('texting_p01_l11_lecture');
+ function showChat(review=false){
+  const d=game();if(!review&&(d.done||state.completed.C))return showLesson('texting_p01_l11_lecture');
   surface('<div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true));
+  if(review){document.getElementById('gx-reply-form').outerHTML=button('Смотреть разбор','review-lesson');document.querySelector('[data-gx=hint]')?.remove();}
   const list=document.querySelector('.gx-chat');list.scrollTop=list.scrollHeight;
  }
  async function showLesson(slug){
@@ -47515,6 +47558,7 @@ window.GuestExperiment=(function(){
   if(action==='next')return next();
   if(action==='hint'){const d=game();d.draft=IgnoreGameCore.hints[d.step];saveGame(d);showChat();document.getElementById('gx-reply')?.focus();}
   if(action==='edit-question'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;document.getElementById('gx-question')?.focus();return;}
+  if(action==='review-lesson')return showLesson('texting_p01_l11_lecture');
   if(action==='retry')return showMedia(mediaSpec);
   if(action==='audio')return toggleAudio();
   if(action==='pay'){gxSignal('payment_open');openQuizFullAccess();}
@@ -47522,6 +47566,8 @@ window.GuestExperiment=(function(){
   if(action==='channel'){gxSignal('channel_open');if(state.channel_url)openUrl(state.channel_url);else showToast('Ссылка на канал пока недоступна. Демо приложения открыто.');}
  });
  return {afterFilm:()=>begin(true),resume:()=>begin(false),maybeResume:()=>{if(bootChecked||appStartParam()||isMember||!telegramId||(funnelFilmStarted&&!filmDone))return;bootChecked=true;begin(false);},next,dispose,
+  back:()=>{if(!active)return false;if(document.getElementById('gx-media')){if(state.current==='B'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;return true;}if(state.current==='C'){showChat(true);document.getElementById('quiz-overlay').scrollTop=0;return true;}}return false;},
+  pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},
   active:()=>active,branch:()=>active?state?.current:null,signal:gxSignal,
   quizDone:code=>{if(active&&state?.current==='A'){state.quiz_code=code;state.completed.A=true;gxSignal('game_completed',code);}},
   payment:()=>{if(active)gxSignal('payment_open');}};

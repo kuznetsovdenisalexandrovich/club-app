@@ -9,12 +9,13 @@ window.GuestExperiment=(function(){
  function game(){try{const d=JSON.parse(localStorage.getItem(storageKey()));if(IgnoreGameCore.valid(d))return d;}catch(e){}return IgnoreGameCore.fresh();}
  function saveGame(d){try{localStorage.setItem(storageKey(),JSON.stringify(d));}catch(e){}}
  function disposeMedia(){generation++;if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}}
- function dispose(){disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
+ function dispose(){document.getElementById('gx-back')?.remove();disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
  function gxSignal(event,code=''){
   if(!state?.active)return Promise.resolve();
   const snapshot=state;return request('/event',{branch:state.current||state.seen[state.seen.length-1],event,code}).then(d=>{if(!d.active&&active&&state===snapshot){dispose();closeQuiz();}}).catch(()=>{});
  }
  function nav(){
+  if(!document.getElementById('gx-back')){const b=document.createElement('button');b.id='gx-back';b.className='learning-quiet';b.textContent='← Назад';b.onclick=()=>quizNavigateBack();document.getElementById('quiz-overlay').prepend(b);}
   let el=document.getElementById('gx-next');if(!el){el=document.createElement('button');el.id='gx-next';el.className='learning-quiet';el.dataset.gx='next';document.getElementById('quiz-overlay').appendChild(el);}
   el.textContent='Хочу ещё контента';el.disabled=busy;el.hidden=state?.finished;
  }
@@ -24,9 +25,10 @@ window.GuestExperiment=(function(){
  }
  function note(text){const el=document.getElementById('gx-status');if(el)el.textContent=text;}
  function showQuestion(){surface('<div class="gx-search-heading"><span class="gx-eyebrow">Занятие под твою задачу</span><h2>Что хочется изменить?</h2><p>В продажах, маркетинге или бизнесе.</p></div><form id="gx-question-form" class="gx-compose"><label for="gx-question">Твой вопрос</label><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Клиенты спрашивают цену и пропадают">'+esc(questionDraft)+'</textarea>'+button('Найти занятие','search')+'</form><p id="gx-status" role="status"></p>');}
- function showChat(){
-  const d=game();if(d.done||state.completed.C)return showLesson('texting_p01_l11_lecture');
+ function showChat(review=false){
+  const d=game();if(!review&&(d.done||state.completed.C))return showLesson('texting_p01_l11_lecture');
   surface('<div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true));
+  if(review){document.getElementById('gx-reply-form').outerHTML=button('Смотреть разбор','review-lesson');document.querySelector('[data-gx=hint]')?.remove();}
   const list=document.querySelector('.gx-chat');list.scrollTop=list.scrollHeight;
  }
  async function showLesson(slug){
@@ -123,6 +125,7 @@ window.GuestExperiment=(function(){
   if(action==='next')return next();
   if(action==='hint'){const d=game();d.draft=IgnoreGameCore.hints[d.step];saveGame(d);showChat();document.getElementById('gx-reply')?.focus();}
   if(action==='edit-question'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;document.getElementById('gx-question')?.focus();return;}
+  if(action==='review-lesson')return showLesson('texting_p01_l11_lecture');
   if(action==='retry')return showMedia(mediaSpec);
   if(action==='audio')return toggleAudio();
   if(action==='pay'){gxSignal('payment_open');openQuizFullAccess();}
@@ -130,6 +133,8 @@ window.GuestExperiment=(function(){
   if(action==='channel'){gxSignal('channel_open');if(state.channel_url)openUrl(state.channel_url);else showToast('Ссылка на канал пока недоступна. Демо приложения открыто.');}
  });
  return {afterFilm:()=>begin(true),resume:()=>begin(false),maybeResume:()=>{if(bootChecked||appStartParam()||isMember||!telegramId||(funnelFilmStarted&&!filmDone))return;bootChecked=true;begin(false);},next,dispose,
+  back:()=>{if(!active)return false;if(document.getElementById('gx-media')){if(state.current==='B'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;return true;}if(state.current==='C'){showChat(true);document.getElementById('quiz-overlay').scrollTop=0;return true;}}return false;},
+  pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},
   active:()=>active,branch:()=>active?state?.current:null,signal:gxSignal,
   quizDone:code=>{if(active&&state?.current==='A'){state.quiz_code=code;state.completed.A=true;gxSignal('game_completed',code);}},
   payment:()=>{if(active)gxSignal('payment_open');}};

@@ -68,3 +68,9 @@ body:has(#quiz-overlay.open){overflow:hidden}
 .gx-compose .learning-primary{margin-top:12px;min-height:50px}
 .gx-content #gx-status:empty{display:none}
 .gx-content .gx-outcome{font-size:14px;border-left:2px solid var(--warm);padding-left:12px}
+
+.quiz-purchase-suspended{display:none!important}
+#gx-back{align-self:flex-start;position:relative;margin:12px 20px 0;min-height:40px;flex:none;z-index:3}
+#quiz-overlay.gx-open .quiz-close{display:none}
+#quiz-overlay.gx-open #quiz-inner>[onclick="quizNavigateBack()"],#quiz-overlay.gx-open [data-learning="result"]{display:none}
+html[data-tg-native-back] #gx-back,html[data-tg-native-back] .access-back,html[data-tg-native-back] #quiz-inner>[onclick="quizNavigateBack()"]{display:none}
