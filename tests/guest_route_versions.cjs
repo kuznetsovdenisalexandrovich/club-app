@@ -11,11 +11,11 @@ function setup(fetch,peer=17){
   return fetch(url,o);
  }});return {t,calls};
 }
-for(const pathname of ['/guest-experiment/state','/guest-experiment/start','/learning/media/texting_p01_l11_lecture','/learning/recommendations'])test('new endpoint '+pathname+' avoids older reserve without changing global route',async()=>{
- const {t,calls}=setup(async url=>url.startsWith('https://reserve.test')?json({detail:'Not Found'},404):json({ok:true}));
+for(const pathname of ['/guest-experiment/state','/guest-experiment/start','/learning/media/texting_p01_l11_lecture','/learning/recommendations'])test('new endpoint '+pathname+' uses upgraded reserve without changing global route',async()=>{
+ const {t,calls}=setup(async url=>json({ok:true}));
  const r=await t.request('https://primary.test'+pathname,{method:pathname.endsWith('/start')?'POST':'GET',body:pathname.endsWith('/start')?'{}':undefined});
- assert.equal(r.status,200);assert(calls.every(c=>c.url.startsWith('https://primary.test')));
- const business=calls.filter(c=>!c.url.endsWith('/rf/readiness'));assert.equal(business.length,1);assert.equal(business[0].headers.get('x-rf-min-timeweb'),'17');
+ assert.equal(r.status,200);assert(calls.every(c=>c.url.startsWith('https://reserve.test')));
+ const business=calls.filter(c=>!c.url.endsWith('/rf/readiness'));assert.equal(business.length,1);assert.equal(business[0].headers.get('x-rf-min-timeweb'),null);
  if(pathname.endsWith('/start'))assert(business[0].headers.get('idempotency-key'));
  assert.equal(t.state().active,'timeweb');
 });
@@ -27,13 +27,13 @@ test('feature settings can be read from primary without replacing ordinary setti
 });
 test('lagging primary cannot receive a new feature mutation',async()=>{
  const {t,calls}=setup(async()=>{throw Error('business request must not run');},16);
- await assert.rejects(t.request('https://primary.test/guest-experiment/start',{method:'POST',body:'{}'}));
+ await assert.rejects(t.request('https://primary.test/assistant/chat',{method:'POST',body:'{}'}));
  assert(calls.every(c=>c.url.endsWith('/rf/readiness')));
 });
-test('lost feature response is never replayed on older reserve',async()=>{
+test('lost branch response is never replayed across nodes',async()=>{
  const {t,calls}=setup(async()=>{throw new TypeError('network');});
- await assert.rejects(t.request('https://primary.test/guest-experiment/next',{method:'POST',body:'{"branch":"A"}'}));
- assert.equal(calls.filter(c=>c.method==='POST').length,1);assert(calls.every(c=>c.url.startsWith('https://primary.test')));
+ await assert.rejects(t.request('https://primary.test/guest-experiment/next',{method:'POST',body:'{"branch":"A"}',rfNoRetry:true}));
+ assert.equal(calls.filter(c=>c.method==='POST').length,1);assert(calls.every(c=>c.url.startsWith('https://reserve.test')));
 });
 test('access denial is final and unrelated payment stays on existing route',async()=>{
  const {t,calls}=setup(async()=>json({detail:'denied'},403));
