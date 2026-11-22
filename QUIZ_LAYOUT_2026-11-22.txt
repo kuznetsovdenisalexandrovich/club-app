@@ -1,0 +1,19 @@
+APP v699 — 22.11.2026
+
+Quiz layout and shadow-side offer, requested by Denis during iPhone pilot.
+Result → prominent “Узнать теневую сторону” → existing recommendation/video.
+Removed the shadow-side plan offer. Shared cold guest retains film conversion.
+Member recommendation still saves through existing idempotent learning path.
+Late gift responses cannot replace an open shadow/player.
+Quiz overlay has no horizontal overflow; vertical result scrolling retained.
+Question body scrolls separately; back/more-content stay at bottom.
+First screen heading: “Узнай, кто ты из богов продаж”.
+
+Validation: 29 Node tests passed; six full browser journeys (320/390/1440,
+light/dark), all four branches, zero page errors. All 12 question positions,
+long-answer overflow and result→shadow→lecture verified. Physical iPhone
+validation remains with Denis. Fixture journeys did not mutate production.
+
+Rollback: revert this frontend commit to v698 / efbb724 and publish Pages.
+No DB, pilot reset, backend, Timeweb, payment or player algorithm changes.
+Evidence: club-continuation-2026-11-20/work/quiz-layout-22.

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v698 -->
+<!-- FILE_VERSION: index-v699 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v698';
+window.CLUB_BUILD_ID = 'app-v699';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16767,7 +16767,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v698 · 22.11.2026 Повторный пилот';
+const APP_BUILD = 'v699 · 22.11.2026 Устойчивый экран игры';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -42216,7 +42216,7 @@ function renderQuizIntro(){
   document.getElementById('quiz-inner').innerHTML =
       '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">'
     + '<div class="quiz-kicker">Пантеон продаж</div>'
-    + '<div class="quiz-name" style="font-size:27px;margin-top:8px">Кто ты из боженек продаж?</div>'
+    + '<div class="quiz-name" style="font-size:27px;margin-top:8px">Узнай, кто ты из богов продаж</div>'
     + '<div class="quiz-text" style="text-align:center;color:var(--text-dim);margin-top:12px">'
     + 'Двенадцать вопросов про то, как ты продаёшь на самом деле. В конце — твой бог из пантеона, '
     + 'его сила, слабость и вторая натура.</div>'
@@ -42236,15 +42236,17 @@ function renderQuizQuestion(){
   const q = QUIZ_QUESTIONS[quizIndex];
   const pct = Math.round(quizIndex / QUIZ_QUESTIONS.length * 100);
   document.getElementById('quiz-inner').innerHTML =
-      (window.GuestExperiment?.branch()==='A'&&quizIndex===0?'<div class="gx-poster"><img src="game-covers/gods.jpg" alt=""><strong>Кто ты из богов продаж?</strong></div>':'')
+      '<div class="quiz-question-body">'
+    + (window.GuestExperiment?.branch()==='A'&&quizIndex===0?'<div class="gx-poster"><img src="game-covers/gods.jpg" alt=""><strong>Узнай, кто ты из богов продаж</strong></div>':'')
     + '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:' + pct + '%"></div></div>'
     + '<div class="quiz-step">Вопрос ' + (quizIndex + 1) + ' из ' + QUIZ_QUESTIONS.length + '</div>'
     + '<div class="quiz-question">' + escapeHtml(q.q) + '</div>'
     + '<button class="quiz-answer" onclick="answerQuiz(0)">' + escapeHtml(q.a) + '</button>'
     + '<button class="quiz-answer" onclick="answerQuiz(1)">' + escapeHtml(q.b) + '</button>'
+    + '</div><div class="quiz-question-footer">'
     + (quizIndex > 0
-        ? '<div class="payment-help-link" style="margin-top:14px" onclick="backQuiz()">← Назад</div>'
-        : '');
+        ? '<div class="payment-help-link"  onclick="backQuiz()">← Назад</div>'
+        : '') + '</div>';
 }
 
 function answerQuiz(pick){
@@ -42493,7 +42495,7 @@ function renderQuizResult(){
 
   // Карту ждать не заставляем: рисуем сразу тем, что есть, и перерисовываем,
   // когда приедет ответ. Пустой экран на время запроса был бы хуже
-  loadQuizGift(r.code, function(){ if (quizResult === r) renderQuizResult(); });
+  loadQuizGift(r.code, function(){ if (quizResult === r && !document.getElementById('quiz-shadow-scene')) renderQuizResult(); });
 
   const gift = quizGiftOf(r.code);
   qzSetLook(gift);
@@ -42559,7 +42561,7 @@ function renderQuizResult(){
       + '</div>'
     + '<div class="quiz-text">' + escapeHtml(me.text) + '</div>'
     + '<div class="quiz-quote">' + escapeHtml(me.quote) + '</div>'
-    + (withLesson ? '<div class="quiz-block"><div class="quiz-block-title">Твоя теневая сторона</div><div class="quiz-block-text">' + escapeHtml(me.risk || '') + '</div></div><div id="quiz-learning-offer" class="quiz-offer" role="status">Подбираем занятие, которое поможет с этой стороной…</div>' : quizAdviceHtml(r.code))
+    + (withLesson ? '<button class="learning-primary" data-quiz-shadow onclick="openQuizShadow()">Узнать теневую сторону</button>' : quizAdviceHtml(r.code))
     + '<div class="quiz-axes">' + axesHtml + '</div>'
     + allyHtml
     + godLink
@@ -42906,17 +42908,20 @@ function openQuizShadow(){
   quizHoloStop();
   const r = quizResult;
   if (!r) return;
-  const second = QUIZ_RESULTS[r.secondCode];
   const me = QUIZ_RESULTS[r.code];
+  const second = QUIZ_RESULTS[r.secondCode] || me;
+  const shadowCode = QUIZ_RESULTS[r.secondCode] ? r.secondCode : r.code;
+  const withLesson = ['member','post_film'].includes(quizEntryContext);
+  const wasShadow = !!document.getElementById('quiz-shadow-scene');
   if (!second) return;
 
   // Карта второго бога — тем же публичным запросом, что и своя: у него та же
   // рамка, тот же сигил и тот же знак. Ждать не заставляем, перерисуем по
   // приезде — но только если человек всё ещё на этом экране
-  loadQuizGift(r.secondCode, function(){
+  loadQuizGift(shadowCode, function(){
     if (quizResult === r && document.getElementById('quiz-shadow-scene')) openQuizShadow();
   });
-  const gift = quizGiftOf(r.secondCode);
+  const gift = quizGiftOf(shadowCode);
   qzSetLook(gift);
 
   const godLink = (typeof godHasInfo === 'function' && godHasInfo(second.god))
@@ -42940,17 +42945,17 @@ function openQuizShadow(){
         ? '<div class="quiz-block"><div class="quiz-block-title warm">Что станет силой</div>'
           + '<div class="quiz-block-text">' + escapeHtml(second.growth) + '</div></div>'
         : '')
-    + (me && me.risk
+    + (me && me.risk && second !== me
         ? '<div class="quiz-block"><div class="quiz-block-title">Слабое место ' + escapeHtml(me.god) + '</div>'
           + '<div class="quiz-block-text">' + escapeHtml(me.risk) + '</div></div>'
         : '')
-    + '<div class="quiz-offer">'
-      + '<div class="quiz-offer-text">Хочешь, соберу план занятий под тебя — закрыть слабое место и раскачать сильное?</div>'
-      + '<button class="lec-link-btn access-btn" style="width:100%;margin:0" onclick="quizWantPlan()">Хочу план</button>'
-    + '</div>'
+    + (withLesson ? '<div id="quiz-learning-offer" class="quiz-offer" role="status">Подбираем занятие, которое поможет с этой стороной…</div>'
+        : '<button class="learning-primary" onclick="quizAdviceFilm()">' + escapeHtml(t('quiz.advice.film')) + '</button>')
     + godLink
     + '<div class="payment-help-link" style="margin-top:2px" onclick="renderQuizResult()">← К результату</div>';
   quizHoloStart(gift);
+  if(!wasShadow)document.getElementById('quiz-overlay').scrollTop=0;
+  if(withLesson)window.QuizRecommendations?.prepare(r,quizEntryContext);
 }
 
 /* ══ МИНИ-ВОРОНКА ВОКРУГ ЗАМОРОЖЕННЫХ БАЛЛОВ ═══════════════════════════════
@@ -47263,6 +47268,19 @@ window.QuizRecommendations=(function(){
 #quiz-overlay.gx-open .quiz-answer:focus-visible,.gx-content textarea:focus-visible{outline:2px solid var(--warm);outline-offset:3px}
 #quiz-overlay.gx-open .quiz-progress-bar{box-shadow:0 0 12px rgba(232,97,74,.5)}
 .gx-content .learning-quiet,#gx-next{color:var(--text-dim);text-underline-offset:4px}
+
+/* The overlay owns vertical scrolling; decorated cards must not widen it. */
+body:has(#quiz-overlay.open){overflow:hidden}
+#quiz-overlay{overflow-x:hidden;overscroll-behavior:contain;box-sizing:border-box;max-width:100%}
+#quiz-overlay .quiz-inner{box-sizing:border-box;min-width:0}
+#quiz-overlay .quiz-inner>*{min-width:0}
+#quiz-overlay.gx-open{overflow-x:hidden;overflow-y:auto}
+#quiz-overlay:has(.quiz-question-body){overflow:hidden;padding-bottom:0}
+#quiz-overlay:has(.quiz-question-body) .quiz-inner{flex:1 1 auto;min-height:0;padding-bottom:0;overflow:hidden}
+.quiz-question-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding-bottom:12px}
+.quiz-question-footer{flex:none;min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px 0;box-sizing:border-box}
+#quiz-overlay:has(.quiz-question-body) #gx-next{flex:none;margin:0 auto;padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;max-width:100%}
+#quiz-overlay:not(.gx-open) .quiz-question-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 
 </style>
 <script data-club-bundle="ignore-game-core.js">

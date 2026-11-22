@@ -27,3 +27,16 @@
 #quiz-overlay.gx-open .quiz-answer:focus-visible,.gx-content textarea:focus-visible{outline:2px solid var(--warm);outline-offset:3px}
 #quiz-overlay.gx-open .quiz-progress-bar{box-shadow:0 0 12px rgba(232,97,74,.5)}
 .gx-content .learning-quiet,#gx-next{color:var(--text-dim);text-underline-offset:4px}
+
+/* The overlay owns vertical scrolling; decorated cards must not widen it. */
+body:has(#quiz-overlay.open){overflow:hidden}
+#quiz-overlay{overflow-x:hidden;overscroll-behavior:contain;box-sizing:border-box;max-width:100%}
+#quiz-overlay .quiz-inner{box-sizing:border-box;min-width:0}
+#quiz-overlay .quiz-inner>*{min-width:0}
+#quiz-overlay.gx-open{overflow-x:hidden;overflow-y:auto}
+#quiz-overlay:has(.quiz-question-body){overflow:hidden;padding-bottom:0}
+#quiz-overlay:has(.quiz-question-body) .quiz-inner{flex:1 1 auto;min-height:0;padding-bottom:0;overflow:hidden}
+.quiz-question-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding-bottom:12px}
+.quiz-question-footer{flex:none;min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px 0;box-sizing:border-box}
+#quiz-overlay:has(.quiz-question-body) #gx-next{flex:none;margin:0 auto;padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;max-width:100%}
+#quiz-overlay:not(.gx-open) .quiz-question-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
