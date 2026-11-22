@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v697 -->
+<!-- FILE_VERSION: index-v698 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v697';
+window.CLUB_BUILD_ID = 'app-v698';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16767,7 +16767,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v697 · 22.11.2026 Результат игры и прямой пейвол';
+const APP_BUILD = 'v698 · 22.11.2026 Повторный пилот';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47394,6 +47394,8 @@ window.GuestExperiment=(function(){
   document.getElementById('quiz-overlay').scrollTop=0;
   if(state.finished){surface('<h2>Остаёмся на связи?</h2><p>В открытом канале — ещё идеи и разборы. А демо клуба можно изучать дальше в своём темпе.</p>'+button('Открыть бесплатный канал','channel')+button('Изучить демо приложения','demo',true));return true;}
   if(state.current==='A'){
+   // A freshly restarted pilot must not inherit a completed local C game.
+   if(state.pilot && state.seen?.length===1 && !state.quiz_code && !state.completed?.C){try{localStorage.removeItem(storageKey());}catch(e){}}
    if(state.quiz_code&&QUIZ_RESULTS[state.quiz_code]){openQuiz(true,'post_film');const saved=savedQuizResult();quizResult=saved?.code===state.quiz_code?saved:{code:state.quiz_code};renderQuizResult();}
    else openQuiz(true,'post_film');
    active=true;document.getElementById('quiz-overlay').classList.add('gx-open');nav();return true;

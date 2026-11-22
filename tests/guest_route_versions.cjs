@@ -69,3 +69,10 @@ test('signed profile bootstrap restores an existing guest branch after loading, 
   await vm.runInContext('boot',c);await Promise.resolve();assert.equal(resume,onHome?1:0);
  }
 });
+test('fresh pilot clears previous local ignore game but ordinary or progressed run keeps it',async()=>{
+ for(const state of [{pilot:true,seen:['A'],completed:{},clear:true},{pilot:false,seen:['A'],completed:{},clear:false},{pilot:true,seen:['C','A'],completed:{C:true},clear:false}]){
+  const c=feature(async()=>({active:true,current:'A',...state}),true);let removed=[];c.localStorage={removeItem:k=>removed.push(k)};
+  assert.equal(await c.GuestExperiment.resume(),true);
+  assert.equal(removed.length,state.clear?1:0);if(state.clear)assert.equal(removed[0],'club_guest_game_v1:77');
+ }
+});
