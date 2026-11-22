@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v702 -->
+<!-- FILE_VERSION: index-v703 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v702';
+window.CLUB_BUILD_ID = 'app-v703';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -9615,6 +9615,21 @@ html[data-lite] .qr-sigil,html[data-lite] .hfx,html[data-lite] .pr-ambient,html[
 .qr-plus-sub{font-size:15px;line-height:1.55;margin:0 0 18px;color:var(--text-dim)}
 .qr-plus-scene{pointer-events:none;position:relative;isolation:isolate;overflow:hidden;max-width:380px;margin:0 auto 20px;padding:24px 0}
 .qr-plus-scene .qr-stack{width:min(280px,100%);margin:0 auto}.quiz-overlay .qr-plus-scene .qr-sigil{opacity:.12;mask-image:radial-gradient(ellipse,#000 30%,transparent 68%)}.qr-plus .access-btn{font:inherit;min-height:48px;white-space:normal;margin:0}
+
+.lead-material-dialog{margin:auto;width:min(640px,100vw);max-height:100dvh;box-sizing:border-box;overflow:auto;overscroll-behavior:contain;border:1px solid var(--border);border-radius:24px;background:var(--bg);color:var(--text);padding:22px;box-shadow:var(--sh-sm)}
+.lead-material-dialog:focus{outline:none}
+.lead-material-dialog::backdrop{background:#0006}
+.lead-material-dialog h2{font-family:var(--disp);font-size:clamp(24px,5vw,30px);line-height:1.15;margin:14px 0 20px;overflow-wrap:anywhere}
+.lead-material-dialog .lead-back{margin:0 0 6px;padding:4px 0;min-height:36px}
+.lead-note{font-size:13px;color:var(--text-dim);line-height:1.5;margin:12px 0 18px}.lead-note:empty{display:none}
+.lead-actions{display:flex;flex-direction:column;gap:8px}.lead-material-dialog .learning-primary{width:100%;box-sizing:border-box;min-height:54px;text-align:center;white-space:normal}
+.lead-material-dialog .learning-quiet{color:var(--text-dim);font-size:14px;text-align:center}
+.lead-extras{margin-top:14px;font-size:13px;color:var(--text-dim)}.lead-extras summary{cursor:pointer;text-align:center;padding:12px 0;min-height:44px;box-sizing:border-box}
+.lead-extras button,.lead-extras a{display:block;width:100%;margin:4px auto}
+.lead-pdf-gate{padding:16px;border:1px solid var(--border);border-radius:20px;background:var(--card);line-height:1.5}
+.lead-material-dialog [hidden]{display:none!important}
+html[data-tg-native-back] .lead-back{display:none}
+@media(max-width:480px){.lead-material-dialog{width:100%;max-width:100%;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px));border-radius:22px}}
 </style>
 <!-- ⚠️⚠️ ПРЕДЗАГРУЗКА ДВУХ КОНФИГОВ УБРАНА (24.08.2026). Оба ролика лежали
      на странице разметкой `<span data-boomstream-code>`, а рядом грузились ДВА
@@ -16767,7 +16782,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v702 · 22.11.2026 Возврат к материалу';
+const APP_BUILD = 'v703 · 22.11.2026 Экраны лид-магнитов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17097,6 +17112,8 @@ function comingSoon() {
 const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
 /* Native Back follows the top dismissible layer, including dialogs above games. */
 function appBackLayer(){
+  const dialog=Array.from(document.querySelectorAll('dialog[open]')).at(-1);
+  if(dialog?.id==='lead-material-dialog')return {el:dialog,dismiss:()=>window.LeadMaterialNavigation?.back()};
   const explicit={'dgs':()=>dgsBack(),'quiz-share-offer':()=>closeQuizShareOffer(),'quiz-overlay':()=>quizNavigateBack(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
   const layers=Array.from(document.querySelectorAll('[id].open,[id].gg-open')).filter(el=>el.offsetWidth&&el.offsetHeight);
   const choices=layers.map((el,i)=>{
@@ -27642,27 +27659,38 @@ Object.assign(APP_TEXTS, {"lead.expired": {"c": "Материалы", "l": "Се
 async function openLeadMaterial(code){
  if(window.ClubAppRescue)ClubAppRescue.target(code);
  if(leadMaterialClose)leadMaterialClose();
- const root=document.createElement('dialog');root.style.cssText='margin:auto;width:min(900px,94vw);box-sizing:border-box;max-height:90dvh;overflow:auto;border:1px solid var(--border,#777);border-radius:20px;background:var(--bg,#202020);color:var(--text,#eee);padding:24px';
- const close=document.createElement('button');close.className='lec-link-btn';close.textContent=t('lead.close');close.style.marginBottom='20px';
- const title=document.createElement('h2');title.textContent=t('lead.loading');title.style.overflowWrap='anywhere';const note=document.createElement('p');
+ const root=document.createElement('dialog');root.id='lead-material-dialog';root.className='lead-material-dialog';
+ const close=document.createElement('button');close.className='learning-quiet lead-back';close.textContent='← Назад';
+ const title=document.createElement('h2');title.textContent=t('lead.loading');
+ const note=document.createElement('p');note.className='lead-note';note.setAttribute('role','status');
  const box=document.createElement('div');box.id='lead-material-player';box.style.cssText='width:100%;aspect-ratio:16/9';
- const links=document.createElement('div');links.style.cssText='display:flex;flex-direction:column;gap:12px;margin-top:20px';
- const gate=document.createElement('div');gate.hidden=true;gate.style.cssText='margin-top:20px;padding:16px;border:1px solid var(--border,#777);border-radius:12px';
- root.append(close,title,note,box,links,gate);document.body.appendChild(root);root.showModal();
+ const links=document.createElement('div');links.className='lead-actions';
+ const extras=document.createElement('details');extras.className='lead-extras';extras.hidden=true;extras.innerHTML='<summary>Другие способы просмотра</summary>';
+ const gate=document.createElement('div');gate.hidden=true;gate.className='lead-pdf-gate';
+ root.append(close,title,box,note,links,gate,extras);document.body.appendChild(root);root.showModal();appSyncNavigation();
  let closed=false,player=null,launch='',attempt=window.__leadMaterialBoot&&window.__leadMaterialBoot.code===code?window.__leadMaterialBoot.attempt:crypto.randomUUID();
  try{launch=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')||''}catch(e){}
  const platform=isInsideVk()?'vk':'tg';if(platform==='vk')launch=vkLaunchQuery();
  const startUrl=platform==='vk'?'https://vk.ru/app54827669#'+encodeURIComponent(code):'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code);
  let signalChain=Promise.resolve();
  const signal=event=>{if(event==='error'&&window.ClubAppRescue)ClubAppRescue.fail('content_error');return signalChain=signalChain.then(()=>launch?fetch('https://bot.youselllikeagod-magazine.ru/content/playback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,attempt,launch,event,platform,managed_rescue:!!(window.ClubAppRescue&&ClubAppRescue.accepted)}),keepalive:true,signal:AbortSignal.timeout(15000)}).catch(()=>null):Promise.resolve(null));};
- leadMaterialClose=()=>{if(closed)return;closed=true;removeClubVideoFullscreen(box);nurtureOfferCollapsed();signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null};
- close.onclick=leadMaterialClose;root.addEventListener('cancel',e=>{e.preventDefault();if(leadMaterialClose)leadMaterialClose()});
- const button=(label,action)=>{const b=document.createElement('button');b.className='lec-link-btn';b.textContent=label;b.style.cssText='white-space:normal;min-height:46px;width:100%;box-sizing:border-box';b.onclick=action;return b};
- const anchor=(label,url)=>{const a=document.createElement('a');a.className='lec-link-btn';a.textContent=label;a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;min-height:46px;box-sizing:border-box;text-decoration:none';return a};
+ leadMaterialClose=()=>{if(closed)return;closed=true;removeClubVideoFullscreen(box);nurtureOfferCollapsed();signal('closed');if(player)try{player.destroy()}catch(e){}root.close();root.remove();leadMaterialClose=null;window.LeadMaterialNavigation=null;appSyncNavigation()};
+ const back=()=>{if(!gate.hidden){gate.hidden=true;links.hidden=false;extras.hidden=false;root.scrollTop=0;return;}leadMaterialClose();};
+ window.LeadMaterialNavigation={back,suspend:()=>{
+   if(!root.open||closed)return null;
+   const scroll=root.scrollTop;closeClubVideoFullscreen(box);
+   box.querySelectorAll('video,audio').forEach(v=>v.pause());
+   try{Promise.resolve(player?.pause?.()).catch(()=>{});}catch(e){}
+   root.close();
+   return {resume:()=>{if(!closed){root.showModal();root.scrollTop=scroll;}},discard:()=>{if(!closed)leadMaterialClose();}};
+ }};
+ close.onclick=back;root.addEventListener('cancel',e=>{e.preventDefault();back()});
+ const button=(label,action)=>{const b=document.createElement('button');b.className='learning-quiet';b.textContent=label;b.style.cssText='white-space:normal;min-height:44px;box-sizing:border-box';b.onclick=action;return b};
+ const anchor=(label,url)=>{const a=document.createElement('a');a.className='learning-quiet';a.textContent=label;a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;min-height:46px;box-sizing:border-box;text-decoration:none';return a};
  try{
   const response=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code),{signal:AbortSignal.timeout(12000)});
   if(!response.ok)throw new Error('material');const data=await response.json();if(closed)return;
-  title.textContent=data.title;note.textContent=data.note;
+  title.textContent=data.title;note.textContent='';
   let allowed=await signal('requested');if(closed)return;
   if(!allowed||allowed.status>=500){allowed=await signal('requested');if(closed)return}
   if(!allowed||!allowed.ok){
@@ -27675,11 +27703,12 @@ async function openLeadMaterial(code){
     note.textContent=t(reason==='launch_expired'?'lead.expired':reason==='delivery_blocked'?'lead.blocked':allowed&&[401,403].includes(allowed.status)||!launch?'lead.authError':'lead.connectionError');
     links.append(button(t('lead.retry'),()=>openLeadMaterial(code)),anchor(t('lead.bot'),startUrl));
    }
+   if(links.firstElementChild)links.firstElementChild.className='learning-primary';
    return;
   }
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}sendAttributionTouch(code);
   const materialActions=Array.isArray(data.actions)?data.actions:['full','pdf','film'];
-  if(materialActions.includes('full'))links.append(button(t('lead.full'),()=>{leadMaterialClose();openAccessPage()}));
+  if(materialActions.includes('full')){note.textContent='Открытый фрагмент занятия';const buy=button('Смотреть полное занятие',()=>openAccessPage());buy.className='learning-primary';buy.dataset.leadBuy='1';links.append(buy);}else note.textContent=data.note||'';
   const pdfGate=data.pdf_gate&&data.pdf_gate[platform];
   if(pdfGate&&materialActions.includes('pdf')){
    const explanation=document.createElement('p');explanation.textContent=t(platform==='vk'?'lead.vkGate':'lead.gate');explanation.style.cssText='margin-bottom:16px;line-height:1.5';
@@ -27690,17 +27719,18 @@ async function openLeadMaterial(code){
      const r=await fetch('https://bot.youselllikeagod-magazine.ru/content/materials/'+encodeURIComponent(code)+'/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({launch,platform,nurture_token:window.__nurtureToken||''}),signal:AbortSignal.timeout(25000)});
      if(!r.ok)throw new Error('pdf');const result=await r.json();if(closed)return;
      status.replaceChildren();
-     if(result.subscribed){const u=new URL(result.url);if(u.origin!=='https://bot.youselllikeagod-magazine.ru'||!u.pathname.startsWith('/content/pdf/'))throw new Error('url');status.append(anchor(t('lead.download'),await window.clubBotTransport.directLink(result.url)))}
+     if(result.subscribed){const u=new URL(result.url);if(u.origin!=='https://bot.youselllikeagod-magazine.ru'||!u.pathname.startsWith('/content/pdf/'))throw new Error('url');const download=anchor(t('lead.download'),await window.clubBotTransport.directLink(result.url));download.className='learning-primary';status.append(download);check.hidden=true}
      else status.textContent=t(platform==='vk'?'lead.vkNotSubscribed':'lead.notSubscribed');
     }catch(e){if(!closed)status.textContent=t('lead.pdfError')}finally{check.disabled=false}
    });
-   check.style.marginTop='12px';gate.append(explanation,anchor(t(platform==='vk'?'lead.vkSubscribe':'lead.subscribe'),pdfGate.url),check,status);
-   links.append(button(t('lead.pdf'),()=>{gate.hidden=false;gate.scrollIntoView({behavior:'smooth',block:'nearest'});check.click()}));
+   check.className='learning-primary';check.style.marginTop='12px';gate.append(explanation,anchor(t(platform==='vk'?'lead.vkSubscribe':'lead.subscribe'),pdfGate.url),check,status);
+   links.append(button(t('lead.pdf'),()=>{gate.hidden=false;links.hidden=true;extras.hidden=true;check.hidden=false;gate.scrollIntoView({behavior:'smooth',block:'nearest'});check.click()}));
   }
-  if(materialActions.includes('film'))links.append(button(t('lead.film'),()=>{leadMaterialClose();openFilmRoute()}));
-  if(materialActions.includes('demo'))links.append(button('Посмотреть демо клуба',()=>{leadMaterialClose();switchView('portal')}));
-  if(platform==='vk'){if(data.vk_bot_url)links.append(anchor(t('lead.bot'),data.vk_bot_url))}
-  else for(const [bot,url] of Object.entries(data.bot_urls||{}))links.append(anchor(t('lead.bot'),url));
+  if(materialActions.includes('film'))extras.append(button(t('lead.film'),()=>{leadMaterialClose();openFilmRoute()}));
+  if(materialActions.includes('demo'))extras.append(button('Посмотреть демо клуба',()=>{leadMaterialClose();switchView('portal')}));
+  if(platform==='vk'){if(data.vk_bot_url)extras.append(anchor(t('lead.bot'),data.vk_bot_url))}
+  else for(const [bot,url] of Object.entries(data.bot_urls||{}))extras.append(anchor(t('lead.bot'),url));
+  extras.hidden=extras.children.length<2;
   try{
    if(data.video_url){
     const u=new URL(data.video_url);if(u.origin!=='https://club-audio-725136.s3.ru-7.storage.selcloud.ru'||!/^\/lead-magnets\/[a-zA-Z0-9_-]+\.mp4$/.test(u.pathname))throw new Error('video');
@@ -27709,8 +27739,8 @@ async function openLeadMaterial(code){
     video.addEventListener('playing',()=>nurtureOfferSample('video',data.id,video.currentTime,true));video.addEventListener('pause',()=>nurtureOfferSample('video',data.id,video.currentTime,false));
     let nurtureLast=0;video.addEventListener('timeupdate',()=>{nurtureOfferSample('video',data.id,video.currentTime,!video.paused);if(!video.paused&&!document.hidden&&video.currentTime>=nurtureLast+15){nurtureLast=video.currentTime;nurtureProgress('viewing',code,nurtureLast)}});
     video.addEventListener('playing',()=>signal('playing'));
-    video.addEventListener('error',()=>{note.textContent=t('lead.error');signal('error')});
-    video.addEventListener('ended',()=>{nurtureProgress('completed',code,video.duration||0);note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
+    video.addEventListener('error',()=>{note.textContent=t('lead.error');extras.open=true;signal('error')});
+    video.addEventListener('ended',()=>{nurtureProgress('completed',code,video.duration||0);note.textContent='Фрагмент закончился. Полное занятие — в клубе.';links.scrollIntoView({behavior:'smooth',block:'nearest'})});
     player={destroy:()=>{video.pause();video.removeAttribute('src');video.load()}};leadMaterialPlayer=player;box.append(video);mountClubVideoFullscreen(box,()=>video);video.src=data.video_url;
     return;
    }
@@ -27718,9 +27748,9 @@ async function openLeadMaterial(code){
    player=await factory.create(box.id,{url:'https://kinescope.io/'+data.kinescope_id,size:{width:'100%',height:'100%'},behavior:{autoPlay:false,preload:'metadata'}});
    if(closed){player.destroy();return}leadMaterialPlayer=player;mountClubVideoFullscreen(box);nurtureOfferWatchKinescope(player,data.id);signal('ready');
    if(player.Events.Playing)player.on(player.Events.Playing,()=>signal('playing'));
-   if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent=t('lead.end');links.scrollIntoView({behavior:'smooth',block:'nearest'})});
-   if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');signal('error')});
-  }catch(e){if(!closed){note.textContent=t('lead.error');signal('error')}}
+   if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent='Фрагмент закончился. Полное занятие — в клубе.';links.scrollIntoView({behavior:'smooth',block:'nearest'})});
+   if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');extras.open=true;signal('error')});
+  }catch(e){if(!closed){note.textContent=t('lead.error');extras.open=true;signal('error')}}
  }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;links.append(anchor(t('lead.start'),startUrl));signal('error')}}
 }
 
@@ -35316,7 +35346,7 @@ function rememberPurchaseReturn(){
   if(view==='access')return;
   const overlay=document.getElementById('quiz-overlay');
   const quiz=overlay?.classList.contains('open');
-  purchaseReturn={view,quiz,scroll:quiz?overlay.scrollTop:window.scrollY};
+  purchaseReturn={view,quiz,scroll:quiz?overlay.scrollTop:window.scrollY,lead:window.LeadMaterialNavigation?.suspend()};
   if(quiz){
     window.GuestExperiment?.pauseMedia();window.QuizRecommendations?.pauseMedia();
     overlay.querySelectorAll('video,audio').forEach(m=>m.pause());
@@ -35325,6 +35355,7 @@ function rememberPurchaseReturn(){
 }
 function discardPurchaseReturn(){
   const saved=purchaseReturn;purchaseReturn=null;
+  saved?.lead?.discard();
   if(saved?.quiz){document.getElementById('quiz-overlay').classList.remove('quiz-purchase-suspended');closeQuiz();}
 }
 function accessNavigateBack(){
@@ -35332,6 +35363,7 @@ function accessNavigateBack(){
   switchView(saved?.view||'portal');
   if(saved?.quiz){const el=document.getElementById('quiz-overlay');el.classList.remove('quiz-purchase-suspended');el.classList.add('open');el.scrollTop=saved.scroll;}
   else if(saved)window.scrollTo(0,saved.scroll);
+  saved?.lead?.resume();
   appSyncNavigation();
 }
 function quizNavigateBack(){

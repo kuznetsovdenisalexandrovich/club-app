@@ -1,0 +1,26 @@
+APP v703 — Lead material hierarchy, 22.11.2026
+Baseline / rollback: app v702 / 6372f45.
+
+Common lead material dialog now presents title → video → short note → one orange
+full-lesson CTA. PDF is a quiet action; film/demo/bot alternatives are disclosed
+under Other viewing options. Video errors reveal alternatives. Removed the long
+opening sales/PDF explanation from the main screen; PDF terms remain in its gate.
+PDF subscription check/download stays inline, hides competing actions while open,
+and Back returns to video actions. Native Telegram Back handles this dialog;
+local Back remains in ordinary browsers. Missing bot permission retains its own
+primary start-bot action, without a misleading purchase button.
+
+Purchase detour suspends the dialog, exits fullscreen, pauses native/external
+player and retains DOM/time. Returning restores the same dialog; abandoning the
+purchase discards it. Reuses v702 purchase-origin mechanism. Sources, rescue
+signals, permission checks, PDF validation/transport and payment creation unchanged.
+
+Validation: 85 focused Node tests; six Chrome fixtures,320/390/1440 light/dark,
+native MP4 and mocked Kinescope API/iframe, purchase return and player identity,
+PDF non-subscriber/subscriber/download, inline Back, error alternatives, denied
+bot write permission. No page errors. External API fixture is not a real Kinescope
+playback/network test. No physical iPhone or real Telegram tested this turn.
+No production messages, PDF writes, orders, progress resets or backend deployments.
+
+Rollback: revert release commit to v702, publish frontend, verify Pages exact bytes.
+Evidence: club-continuation-2026-11-20/work/lead-layout-22.
