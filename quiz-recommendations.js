@@ -6,7 +6,7 @@ window.QuizRecommendations=(function(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const owner=()=>isMember&&telegramId?'member:'+telegramId:'';
   const api=(path,body)=>apiRequest(API_URL+'/learning'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{},15000);
-  function qrDispose(){generation++;if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}owned=null;}
+  function qrDispose(){generation++;if(player){player.destroy();player=null;}if(audio){audio.destroy();audio=null;}owned=null;}
   function qrReset(){qrDispose();bypass=false;prepared=null;}
   async function qrLoadPersonal(){
     const who=owner();if(!who){personal=[];personalOwner='';return;}
@@ -73,11 +73,11 @@ window.QuizRecommendations=(function(){
     try{
       const manifest=full?await apiRequest(API_URL+'/lectures/'+encodeURIComponent(l.slug)+'/audio',{},15000):await api('/media/'+encodeURIComponent(l.slug)+'?kind=audio');
       if(ticket!==generation)return;
-      const slot=document.getElementById('learning-slot');slot.innerHTML='<div class="learning-audio"><span>Аудиоверсия занятия</span><audio controls preload="metadata"></audio></div>';
-      audio=slot.querySelector('audio');audio.src=full?manifest.url:manifest.sources[0].url;
-      audio.addEventListener('playing',()=>{if(typeof rememberLastLecture==='function')rememberLastLecture(l);});
-      audio.addEventListener('ended',()=>qrEnded(data,context));
-      audio.addEventListener('error',()=>{if(ticket!==generation)return;window.ClubAppRescue?.fail('content_error');qrNote('Не удалось загрузить аудио. Попробуй ещё раз.');slot.innerHTML='<button class="learning-primary" data-learning="retry">Повторить загрузку</button>';});
+      const slot=document.getElementById('learning-slot');slot.innerHTML='';
+      audio=new ClubLessonAudio(slot,{url:full?manifest.url:manifest.sources[0].url,lecture:l,
+        onPlaying:()=>{if(typeof rememberLastLecture==='function')rememberLastLecture(l);if(window.GuestExperiment?.branch()==='A')GuestExperiment.signal('started');},
+        onEnded:()=>{if(window.GuestExperiment?.branch()==='A')GuestExperiment.signal('completed');qrEnded(data,context);},
+        onError:()=>{if(ticket!==generation)return;window.ClubAppRescue?.fail('content_error');qrNote('Не удалось загрузить аудио. Нажми ▶, чтобы повторить.');}});
       qrNote(full?'Полная аудиоверсия. Видео этого занятия пока открывается на внешней площадке.':'Короткая аудиоверсия · около 10 минут. Видео готовится.');
     }catch(e){if(ticket!==generation)return;document.getElementById('learning-slot').innerHTML='<button class="learning-primary" data-learning="retry">Повторить загрузку</button>';qrNote('Сейчас не удалось открыть занятие.');window.ClubAppRescue?.fail('content_error');}
   }
@@ -89,7 +89,7 @@ window.QuizRecommendations=(function(){
       qrNote('Фрагмент закончился. Полное занятие доступно в клубе.');
       return;
     }
-    if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}
+    if(player){player.destroy();player=null;}if(audio){audio.destroy();audio=null;}
     document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'← К теневой стороне':'Хочу ещё контента')+'</button></div>';
   }
   function qrOriginal(){qrDispose();bypass=true;openQuizShadow();}

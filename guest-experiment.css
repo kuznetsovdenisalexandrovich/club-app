@@ -91,3 +91,26 @@ html[data-tg-native-back] #gx-back,html[data-tg-native-back] .access-back,html[d
 #quiz-overlay .learning-result .learning-kicker{margin-bottom:8px}
 #quiz-overlay .learning-result #learning-note{margin:12px 0 16px}
 #quiz-overlay .learning-result .learning-quiet{margin:8px auto 0;min-height:44px;box-sizing:border-box}
+
+/* Same glass, bubbles and assistant as the club games; no introduction screen. */
+[data-theme] #quiz-overlay.gx-open:has(.gx-game){background:var(--gg-page);color:var(--gg-ink)}
+.gx-game{font-family:var(--gg-font-body);display:flex;flex-direction:column;gap:16px;min-width:0}
+.gx-game-title{font:700 24px/1.2 var(--gg-font-disp);letter-spacing:-.5px;margin:0 0 4px;color:var(--gg-ink)}
+.gx-game .gx-conversation{background:var(--gg-panel);border-color:var(--gg-panel-brd);box-shadow:var(--gg-panel-sh)}
+.gx-game .gx-chat-heading{border-color:var(--gg-card-brd)}
+.gx-game .gx-chat-heading h2{margin:0 0 4px;color:var(--gg-ink)}
+.gx-game .gx-chat-heading span:not(.gx-avatar),.gx-game .gx-chat>small{color:var(--gg-muted)}
+.gx-game .gx-avatar{background:var(--gg-send);box-shadow:var(--gg-send-sh)}
+.gx-game .gx-message{background:var(--gg-bubble);border-color:var(--gg-bubble-brd);box-shadow:var(--gg-bubble-sh);color:var(--gg-ink)}
+.gx-game .gx-message.you{background:var(--gg-me);color:var(--gg-me-ink);border-color:var(--gg-me-brd);box-shadow:var(--gg-me-sh)}
+.gx-game .gx-message.status{background:none;box-shadow:none;color:var(--gg-muted)}
+.gx-game .gx-coach{display:flex;align-items:center;gap:12px;margin:0;padding:0}
+.gx-game .gx-coach .gg-robot{width:56px;flex:none}
+.gx-game .gx-coach p{font-size:14px;line-height:1.45;color:var(--gg-ink-3);margin:0}
+.gx-game .gx-compose{background:var(--gg-card);border-color:var(--gg-card-brd);box-shadow:var(--gg-card-sh);margin:0}
+.gx-game .gx-compose label{color:var(--gg-muted)}
+.gx-game .gx-compose textarea{color:var(--gg-ink)}
+.gx-game .gx-compose textarea::placeholder{color:var(--gg-muted)}
+.gx-game .learning-primary{background:var(--gg-send);box-shadow:var(--gg-send-sh);border:1px solid var(--gg-me-brd);color:white;margin:12px 0 0;animation:none}
+.gx-game .learning-quiet{margin:0 auto;color:var(--gg-muted)}
+#quiz-overlay:has(.gx-game) #gx-next,#quiz-overlay:has(.gx-game) #gx-back{color:var(--gg-muted)}

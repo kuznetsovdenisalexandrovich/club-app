@@ -8,7 +8,7 @@ window.GuestExperiment=(function(){
  const storageKey=()=> 'club_guest_game_v1:'+String(telegramId||'');
  function game(){try{const d=JSON.parse(localStorage.getItem(storageKey()));if(IgnoreGameCore.valid(d))return d;}catch(e){}return IgnoreGameCore.fresh();}
  function saveGame(d){try{localStorage.setItem(storageKey(),JSON.stringify(d));}catch(e){}}
- function disposeMedia(){generation++;if(player){player.destroy();player=null;}if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}}
+ function disposeMedia(){generation++;if(player){player.destroy();player=null;}if(audio){audio.destroy();audio=null;}}
  function dispose(){document.getElementById('gx-back')?.remove();disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
  function gxSignal(event,code=''){
   if(!state?.active)return Promise.resolve();
@@ -27,7 +27,7 @@ window.GuestExperiment=(function(){
  function showQuestion(){surface('<div class="gx-search-heading"><span class="gx-eyebrow">Занятие под твою задачу</span><h2>Что хочется изменить?</h2><p>В продажах, маркетинге или бизнесе.</p></div><form id="gx-question-form" class="gx-compose"><label for="gx-question">Твой вопрос</label><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Клиенты спрашивают цену и пропадают">'+esc(questionDraft)+'</textarea>'+button('Найти занятие','search')+'</form><p id="gx-status" role="status"></p>');}
  function showChat(review=false){
   const d=game();if(!review&&(d.done||state.completed.C))return showLesson('texting_p01_l11_lecture');
-  surface('<div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><p class="gx-coach" role="status">'+esc(d.coach)+'</p><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true));
+  surface('<div class="gx-game"><div class="gx-game-title">Вытащи клиента из игнора</div><div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><div class="gx-coach" role="status"><span class="gg-robot" aria-hidden="true"></span><p>'+esc(d.coach)+'</p></div><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true)+'</div>');
   if(review){document.getElementById('gx-reply-form').outerHTML=button('Смотреть разбор','review-lesson');document.querySelector('[data-gx=hint]')?.remove();}
   const list=document.querySelector('.gx-chat');list.scrollTop=list.scrollHeight;
  }
@@ -60,10 +60,10 @@ window.GuestExperiment=(function(){
   const ticket=generation;btn.disabled=true;
   try{
    const d=await apiRequest(API_URL+'/learning/media/'+encodeURIComponent(mediaSpec.slug)+'?kind=audio',{},15000);if(ticket!==generation)return;
-   player?.action('pause');player?.removeFullscreen?.close();audio=document.createElement('audio');audio.controls=true;audio.preload='metadata';audio.src=d.sources[0].url;
-   document.getElementById('gx-media').after(audio);document.getElementById('gx-media').hidden=true;btn.textContent='Вернуться к видео';
-   audio.addEventListener('playing',()=>gxSignal('started'));audio.addEventListener('ended',()=>{note('Фрагмент закончился. Полное занятие — в клубе.');gxSignal('completed');});
-   audio.addEventListener('error',()=>note('Аудио не загрузилось. Можно вернуться к видео.'));
+   player?.action('pause');player?.removeFullscreen?.close();
+   const slot=document.createElement('div');document.getElementById('gx-media').after(slot);
+   audio=new ClubLessonAudio(slot,{url:d.sources[0].url,lecture:mediaSpec,onPlaying:()=>gxSignal('started'),onEnded:()=>{note('Фрагмент закончился. Полное занятие — в клубе.');gxSignal('completed');},onError:()=>note('Аудио не загрузилось. Можно повторить или вернуться к видео.')});
+   document.getElementById('gx-media').hidden=true;btn.textContent='Вернуться к видео';
    audio.play().catch(()=>note('Нажми ▶ в аудиоплеере.'));
   }catch(e){if(ticket===generation)note('Аудиоверсия пока недоступна. Видео остаётся здесь.');}finally{if(ticket===generation)btn.disabled=false;}
  }
