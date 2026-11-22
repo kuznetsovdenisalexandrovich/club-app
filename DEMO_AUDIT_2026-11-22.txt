@@ -1,0 +1,35 @@
+APP v701 — Demo boundary audit, 22.11.2026
+Baseline and rollback: app v700 / 53907d1.
+
+Reproduced: manual onboarding entry bypassed membership checks and told a guest
+that channel/chat were open. Demo help now launches the existing guest tour
+without the member help menu; manual onboarding and onboarding-video entries
+use the same boundary. Members retain instructions; welcome claims joined
+channel/chat only when both profile flags confirm it. Paused users retain recovery.
+Guest tour does not write member onboarding progress; missing tour counts no
+longer display a fictitious zero-size library.
+
+Other repairs:
+- Channel/chat/reserve/access-link and VK access-flow actions gate guests before
+  platform linking or access requests. Question-for-Denis dialog/submission gates
+  guests; guest lecture assistant and support remain available.
+- Profile editor/directory/person actions gate guests. Guest profile does not
+  load a member record. Old profile summary and introduction start/progress are
+  hidden when switching into demo. Member tour overlays are dismissed without
+  marking steps complete.
+- Points-feed empty state distinguishes guest from member. Invite-friends link
+  on points page opens the existing invitation flow instead of comingSoon.
+
+Validation: 72 focused Node tests incl. new demo_boundaries.cjs; 6 four-branch
+browser journeys with guest boundary checks, 320/390/1440 light/dark; 4 separate
+7-tab surveys (portal/library/games/schedule/profile/cards/points-info),390/1440
+light/dark. Checked guest tour → payment choices, guest and paused gates, member
+welcome with/without joined flags, retained library/game paths, question retry,
+media and fullscreen, direct payment navigation, saved progress and completion.
+Fixtures only: no real user mutations, messages or payment orders. Browser API
+fixtures are not production authorization/security tests and do not validate
+physical iPhone or native Telegram. Live production server flags/content may vary.
+
+Rollback: revert this release commit and publish frontend to main; compare Pages
+bytes with index.html. No DB migration, server rollout or experiment reset.
+Evidence: club-continuation-2026-11-20/work/demo-audit-22.

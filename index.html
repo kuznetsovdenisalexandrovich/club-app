@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v700 -->
+<!-- FILE_VERSION: index-v701 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v700';
+window.CLUB_BUILD_ID = 'app-v701';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -10942,7 +10942,7 @@ function renderMeetingNotice(notice){
 
     <div class="section-label">Что такое баллы и уровень</div>
     <div class="card">
-      <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и особенно за <span style="color:var(--warm);font-weight:700;cursor:pointer" onclick="comingSoon()">приглашение друзей в клуб</span>. Баллы можно потратить на кучу разных ништяков — от личной консультации до доступа к очень особенным материалам. Ими даже можно оплатить участие в клубе.</div>
+      <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и особенно за <span style="color:var(--warm);font-weight:700;cursor:pointer" onclick="openInvitePopup()">приглашение друзей в клуб</span>. Баллы можно потратить на кучу разных ништяков — от личной консультации до доступа к очень особенным материалам. Ими даже можно оплатить участие в клубе.</div>
       <div class="reward-hint" style="margin-top:12px" data-text="points.a2">Уровень — это твой ранг. Если баллы можно тратить, то уровень лишь растёт. Уровень сам по себе открывает доступ к разным материалам и функциям. Например, с какого-то уровня ты сможешь скачивать себе красивые выжимки занятий и скрипты продаж в PDF — и оставлять их себе, даже после окончания подписки.</div>
     </div>
 
@@ -16767,7 +16767,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v700 · 22.11.2026 Понятные переходы';
+const APP_BUILD = 'v701 · 22.11.2026 Гостевой маршрут';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19414,6 +19414,9 @@ function guestTourTry(){
 }
 
 function renderDemoBanner(){
+  if(!isMember){window.ClubIntroduction?.render();window.MemberProfiles?.refreshSummary();}
+  const guide=document.querySelector('[onclick="openHowToUsePopup()"] .tile-label');
+  if(guide)guide.textContent=isMember?'Как пользоваться клубом':isPaused?'Как вернуться в клуб':'Что доступно в демо';
   const el = document.getElementById('demo-banner');
   // v427: участник на паузе — не гость: продающих плашек ему не надо, своя плашка
   const asMember = isMember || isPaused;
@@ -19887,7 +19890,7 @@ async function loadPointsFeed(){
     const d = await apiRequest(`${API_URL}/points/feed?telegram_id=${telegramId}&all=1`, {}, 8000);
     const items = (d && d.items) || [];
     if (!items.length){
-      box.innerHTML = '<div class="reward-hint">' + t('points.feed_empty') + '</div>';
+      box.innerHTML = '<div class="reward-hint">' + (isMember?t('points.feed_empty'):'Начислений пока нет. Баллы за занятия и эфиры доступны участникам клуба.') + '</div>';
       return;
     }
     let h = items.map(function(it){
@@ -25164,6 +25167,7 @@ async function loadNextEventIntoSteps(){
    канал остаётся вторым запасом: у чата стоит одобрение заявок, но у канала
    она открывает вход сразу */
 async function openTgAccess(what){
+  if (!isMember){ openPaywall(); return; }
   const fallback = what === 'chat' ? CHAT_JOIN_LINK : CHANNEL_JOIN_LINK;
   if (!hasRealTg()){ await linkTelegramFromVk(); return; }
   showToast(t('tg.access_wait'));
@@ -25198,11 +25202,13 @@ function tgAccessViaBot(fallback){
    без проверки; внутри ВК у человека без Telegram открывалась ссылка t.me, а
    родные группа и беседа ВК стояли рядом с подписью «резервные» */
 function openClubChannelTile(){
+  if (!isMember){ openPaywall(); return; }
   const вВк = (typeof isInsideVk === 'function' && isInsideVk()) || !hasRealTg();
   if (вВк){ if (typeof openVkAccessFlow === 'function' && !vkAccessGranted) openVkAccessFlow(); else openVkLink(VK_CHANNEL_LINK); return; }
   openTgAccess('channel');
 }
 function openClubChatTile(){
+  if (!isMember){ openPaywall(); return; }
   const вВк = (typeof isInsideVk === 'function' && isInsideVk()) || !hasRealTg();
   if (вВк){ openVkLink(VK_CHAT_LINK); return; }
   openTgAccess('chat');
@@ -25228,6 +25234,7 @@ function renderReserveTiles(){
   } catch(e){}
 }
 function openReserveTile(what){
+  if (!isMember){ openPaywall(); return; }
   if (!reserveIsTg()){ openVkLink(what === 'chat' ? VK_CHAT_LINK : VK_CHANNEL_LINK); return; }
   if (!hasRealTg()){ if (typeof linkTelegramFromVk === 'function') linkTelegramFromVk(); return; }
   openTgAccess(what === 'chat' ? 'chat' : 'channel');
@@ -25243,12 +25250,14 @@ function openChatJoinLink(){ openTgAccess('chat'); pendingJoinKey = 'chat'; rend
 // выполненным для тестирования интерфейса
 function placeholderSayHiStep(){ markOnboardStep('say_hi'); }
 function openAskDenisPopup(){
+  if (!isMember){ openPaywall(); return; }
   document.getElementById('ask-denis-popup-overlay').classList.add('open');
 }
 function closeAskDenisPopup(){
   document.getElementById('ask-denis-popup-overlay').classList.remove('open');
 }
 async function submitAskDenisQuestion(){
+  if (!isMember){ openPaywall(); return; }
   const input = document.getElementById('ask-denis-input');
   const text = input.value.trim().slice(0, 500); // скрытое ограничение — textarea уже не даёт напечатать больше через maxlength, это просто подстраховка
   if (!text) return;
@@ -25371,6 +25380,7 @@ function pushSkippedInTelegram(){
 
 /* ── "Как пользоваться клубом" — попап с быстрыми переходами (отдельная точка входа с портала) ── */
 function openHowToUsePopup(){
+  if (!isMember){ if(isPaused)return openPaywall(); return gtStart('fork'); }
   document.getElementById('howto-popup-overlay').classList.add('open');
 }
 function closeHowToUsePopup(){
@@ -25602,6 +25612,7 @@ function gtLiveText(){
 }
 function gtLibText(){
   const c = (gtData && gtData.counts) || {};
+  if(!c.lectures)return 'Здесь можно найти занятие по своей задаче и посмотреть открытые фрагменты. Полные материалы доступны после вступления в клуб.';
   return tf('gt.lib_x', {
     занятий: c.lectures || 0, аудио: c.with_audio || 0, выпусков: c.issues || 0,
   });
@@ -25739,6 +25750,13 @@ function onbHasSeed(){
 /* ⚠️ ПРЕДЛАГАЕМ ЗНАКОМСТВО ТОЛЬКО ТОМУ, КОМУ ЕСТЬ ЧТО ПОКАЗАТЬ: участнику,
    уже получившему доступы. Гостю и человеку без канала показывать тур рано —
    у него другая задача, и окно поверх неё только помешает. */
+function showMemberTourWelcome(){
+  if(!isMember)return;
+  const hi=document.getElementById('onb-hi');
+  hi.querySelector('[data-text="onb.hi_text"]').textContent=channelJoined&&chatJoined
+    ? t('onb.hi_text') : 'Покажу, где искать занятия и как пользоваться возможностями клуба.';
+  hi.classList.add('open');
+}
 function onbMaybeOffer(){
   if(window.ClubIntroduction?.active())return;
   if (onbActive || tourDone) return;
@@ -25748,7 +25766,7 @@ function onbMaybeOffer(){
   if (typeof nbLoaded !== 'undefined' && (!nbLoaded || nbMode())) return;
   if (!channelJoined || !chatJoined) return;
   onbSeed = onbHasSeed();
-  document.getElementById('onb-hi').classList.add('open');
+  showMemberTourWelcome();
   markTourOnServer({ step:'offer', action:'shown', index:0 });
 }
 
@@ -25757,17 +25775,19 @@ function onbMaybeOffer(){
    приходит СОЗНАТЕЛЬНО — из шага регистрации, из справки, из отладки.
    Отказывать ему потому, что «уже проходил», неправильно. */
 function onbRestart(){
+  if (!isMember){ document.getElementById('onb-hi').classList.remove('open'); if(isPaused)return openPaywall(); return gtStart('fork'); }
   onbActive = false;
   onbIdx = 0;
   onbTrying = null;
   onbSeed = onbHasSeed();
   onbHideCard();
   onbDrawTrail();
-  document.getElementById('onb-hi').classList.add('open');
+  showMemberTourWelcome();
   markTourOnServer({ step:'offer', action:'shown', index:0 });
 }
 
 function onbStart(){
+  if (!isMember){ document.getElementById('onb-hi').classList.remove('open'); if(isPaused)return openPaywall(); return gtStart('fork'); }
   document.getElementById('onb-hi').classList.remove('open');
   onbActive = true; onbIdx = 0; onbTrying = null;
   onbSeed = onbHasSeed();
@@ -26331,7 +26351,7 @@ function onbDone(key){
 /* Отметка знакомства на сервере. Звать можно сколько угодно: сервер только
    двигает положение вперёд и пишет событие в статистику */
 async function markTourOnServer(data){
-  if (!telegramId) return;
+  if (!isMember || !telegramId) return;
   try {
     await fetch(`${API_URL}/onboard/tour`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -32678,6 +32698,7 @@ async function openVkGateForUrl(url){
 /* Точка входа по ссылке: сразу ведём человека получать доступ, а если он уже
    есть — говорим об этом и открываем группу, а не гоняем по кругу */
 async function openVkAccessFlow(){
+  if (!isMember){ openPaywall(); return; }
   switchView('portal');
   if (await vkAccessFresh()){
     openUrl(VK_GROUP_LINK);
@@ -34728,6 +34749,7 @@ function filmWidgetOpen(){
 }
 
 function openVideoPopup(which){
+  if(which==='onboarding' && !isMember)return openHowToUsePopup();
   videoPopupMount(which);
   document.getElementById(`video-popup-${which}-overlay`).classList.add('open');
   /* Бар сам не узнает, что поверх него лег плеер — толкаем перерисовку */
@@ -34943,6 +34965,10 @@ function enterDemoMode(options){
   if (typeof bwResume === 'function') setTimeout(bwResume, 400);
   startStoragePollOnce();
   isMember = false;
+  // A member can enter demo intentionally; dismiss member guidance without marking steps.
+  onbActive=false;onbTrying=null;onbHideCard();onbWatchModals(false);onbStopScroll();
+  document.getElementById('onb-hi').classList.remove('open');
+  document.getElementById('onb-trail').classList.remove('open');
   // Скрываем экраны входа
   var demoScreens = ['web-login-screen','web-add-home-screen-screen'];
   demoScreens.forEach(function(id){
@@ -46927,9 +46953,10 @@ function theme(p){return 'mp-theme-'+(p.premium_active&&['graphite','lavender','
 function safeLink(value){try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch(e){return '';}}
 function link(url,label){url=safeLink(url);return url?'<a class="mp-link" target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">'+esc(label)+'</a>':'';}
 function card(p){return '<div class="mp-head">'+avatar(p)+'<div style="min-width:0">'+(p.premium_active&&!p.hide_badge?'<div class="mp-badge">Премиальный профиль</div>':'')+'<div class="mp-name">'+esc(p.display_name)+'</div></div></div>'+(p.profession?'<p class="mp-bio">'+esc(p.profession)+'</p>':'')+(p.bio?'<p class="mp-bio">'+esc(p.bio)+'</p>':'')+'<div class="mp-tags">'+(p.tags||[]).map(t=>'<span class="mp-tag">'+esc(t)+'</span>').join('')+'</div>'+(p.premium_active?link(p.website,'Ссылка участника'):'')+(p.project?'<div class="mp-project"><h3>'+esc(p.project.title)+'</h3><p class="mp-bio">'+esc(p.project.description)+'</p>'+link(p.project.url,'Открыть проект')+'</div>':'');}
-function ownCard(){const r=root();if(!r||!state)return;r.hidden=false;r.className='card '+theme(state);r.innerHTML=card({...state,project:null,hide_badge:true})+facts()+'<div class="mp-actions"><button type="button" data-mp="edit">Редактировать профиль</button></div>';for(const id of ['mp-people-entry','mp-projects-entry']){const e=document.getElementById(id);if(e)e.hidden=false;}}
-async function load(){const n=++sequence;const r=root();if(!r)return;try{await waitProfile();const p=await api('/me');if(n!==sequence)return;state=p;ownCard();return p;}catch(e){if(n!==sequence)return;r.hidden=e.status===401||e.status===403;if(!r.hidden)r.innerHTML='<p class="mp-muted">Профиль не загрузился.</p><button class="mp-button" data-mp="reload">Повторить</button>';}}
+function ownCard(){const r=root();if(!r)return;if(!isMember){r.hidden=true;return;}if(!state)return;r.hidden=false;r.className='card '+theme(state);r.innerHTML=card({...state,project:null,hide_badge:true})+facts()+'<div class="mp-actions"><button type="button" data-mp="edit">Редактировать профиль</button></div>';for(const id of ['mp-people-entry','mp-projects-entry']){const e=document.getElementById(id);if(e)e.hidden=false;}}
+async function load(){const n=++sequence;const r=root();if(!r)return;try{await waitProfile();if(n!==sequence)return;if(!isMember){state=null;r.hidden=true;for(const id of ['mp-people-entry','mp-projects-entry']){const e=document.getElementById(id);if(e)e.hidden=true;}return;}const p=await api('/me');if(n!==sequence)return;state=p;ownCard();return p;}catch(e){if(n!==sequence)return;r.hidden=e.status===401||e.status===403;if(!r.hidden)r.innerHTML='<p class="mp-muted">Профиль не загрузился.</p><button class="mp-button" data-mp="reload">Повторить</button>';}}
 async function openEditor(){
+ if(!isMember){openPaywall();return;}
  switchView('profile');
  open('<h2>Мой профиль</h2><p class="mp-muted">Загружаю профиль…</p><div class="mp-actions"><button data-mp="open-editor">Повторить</button><button data-mp="close">Закрыть</button></div>');
  const request=load(), n=sequence;
@@ -46944,10 +46971,10 @@ function edit(){if(!state)return;crop=null;avatarDraft=null;photoSequence++;phot
 function draft(){return {revision:state.revision,...(Object.prototype.hasOwnProperty.call(state,'profession')?{profession:document.getElementById('mp-profession').value,specialist:!!document.getElementById('mp-specialist')?.checked}:{}),display_name:document.getElementById('mp-name').value,bio:document.getElementById('mp-bio').value,tags:document.getElementById('mp-tags').value.split(',').map(s=>s.trim()).filter(Boolean),directory:document.getElementById('mp-directory').checked,website:state.premium_active?document.getElementById('mp-website').value:'',theme:state.premium_active?document.getElementById('mp-theme').value:'graphite'};}
 async function mutate(action,closeAfter=false){let success=false;if(busy)return;busy=true;const controls=[...overlay().querySelectorAll('button,input,textarea,select')].map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);try{await action();ownCard();success=true;}catch(e){status(e.message||'Не удалось сохранить. Попробуй ещё раз.');}finally{busy=false;controls.forEach(([e,disabled])=>{if(e.isConnected)e.disabled=disabled;});if(success&&closeAfter){close();window.ClubIntroduction?.profileSaved();}}}
 function projectEdit(){const p=state.project||{};const labels={draft:'Черновик',pending:'На рассмотрении у Дениса',approved:'Одобрено',rejected:'Нужны изменения',hidden:'Скрыто администратором'};open('<h2>Мой проект</h2><p class="mp-muted">Один проект на участника. После одобрения Дениса карточка появится в каталоге клуба. Изменения тоже проходят одобрение; до него остаётся прежняя опубликованная версия.</p><p>'+esc(labels[state.project_status]||'Черновик')+'</p>'+(state.review_note?'<p class="mp-bio">'+esc(state.review_note)+'</p>':'')+field('Название проекта','mp-project-title',p.title,100)+'<label class="mp-field">Чем полезен участникам<textarea id="mp-project-description" maxlength="1200">'+esc(p.description)+'</textarea></label>'+field('Ссылка на проект','mp-project-url',p.url,500,'url')+'<div class="mp-actions"><button data-mp="project-submit">Отправить на одобрение</button><button data-mp="project-hide">Скрыть проект и отозвать заявку</button><button data-mp="edit">Назад в профиль</button></div>');}
-async function directory(kind='people',append=false){const n=++sequence;if(!append){open('<h2>'+(kind==='people'?'Участники клуба':kind==='specialists'?'Биржа специалистов':'Проекты участников')+'</h2>'+(kind!=='catalog'?'<p class="mp-muted">Ищи по имени, описанию или тегам. Здесь только действующие участники, включившие видимость в поиске.</p><label class="mp-field">Поиск специалиста<input id="mp-search" maxlength="80" placeholder="Например, дизайнер"></label><button class="mp-button" data-mp="search">Найти</button>':'<p class="mp-muted">Проекты премиальных участников, одобренные Денисом.</p>')+'<button class="mp-button" data-mp="specialists">Биржа специалистов</button><div id="mp-results"></div><div class="mp-actions"><button id="mp-more" data-mp="more" hidden>Показать ещё</button><button data-mp="close">Закрыть</button></div>');sheet().dataset.kind=kind;sheet().dataset.offset='0';}
+async function directory(kind='people',append=false){if(!isMember){openPaywall();return;}const n=++sequence;if(!append){open('<h2>'+(kind==='people'?'Участники клуба':kind==='specialists'?'Биржа специалистов':'Проекты участников')+'</h2>'+(kind!=='catalog'?'<p class="mp-muted">Ищи по имени, описанию или тегам. Здесь только действующие участники, включившие видимость в поиске.</p><label class="mp-field">Поиск специалиста<input id="mp-search" maxlength="80" placeholder="Например, дизайнер"></label><button class="mp-button" data-mp="search">Найти</button>':'<p class="mp-muted">Проекты премиальных участников, одобренные Денисом.</p>')+'<button class="mp-button" data-mp="specialists">Биржа специалистов</button><div id="mp-results"></div><div class="mp-actions"><button id="mp-more" data-mp="more" hidden>Показать ещё</button><button data-mp="close">Закрыть</button></div>');sheet().dataset.kind=kind;sheet().dataset.offset='0';}
  const q=document.getElementById('mp-search')?.value||'';try{status('Загружаю…');const data=await api('/'+kind+'?offset='+(append?sheet().dataset.offset:'0')+'&q='+encodeURIComponent(q));if(n!==sequence||overlay().hidden)return;const results=document.getElementById('mp-results');if(!append)results.innerHTML='';results.insertAdjacentHTML('beforeend',data.items.map(p=>'<article class="mp-person '+theme(p)+'">'+card(p)+'<div class="mp-actions"><button data-mp="person" data-id="'+Number(p.id)+'">Посмотреть профиль</button></div></article>').join(''));const more=document.getElementById('mp-more');more.hidden=data.next_offset===null;sheet().dataset.offset=String(data.next_offset||0);status(results.children.length?'':'Пока никого не найдено.');}catch(e){if(n===sequence)status(e.message);}}
-async function person(path){const n=++sequence;open('<h2>Профиль участника</h2><div id="mp-person-view"></div><div class="mp-actions"><button data-mp="people">Все участники</button><button data-mp="close">Закрыть</button></div>');status('Загружаю…');try{const p=await api(path);if(n!==sequence||overlay().hidden)return;document.getElementById('mp-person-view').innerHTML='<article class="mp-person '+theme(p)+'">'+card(p)+'</article>';status('');}catch(e){if(n===sequence)status(e.message);}}
-async function action(name,button){if(busy)return;if(name==='close')return close();if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium'){close();return ClubIntroduction.premium();}if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='specialists')return directory('specialists');if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
+async function person(path){if(!isMember){openPaywall();return;}const n=++sequence;open('<h2>Профиль участника</h2><div id="mp-person-view"></div><div class="mp-actions"><button data-mp="people">Все участники</button><button data-mp="close">Закрыть</button></div>');status('Загружаю…');try{const p=await api(path);if(n!==sequence||overlay().hidden)return;document.getElementById('mp-person-view').innerHTML='<article class="mp-person '+theme(p)+'">'+card(p)+'</article>';status('');}catch(e){if(n===sequence)status(e.message);}}
+async function action(name,button){if(busy)return;if(name==='close')return close();if(!isMember){close();openPaywall();return;}if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium'){close();return ClubIntroduction.premium();}if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='specialists')return directory('specialists');if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
  if(name==='save'&&photoLoading){status(tx('mp.photo_loading'));return;}
  if(name==='save')return mutate(async()=>{const values=draft();if(crop)state=await api('/me/avatar','PUT',{revision:state.revision,image:cropData()});else if(avatarDraft==='remove')state=await api('/me/avatar','DELETE',{revision:state.revision});crop=null;avatarDraft=null;state=await api('/me','PUT',{...values,revision:state.revision});if(typeof onbDone==='function')onbDone('profile');},true);
  if(name==='remove-avatar'){crop=null;avatarDraft='remove';photoSequence++;photoLoading=false;document.getElementById('mp-crop-wrap').hidden=true;const file=document.getElementById('mp-avatar-file');if(file)file.value='';const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar({...state,avatar:''});status(tx('mp.photo_staged'));return;}
