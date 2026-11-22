@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v705 -->
+<!-- FILE_VERSION: index-v706 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v705';
+window.CLUB_BUILD_ID = 'app-v706';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16792,7 +16792,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v705 · 22.11.2026 Лекция после покупки';
+const APP_BUILD = 'v706 · 22.11.2026 Лид-магниты и согласие';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17123,6 +17123,7 @@ const TG_ROOT_VIEWS = ['portal', 'library', 'profile', 'games'];
 /* Native Back follows the top dismissible layer, including dialogs above games. */
 function appBackLayer(){
   const dialog=Array.from(document.querySelectorAll('dialog[open]')).at(-1);
+  if(dialog?.id==='lead-data-consent')return {el:dialog,dismiss:()=>window.closeClubDataConsent?.()};
   if(dialog?.id==='lead-material-dialog')return {el:dialog,dismiss:()=>window.LeadMaterialNavigation?.back()};
   const explicit={'dgs':()=>dgsBack(),'quiz-share-offer':()=>closeQuizShareOffer(),'quiz-overlay':()=>quizNavigateBack(),'fp-overlay':()=>plCloseFull(),'zoom-overlay':()=>closeCardZoom(),'card-share-sheet':()=>closeCardShareSheet(),'reveal-overlay':()=>closeShowcase()};
   const layers=Array.from(document.querySelectorAll('[id].open,[id].gg-open')).filter(el=>el.offsetWidth&&el.offsetHeight);
@@ -27667,7 +27668,11 @@ function leadMaterialFromUrl(){
 }
 Object.assign(APP_TEXTS, {"lead.vkNotSubscribed": {"c":"Материалы","l":"Подписка пока не найдена. Подпишись на сообщество и повтори проверку.","w":"Материал","i":false,"t":"Подписка пока не найдена. Подпишись на сообщество и повтори проверку."}, "lead.vkGate": {"c": "Материалы", "l": "PDF-выжимка — за подписку на моё бесплатное сообщество ВКонтакте. Подпишись и нажми «Проверить подписку».", "w": "Материал", "i": false, "t": "PDF-выжимка — за подписку на моё бесплатное сообщество ВКонтакте. Подпишись и нажми «Проверить подписку»."}, "lead.vkSubscribe": {"c": "Материалы", "l": "Подписаться на сообщество", "w": "Материал", "i": false, "t": "Подписаться на сообщество"}, "lead.vkAllow": {"c": "Материалы", "l": "Чтобы получить материал и сохранить возможность просмотра в сообщениях, разреши сообщения сообщества по кнопке ниже.", "w": "Материал", "i": false, "t": "Чтобы получить материал и сохранить возможность просмотра в сообщениях, разреши сообщения сообщества по кнопке ниже."}});
 Object.assign(APP_TEXTS, {"lead.expired": {"c": "Материалы", "l": "Сеанс приложения устарел. Закрой приложение и открой лекцию заново из сообщения бота.", "w": "Материал", "i": false, "t": "Сеанс приложения устарел. Закрой приложение и открой лекцию заново из сообщения бота."}, "lead.blocked": {"c": "Материалы", "l": "Получение сообщений отключено. Открой бота, чтобы возобновить получение материалов.", "w": "Материал", "i": false, "t": "Получение сообщений отключено. Открой бота, чтобы возобновить получение материалов."}, "lead.authError": {"c": "Материалы", "l": "Не удалось подтвердить вход в приложение. Закрой его и открой лекцию заново из сообщения бота.", "w": "Материал", "i": false, "t": "Не удалось подтвердить вход в приложение. Закрой его и открой лекцию заново из сообщения бота."}, "lead.connectionError": {"c": "Материалы", "l": "Не удалось связаться с сервером. Попробуй ещё раз — повторно запускать бота не нужно.", "w": "Материал", "i": false, "t": "Не удалось связаться с сервером. Попробуй ещё раз — повторно запускать бота не нужно."}, "lead.retry": {"c": "Материалы", "l": "Повторить проверку", "w": "Материал", "i": false, "t": "Повторить проверку"}});
+let leadMaterialOpenSeq=0;
 async function openLeadMaterial(code){
+ const openSeq=++leadMaterialOpenSeq;
+ const gateAttempt=window.__leadMaterialBoot&&window.__leadMaterialBoot.code===code?window.__leadMaterialBoot.attempt:crypto.randomUUID();
+ if(!window.ensureClubDataConsent||!await window.ensureClubDataConsent({lead_code:code,lead_attempt:gateAttempt})||openSeq!==leadMaterialOpenSeq)return;
  if(window.ClubAppRescue)ClubAppRescue.target(code);
  if(leadMaterialClose)leadMaterialClose();
  const root=document.createElement('dialog');root.id='lead-material-dialog';root.className='lead-material-dialog';
@@ -27679,7 +27684,7 @@ async function openLeadMaterial(code){
  const extras=document.createElement('details');extras.className='lead-extras';extras.hidden=true;extras.innerHTML='<summary>Другие способы просмотра</summary>';
  const gate=document.createElement('div');gate.hidden=true;gate.className='lead-pdf-gate';
  root.append(close,title,box,note,links,gate,extras);document.body.appendChild(root);root.showModal();appSyncNavigation();
- let closed=false,player=null,launch='',attempt=window.__leadMaterialBoot&&window.__leadMaterialBoot.code===code?window.__leadMaterialBoot.attempt:crypto.randomUUID();
+ let closed=false,player=null,launch='',attempt=gateAttempt;
  try{launch=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)||new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')||''}catch(e){}
  const platform=isInsideVk()?'vk':'tg';if(platform==='vk')launch=vkLaunchQuery();
  const startUrl=platform==='vk'?'https://vk.ru/app54827669#'+encodeURIComponent(code):'https://t.me/youselllikeagod_bot?start='+encodeURIComponent(code);
@@ -27720,7 +27725,7 @@ async function openLeadMaterial(code){
   window.__checkoutLectureSource=code;
   try{localStorage.setItem('club_app_attribution_code',code)}catch(e){}sendAttributionTouch(code);
   const materialActions=Array.isArray(data.actions)?data.actions:['full','pdf','film'];
-  if(materialActions.includes('full')){note.textContent='Открытый фрагмент занятия';const buy=button('Смотреть полное занятие',()=>openAccessPage());buy.className='learning-primary';buy.dataset.leadBuy='1';links.append(buy);}else note.textContent=data.note||'';
+  if(materialActions.includes('full')){note.textContent='Открытый фрагмент занятия';const buy=button('Смотреть полное занятие',()=>{signal('pay_clicked');openAccessPage()});buy.className='learning-primary';buy.dataset.leadBuy='1';links.append(buy);}else note.textContent=data.note||'';
   const pdfGate=data.pdf_gate&&data.pdf_gate[platform];
   if(pdfGate&&materialActions.includes('pdf')){
    const explanation=document.createElement('p');explanation.textContent=t(platform==='vk'?'lead.vkGate':'lead.gate');explanation.style.cssText='margin-bottom:16px;line-height:1.5';
@@ -27752,7 +27757,7 @@ async function openLeadMaterial(code){
     let nurtureLast=0;video.addEventListener('timeupdate',()=>{nurtureOfferSample('video',data.id,video.currentTime,!video.paused);if(!video.paused&&!document.hidden&&video.currentTime>=nurtureLast+15){nurtureLast=video.currentTime;nurtureProgress('viewing',code,nurtureLast)}});
     video.addEventListener('playing',()=>signal('playing'));
     video.addEventListener('error',()=>{note.textContent=t('lead.error');extras.open=true;signal('error')});
-    video.addEventListener('ended',()=>{nurtureProgress('completed',code,video.duration||0);note.textContent='Фрагмент закончился. Полное занятие — в клубе.';links.scrollIntoView({behavior:'smooth',block:'nearest'})});
+    video.addEventListener('ended',()=>{signal('completed');nurtureProgress('completed',code,video.duration||0);note.textContent='Фрагмент закончился. Полное занятие — в клубе.';links.scrollIntoView({behavior:'smooth',block:'nearest'})});
     player={destroy:()=>{video.pause();video.removeAttribute('src');video.load()}};leadMaterialPlayer=player;box.append(video);mountClubVideoFullscreen(box,()=>video);video.src=data.video_url;
     return;
    }
@@ -27760,7 +27765,7 @@ async function openLeadMaterial(code){
    player=await factory.create(box.id,{url:'https://kinescope.io/'+data.kinescope_id,size:{width:'100%',height:'100%'},behavior:{autoPlay:false,preload:'metadata'}});
    if(closed){player.destroy();return}leadMaterialPlayer=player;mountClubVideoFullscreen(box);nurtureOfferWatchKinescope(player,data.id);signal('ready');
    if(player.Events.Playing)player.on(player.Events.Playing,()=>signal('playing'));
-   if(player.Events.Ended)player.on(player.Events.Ended,()=>{note.textContent='Фрагмент закончился. Полное занятие — в клубе.';links.scrollIntoView({behavior:'smooth',block:'nearest'})});
+   if(player.Events.Ended)player.on(player.Events.Ended,()=>{signal('completed');note.textContent='Фрагмент закончился. Полное занятие — в клубе.';links.scrollIntoView({behavior:'smooth',block:'nearest'})});
    if(player.Events.Error)player.on(player.Events.Error,()=>{note.textContent=t('lead.error');extras.open=true;signal('error')});
   }catch(e){if(!closed){note.textContent=t('lead.error');extras.open=true;signal('error')}}
  }catch(e){if(!closed){title.textContent=t('lead.missing');box.hidden=true;links.append(anchor(t('lead.start'),startUrl));signal('error')}}
@@ -46991,6 +46996,34 @@ async function legalOpen(kind='settings',next=null){
   }
  }finally{if(n===run)legalChecking=false;}
 }
+// Data-only gate. Reuses the existing document/version and does not enable mailing.
+let dataConsentPromise=null,dataConsentDialog=null;
+window.ensureClubDataConsent=async function(entry={}){
+ let d;
+ try{d=await legalRequest(entry);}catch(e){if(typeof showToast==='function')showToast('Не удалось проверить согласие. Попробуй открыть материал ещё раз.');return false;}
+ if(!d.lead_data_gate||d.data)return true;
+ if(d.data_declined){if(entry.lead_code&&typeof showToast==='function')showToast('Вы ранее отказались от обработки данных. Выбор можно изменить в разделе «Данные и рассылки».');return false;}
+ if(dataConsentPromise)return dataConsentPromise;
+ if(window.ClubAppRescue)ClubAppRescue.mark('gate');
+ if(typeof hideSplash==='function')hideSplash();
+ dataConsentPromise=new Promise(resolve=>{
+  const box=legalEl('dialog');box.id='lead-data-consent';box.className='legal-center';dataConsentDialog=box;
+  const title=legalEl('h2','Согласие на обработку данных');
+  const body=legalEl('p',entry.lead_code?'Для получения материала нужно твоё согласие на обработку имени, юзернейма и ID аккаунта.':'Подтверди согласие на обработку имени, юзернейма и ID аккаунта.');
+  const doc=legalLink('Согласие на обработку персональных данных',base+'/archive/'+d.version+'/consent.html');
+  const owner=legalEl('p','ИП Кузнецов Денис Александрович. Оплаченный доступ и поддержка сохраняются независимо от ответа.');
+  const status=legalEl('p');status.setAttribute('role','status');
+  let saving=false,done=false;
+  const finish=value=>{if(done)return;done=true;box.close();box.remove();dataConsentDialog=null;dataConsentPromise=null;window.closeClubDataConsent=null;if(typeof appSyncNavigation==='function')appSyncNavigation();resolve(value);};
+  const save=async yes=>{if(saving)return;saving=true;accept.disabled=true;decline.disabled=true;close.disabled=true;status.textContent='Сохраняю выбор…';try{const saved=await legalRequest({purpose:'data',enabled:yes,version:d.version,data_only:true});legalSaved(saved);finish(yes&&saved.data);}catch(e){status.textContent='Не удалось сохранить выбор. Попробуй ещё раз.';saving=false;accept.disabled=false;decline.disabled=false;close.disabled=false;}};
+  const accept=legalButton('Даю согласие',()=>save(true),true),decline=legalButton('Не согласен',()=>save(false)),close=legalButton('Закрыть',()=>finish(false));
+  const content=legalEl('div');content.className='legal-center-content';decline.classList.add('legal-decline');close.classList.add('legal-decline');content.append(title,body,doc,owner,accept,decline,close,status);box.append(content);box.addEventListener('cancel',e=>{e.preventDefault();if(!saving)finish(false)});
+  window.closeClubDataConsent=()=>{if(!saving)finish(false)};
+  document.body.append(box);box.showModal();if(typeof appSyncNavigation==='function')appSyncNavigation();
+ });
+ return dataConsentPromise;
+};
+
 // One account-level prompt; it never grants consent or interrupts an open film/dialog.
 let promptChecks=0,promptChecking=false;
 const promptTimer=setInterval(async()=>{
@@ -46998,7 +47031,7 @@ const promptTimer=setInterval(async()=>{
  if(promptChecking||document.hidden||typeof splashHidden==='undefined'||!splashHidden||!legalInitialAuth()||new URLSearchParams(location.search).has('view'))return;
  if(legalChecking||modal||document.querySelector('dialog[open]')||document.querySelector('video:not([paused])')&&[...document.querySelectorAll('video')].some(v=>!v.paused))return;
  promptChecking=true;const before=run;
- try{const d=await legalRequest({claim_prompt:true});clearInterval(promptTimer);if(d.show_prompt&&!(d.can_receive??(d.data&&d.ads))&&before===run&&!legalChecking&&!modal)await legalOpen();}catch(e){}finally{promptChecking=false;}
+ try{const d=await legalRequest({claim_prompt:true});clearInterval(promptTimer);if(d.show_prompt&&before===run&&!legalChecking&&!modal){if(d.lead_data_gate){if(!d.data&&!d.data_declined)await window.ensureClubDataConsent();}else if(!(d.can_receive??(d.data&&d.ads)))await legalOpen();}}catch(e){}finally{promptChecking=false;}
 },2000);
 window.openLegalCenter=()=>legalOpen();window.ensureClubFilmConsent=next=>{if(state&&(state.can_receive??(state.data&&state.ads))&&validUntil>Date.now())return true;if((legalChecking||modal)&&mode==='film')return false;legalOpen('film',next);return false;};
 window.addEventListener('pagehide',()=>{let pending='';try{pending=sessionStorage.getItem('club_legal_pending')||'';}catch(e){}if(!pending||!identity)return;const body=JSON.stringify({...identity,event:'left',attempt:pending});try{navigator.sendBeacon(endpoint,new Blob([body],{type:'application/json'}));}catch(e){}});
