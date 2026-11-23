@@ -44004,7 +44004,7 @@ async function ggLoad(){
   try {
     const q = telegramId ? ('telegram_id=' + encodeURIComponent(telegramId))
                          : ('guest_key=' + encodeURIComponent(ggGuestKey()));
-    const r = await fetch(API_URL + '/games/list?' + q + '&invitation=' + encodeURIComponent(gameInviteToken()));
+    const r = await fetch(API_URL + '/games/list?ignore_v1=1&' + q + '&invitation=' + encodeURIComponent(gameInviteToken()));
     if (!r.ok) throw new Error('HTTP ' + r.status);
     ggList = await r.json();
     if (typeof renderTabDots === 'function') renderTabDots();
