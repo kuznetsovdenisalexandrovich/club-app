@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v708 -->
+<!-- FILE_VERSION: index-v709 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v708';
+window.CLUB_BUILD_ID = 'app-v709';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16793,7 +16793,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v708 · 23.11.2026 Игра с рефери';
+const APP_BUILD = 'v709 · 23.11.2026 Свет по краям игр';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47892,6 +47892,18 @@ html[data-gg-play] #gg-root .gg-robot-wrap[data-response=bad]{filter:drop-shadow
 @keyframes club-ref-yes{30%{transform:translateY(5px) rotate(-4deg)}65%{transform:translateY(-3px) rotate(3deg)}}
 @keyframes club-ref-no{25%,75%{transform:translateX(-5px) rotate(-5deg)}50%{transform:translateX(5px) rotate(5deg)}}
 @media(prefers-reduced-motion:reduce){html[data-gg-play] #gg-root .gg-robot-wrap[data-response]{animation:none}}
+
+/* Keep edge light on the masked perimeter: translucent panels must not reveal
+   the former conic background through their centre. */
+html[data-gg-play][data-theme=dark] #gg-root .gg-bubble,
+html[data-gg-play][data-theme=dark] #gg-root .gg-feedback{background:var(--gg-bubble);border-color:rgba(163,174,218,.16)}
+html[data-gg-play][data-theme=dark] #gg-root .gg-msg.gg-me .gg-bubble{background:var(--gg-me);border-color:var(--gg-me-brd)}
+html[data-gg-play][data-theme=dark] #gg-root .gg-composer{background:var(--gg-panel);border-color:rgba(163,174,218,.16)}
+html[data-gg-play] #gg-root .gg-arbiter::before,
+html[data-gg-play] #gg-root .gg-arbiter::after{display:none}
+html[data-gg-play] #gg-root .gg-composer::after{content:"";position:absolute;inset:0;padding:1px;border-radius:inherit;pointer-events:none;background:var(--gg-edge-radial);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude}
+
+html[data-gg-play] #gg-root .gg-progress::before{inset:-3px 0;opacity:.2;filter:blur(7px)}
 
 </style>
 </body>
