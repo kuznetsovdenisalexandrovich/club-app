@@ -40,3 +40,20 @@ html[data-gg-play] #gg-root .gg-arbiter::after{display:none}
 html[data-gg-play] #gg-root .gg-composer::after{content:"";position:absolute;inset:0;padding:1px;border-radius:inherit;pointer-events:none;background:var(--gg-edge-radial);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude}
 
 html[data-gg-play] #gg-root .gg-progress::before{inset:-3px 0;opacity:.2;filter:blur(7px)}
+
+/* All trainer screens consume the same live Telegram safe area as the app.
+   The new shadow-root trainer is absolutely positioned, so inset it explicitly. */
+html[data-gg-play] #gg-play-wrap{padding-top:var(--safe-top,0px)!important;padding-left:max(12px,env(safe-area-inset-left,0px),var(--tg-safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px),var(--tg-safe-area-inset-right,0px))}
+html[data-gg-play] #gg-play-wrap.ignore-open>#club-ignore-host{top:var(--safe-top,0px);bottom:0;left:max(env(safe-area-inset-left,0px),var(--tg-safe-area-inset-left,0px));right:max(env(safe-area-inset-right,0px),var(--tg-safe-area-inset-right,0px));width:auto;height:auto}
+
+html[data-gg-keyboard] #gg-root .gg-arbiter{min-height:0;padding:4px 12px 10px}html[data-gg-keyboard] #gg-root .gg-robot-wrap{display:none}html[data-gg-keyboard] #gg-root .gg-topbar{height:44px;min-height:44px}
+
+#quiz-overlay.gx-open:has(#gx-ignore-host){padding:var(--safe-top,0px) 0 max(12px,env(safe-area-inset-bottom,0px));overflow:hidden}
+#quiz-overlay.gx-open:has(#gx-ignore-host) #quiz-inner{flex:1 1 auto!important;min-height:0;display:flex}
+#quiz-overlay.gx-open #gx-ignore-host{flex:1 1 auto;height:auto;min-height:0;width:100%}
+
+/* No continuous animation or backdrop blur while a trainer waits for input. */
+html[data-gg-play] #gg-root .gg-bubble::after,html[data-gg-play] #gg-root .gg-feedback::after,html[data-gg-play] #gg-root .gg-robot{animation:none}
+html[data-gg-play] #gg-root .gg-bubble,html[data-gg-play] #gg-root .gg-feedback,html[data-gg-play] #gg-root .gg-composer{backdrop-filter:none;-webkit-backdrop-filter:none}
+html[data-gg-play] .ci-progress,html:has(#gx-ignore-host) .ci-progress{display:none!important}
+html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
