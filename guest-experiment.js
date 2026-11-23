@@ -8,8 +8,8 @@ window.GuestExperiment=(function(){
  const storageKey=()=> 'club_guest_game_v1:'+String(telegramId||'');
  function game(){try{const d=JSON.parse(localStorage.getItem(storageKey()));if(IgnoreGameCore.valid(d))return d;}catch(e){}return IgnoreGameCore.fresh();}
  function saveGame(d){try{localStorage.setItem(storageKey(),JSON.stringify(d));}catch(e){}}
- function disposeMedia(){generation++;if(player){player.destroy();player=null;}if(audio){audio.destroy();audio=null;}}
- function dispose(){document.getElementById('gx-back')?.remove();disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
+ function disposeMedia(){window.ClubIgnoreGame?.dispose();generation++;if(player){player.destroy();player=null;}if(audio){audio.destroy();audio=null;}}
+ function dispose(){window.ClubIgnoreGame?.dispose();document.getElementById('gx-back')?.remove();disposeMedia();active=false;document.getElementById('gx-next')?.remove();document.getElementById('quiz-overlay')?.classList.remove('gx-open');}
  function gxSignal(event,code=''){
   if(!state?.active)return Promise.resolve();
   const snapshot=state;return request('/event',{branch:state.current||state.seen[state.seen.length-1],event,code}).then(d=>{if(!d.active&&active&&state===snapshot){dispose();closeQuiz();}}).catch(()=>{});
@@ -26,11 +26,11 @@ window.GuestExperiment=(function(){
  function note(text){const el=document.getElementById('gx-status');if(el)el.textContent=text;}
  function showQuestion(){surface('<div class="gx-search-heading"><span class="gx-eyebrow">Занятие под твою задачу</span><h2>Что хочется изменить?</h2><p>В продажах, маркетинге или бизнесе.</p></div><form id="gx-question-form" class="gx-compose"><label for="gx-question">Твой вопрос</label><textarea id="gx-question" maxlength="500" minlength="3" required placeholder="Клиенты спрашивают цену и пропадают">'+esc(questionDraft)+'</textarea>'+button('Найти занятие','search')+'</form><p id="gx-status" role="status"></p>');}
  function showChat(review=false){
-  const d=game();if(!review&&(d.done||state.completed.C))return showLesson('texting_p01_l11_lecture');
-  surface('<div class="gx-game"><div class="gx-game-title">Вытащи клиента из игнора</div><div class="gx-conversation"><header class="gx-chat-heading"><span class="gx-avatar" aria-hidden="true">С</span><div><h2>Саша · клиент</h2><span>Тренажёр переписки</span></div></header><div class="gx-chat" role="log" aria-label="Переписка с клиентом">'+d.messages.map(m=>(m.old?'<small>Неделю назад</small>':'')+'<div class="gx-message '+m.who+'">'+esc(m.text)+'</div>').join('')+'</div></div><div class="gx-coach" role="status"><span class="gg-robot" aria-hidden="true"></span><p>'+esc(d.coach)+'</p></div><form id="gx-reply-form" class="gx-compose"><label for="gx-reply">Твой ответ</label><textarea id="gx-reply" maxlength="600" required placeholder="Напиши клиенту…">'+esc(d.draft)+'</textarea>'+button('Отправить','reply')+'</form>'+button('Нужна подсказка','hint',true)+'</div>');
-  if(review){document.getElementById('gx-reply-form').outerHTML=button('Смотреть разбор','review-lesson');document.querySelector('[data-gx=hint]')?.remove();}
-  const list=document.querySelector('.gx-chat');list.scrollTop=list.scrollHeight;
+  surface('<div id="gx-ignore-host"></div>');
+  document.getElementById('gx-next')?.setAttribute('hidden','');
+  ClubIgnoreGame.open({container:document.getElementById('gx-ignore-host'),branch:true,more:()=>next(),leave:()=>quizNavigateBack()});
  }
+
  async function showLesson(slug){
   surface('<div id="gx-media"></div><p id="gx-status" role="status">Открываем занятие…</p>');const ticket=generation;
   try{const data=await request('/lesson/'+encodeURIComponent(slug));if(ticket!==generation)return;await showMedia({slug,title:data.lecture.title});}
@@ -133,8 +133,8 @@ window.GuestExperiment=(function(){
   if(action==='channel'){gxSignal('channel_open');if(state.channel_url)openUrl(state.channel_url);else showToast('Ссылка на канал пока недоступна. Демо приложения открыто.');}
  });
  return {afterFilm:()=>begin(true),resume:()=>begin(false),maybeResume:()=>{if(bootChecked||appStartParam()||isMember||!telegramId||(funnelFilmStarted&&!filmDone))return;bootChecked=true;begin(false);},next,dispose,
-  back:()=>{if(!active)return false;if(document.getElementById('gx-media')){if(state.current==='B'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;return true;}if(state.current==='C'){showChat(true);document.getElementById('quiz-overlay').scrollTop=0;return true;}}return false;},
-  pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},
+  back:()=>{if(!active)return false;if(window.ClubIgnoreGame?.back())return true;if(document.getElementById('gx-media')){if(state.current==='B'){showQuestion();document.getElementById('quiz-overlay').scrollTop=0;return true;}if(state.current==='C'){showChat(true);document.getElementById('quiz-overlay').scrollTop=0;return true;}}return false;},
+  pauseMedia:()=>{window.ClubIgnoreGame?.pause();player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},
   active:()=>active,branch:()=>active?state?.current:null,signal:gxSignal,
   quizDone:code=>{if(active&&state?.current==='A'){state.quiz_code=code;state.completed.A=true;gxSignal('game_completed',code);}},
   payment:()=>{if(active)gxSignal('payment_open');}};

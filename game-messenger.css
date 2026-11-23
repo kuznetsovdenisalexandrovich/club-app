@@ -1,0 +1,30 @@
+/* New trainer lives inside the existing game navigation and payment history. */
+#gg-play-wrap.ignore-open>:not(#club-ignore-host){display:none!important}
+#gg-play-wrap.ignore-open{padding:0!important}
+#gg-play-wrap.ignore-open>#club-ignore-host{position:absolute;inset:0;width:100%;height:100%}
+#gx-ignore-host{height:calc(var(--tg-viewport-stable-height,100dvh) - 100px);min-height:280px}
+#quiz-overlay.gx-open:has(#gx-ignore-host){padding:0 0 12px}
+#quiz-overlay.gx-open:has(#gx-ignore-host) #quiz-inner{width:100%;max-width:600px}
+/* Shared visual refresh only. Existing scoring, prompts and game gates remain. */
+html[data-gg-play] #gg-root .gg-arbiter{border:0;border-radius:0;box-shadow:none;background:none;backdrop-filter:none;display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 18px 14px}
+html[data-gg-play] #gg-root .gg-robot-wrap{width:64px;height:64px;align-self:center}
+html[data-gg-play] #gg-root .gg-arb-content{width:100%}
+html[data-gg-play] #gg-root .gg-scale-legend{display:none}
+html[data-gg-play] #gg-root .gg-arbiter .gg-arb-rules{display:none}
+html[data-gg-play] #gg-root .gg-feed{border:0;border-radius:0;box-shadow:none;background:none}
+html[data-gg-play] #gg-root .gg-msg .gg-ava{display:none}
+html[data-gg-play] #gg-root .gg-notebtn{display:flex;width:fit-content;margin:14px auto}
+html[data-gg-play] #gg-root .gg-feedback{margin:14px auto;max-width:94%}
+html[data-gg-play] #gg-root .gg-topbar{border:0;box-shadow:none;background:none}
+html[data-gg-play][data-theme=light] body::before,html[data-gg-play][data-theme=light] body::after{display:none}
+html[data-gg-play] #gg-root .gg-bubble,html[data-gg-play] #gg-root .gg-feedback{position:relative}
+html[data-gg-play] #gg-root .gg-bubble::after,html[data-gg-play] #gg-root .gg-feedback::after{content:"";position:absolute;inset:-1px;padding:1px;border-radius:inherit;pointer-events:none;background:var(--gg-edge-radial);background-size:150% 150%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;animation:club-game-edge 9s ease-in-out infinite alternate}
+@keyframes club-game-edge{from{background-position:0% 20%}to{background-position:100% 80%}}
+@media(prefers-reduced-motion:reduce){html[data-gg-play] #gg-root .gg-bubble::after,html[data-gg-play] #gg-root .gg-feedback::after{animation:none}}
+@media(max-height:650px){html[data-gg-play] #gg-root .gg-arbiter{flex-direction:row;align-items:center;gap:10px}html[data-gg-play] #gg-root .gg-robot-wrap{width:46px;height:46px;flex:none}}
+
+html[data-gg-play] #gg-root .gg-robot-wrap[data-response=good]{filter:drop-shadow(0 0 16px #3dcba3);animation:club-ref-yes .7s ease}
+html[data-gg-play] #gg-root .gg-robot-wrap[data-response=bad]{filter:drop-shadow(0 0 16px #ff646e);animation:club-ref-no .5s ease}
+@keyframes club-ref-yes{30%{transform:translateY(5px) rotate(-4deg)}65%{transform:translateY(-3px) rotate(3deg)}}
+@keyframes club-ref-no{25%,75%{transform:translateX(-5px) rotate(-5deg)}50%{transform:translateX(5px) rotate(5deg)}}
+@media(prefers-reduced-motion:reduce){html[data-gg-play] #gg-root .gg-robot-wrap[data-response]{animation:none}}

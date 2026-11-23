@@ -1,0 +1,9 @@
+23.11.2026 — ignore game release (authorized by Denis).
+Baseline: app v707/e8a3e17; backend v726/1b54aa7; bot v226/23eee58 (runtime620fbc6).
+New game uses existing GameSession ledger, isolated author-reviewed judge and Python scoring. No changes to previous games' rules/points/stop phrases. Existing material/roadmap records are untouched.
+Frontend v708: approved glass messenger, native video/payment/share, exact gs_ignore rescue target; same game in guest branch C. Payment return preserves game. Delayed legacy result only opens inside the same party. Original first rescue inline script preserved.
+Bot v227: native scheduled campaign with union of ongoing guest journeys and members, live consent/manual/ban exclusions, cross-platform identity dedup. Confirmed/ambiguous campaign receipts consume the new nurture step without synthetic delivery receipts. Hold until 25Nov preserves cursors. available_from prevents new step sending ahead of planned invitation.
+Schedule requested: 24Nov2026 12:00 Moscow; normal nurture resumes25Nov. No automatic repeat after unknown delivery. No payment, DNS or VPN changes.
+Artifacts and exact rollback/config manifests: /Users/Denis/Documents/Codex/2026-11-20/club-continuation-2026-11-20/work/ignore-release-23
+Tests at checkpoint: backend80 passed; bot99 passed; frontend six theme/viewport cases incl branchC, pay/back/fullscreen and analytics; node16 related passed. Further checks/deploy recorded in final outputs journal.
+Rollback order: cancel only new campaign(s), restore prior nurture config (compare revision first; preserve all receipts/runs), disable ignore catalog entry, revert app release, restore previous server images/pins. Keep historical sessions/delivery logs. Exact scripts staged in artifacts before rollout.
