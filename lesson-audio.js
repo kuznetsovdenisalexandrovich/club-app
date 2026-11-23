@@ -8,6 +8,7 @@ window.ClubLessonAudio=class {
   slot.appendChild(this.root);
   this.media=document.createElement('audio');this.media.preload='metadata';this.media.src=url;this.root.appendChild(this.media);
   this.seek=this.root.querySelector('input');this.playButton=this.root.querySelector('[data-podcast="play"]');
+  this.resumeCleanup=window.ClubMaterialHistory?.attachAudio(this.media,lecture);
   this.status=this.root.querySelector('.podcast-status');this.lecture=lecture;this.dead=false;
   this.events=new AbortController();const listen=(event,fn)=>this.media.addEventListener(event,()=>{if(!this.dead)fn();},{signal:this.events.signal});
   const sync=()=>{const playing=!this.media.paused&&!this.media.ended;this.playButton.innerHTML=playing?PL_ICON_PAUSE:PL_ICON_PLAY;this.playButton.setAttribute('aria-label',playing?'Пауза':'Слушать');if(msOwner==='lesson-podcast')msState(playing);};
@@ -26,5 +27,5 @@ window.ClubLessonAudio=class {
  pause(){this.media.pause();}
  get hidden(){return this.root.hidden;}
  set hidden(value){this.root.hidden=value;}
- destroy(){if(this.dead)return;this.dead=true;this.events.abort();this.media.pause();this.media.removeAttribute('src');this.media.load();this.root.remove();msRelease('lesson-podcast');}
+ destroy(){if(this.dead)return;this.resumeCleanup?.();this.dead=true;this.events.abort();this.media.pause();this.media.removeAttribute('src');this.media.load();this.root.remove();msRelease('lesson-podcast');}
 };

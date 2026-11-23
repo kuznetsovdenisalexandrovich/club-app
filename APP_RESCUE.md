@@ -385,3 +385,15 @@ The compact guest home button uses the same orange treatment. CSS-only visual
 change plus build markers: no player, routing, assignment or payment changes.
 No transformed/filtered player ancestor; lite/reduced-motion disable animation.
 Rollback: revert this commit to v692 / 940416e.
+
+2026-11-23 v714 / backend v729 (reserve v711): material-history records the
+format, stable target, last action and supported position in private replicated
+documents. Continue takes precedence over welcome/live suggestions when an
+unfinished material exists. Audio uses the existing queue, video uses existing
+bonus/meeting/learning engines, readers retain scroll, games use their existing
+session authorization. External Telegram/VK entries describe an opening only.
+No rewards or viewing receipts are derived from history. No player source,
+preload, recovery or payment algorithms change. Writes are bounded, debounced,
+account-scoped and preserve newer rewinds; read failure retains local history.
+Rollback frontend before the server; preserve material_history:* documents and
+all user progress. Library editorial changes have a separate field-only backup.

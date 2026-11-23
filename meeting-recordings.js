@@ -47,7 +47,7 @@ async function openMeetingRecording(id){
   const path=API_URL+'/media/meeting/'+id+'/replay?direct_capable=1';
   const media=await apiRequest(path);
   if(gen!==meetingGeneration)return;
-  meetingPlayer=new ClubFilmPlayer(body,{sources:media.sources,text:key=>key==='film.start'?'Смотреть запись':key==='funnel.title'?'Запись занятия':t(key),expiresIn:media.expires_in,refreshSources:()=>refreshFilmSources(path),onEvent:()=>{},onDiagnostic:filmDiagnostics('meeting')});
+  meetingPlayer=new ClubFilmPlayer(body,{position:window.ClubMaterialHistory?.get('meeting',String(id))?.position||0,sources:media.sources,text:key=>key==='film.start'?'Смотреть запись':key==='funnel.title'?'Запись занятия':t(key),expiresIn:media.expires_in,refreshSources:()=>refreshFilmSources(path),onEvent:e=>{window.ClubMaterialHistory?.media('meeting',String(id),data.title,e);},onDiagnostic:filmDiagnostics('meeting')});
  }catch(e){if(gen!==meetingGeneration)return;body.textContent='Не удалось открыть запись. Проверь доступ к клубу и попробуй ещё раз.';const b=document.createElement('button');b.className='lec-link-btn';b.textContent='Повторить';b.onclick=()=>openMeetingRecording(id);body.append(b);}
 }
 let meetingNoticeTimer;

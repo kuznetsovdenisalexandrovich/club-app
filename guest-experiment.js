@@ -46,7 +46,8 @@ window.GuestExperiment=(function(){
   const manifest=()=>apiRequest(API_URL+path,{},15000);
   try{
    const [data]=await Promise.all([manifest(),filmEngineReady()]);if(ticket!==generation)return;
-   player=new ClubFilmPlayer(document.getElementById('gx-media'),{adaptiveRecovery:true,sources:data.sources,expiresIn:data.expires_in,text:k=>k==='film.start'?'Смотреть видео':t(k),refreshSources:manifest,onDiagnostic:filmDiagnostics('bonus'),onFault:code=>{if(code==='film_unavailable')window.ClubAppRescue?.fail('content_error');},onEvent:e=>{
+   player=new ClubFilmPlayer(document.getElementById('gx-media'),{position:window.ClubMaterialHistory?.get(spec.masterclass?'bonus':'learning',spec.masterclass?'masterclass:i1':spec.slug)?.position||0,adaptiveRecovery:true,sources:data.sources,expiresIn:data.expires_in,text:k=>k==='film.start'?'Смотреть видео':t(k),refreshSources:manifest,onDiagnostic:filmDiagnostics('bonus'),onFault:code=>{if(code==='film_unavailable')window.ClubAppRescue?.fail('content_error');},onEvent:e=>{
+    window.ClubMaterialHistory?.media(spec.masterclass?'bonus':'learning',spec.masterclass?'masterclass:i1':spec.slug,spec.title||'',{...e,method:e.method==='stop'?'pause':e.method});
     if(e.method==='play')gxSignal('started');
     if(e.method==='stop'){player?.removeFullscreen?.close();note(spec.masterclass?'Видео закончилось. Полный доступ — по кнопке ниже.':'Фрагмент закончился. Полное занятие — в клубе.');gxSignal('completed');}
    }});note(spec.masterclass?'':'Фрагмент занятия · около 10 минут');gxSignal('access_shown');

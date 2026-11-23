@@ -62,7 +62,7 @@ window.QuizRecommendations=(function(){
     if(!member&&window.GuestExperiment?.branch()==='A')GuestExperiment.signal('access_shown');
     if(data.video_ready){
       try{const [manifest]=await Promise.all([api('/media/'+encodeURIComponent(l.slug)),filmEngineReady()]);if(ticket!==generation)return;
-        player=new ClubFilmPlayer(document.getElementById('learning-slot'),{sources:manifest.sources,expiresIn:manifest.expires_in,text:k=>k==='film.start'?'Смотреть фрагмент':t(k),refreshSources:()=>api('/media/'+encodeURIComponent(l.slug)),onEvent:e=>{if(window.GuestExperiment?.branch()==='A'){if(e.method==='play')GuestExperiment.signal('started');if(e.method==='stop')GuestExperiment.signal('completed');}if(e.method==='play'&&typeof rememberLastLecture==='function')rememberLastLecture(l);if(e.method==='stop')qrEnded(data,context);},onFault:code=>{if(code==='film_unavailable')window.ClubAppRescue?.fail('content_error');},onDiagnostic:filmDiagnostics('bonus')});
+        player=new ClubFilmPlayer(document.getElementById('learning-slot'),{position:window.ClubMaterialHistory?.get('learning',l.slug)?.position||0,sources:manifest.sources,expiresIn:manifest.expires_in,text:k=>k==='film.start'?'Смотреть фрагмент':t(k),refreshSources:()=>api('/media/'+encodeURIComponent(l.slug)),onEvent:e=>{if(window.GuestExperiment?.branch()==='A'){if(e.method==='play')GuestExperiment.signal('started');if(e.method==='stop')GuestExperiment.signal('completed');}window.ClubMaterialHistory?.media('learning',l.slug,l.title,{...e,method:e.method==='stop'?'pause':e.method});if(e.method==='stop')qrEnded(data,context);},onFault:code=>{if(code==='film_unavailable')window.ClubAppRescue?.fail('content_error');},onDiagnostic:filmDiagnostics('bonus')});
         qrNote('Фрагмент занятия · около 10 минут');return;
       }catch(e){if(ticket!==generation)return;}
     }
@@ -75,7 +75,7 @@ window.QuizRecommendations=(function(){
       if(ticket!==generation)return;
       const slot=document.getElementById('learning-slot');slot.innerHTML='';
       audio=new ClubLessonAudio(slot,{url:full?manifest.url:manifest.sources[0].url,lecture:l,
-        onPlaying:()=>{if(typeof rememberLastLecture==='function')rememberLastLecture(l);if(window.GuestExperiment?.branch()==='A')GuestExperiment.signal('started');},
+        onPlaying:()=>{if(typeof rememberLastLecture==='function')rememberLastLecture(l,'audio');if(window.GuestExperiment?.branch()==='A')GuestExperiment.signal('started');},
         onEnded:()=>{if(window.GuestExperiment?.branch()==='A')GuestExperiment.signal('completed');qrEnded(data,context);},
         onError:()=>{if(ticket!==generation)return;window.ClubAppRescue?.fail('content_error');qrNote('Не удалось загрузить аудио. Нажми ▶, чтобы повторить.');}});
       qrNote(full?'Полная аудиоверсия. Видео этого занятия пока открывается на внешней площадке.':'Короткая аудиоверсия · около 10 минут. Видео готовится.');
@@ -92,7 +92,15 @@ window.QuizRecommendations=(function(){
     if(player){player.destroy();player=null;}if(audio){audio.destroy();audio=null;}
     document.getElementById('quiz-inner').innerHTML='<div class="learning-result"><h2>'+(member?'Продолжим по твоей задаче?':'Продолжение — в клубе')+'</h2><p>'+(member?'Полное занятие и другие рекомендации доступны на твоей карте.':'Полные занятия, практика и личные разборы твоих ситуаций с Денисом.')+'</p><button class="learning-primary" data-learning="'+(member?'map':'join')+'">'+(member?'Открыть мою карту':'Посмотреть условия клуба')+'</button><button class="learning-quiet" data-learning="'+(member?'result':'more')+'">'+(member?'← К теневой стороне':'Хочу ещё контента')+'</button></div>';
   }
-  function qrOriginal(){qrDispose();bypass=true;openQuizShadow();}
+  async function qrResume(slug){
+    qrDispose();const ticket=generation;
+    const l=await apiRequest(API_URL+'/lectures/'+encodeURIComponent(slug),{},8000);
+    if(ticket!==generation)return;
+    const data={lecture:l,reason:'Продолжи с того места, где остановился',video_ready:true,code:''};
+    owned={data,context:'resume'};document.getElementById('quiz-overlay').classList.add('open');
+    await qrRender(data,'resume',ticket);
+  }
+  function qrOriginal(){const resume=owned?.context==='resume';qrDispose();if(resume){closeQuiz();switchView('library');return;}bypass=true;openQuizShadow();}
   async function qrOpenLesson(slug){
     const item=qrItems().find(x=>x.slug===slug);if(!item)return;
     // Use the existing library route for the complete member lesson.
@@ -110,5 +118,5 @@ window.QuizRecommendations=(function(){
     if(action==='join')return openQuizFullAccess();
     if(action==='more'){if(window.GuestExperiment?.active())return GuestExperiment.next();closeQuiz();switchView('library');}
   });
-  return {pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},back:qrOriginal,prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
+  return {resume:qrResume,pauseMedia:()=>{player?.removeFullscreen?.close();player?.action('pause');audio?.pause();},back:qrOriginal,prepare:qrPrepare,isOpen:()=>!!owned,show:qrShow,reset:qrReset,dispose:qrDispose,loadPersonal:qrLoadPersonal,mapHtml:qrMapHtml,hasItems:()=>qrItems().length>0};
 })();

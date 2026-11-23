@@ -4,6 +4,7 @@ const PD_CSS="*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;
 let pdEdition=null,pdFrame=null,pdActiveOffer="";
 async function openPersonalDigestOffer(){try{const d=await apiRequest(API_URL+"/digest/personal/offer-access",{method:"POST"});await openPersonalDigest(undefined,undefined,d.token)}catch(e){showToast(e.message||"Не удалось открыть предложение")}}
 async function openPersonalDigest(start,end,offer=""){
+ destroyPersonalDigest();
  pdActiveOffer=offer;document.getElementById('dgs')?.classList.remove('issue-mode');
  if(!offer&&typeof kqDigestAccess==='function'&&!await kqDigestAccess())return;
  pdFeatureOpened('digest');
@@ -14,6 +15,7 @@ async function openPersonalDigest(start,end,offer=""){
     const host=document.getElementById('dgs-pages');host.innerHTML='';
     pdFrame=document.createElement('iframe');pdFrame.title='Твоя персональная выжимка';pdFrame.sandbox='allow-scripts allow-same-origin';pdFrame.allow='accelerometer; gyroscope';
     pdFrame.style='width:100%;height:calc(100dvh - 54px - var(--safe-top, 0px));border:0;display:block';host.appendChild(pdFrame);
+    pdFrame.addEventListener('load',()=>{if(!pdFrame)return;const el=pdFrame.contentDocument?.scrollingElement;if(el)window.ClubMaterialHistory?.watchScroll('personal_digest',d.start+':'+d.end,'Твоя выжимка · '+d.start+(d.start===d.end?'':' — '+d.end),el);},{once:true});
     pdFrame.srcdoc=pdDocument(d);document.getElementById('dgs-count').textContent='';
   }catch(e){dgsEmpty('Не получилось открыть выжимку. Проверь вход в клуб и попробуй ещё раз.');}
 }
@@ -64,7 +66,7 @@ function pdHoloMount(configs){
  parent.addEventListener('club-motion-change',sync);window.addEventListener('pagehide',()=>{io.disconnect();mounts.forEach(f=>f.destroy());parent.removeEventListener('club-motion-change',sync)});sync();
 }
 
-function destroyPersonalDigest(){if(pdFrame){pdFrame.remove();pdFrame=null;}pdEdition=null;}
+function destroyPersonalDigest(){if(pdFrame){window.ClubMaterialHistory?.stopScroll(pdFrame.contentDocument?.scrollingElement);pdFrame.remove();pdFrame=null;}pdEdition=null;}
 
 const PD_PERIOD_CSS=`.pd-toolbar{max-width:430px;margin:auto;padding:48px 22px 8px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#d9cdbb;font:13px/1.4 -apple-system,sans-serif}.pd-export{padding:0 22px 4px;justify-content:flex-end}.pd-gyro{cursor:pointer}.pd-toolbar button{appearance:none;font:inherit;color:#dfb991;border:0;border-bottom:1px solid #9a7d4d;background:none;padding:7px 0;cursor:pointer;min-height:44px}#period-dialog{box-sizing:border-box;width:calc(100% - 28px);max-width:400px;max-height:85dvh;overflow:auto;border:1px solid #9a7d4d66;border-radius:22px;padding:24px;background:#f3eadb;color:#211c18;box-shadow:0 22px 70px #0006}#period-dialog::backdrop{background:#171713aa;backdrop-filter:blur(5px)}.pd-dialog-head{display:flex;align-items:start;gap:12px;justify-content:space-between}.pd-dialog-head h2{font:30px/1.15 Georgia,serif;margin:4px 0 18px}.pd-dialog-head button{appearance:none;border:1px solid #9a7d4d66;border-radius:50%;background:transparent;color:#5d5348;width:36px;height:36px;font:24px/1 sans-serif;flex-shrink:0}#period-dialog p{font:15px/1.5 -apple-system,sans-serif;color:#6e6254}.pd-months{display:grid;gap:10px;margin:22px 0;max-height:35dvh;overflow:auto}.pd-months button{appearance:none;text-align:left;border:1px solid #9a7d4d66;border-radius:12px;padding:14px 16px;background:transparent;color:#211c18;font:16px/1.3 -apple-system,sans-serif;min-height:48px}.pd-months button[aria-pressed=true]{border-color:#914b3d;background:#914b3d0c;color:#914b3d;box-shadow:inset 3px 0 #914b3d}#period-apply{appearance:none;border:0;border-radius:12px;min-height:48px;width:100%;padding:14px;background:#30372c;color:#f3eadb;font:16px/1.3 -apple-system,sans-serif}#period-dialog[open]{display:flex;flex-direction:column;gap:12px}#period-dialog p{margin:0;flex-shrink:0}.pd-dialog-head{flex-shrink:0}.pd-dialog-head h2{font-size:26px;margin:0}.pd-months{margin:0 -5px;padding:5px;min-height:96px;flex:1}.pd-months button{padding:10px 12px;min-height:44px}#period-apply{flex-shrink:0}#period-dialog button[hidden]{display:none}#period-dialog button:focus-visible{outline:2px solid #914b3d;outline-offset:3px}`;
 function pdPeriodControls(initial){
