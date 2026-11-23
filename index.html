@@ -28119,6 +28119,7 @@ function playBonusVideo(bonusKey, itemKey){
   if (!it || it.locked || (!it.media_edition && !it.boomstream)) return;
   disposeBonusNative();
   if (it.media_edition){ playNativeBonus(bonusKey, itemKey, it); return; }
+  window.ClubMaterialHistory?.remember('bonus',bonusKey+':'+itemKey,it.title||b.title);
   const slot = document.getElementById('bonus-video-slot');
   const code = String(it.boomstream).trim();
 
@@ -38941,7 +38942,6 @@ function lastMagazineRead(){
 }
 
 function rememberMagazineRead(it){
-  window.ClubMaterialHistory?.remember('magazine',it.issue_key,it.title||it.issue_key,{platform:'mobile'});
   try {
     localStorage.setItem('club_app_last_magazine', JSON.stringify({
       key: it.issue_key, title: it.title || it.issue_key, ts: Date.now()
@@ -39017,6 +39017,7 @@ async function readMagazineIssue(key, variant){
                           + `&ctx=${encodeURIComponent(ctx)}`)
                     .then(r => r.json());
     if (!d || !d.url){ showToast('Выпуск пока закрыт'); return; }
+    window.ClubMaterialHistory?.remember('magazine',it.issue_key,it.title||it.issue_key,{platform:variant});
     if (variant === 'mobile'){
       it.is_new = false;          // метка «новое» гаснет сразу, не дожидаясь перезагрузки полки
       renderMagazineShelf();
