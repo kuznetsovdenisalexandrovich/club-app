@@ -55,5 +55,5 @@ html[data-gg-keyboard] #gg-root .gg-arbiter{min-height:0;padding:4px 12px 10px}h
 /* No continuous animation or backdrop blur while a trainer waits for input. */
 html[data-gg-play] #gg-root .gg-bubble::after,html[data-gg-play] #gg-root .gg-feedback::after,html[data-gg-play] #gg-root .gg-robot{animation:none}
 html[data-gg-play] #gg-root .gg-bubble,html[data-gg-play] #gg-root .gg-feedback,html[data-gg-play] #gg-root .gg-composer{backdrop-filter:none;-webkit-backdrop-filter:none}
-html[data-gg-play] .ci-progress,html:has(#gx-ignore-host) .ci-progress{display:none!important}
+html[data-gg] .ci-progress,html:has(#gx-ignore-host) .ci-progress{display:none!important}
 html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
