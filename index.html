@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v711 -->
+<!-- FILE_VERSION: index-v712 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v711';
+window.CLUB_BUILD_ID = 'app-v712';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16793,7 +16793,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v711 · 23.11.2026 Игры без фоновой анимации';
+const APP_BUILD = 'v712 · 23.11.2026 Результат игры при отказе ИИ';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47801,18 +47801,19 @@ function appendHint(holder,turn,animate=false){
  const row=el('div',undefined,'hint-row'+(animate?' enter':'')),button=el('button','Подсказка','hint-chip');button.setAttribute('aria-expanded','false');row.append(button);holder.append(row);
  button.onclick=async()=>{if(busy)return;button.disabled=true;const id=state.id;try{const updated=await ignoreApi('hint',{id,turn_no:turn.n});if(state.id!==id)return;const fresh=updated.turns.find(t=>t.n===turn.n);state.turns=state.turns.map(t=>t.n===turn.n?{...t,notes:fresh.notes}:t);const card=noteCard(fresh,true);row.replaceWith(card);stage('hint-open',fresh);const chat=$('chat'),box=chat.getBoundingClientRect(),rect=card.getBoundingClientRect();let top=chat.scrollTop;if(rect.height>chat.clientHeight-24||rect.top<box.top+12)top+=rect.top-box.top-12;else if(rect.bottom>box.bottom-12)top+=rect.bottom-box.bottom+12;chat.scrollTo({top,behavior:reduced()?'auto':'smooth'});}catch(e){$('status').textContent=e.message;button.disabled=false;}};
 }
+function silentClient(holder){holder.append(el('div','Александр прочитал и пока не отвечает.','receipt'));}
 function turnHolder(turn,animate=false){const holder=el('div',undefined,'turn-group');holder.dataset.turn=turn.n;holder.append(message(turn.player,'you',animate));const receipt=el('div',animate?'Отправлено':'Прочитано ✓✓','receipt'+(animate?'':' read'));holder.append(receipt);return holder;}
 function syncChrome(){
  $('turn').textContent=state.turn_no+' / '+state.max_turns;$('composer').hidden=state.status!=='live';$('finish').hidden=state.status==='live';
  if(state.status!=='live'){
-  const won=state.status==='won',box=$('finish');box.replaceChildren(el('h2',won?'Диалог вернулся':'Попытка завершена'),el('p',won?'Александр согласился на живой контакт.':state.status==='lost'?'Любопытство удовлетворено — клиент снова ушёл в игнор.':'Шесть ходов закончились. Переписка осталась выше.'));
+  const won=state.status==='won',box=$('finish');box.replaceChildren(el('h2',won?'Диалог вернулся':state.status==='finished'?'Твой результат — '+state.score+'%':'Попытка завершена'),el('p',won?'Александр согласился на живой контакт.':state.status==='finished'?'Посмотри разбор Дениса, чтобы увереннее возвращать клиентов в диалог.':state.status==='lost'?'Любопытство удовлетворено — клиент снова ушёл в игнор.':'Шесть ходов закончились. Переписка осталась выше.'));
   const watch=el('button','Смотреть разбор','learning-primary');watch.onclick=showVideo;box.append(watch);const share=el('button','Поделиться игрой','link');share.onclick=()=>openGameShare('ai');box.append(share);const again=el('button','Сыграть ещё раз','link');again.onclick=ignoreStart;box.append(again);if(context.branch&&!box.querySelector('[data-more]')){const more=el('button','Хочу ещё контента','link');more.dataset.more='1';more.onclick=context.more;box.append(more);}
  }
 }
 function ignoreRender(){
  const chat=$('chat');chat.replaceChildren(dateHeader(),message('Всё, принял, завтра точно оплатим','client'));
  if(!state.turns.length)chat.append(el('p','Неделя тишины. Попробуй вернуть Александра в диалог.','context-note'));
- for(const turn of state.turns){const holder=turnHolder(turn);if(turn.client){const slot=el('div',undefined,'client-slot');slot.append(message(turn.client,'client'));holder.append(slot);}appendHint(holder,turn);chat.append(holder);}
+ for(const turn of state.turns){const holder=turnHolder(turn);if(turn.client){const slot=el('div',undefined,'client-slot');slot.append(message(turn.client,'client'));holder.append(slot);}else silentClient(holder);appendHint(holder,turn);chat.append(holder);}
  scoreNow(state.score);syncChrome();reaction('idle');requestAnimationFrame(toBottom);
 }
 function resizeInput(){$('reply').style.height='44px';$('reply').style.height=Math.min(112,$('reply').scrollHeight)+'px';}
@@ -47830,10 +47831,10 @@ async function ignoreSubmit(e){
   await wait(500);if(ticket!==run)return;
   const receipt=holder.querySelector('.receipt');receipt.textContent='Прочитано ✓✓';receipt.classList.add('read','reveal');stage('read',optimistic);reaction('thinking');
   const result=await response;if(result.error)throw result.error;if(ticket!==run)return;
-  state=result.data;pending=null;saveDraft();ignoreRemember();if(context.branch){GuestExperiment.signal('started');if(state.status!=='live')GuestExperiment.signal('game_completed');}const turn=state.turns.at(-1);
+  state=result.data;pending=null;saveDraft();ignoreRemember();if(context.branch){GuestExperiment.signal('started');if(state.status!=='live')GuestExperiment.signal('game_completed');}if(state.completion_reason==='judge_unavailable'){holder.remove();ignoreRender();showCompletion();return;}const turn=state.turns.at(-1);
   reaction(turn.feedback?'bad':turn.delta>0?'good':'idle');stage('referee',turn);await wait(750);if(ticket!==run)return;
   stage('score',turn);await scoreTo(state.score);$('turn').textContent=state.turn_no+' / '+state.max_turns;
-  if(turn.client){const slot=el('div',undefined,'client-slot'),dots=el('div',undefined,'message client typing');for(let i=0;i<3;i++)dots.append(el('i'));slot.append(dots);holder.append(slot);toBottom();await wait(380);slot.replaceChildren(message(turn.client,'client',true));stage('client',turn);await wait(250);}
+  if(turn.client){const slot=el('div',undefined,'client-slot'),dots=el('div',undefined,'message client typing');for(let i=0;i<3;i++)dots.append(el('i'));slot.append(dots);holder.append(slot);toBottom();await wait(380);slot.replaceChildren(message(turn.client,'client',true));stage('client',turn);await wait(250);}else silentClient(holder);
   appendHint(holder,turn,true);if(turn.notes?.length)stage('hint',turn);await wait(300);syncChrome();toBottom();
  }catch(e){if(ticket!==run)return;holder.remove();$('reply').value=text;resizeInput();reaction('idle');$('status').textContent=e.message;}
  finally{if(ticket===run)setBusy(false);}
@@ -47845,6 +47846,10 @@ $('reply').addEventListener('keydown',e=>{
 });
 function closeDialog(){if(root.fullscreenElement)document.exitFullscreen().catch(()=>{});dialogGeneration++;video?.destroy();video=null;$('dialog').close();}
 function dialogBody(){dialogGeneration++;video?.destroy();video=null;const body=$('dialog-body');body.replaceChildren();if(!$('dialog').open)$('dialog').showModal();return body;}
+function showCompletion(){
+ const body=dialogBody();body.append(el('h2','Твой результат — '+state.score+'%'),el('p','Как вернуть клиента в диалог? Посмотри разбор Дениса.'));
+ const watch=el('button',state.mode==='member'?'Смотреть лекцию':'Смотреть фрагмент','learning-primary');watch.onclick=showVideo;body.append(watch);
+}
 function helpDialog(){
  const body=dialogBody();
  if(state?.mode==='member'){body.append(el('h2','Попробуй так'),el('p',state.hint||'В этой партии ты уже достиг цели.'));return;}
