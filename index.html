@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v717 -->
+<!-- FILE_VERSION: index-v718 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v717';
+window.CLUB_BUILD_ID = 'app-v718';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -10911,8 +10911,7 @@ function renderMeetingNotice(notice){
       <div class="card" style="margin-top:12px">
         <div class="section-label" style="margin-bottom:8px">Окно бонусов</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;text-align:left">
-          Запускает режим финальных минут так, будто фильм только что досмотрен:
-          бар с обратным отсчётом, попап бонусов, фазы окна.
+          Участнику показывает предпросмотр бара и списка бонусов без изменения подписки и прогресса. Для гостя — тест настоящего окна после фильма.
         </div>
         <button class="help-btn" style="margin-bottom:8px" onclick="debugWindowStart()">Запустить окно «15 минут»</button>
         <button class="help-btn" style="margin-bottom:8px" onclick="debugWindowLast()">Перемотать к финальным минутам</button>
@@ -11504,6 +11503,7 @@ function renderMeetingNotice(notice){
     <button class="lec-link-btn access-btn" style="width:100%;margin-top:6px"
             onclick="bwBuy()">Получить</button>
     <button type="button" class="bw-details" onclick="bwClose();openClubInfoPage()">Узнать подробнее</button>
+    <button type="button" id="bw-preview-stop" class="bw-cancel" hidden onclick="bwPreviewStop()">Завершить предпросмотр</button>
     <button type="button" class="bw-cancel" onclick="bwClose()" data-text="bw.close">Закрыть</button>
   </div>
 </div>
@@ -16931,7 +16931,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v717 · 25.11.2026 Бонусы и отзывы';
+const APP_BUILD = 'v718 · 25.11.2026 Предпросмотр бонусов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -23175,7 +23175,36 @@ function setDebugMode(on){
    [stated] Denis: «добавь мне в отладку режим "15 минут"». Гонять окно,
    каждый раз досматривая получасовой фильм, невозможно — здесь оно
    заводится с любой точки. */
-function debugWindowStart(){
+let bwPreview=false,bwPreviewEnd=0,bwPreviewTimer=null;
+// Owner-requested visual preview for this Telegram account; no membership writes.
+function bwRequestedPreview(){
+  if(!isMember||platformUserName().toLowerCase()!=='@sex_sells')return;
+  try{if(sessionStorage.getItem('club_bonus_preview_closed_v718')==='1')return;}catch(e){}
+  debugWindowStart(false);
+}
+window.addEventListener('load',()=>{profileReady.then(bwRequestedPreview);});
+function bwPreviewTick(){
+  const left=Math.max(0,Math.ceil((bwPreviewEnd-Date.now())/1000));
+  if(!left){bwPreviewStop();return;}
+  saleTimerPlace();
+  document.getElementById('bonus-bar').classList.add('on');
+  document.getElementById('bb-time').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
+  document.getElementById('bb-txt').textContent='Бонусы за вступление · посмотреть';
+  document.getElementById('debug-window-state').textContent='Предпросмотр участника · осталось '+left+' с';
+}
+function bwPreviewStop(){
+  clearInterval(bwPreviewTimer);bwPreviewTimer=null;bwPreview=false;bwClose();
+  try{sessionStorage.setItem('club_bonus_preview_closed_v718','1');}catch(e){}
+  document.getElementById('bonus-bar')?.classList.remove('on');
+  document.getElementById('debug-window-state').textContent='Предпросмотр завершён';
+}
+function debugWindowStart(openSheet=true){
+  if(isMember){
+    bwPreview=true;bwPreviewEnd=Date.now()+15*60000;
+    clearInterval(bwPreviewTimer);bwPreviewTick();bwPreviewTimer=setInterval(bwPreviewTick,1000);
+    document.getElementById('bonus-bar').scrollIntoView({block:'start',behavior:'instant'});
+    if(openSheet)bwOpen();return;
+  }
   try { localStorage.setItem('club_app_film_done_at', String(Date.now())); } catch(e){}
   bwReturnUsed = false;
   try { localStorage.removeItem('club_app_window_back'); } catch(e){}
@@ -23187,6 +23216,7 @@ function debugWindowStart(){
 
 /* Перемотка к финальным минутам — сдвигаем конец окна, а не ждём */
 function debugWindowLast(){
+  if(isMember){if(!bwPreview)debugWindowStart();bwPreviewEnd=Date.now()+60000;bwPreviewTick();return;}
   if (!bwTimer) debugWindowStart();
   const lastSec = Math.max(30, (bwLastMin || 5) * 60 - 20);
   bwEndsAt = Date.now() + lastSec * 1000;
@@ -23195,12 +23225,14 @@ function debugWindowLast(){
 }
 
 function debugWindowEnd(){
+  if(bwPreview){bwPreviewStop();return;}
   bwEndsAt = Date.now() - 1000;
   bwTick();
   debugWindowRefresh();
 }
 
 function debugWindowRefresh(){
+  if(bwPreview){bwPreviewTick();return;}
   const el = document.getElementById('debug-window-state');
   if (!el) return;
   const left = Math.max(0, Math.round((bwEndsAt - Date.now()) / 1000));
@@ -33971,6 +34003,7 @@ function bwStart(seconds){
 }
 
 function bwTick(){
+  if(bwPreview)return;
   if(isMember){bwStop();return;}
   if(typeof saleOffer!=='undefined' && saleOffer && saleDeadline>performance.now()){saleTimerTick();return}
   const left = Math.max(0, Math.round((bwEndsAt - Date.now()) / 1000));
@@ -34057,20 +34090,22 @@ async function bwLoadList(){
 
 async function bwOpen(){
   const ov = document.getElementById('bonus-window-sheet');
-  if(isMember)return;
+  if(isMember&&!bwPreview)return;
+  document.getElementById('bw-preview-stop').hidden=!bwPreview;
   saleTimerPlace();
   const bar=document.getElementById('bonus-bar');
   if(!bar?.classList.contains('on'))return;
   if(bar.getBoundingClientRect().top<0)bar.scrollIntoView({block:'start',behavior:'instant'});
   if (ov) ov.classList.add('open');
+  appSyncNavigation();
   bwPositionSheet();
   bar.setAttribute('aria-expanded','true');
   ov?.querySelector('.bw-sheet')?.focus({preventScroll:true});
-  track('bonus_window_peek');
+  if(!bwPreview)track('bonus_window_peek');
   const box = document.getElementById('bw-list');
   if (!box) return;
   let rows = await bwLoadList();
-  const offer=typeof saleOffer!=='undefined'?saleOffer:null;
+  const offer=!bwPreview&&typeof saleOffer!=='undefined'?saleOffer:null;
   const sub=document.getElementById('bw-sub');
   if(sub)sub.textContent=offer?(offer.body||''):(saleBonusOnly?'Вступи до конца окна — эти бонусы останутся у тебя вместе с доступом.':'Бонусы доступны участникам клуба. Сейчас их доступность не ограничена таймером.');
   if(offer?.timer?.bonus_keys?.length)rows=rows.filter(b=>offer.timer.bonus_keys.includes(b.key));
@@ -34111,10 +34146,13 @@ document.addEventListener('keydown',e=>{
 function bwClose(){
   document.getElementById('bonus-bar')?.setAttribute('aria-expanded','false');
   const ov = document.getElementById('bonus-window-sheet');
+  const wasOpen=ov?.classList.contains('open');
   if (ov) ov.classList.remove('open');
+  if(wasOpen)appSyncNavigation();
 }
 
 function bwBuy(){
+  if(bwPreview){showToast('Это предпросмотр. Доступ к клубу у тебя уже есть.');return;}
   bwClose();
   if(typeof saleOffer!=='undefined'&&saleOffer){promoCode=saleOffer.code;promoOpen();return}
   track('bonus_window_buy');
@@ -47063,6 +47101,7 @@ body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{
 .club-reviews-link{display:block;width:100%;font-size:13px;text-decoration:underline;text-underline-offset:3px}
 #bonus-window-sheet .access-btn{min-height:50px;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:#fff;border:1px solid #ffffff38;box-shadow:0 6px 20px #e8614a44;font-size:16px;font-weight:700}
 .bw-details{display:block;margin:14px auto 0;color:var(--accent);font-size:13px;text-decoration:underline;text-underline-offset:3px}
+#bw-preview-stop[hidden]{display:none!important}
 .bw-cancel{display:block;width:100%;color:var(--text-dim);font-size:13px}
 html[data-app-layer]:has(#bonus-window-sheet.open) #app-level-slot{display:block}
 #bonus-window-sheet{padding:0;backdrop-filter:none;background:rgba(0,0,0,.38);top:var(--bw-top,100px);align-items:flex-start}
@@ -47112,6 +47151,7 @@ function saleTimerUse(data,code){
  clearInterval(saleTickId);saleTimerTick();saleTickId=setInterval(saleTimerTick,1000);
 }
 function saleTimerTick(){
+ if(typeof bwPreview!=='undefined'&&bwPreview)return;
  if(!saleOffer)return;
  const bar=document.getElementById('bonus-bar');if(!bar)return;
  saleTimerPlace();

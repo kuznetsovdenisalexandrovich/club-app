@@ -417,3 +417,10 @@ from that bar; member/expiry dismiss it. The 90% film milestone quietly resumes
 the server window immediately. Failed deadline reads do not invent a fresh window.
 Bonus scarcity remains OFF at Denis's request; the list states that availability
 is not limited by the timer. No player sources, playback or payment creation changed.
+
+2026-11-25 v718: member-only bonus preview uses separate in-memory deadline;
+no film marks, membership changes or checkout. Owner requested automatic visual
+preview for @sex_sells; only that current Telegram username plus member status
+qualifies. Stop suppresses it for this WebView session. Profile debugging can
+restart preview manually. Existing guest debug flow is unchanged. Bonus sheet
+open/close explicitly refreshes native-back/header visibility state.

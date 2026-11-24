@@ -13,6 +13,7 @@ function saleTimerUse(data,code){
  clearInterval(saleTickId);saleTimerTick();saleTickId=setInterval(saleTimerTick,1000);
 }
 function saleTimerTick(){
+ if(typeof bwPreview!=='undefined'&&bwPreview)return;
  if(!saleOffer)return;
  const bar=document.getElementById('bonus-bar');if(!bar)return;
  saleTimerPlace();
