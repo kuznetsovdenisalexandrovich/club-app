@@ -408,3 +408,12 @@ The historical05:22 profile AbortError is not attributed to these assets;
 its network root cause remains unknown. Rollback frontend to d9ab5bd.
 The existing profile Retry button now stops click propagation to its parent
 subscription card. Retry remains manual and uses the same bootstrap path.
+
+2026-11-25 v717: review purchase CTAs are absent for members; content buttons
+await the exact lecture route with visible pending/error feedback. A late library
+refresh preserves that selected lecture. Existing l_/la_/li_ adapters are reused.
+The bonus bar shares the level slot (including games), and its list unfolds down
+from that bar; member/expiry dismiss it. The 90% film milestone quietly resumes
+the server window immediately. Failed deadline reads do not invent a fresh window.
+Bonus scarcity remains OFF at Denis's request; the list states that availability
+is not limited by the timer. No player sources, playback or payment creation changed.

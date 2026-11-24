@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v716 -->
+<!-- FILE_VERSION: index-v717 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v716';
+window.CLUB_BUILD_ID = 'app-v717';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -11208,7 +11208,7 @@ function renderMeetingNotice(notice){
       </div>
     </div>
     <button class="lec-link-btn access-btn" onclick="openAccessPage()" data-text="club.buy">Получить доступ</button>
-    <div class="payment-help-link" onclick="ClubReviews.open()">Отзывы</div>
+    <button type="button" class="payment-help-link club-reviews-link" onclick="ClubReviews.open()">Почитать отзывы</button>
     <!-- ⚠️ ОСМОТРЕТЬСЯ ПРЕДЛАГАЕМ ЗДЕСЬ, А НЕ ПОД ФИЛЬМОМ. [stated] Denis:
          «на странице информации о клубе можно уже дать возможность
          осмотреться в приложении». Кнопка нужна только тому, кто ещё не
@@ -11497,13 +11497,14 @@ function renderMeetingNotice(notice){
 </div>
 
 <div class="bw-sheet-overlay" id="bonus-window-sheet" onclick="if(event.target===this) bwClose()">
-  <div class="bw-sheet">
-    <div class="bw-title" data-text="bw.title">Бонусы за вступление</div>
+  <div class="bw-sheet" role="dialog" aria-modal="true" aria-labelledby="bw-dialog-title" tabindex="-1">
+    <div class="bw-title" id="bw-dialog-title" data-text="bw.title">Бонусы за вступление</div>
     <div class="bw-sub" id="bw-sub" data-text="bw.sub">Вступишь, пока идёт время — заберёшь всё это вместе с доступом.</div>
     <div id="bw-list"></div>
     <button class="lec-link-btn access-btn" style="width:100%;margin-top:6px"
-            onclick="bwBuy()" data-text="bw.buy">Получить доступ в клуб</button>
-    <div class="bw-cancel" onclick="bwClose()" data-text="bw.close">Закрыть</div>
+            onclick="bwBuy()">Получить</button>
+    <button type="button" class="bw-details" onclick="bwClose();openClubInfoPage()">Узнать подробнее</button>
+    <button type="button" class="bw-cancel" onclick="bwClose()" data-text="bw.close">Закрыть</button>
   </div>
 </div>
 
@@ -16930,7 +16931,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v716 · 25.11.2026 Отзывы';
+const APP_BUILD = 'v717 · 25.11.2026 Бонусы и отзывы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17287,6 +17288,7 @@ function appSyncNavigation(){
     if(!el._homeAnchor){el._homeAnchor=document.createComment(id+' home');el.before(el._homeAnchor)}
     if(slot&&el.parentElement!==slot)slot.append(el);
   }
+  if(typeof saleTimerPlace==='function')saleTimerPlace();
   const layer=appBackLayer();
   document.documentElement.toggleAttribute('data-app-layer',!!layer);
   document.querySelectorAll('.app-native-close-handle').forEach(b=>b.classList.remove('app-native-close-handle'));
@@ -17451,6 +17453,8 @@ async function refreshScreenData(name, force){
 
 function switchView(name, preserveGame) {
   if(name!=='reviews')window.ClubReviews?.stop();
+  bwClose();
+  libraryTargetLecture=null;
   if(name!=='access' && purchaseReturn && document.getElementById('view-access')?.classList.contains('active'))discardPurchaseReturn();
   if(name==='profile' && window.MemberProfiles)MemberProfiles.load();
   if(typeof pdFeatureOpened==='function')pdFeatureOpened(name);
@@ -26578,6 +26582,7 @@ function toggleTagFilter(tag) {
 }
 
 function applyTagFilter() {
+  libraryTargetLecture=null;
   const base = allLectures;
   const filtered = activeTagFilter ? base.filter(l => (l.tags || []).includes(activeTagFilter)) : base;
   renderLibrary(filtered);
@@ -27346,8 +27351,11 @@ async function ensureLibrary(){
 /* Показываем ОДНУ карточку занятия — переиспользуем обычный рендер библиотеки,
    поэтому у карточки сразу все родные кнопки: ТГ, ВК, «Главные идеи»,
    «Слушать», закладка. Своего экрана заводить не пришлось */
+let libraryTargetLecture=null;
 function showSingleLecture(lec){
   switchView('library');
+  libraryTargetLecture=lec;
+  screenRefreshedAt.library=Date.now();
   /* v450: лекция показывается вместе со своими практиками, практика — со своей лекцией */
   if (typeof renderLibrary === 'function') renderLibrary(lectureFamilyOf(lec));
   const banner = document.getElementById('dl-banner');
@@ -28722,6 +28730,7 @@ function toggleSaved(slug){
 }
 
 async function openSavedList(){
+  libraryTargetLecture=null;
   if (!allLectures.length) {
     try { await loadLibrary(); } catch (e) {}
   }
@@ -28814,7 +28823,8 @@ async function loadLibrary() {
     if (!sameAsBefore) {
       allTags = collectTags(data);
       renderTagFilter();
-      applyTagFilter();
+      if(libraryTargetLecture)renderLibrary(lectureFamilyOf(lectureBySafeKey(libraryTargetLecture.slug)||libraryTargetLecture));
+      else applyTagFilter();
       renderPersonalPlanSection();
     }
 
@@ -33862,7 +33872,7 @@ async function bwOnFilmDone(byRipe,quiet){
         body: JSON.stringify({ telegram_id: telegramId, ripe: !!byRipe, tg_init: ivIdent().tg_init })
       }, 8000);
       if (d && d.known && typeof d.seconds_left === 'number') left = d.seconds_left;
-    } catch(e){ /* сеть молчит — считаем по своей отметке, окно важнее точности */ }
+    } catch(e){ return; }
   }
   bwStart(left);
   /* ⚠️ СПИСОК ПОКАЗЫВАЕМ САМИ, ОДИН РАЗ (04.09.2026). Прежде содержимое окна
@@ -33961,6 +33971,7 @@ function bwStart(seconds){
 }
 
 function bwTick(){
+  if(isMember){bwStop();return;}
   if(typeof saleOffer!=='undefined' && saleOffer && saleDeadline>performance.now()){saleTimerTick();return}
   const left = Math.max(0, Math.round((bwEndsAt - Date.now()) / 1000));
   const t = document.getElementById('bb-time');
@@ -34024,7 +34035,7 @@ async function bwReturnWindow(){
         if (!d.ok){ bwReturnUsed = true; bwRenderReturn(); return; }
         if (typeof d.seconds_left === 'number') left = d.seconds_left;
       }
-    } catch(e){ /* сеть молчит — окно важнее точности, отдаём по-своему */ }
+    } catch(e){ bwRenderReturn();showToast('Не удалось проверить окно. Попробуй ещё раз.');return; }
   }
   bwReturnUsed = true;
   try {
@@ -34046,7 +34057,15 @@ async function bwLoadList(){
 
 async function bwOpen(){
   const ov = document.getElementById('bonus-window-sheet');
+  if(isMember)return;
+  saleTimerPlace();
+  const bar=document.getElementById('bonus-bar');
+  if(!bar?.classList.contains('on'))return;
+  if(bar.getBoundingClientRect().top<0)bar.scrollIntoView({block:'start',behavior:'instant'});
   if (ov) ov.classList.add('open');
+  bwPositionSheet();
+  bar.setAttribute('aria-expanded','true');
+  ov?.querySelector('.bw-sheet')?.focus({preventScroll:true});
   track('bonus_window_peek');
   const box = document.getElementById('bw-list');
   if (!box) return;
@@ -34069,7 +34088,28 @@ async function bwOpen(){
   }).join('');
 }
 
+function bwPositionSheet(){
+  const ov=document.getElementById('bonus-window-sheet'),bar=document.getElementById('bonus-bar');
+  if(!ov?.classList.contains('open')||!bar)return;
+  const r=bar.getBoundingClientRect();
+  ov.style.setProperty('--bw-top',Math.max(0,r.bottom-1)+'px');
+  ov.style.setProperty('--bw-left',r.left+'px');
+  ov.style.setProperty('--bw-width',r.width+'px');
+}
+window.addEventListener('resize',bwPositionSheet);
+window.addEventListener('scroll',bwPositionSheet,{passive:true});
+document.addEventListener('keydown',e=>{
+ const ov=document.getElementById('bonus-window-sheet');if(!ov?.classList.contains('open'))return;
+ if(e.key==='Escape'){e.preventDefault();bwClose();document.getElementById('bonus-bar')?.focus({preventScroll:true});}
+ if(e.key==='Tab'){
+  const list=Array.from(ov.querySelectorAll('button,a[href]')).filter(x=>!x.disabled);
+  const first=list[0],last=list.at(-1);
+  if(e.shiftKey&&(document.activeElement===first||document.activeElement===ov.querySelector('.bw-sheet'))){e.preventDefault();last?.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+ }
+});
 function bwClose(){
+  document.getElementById('bonus-bar')?.setAttribute('aria-expanded','false');
   const ov = document.getElementById('bonus-window-sheet');
   if (ov) ov.classList.remove('open');
 }
@@ -34628,6 +34668,7 @@ function filmHandlePlayback(d, native){
     if (!filmRipe && d.time >= d.duration * FILM_RIPE_PCT){
       filmRipe = true;
       track('funnel_film_ripe', '', Math.floor(d.time));
+      bwOnFilmDone(true,true);
     }
     if (d.time >= d.duration - 3) showFunnelAfter();
   }
@@ -47013,9 +47054,23 @@ html[data-lite] #gg-root .kq-tile,html[data-lite] #gg-root .kq-gate,html[data-li
 body:has(#quiz-overlay.open) #film-chip,body:has(#quiz-overlay.open) #funnel-screen.pip-mode{display:none!important}
 #funnel-screen.pip-mode .film-dock{height:198px;padding:0;background:transparent;min-height:0}
 
-#app-level-slot #bonus-bar{position:relative;inset:auto;z-index:1;width:100%;box-sizing:border-box;margin:0 0 18px;background:var(--card-bg);border:1px solid var(--line);border-radius:20px;box-shadow:none;color:var(--text)}
+:is(#app-level-slot,#games-level-slot) #bonus-bar{position:relative;inset:auto;z-index:1;width:100%;box-sizing:border-box;margin:0 0 18px;background:var(--card-bg);border:1px solid var(--line);border-radius:20px;box-shadow:none;color:var(--text)}
 #bonus-bar .bb-row{padding:15px 18px;gap:14px}#bonus-bar .bb-txt{font-size:14px;white-space:normal;line-height:1.4}#bonus-bar .bb-time{font-size:22px;color:var(--accent);font-weight:700}#bonus-bar .bb-fuse{display:none}
 body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{display:none!important}
+
+/* The bonus list unfolds from its own header bar, in both themes. */
+.club-reviews-link,.bw-details,.bw-cancel{font:inherit;border:0;background:none;cursor:pointer}
+.club-reviews-link{display:block;width:100%;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+#bonus-window-sheet .access-btn{min-height:50px;background:linear-gradient(135deg,var(--warm),var(--warm-deep));color:#fff;border:1px solid #ffffff38;box-shadow:0 6px 20px #e8614a44;font-size:16px;font-weight:700}
+.bw-details{display:block;margin:14px auto 0;color:var(--accent);font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.bw-cancel{display:block;width:100%;color:var(--text-dim);font-size:13px}
+html[data-app-layer]:has(#bonus-window-sheet.open) #app-level-slot{display:block}
+#bonus-window-sheet{padding:0;backdrop-filter:none;background:rgba(0,0,0,.38);top:var(--bw-top,100px);align-items:flex-start}
+#bonus-window-sheet .bw-sheet{position:absolute;left:var(--bw-left,16px);width:var(--bw-width,calc(100% - 32px));max-width:none;box-sizing:border-box;border:1px solid var(--line);border-top:0;border-radius:0 0 24px 24px;max-height:calc(100dvh - var(--bw-top,100px) - 16px);box-shadow:0 14px 28px #0003;animation:bonusUnfold .24s ease-out both;transform-origin:top}
+body:has(#bonus-window-sheet.open) #bonus-bar{border-radius:20px 20px 0 0}
+@keyframes bonusUnfold{from{opacity:0;transform:translateY(-16px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(0)}}
+@media(prefers-reduced-motion:reduce){#bonus-window-sheet .bw-sheet{animation:none}}
+html[data-motion="off"] #bonus-window-sheet .bw-sheet{animation:none}
 html[data-motion="off"] .bb-time{animation:none!important}
 
 #gg-root .kq-welcome{max-width:600px;margin:4px auto 0;display:grid;gap:16px}
@@ -47046,8 +47101,9 @@ html[data-motion="off"] .bb-time{animation:none!important}
 let saleBonusOnly=false;
 let saleOffer=null,saleTickId=null,saleDeadline=0;
 function saleTimerPlace(){
- const bar=document.getElementById('bonus-bar'),slot=document.getElementById('app-level-slot');
+ const bar=document.getElementById('bonus-bar'),slot=document.getElementById(document.getElementById('view-games')?.classList.contains('active')?'games-level-slot':'app-level-slot');
  if(bar&&slot&&bar.parentElement!==slot)slot.prepend(bar);
+ if(bar){bar.setAttribute('role','button');bar.tabIndex=0;bar.setAttribute('aria-controls','bonus-window-sheet');bar.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bwOpen();}};}
 }
 function saleTimerUse(data,code){
  const timer=data?.timer;if(!timer?.expires_at||timer.reason==='not_started'){saleOffer=null;clearInterval(saleTickId);document.getElementById('bonus-bar')?.classList.remove('on');return;}
@@ -47059,7 +47115,7 @@ function saleTimerTick(){
  if(!saleOffer)return;
  const bar=document.getElementById('bonus-bar');if(!bar)return;
  saleTimerPlace();
- if(isMember){bar.classList.remove('on');clearInterval(saleTickId);return}
+ if(isMember){bar.classList.remove('on');clearInterval(saleTickId);bwClose();return}
  const left=Math.max(0,Math.ceil((saleDeadline-performance.now())/1000));
  bar.classList.toggle('on',left>0);bar.setAttribute('role','button');bar.tabIndex=0;bar.setAttribute('aria-label','Срок и условия предложения');
  bar.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bwOpen()}};
@@ -47067,7 +47123,7 @@ function saleTimerTick(){
  document.getElementById('bb-time').textContent=[h,m,s].map((n,i)=>i?String(n).padStart(2,'0'):n).join(':');
  document.getElementById('bb-txt').textContent=(saleOffer.headline||'Специальное предложение')+' · до конца';
  const fuse=document.getElementById('bb-fuse');if(fuse)fuse.hidden=true;
- if(!left){clearInterval(saleTickId);saleOffer.ok=false;const btn=document.getElementById('promo-t1r-btn');if(btn&&document.getElementById('promo-t1r-overlay')?.classList.contains('open')){btn.textContent='Посмотреть обычные тарифы';btn.onclick=()=>{closePromoTester();openAccessPage()}}}
+ if(!left){bwClose();clearInterval(saleTickId);saleOffer.ok=false;const btn=document.getElementById('promo-t1r-btn');if(btn&&document.getElementById('promo-t1r-overlay')?.classList.contains('open')){btn.textContent='Посмотреть обычные тарифы';btn.onclick=()=>{closePromoTester();openAccessPage()}}}
 }
 async function saleTimerRefresh(){
  let code=typeof promoCode!=='undefined'?promoCode:'';try{code=code||localStorage.getItem('club_sale_code')||''}catch(e){}
@@ -48159,8 +48215,7 @@ html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
 .review-media-error{display:block;padding:32px 12px;text-align:center;color:inherit;}
 
 </style>
-<script data-club-bundle="reviews.js">
-/* Original Telegram captures. No rewritten testimonials or eager media downloads. */
+<script data-club-bundle="reviews.js">/* Original Telegram captures. No rewritten testimonials or eager media downloads. */
 (function(root){
  'use strict';
  let items=null,flight=null,topic='',count=0,generation=0;
@@ -48168,10 +48223,18 @@ html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
  const el=id=>document.getElementById(id);
  function pause(){el('view-reviews')?.querySelectorAll('video').forEach(v=>v.pause());}
  function stop(){generation++;pause();}
- function go(item){
-  stop();
-  if(item.target&&/^l[ai]?_[a-zA-Z0-9_-]+$/.test(item.target))return runAppRoute(item.target);
-  openAccessPage();
+ async function go(item,button){
+  if(button.disabled)return;
+  if(!item.target&&typeof isMember!=='undefined'&&isMember){button.remove();return;}
+  pause();button.disabled=true;const label=button.textContent;button.textContent='Открываем…';
+  try{
+   if(item.target&&/^l[ai]?_[a-zA-Z0-9_-]+$/.test(item.target)){
+    root.ClubAppRescue?.target(item.target);
+    const prefix=item.target.startsWith('la_')?'la_':item.target.startsWith('li_')?'li_':'l_';
+    await openLectureByKey(contentKeyWithoutTail(item.target.slice(prefix.length)),prefix==='la_'?'audio':prefix==='li_'?'insights':'');
+   }else await openAccessPage(true);
+  }catch(e){showToast('Не удалось открыть. Попробуй ещё раз.');}
+  finally{button.disabled=false;button.textContent=label;}
  }
  function more(){
   const selected=items.filter(x=>!topic||x.topic===topic),part=selected.slice(count,count+batch);
@@ -48187,7 +48250,9 @@ html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
    asset.addEventListener('error',()=>{if(card.querySelector('.review-media-error'))return;const e=document.createElement('a');e.className='review-media-error';e.textContent='Открыть оригинал в Telegram';e.href=item.source;e.target='_blank';e.rel='noopener';asset.hidden=true;card.prepend(e);},{once:true});
    card.append(asset);
    if(item.source){const source=document.createElement('a');source.className='review-source';source.textContent='В Telegram';source.href=item.source;source.target='_blank';source.rel='noopener';card.append(source);}
-   const button=document.createElement('button');button.className='lec-link-btn access-btn';button.textContent=item.target?'Узнать как':'Хочу так же';button.addEventListener('click',()=>go(item));card.append(button);
+   if(item.target||!(typeof isMember!=='undefined'&&isMember)){
+   const button=document.createElement('button');button.className='lec-link-btn access-btn';button.textContent=item.target?'Узнать как':'Хочу так же';button.addEventListener('click',()=>go(item,button));card.append(button);
+   }
    el('review-list').append(card);
   }
   count+=part.length;el('review-more').hidden=count>=selected.length;
@@ -48222,7 +48287,6 @@ html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
  root.ClubReviews={open,stop};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window);
-
 </script>
 </body>
 

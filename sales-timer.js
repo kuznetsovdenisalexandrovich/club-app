@@ -2,8 +2,9 @@
 let saleBonusOnly=false;
 let saleOffer=null,saleTickId=null,saleDeadline=0;
 function saleTimerPlace(){
- const bar=document.getElementById('bonus-bar'),slot=document.getElementById('app-level-slot');
+ const bar=document.getElementById('bonus-bar'),slot=document.getElementById(document.getElementById('view-games')?.classList.contains('active')?'games-level-slot':'app-level-slot');
  if(bar&&slot&&bar.parentElement!==slot)slot.prepend(bar);
+ if(bar){bar.setAttribute('role','button');bar.tabIndex=0;bar.setAttribute('aria-controls','bonus-window-sheet');bar.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bwOpen();}};}
 }
 function saleTimerUse(data,code){
  const timer=data?.timer;if(!timer?.expires_at||timer.reason==='not_started'){saleOffer=null;clearInterval(saleTickId);document.getElementById('bonus-bar')?.classList.remove('on');return;}
@@ -15,7 +16,7 @@ function saleTimerTick(){
  if(!saleOffer)return;
  const bar=document.getElementById('bonus-bar');if(!bar)return;
  saleTimerPlace();
- if(isMember){bar.classList.remove('on');clearInterval(saleTickId);return}
+ if(isMember){bar.classList.remove('on');clearInterval(saleTickId);bwClose();return}
  const left=Math.max(0,Math.ceil((saleDeadline-performance.now())/1000));
  bar.classList.toggle('on',left>0);bar.setAttribute('role','button');bar.tabIndex=0;bar.setAttribute('aria-label','Срок и условия предложения');
  bar.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bwOpen()}};
@@ -23,7 +24,7 @@ function saleTimerTick(){
  document.getElementById('bb-time').textContent=[h,m,s].map((n,i)=>i?String(n).padStart(2,'0'):n).join(':');
  document.getElementById('bb-txt').textContent=(saleOffer.headline||'Специальное предложение')+' · до конца';
  const fuse=document.getElementById('bb-fuse');if(fuse)fuse.hidden=true;
- if(!left){clearInterval(saleTickId);saleOffer.ok=false;const btn=document.getElementById('promo-t1r-btn');if(btn&&document.getElementById('promo-t1r-overlay')?.classList.contains('open')){btn.textContent='Посмотреть обычные тарифы';btn.onclick=()=>{closePromoTester();openAccessPage()}}}
+ if(!left){bwClose();clearInterval(saleTickId);saleOffer.ok=false;const btn=document.getElementById('promo-t1r-btn');if(btn&&document.getElementById('promo-t1r-overlay')?.classList.contains('open')){btn.textContent='Посмотреть обычные тарифы';btn.onclick=()=>{closePromoTester();openAccessPage()}}}
 }
 async function saleTimerRefresh(){
  let code=typeof promoCode!=='undefined'?promoCode:'';try{code=code||localStorage.getItem('club_sale_code')||''}catch(e){}

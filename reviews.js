@@ -6,10 +6,18 @@
  const el=id=>document.getElementById(id);
  function pause(){el('view-reviews')?.querySelectorAll('video').forEach(v=>v.pause());}
  function stop(){generation++;pause();}
- function go(item){
-  stop();
-  if(item.target&&/^l[ai]?_[a-zA-Z0-9_-]+$/.test(item.target))return runAppRoute(item.target);
-  openAccessPage();
+ async function go(item,button){
+  if(button.disabled)return;
+  if(!item.target&&typeof isMember!=='undefined'&&isMember){button.remove();return;}
+  pause();button.disabled=true;const label=button.textContent;button.textContent='Открываем…';
+  try{
+   if(item.target&&/^l[ai]?_[a-zA-Z0-9_-]+$/.test(item.target)){
+    root.ClubAppRescue?.target(item.target);
+    const prefix=item.target.startsWith('la_')?'la_':item.target.startsWith('li_')?'li_':'l_';
+    await openLectureByKey(contentKeyWithoutTail(item.target.slice(prefix.length)),prefix==='la_'?'audio':prefix==='li_'?'insights':'');
+   }else await openAccessPage(true);
+  }catch(e){showToast('Не удалось открыть. Попробуй ещё раз.');}
+  finally{button.disabled=false;button.textContent=label;}
  }
  function more(){
   const selected=items.filter(x=>!topic||x.topic===topic),part=selected.slice(count,count+batch);
@@ -25,7 +33,9 @@
    asset.addEventListener('error',()=>{if(card.querySelector('.review-media-error'))return;const e=document.createElement('a');e.className='review-media-error';e.textContent='Открыть оригинал в Telegram';e.href=item.source;e.target='_blank';e.rel='noopener';asset.hidden=true;card.prepend(e);},{once:true});
    card.append(asset);
    if(item.source){const source=document.createElement('a');source.className='review-source';source.textContent='В Telegram';source.href=item.source;source.target='_blank';source.rel='noopener';card.append(source);}
-   const button=document.createElement('button');button.className='lec-link-btn access-btn';button.textContent=item.target?'Узнать как':'Хочу так же';button.addEventListener('click',()=>go(item));card.append(button);
+   if(item.target||!(typeof isMember!=='undefined'&&isMember)){
+   const button=document.createElement('button');button.className='lec-link-btn access-btn';button.textContent=item.target?'Узнать как':'Хочу так же';button.addEventListener('click',()=>go(item,button));card.append(button);
+   }
    el('review-list').append(card);
   }
   count+=part.length;el('review-more').hidden=count>=selected.length;
