@@ -397,3 +397,14 @@ preload, recovery or payment algorithms change. Writes are bounded, debounced,
 account-scoped and preserve newer rewinds; read failure retains local history.
 Rollback frontend before the server; preserve material_history:* documents and
 all user progress. Library editorial changes have a separate field-only backup.
+
+2026-11-24 v715: sales-timer.js and the current public Boomstream SDK are
+embedded byte-for-byte at their original script positions. The SDK URL with
+v=1.1.1 currently serves internal version1.5.0; the fetched bytes are pinned
+in boomstream-sdk.js. No external SDK/timer download is needed after HTML.
+Keep bundle parity and test SDK iframe binding plus main startup with network
+blocked. Existing native playback, consent, rescue and payment logic remain.
+The historical05:22 profile AbortError is not attributed to these assets;
+its network root cause remains unknown. Rollback frontend to d9ab5bd.
+The existing profile Retry button now stops click propagation to its parent
+subscription card. Retry remains manual and uses the same bootstrap path.
