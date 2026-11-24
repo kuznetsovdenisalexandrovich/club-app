@@ -430,3 +430,10 @@ The user's screenshot showed guest-style home, excluded by the prior condition.
 Account targeting calls a separate visual preview directly, never the guest
 film-done debug path. Existing real deadline is restored on preview stop.
 Full guest-profile startup and member preview are tested; no account access writes.
+
+2026-11-25 v720: bonus bar and dropdown reuse the actual light/dark level-card
+surface rules. Restore the level-style recessed track and softly pulsing fill.
+Normal15-minute and isolated preview fill widths derive from remaining time,
+not animation elapsed time; reduced-motion disables pulse. Popup unfolds as a
+continuous bottom-rounded extension with existing orange CTA and raised items.
+No deadlines, membership, player, payment or delivery behavior changes.
