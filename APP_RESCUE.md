@@ -424,3 +424,9 @@ preview for @sex_sells; only that current Telegram username plus member status
 qualifies. Stop suppresses it for this WebView session. Profile debugging can
 restart preview manually. Existing guest debug flow is unchanged. Bonus sheet
 open/close explicitly refreshes native-back/header visibility state.
+
+2026-11-25 v719: requested @sex_sells preview no longer requires isMember.
+The user's screenshot showed guest-style home, excluded by the prior condition.
+Account targeting calls a separate visual preview directly, never the guest
+film-done debug path. Existing real deadline is restored on preview stop.
+Full guest-profile startup and member preview are tested; no account access writes.

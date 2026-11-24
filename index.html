@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v718 -->
+<!-- FILE_VERSION: index-v719 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v718';
+window.CLUB_BUILD_ID = 'app-v719';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16931,7 +16931,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v718 · 25.11.2026 Предпросмотр бонусов';
+const APP_BUILD = 'v719 · 25.11.2026 Предпросмотр аккаунта';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -23178,9 +23178,9 @@ function setDebugMode(on){
 let bwPreview=false,bwPreviewEnd=0,bwPreviewTimer=null;
 // Owner-requested visual preview for this Telegram account; no membership writes.
 function bwRequestedPreview(){
-  if(!isMember||platformUserName().toLowerCase()!=='@sex_sells')return;
+  if(platformUserName().toLowerCase()!=='@sex_sells')return;
   try{if(sessionStorage.getItem('club_bonus_preview_closed_v718')==='1')return;}catch(e){}
-  debugWindowStart(false);
+  bwPreviewStart(false);
 }
 window.addEventListener('load',()=>{profileReady.then(bwRequestedPreview);});
 function bwPreviewTick(){
@@ -23190,20 +23190,27 @@ function bwPreviewTick(){
   document.getElementById('bonus-bar').classList.add('on');
   document.getElementById('bb-time').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
   document.getElementById('bb-txt').textContent='Бонусы за вступление · посмотреть';
-  document.getElementById('debug-window-state').textContent='Предпросмотр участника · осталось '+left+' с';
+  document.getElementById('debug-window-state').textContent='Предпросмотр · осталось '+left+' с';
 }
 function bwPreviewStop(){
   clearInterval(bwPreviewTimer);bwPreviewTimer=null;bwPreview=false;bwClose();
   try{sessionStorage.setItem('club_bonus_preview_closed_v718','1');}catch(e){}
   document.getElementById('bonus-bar')?.classList.remove('on');
+  if(!isMember){
+    if(saleOffer&&saleDeadline>performance.now())saleTimerTick();
+    else if(bwEndsAt>Date.now()){document.getElementById('bonus-bar').classList.add('on');bwTick();bwNameLoot();}
+  }
   document.getElementById('debug-window-state').textContent='Предпросмотр завершён';
+}
+function bwPreviewStart(openSheet=true){
+  bwPreview=true;bwPreviewEnd=Date.now()+15*60000;
+  clearInterval(bwPreviewTimer);bwPreviewTick();bwPreviewTimer=setInterval(bwPreviewTick,1000);
+  document.getElementById('bonus-bar').scrollIntoView({block:'start',behavior:'instant'});
+  if(openSheet)bwOpen();
 }
 function debugWindowStart(openSheet=true){
   if(isMember){
-    bwPreview=true;bwPreviewEnd=Date.now()+15*60000;
-    clearInterval(bwPreviewTimer);bwPreviewTick();bwPreviewTimer=setInterval(bwPreviewTick,1000);
-    document.getElementById('bonus-bar').scrollIntoView({block:'start',behavior:'instant'});
-    if(openSheet)bwOpen();return;
+    bwPreviewStart(openSheet);return;
   }
   try { localStorage.setItem('club_app_film_done_at', String(Date.now())); } catch(e){}
   bwReturnUsed = false;
@@ -23216,7 +23223,7 @@ function debugWindowStart(openSheet=true){
 
 /* Перемотка к финальным минутам — сдвигаем конец окна, а не ждём */
 function debugWindowLast(){
-  if(isMember){if(!bwPreview)debugWindowStart();bwPreviewEnd=Date.now()+60000;bwPreviewTick();return;}
+  if(isMember||bwPreview){if(!bwPreview)debugWindowStart();bwPreviewEnd=Date.now()+60000;bwPreviewTick();return;}
   if (!bwTimer) debugWindowStart();
   const lastSec = Math.max(30, (bwLastMin || 5) * 60 - 20);
   bwEndsAt = Date.now() + lastSec * 1000;
@@ -34152,7 +34159,7 @@ function bwClose(){
 }
 
 function bwBuy(){
-  if(bwPreview){showToast('Это предпросмотр. Доступ к клубу у тебя уже есть.');return;}
+  if(bwPreview){showToast('Это предпросмотр. Оплата здесь не запускается.');return;}
   bwClose();
   if(typeof saleOffer!=='undefined'&&saleOffer){promoCode=saleOffer.code;promoOpen();return}
   track('bonus_window_buy');
