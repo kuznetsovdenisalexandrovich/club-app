@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v715 -->
+<!-- FILE_VERSION: index-v716 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v715';
+window.CLUB_BUILD_ID = 'app-v716';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -11208,6 +11208,7 @@ function renderMeetingNotice(notice){
       </div>
     </div>
     <button class="lec-link-btn access-btn" onclick="openAccessPage()" data-text="club.buy">Получить доступ</button>
+    <div class="payment-help-link" onclick="ClubReviews.open()">Отзывы</div>
     <!-- ⚠️ ОСМОТРЕТЬСЯ ПРЕДЛАГАЕМ ЗДЕСЬ, А НЕ ПОД ФИЛЬМОМ. [stated] Denis:
          «на странице информации о клубе можно уже дать возможность
          осмотреться в приложении». Кнопка нужна только тому, кто ещё не
@@ -11221,6 +11222,15 @@ function renderMeetingNotice(notice){
          с «получить доступ» съедает конверсию. На экране оплаты её НЕТ сознательно -->
     <div class="payment-help-link" id="club-info-login" style="display:none" onclick="clubInfoLogin()" data-text="club.already">Я уже участник — войти</div>
     <div class="scroll-spacer"></div>
+  </div>
+
+  <div class="view" id="view-reviews">
+    <h1 class="review-heading">Отзывы <span id="review-count"></span></h1>
+    <div id="review-filters" aria-label="Темы отзывов"></div>
+    <p id="review-status" role="status"></p>
+    <button id="review-retry" class="lec-link-btn access-btn" hidden>Повторить</button>
+    <div id="review-list"></div>
+    <button id="review-more" class="lec-link-btn access-btn" hidden>Ещё отзывы</button>
   </div>
 
   <!-- ── Получить доступ (персональные ссылки на оплату) ── -->
@@ -11238,6 +11248,8 @@ function renderMeetingNotice(notice){
          и дальше либо плати, либо закрывай приложение: тупик здесь стоит
          дороже всего, человек уходит не подумав, а обидевшись -->
     <div class="payment-help-link" onclick="openClubInfoPage()" data-text="access.about">Сначала узнать подробнее о клубе</div>
+
+    <div class="payment-help-link" onclick="ClubReviews.open()">Отзывы</div>
 
     <!-- ОКОШКО ЗАСТРЯВШЕГО. Появляется, когда человек вернулся с оплаты
          несколько раз подряд без результата — см. noteAccessReturn() -->
@@ -16918,7 +16930,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v715 · 24.11.2026 Надёжная загрузка модулей';
+const APP_BUILD = 'v716 · 25.11.2026 Отзывы';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17438,6 +17450,7 @@ async function refreshScreenData(name, force){
 }
 
 function switchView(name, preserveGame) {
+  if(name!=='reviews')window.ClubReviews?.stop();
   if(name!=='access' && purchaseReturn && document.getElementById('view-access')?.classList.contains('active'))discardPurchaseReturn();
   if(name==='profile' && window.MemberProfiles)MemberProfiles.load();
   if(typeof pdFeatureOpened==='function')pdFeatureOpened(name);
@@ -27177,6 +27190,7 @@ function payShareUrl(src){
    Для сложных случаев с параметром (bonus_<ключ>, pay_<метка>) остаются
    отдельные функции выше — таблица покрывает переходы БЕЗ параметра */
 const DEEPLINKS = {
+  'reviews': { go: () => ClubReviews.open(), guests: true },
   'legal': { go: () => openLegalCenter(), guests: true },
   'introduction': { go: () => ClubIntroduction.start(), guests: false },
   'introduction_steps': { go: () => ClubIntroduction.steps(), guests: false },
@@ -48124,6 +48138,92 @@ html[data-gg] .ci-progress,html:has(#gx-ignore-host) .ci-progress{display:none!i
 html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
 
 </style>
+<style data-club-bundle="reviews.css">
+#view-reviews{padding-bottom:calc(96px + env(safe-area-inset-bottom));}
+.review-heading{display:flex;align-items:baseline;gap:12px;margin:16px 0;font-family:var(--disp);font-size:28px;}
+#review-count{font:14px var(--body, sans-serif);opacity:.5;}
+#review-filters{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 24px;}
+.review-filter{min-height:44px;padding:10px 15px;border-radius:24px;border:1px solid var(--border, #8885);background:transparent;color:inherit;font:inherit;cursor:pointer;}
+.review-filter[aria-pressed=true]{background:rgba(255,141,75,.16);border-color:#d88b55;}
+#review-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start;}
+.review-card{min-width:0;padding:12px;border:1px solid var(--border,#8883);border-radius:22px;background:var(--card,transparent);}
+.review-card img,.review-card video{display:block;width:100%;height:auto;max-height:none;border-radius:12px;}
+.review-card video{aspect-ratio:1;object-fit:contain;background:#111;}
+.review-card .access-btn{margin:12px 0 0;width:100%;min-height:46px;}
+.review-source{display:block;text-align:right;margin-top:8px;font-size:12px;color:inherit;opacity:.55;}
+#review-more,#review-retry{margin:24px auto;min-height:46px;}
+#review-more[hidden],#review-retry[hidden]{display:none!important;}
+@media(max-width:620px){#review-list{grid-template-columns:minmax(0,1fr);gap:20px;}.review-card{padding:8px;}.review-heading{font-size:25px;}}
+
+.review-card img[hidden],.review-card video[hidden]{display:none;}
+.review-media-error{display:block;padding:32px 12px;text-align:center;color:inherit;}
+
+</style>
+<script data-club-bundle="reviews.js">
+/* Original Telegram captures. No rewritten testimonials or eager media downloads. */
+(function(root){
+ 'use strict';
+ let items=null,flight=null,topic='',count=0,generation=0;
+ const batch=12;
+ const el=id=>document.getElementById(id);
+ function pause(){el('view-reviews')?.querySelectorAll('video').forEach(v=>v.pause());}
+ function stop(){generation++;pause();}
+ function go(item){
+  stop();
+  if(item.target&&/^l[ai]?_[a-zA-Z0-9_-]+$/.test(item.target))return runAppRoute(item.target);
+  openAccessPage();
+ }
+ function more(){
+  const selected=items.filter(x=>!topic||x.topic===topic),part=selected.slice(count,count+batch);
+  for(const item of part){
+   const card=document.createElement('article');card.className='review-card';card.dataset.reviewId=item.id;
+   const asset=document.createElement(item.kind==='video'?'video':'img');
+   asset.src=item.src;
+   if(item.kind==='video'){
+    asset.controls=true;asset.playsInline=true;asset.preload='none';if(item.poster)asset.poster=item.poster;
+    asset.addEventListener('play',()=>el('review-list').querySelectorAll('video').forEach(v=>{if(v!==asset)v.pause();}));
+   }else{asset.loading='lazy';asset.decoding='async';asset.tabIndex=0;asset.setAttribute('role','button');asset.addEventListener('click',()=>openCardZoom(item.src));asset.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openCardZoom(item.src);}});asset.alt=item.alt||'Отзыв из Telegram';if(item.width&&item.height){asset.width=item.width;asset.height=item.height;}}
+   asset.addEventListener(item.kind==='video'?'loadeddata':'load',()=>{if(el('view-reviews').classList.contains('active'))root.ClubAppRescue?.mark('content');},{once:true});
+   asset.addEventListener('error',()=>{if(card.querySelector('.review-media-error'))return;const e=document.createElement('a');e.className='review-media-error';e.textContent='Открыть оригинал в Telegram';e.href=item.source;e.target='_blank';e.rel='noopener';asset.hidden=true;card.prepend(e);},{once:true});
+   card.append(asset);
+   if(item.source){const source=document.createElement('a');source.className='review-source';source.textContent='В Telegram';source.href=item.source;source.target='_blank';source.rel='noopener';card.append(source);}
+   const button=document.createElement('button');button.className='lec-link-btn access-btn';button.textContent=item.target?'Узнать как':'Хочу так же';button.addEventListener('click',()=>go(item));card.append(button);
+   el('review-list').append(card);
+  }
+  count+=part.length;el('review-more').hidden=count>=selected.length;
+  el('review-count').textContent=String(selected.length);
+ }
+ function render(){
+  pause();count=0;el('review-list').replaceChildren();el('review-filters').replaceChildren();
+  for(const name of ['',...new Set(items.map(x=>x.topic).filter(Boolean))]){
+   const b=document.createElement('button');b.className='review-filter';b.textContent=name||'Все';b.setAttribute('aria-pressed',String(name===topic));b.addEventListener('click',()=>{topic=name;render();});el('review-filters').append(b);
+  }
+  more();
+ }
+ async function open(){
+  root.ClubAppRescue?.target('reviews');switchView('reviews');const current=++generation;
+  el('review-status').textContent='';el('review-retry').hidden=true;
+  if(items){render();return;}
+  el('review-retry').hidden=true;el('review-status').textContent='Загружаем отзывы…';
+  try{
+   if(!flight)flight=fetch('reviews/catalogue.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('catalogue');return r.json();}).finally(()=>{flight=null;});
+   const data=await flight;
+   if(!Array.isArray(data)||!data.length)throw Error('empty');
+   items=data.filter(x=>x&&/^[a-z0-9_-]+$/.test(x.id)&&/^reviews\/[a-zA-Z0-9_./-]+\.(png|jpg|jpeg|webp|mp4)$/.test(x.src)&&(!x.source||/^https:\/\/t\.me\//.test(x.source)));
+   if(!items.length)throw Error('empty');
+   if(current!==generation)return;
+   el('review-status').textContent='';render();
+  }catch(e){if(current!==generation)return;root.ClubAppRescue?.fail('content_error');el('review-status').textContent='Не удалось загрузить отзывы.';el('review-retry').hidden=false;}
+ }
+ function init(){
+  el('review-more').addEventListener('click',more);el('review-retry').addEventListener('click',()=>{el('review-retry').hidden=true;open();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
+ }
+ root.ClubReviews={open,stop};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})(window);
+
+</script>
 </body>
 
 </html>
