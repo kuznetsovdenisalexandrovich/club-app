@@ -437,3 +437,10 @@ Normal15-minute and isolated preview fill widths derive from remaining time,
 not animation elapsed time; reduced-motion disables pulse. Popup unfolds as a
 continuous bottom-rounded extension with existing orange CTA and raised items.
 No deadlines, membership, player, payment or delivery behavior changes.
+
+2026-11-25 v721 corrects the prior bonus layout: fixed compact level-style row,
+small timer, same track, safe-area top14px, maximum488px. Place bonus bar under
+body to avoid scroll/transform ancestors; active bonus hides the large brand
+header and reserves96px in shell. Popup remains anchored to bar on scroll.
+Normal level UI and actual deadlines unchanged. Real scroll600px and cross-view
+checks pass in both themes/390,900px. v720's flow placement was incorrect.

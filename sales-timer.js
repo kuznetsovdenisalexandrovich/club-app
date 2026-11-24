@@ -2,8 +2,8 @@
 let saleBonusOnly=false;
 let saleOffer=null,saleTickId=null,saleDeadline=0;
 function saleTimerPlace(){
- const bar=document.getElementById('bonus-bar'),slot=document.getElementById(document.getElementById('view-games')?.classList.contains('active')?'games-level-slot':'app-level-slot');
- if(bar&&slot&&bar.parentElement!==slot)slot.prepend(bar);
+ const bar=document.getElementById('bonus-bar');
+ if(bar&&bar.parentElement!==document.body)document.body.append(bar);
  if(bar){bar.setAttribute('role','button');bar.tabIndex=0;bar.setAttribute('aria-controls','bonus-window-sheet');bar.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();bwOpen();}};}
 }
 function saleTimerUse(data,code){
