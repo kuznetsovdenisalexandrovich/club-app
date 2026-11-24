@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v721 -->
+<!-- FILE_VERSION: index-v722 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v721';
+window.CLUB_BUILD_ID = 'app-v722';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16935,7 +16935,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v721 · 25.11.2026 Закреплённый бар';
+const APP_BUILD = 'v722 · 25.11.2026 Раскрытие бонусов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -47133,7 +47133,7 @@ body:has(#bonus-bar.on) #level-card,body:has(#bonus-bar.on) #reward-level-badge{
 .bw-cancel{display:block;width:100%;color:var(--text-dim);font-size:13px}
 html[data-app-layer]:has(#bonus-window-sheet.open) #app-level-slot{display:block}
 #bonus-window-sheet{padding:0;backdrop-filter:none;background:rgba(0,0,0,.38);top:var(--bw-top,100px);align-items:flex-start}
-#bonus-window-sheet.open .bw-sheet{position:absolute;left:var(--bw-left,16px);width:var(--bw-width,calc(100% - 32px));max-width:none;box-sizing:border-box;border:1px solid var(--line);border-top:0;border-radius:0 0 24px 24px;max-height:calc(100dvh - var(--bw-top,100px) - 16px);animation:bonusUnfold .24s ease-out both;transform-origin:top}
+#bonus-window-sheet.open .bw-sheet{position:absolute;top:0;opacity:1;transform:none;clip-path:none;left:var(--bw-left,16px);width:var(--bw-width,calc(100% - 32px));max-width:none;box-sizing:border-box;border:1px solid var(--line);border-top:0;border-radius:0 0 24px 24px;max-height:calc(100dvh - var(--bw-top,100px) - 16px);animation:bonusUnfold .24s ease-out both;transform-origin:top}
 body:has(#bonus-window-sheet.open) #bonus-bar{border-radius:24px 24px 0 0}
 #bonus-window-sheet .bw-title{font-size:21px;line-height:1.2;letter-spacing:-.4px;margin:6px 0 10px}
 #bonus-window-sheet .bw-sub{font-size:13px;line-height:1.5;margin-bottom:18px}
@@ -47144,7 +47144,7 @@ body:has(#bonus-window-sheet.open) #bonus-bar{border-radius:24px 24px 0 0}
 #bonus-window-sheet .bw-item i{font-size:12.5px;line-height:1.45;margin-top:5px}
 #bonus-window-sheet .access-btn{border-radius:16px;padding:16px;min-height:54px}
 #bonus-window-sheet .bw-details{color:var(--text);margin-top:18px}
-@keyframes bonusUnfold{from{opacity:0;transform:translateY(-16px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(0)}}
+@keyframes bonusUnfold{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#bonus-window-sheet .bw-sheet{animation:none}}
 html[data-motion="off"] #bonus-window-sheet .bw-sheet{animation:none}
 html[data-motion="off"] .bb-time{animation:none!important}
