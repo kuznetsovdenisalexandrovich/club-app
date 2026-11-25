@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v723 -->
+<!-- FILE_VERSION: index-v724 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v723';
+window.CLUB_BUILD_ID = 'app-v724';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16935,7 +16935,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v723 · 25.11.2026 Условия наград';
+const APP_BUILD = 'v724 · 26.11.2026 Управление подпиской';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19751,6 +19751,10 @@ function renderSubManage(){
     return;
   }
 
+  if (s.card_change_pending){
+    body.innerHTML = '<div class="sm-block"><div class="sm-title">Смена карты</div><div class="sm-hint">'+escapeHtml(s.card_change_message || 'Сначала заверши смену карты.')+'</div><div class="sm-row"><button class="sm-btn" onclick="closeSubManage();openCardChange()">Продолжить смену карты</button></div></div>';
+    return;
+  }
   const shiftMin = s.next_payment_iso ? nextDayIso(s.next_payment_iso) : '';
   /* v427: пауза — когда началась/начнётся, до какого числа, продление */
   let frozen = '';
