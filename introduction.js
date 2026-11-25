@@ -84,13 +84,10 @@ window.ClubIntroduction = (function(){
   async function gift(){
     try{state=await ciApi('/gift',{});ciRender();}catch(e){ciShow('<h2>Профиль сохранён</h2><p>Не удалось проверить подарок. Можно попробовать ещё раз.</p><button class="ci-primary" data-ci="gift">Проверить подарок</button>');return;}
     const g=state.gift;
-    ciShow('<div class="ci-eyebrow">Для тебя</div><h2>'+(g?.amount?'Твои 1000 баллов':'Подарок уже на твоём счёте')+'</h2><p>'+(g?.amount?'А вот и мой подарок за твою решительность — 1000 баллов.':'Ты уже получал 1000 приветственных баллов за знакомство с клубом.')+' Можешь использовать их, чтобы сделать свой аккаунт «Премиум» на месяц. Это даст тебе <button class="ci-inline" data-ci="perks">кучу ничтяков</button>.</p><div id="ci-perks" hidden><ul><li>Заметная аватарка и более крупный текст в чате эфиров.</li><li>Особое оформление профиля.</li><li>Возможность представить себя на бирже специалистов.</li><li>Три карты за продление вместо одной.</li></ul></div><div class="ci-sticky"><button class="ci-primary ci-shimmer" data-ci="premium">Хочу премиум</button><small>1000 баллов · один месяц · без автосписания</small></div>');
+    ciShow('<div class="ci-eyebrow">Для тебя</div><h2>'+(g?.amount?'Твои 1000 баллов':'Подарок уже на твоём счёте')+'</h2><p>'+(g?.amount?'А вот и мой подарок за твою решительность — 1000 баллов.':'Ты уже получал 1000 приветственных баллов за знакомство с клубом.')+'</p><div class="ci-sticky"><button class="ci-primary" data-ci="close">Отлично</button></div>');
   }
   async function premium(){
-    // Opening the offer never grants the welcome gift or spends points.
-    await ciLoad();
-    if(!active()){ciShow('<h2>Премиум в клубе</h2><p>Сейчас предложение недоступно. Попробуй открыть его позже.</p>');return;}
-    ciShow('<div class="ci-eyebrow">Для участников клуба</div><h2>Премиум на месяц</h2><p>Заметная аватарка и более крупный текст в чате эфиров, особое оформление профиля, размещение на бирже специалистов и три карты за продление вместо одной.</p><p>На твоём счёте: <strong>'+Number(state.points||0)+' баллов</strong>.</p><div class="ci-sticky"><button class="ci-primary ci-shimmer" data-ci="premium">Хочу премиум</button><small>1000 баллов · один месяц · без автосписания</small></div>');
+    ciShow('<div class="ci-eyebrow">Для участников клуба</div><h2>Премиум в клубе</h2><p>Готовим отдельный апгрейд с личной консультацией Дениса и дополнительными возможностями. Условия появятся здесь.</p><button class="ci-primary" data-ci="close">Понятно</button>');
   }
   async function ciAction(button){
     if(busy)return;const name=button.dataset.ci;
