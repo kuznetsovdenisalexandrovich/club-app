@@ -37498,6 +37498,7 @@ async function claimManualAccess(token){
 
   var body = paidClaimWho();
   body.token = token;
+  body.app_response = true;
 
   if (!body.telegram_id && !body.vk_id){
     /* Не поняли, кто открыл. Раньше запрос всё равно уходил и сервер отбивал
