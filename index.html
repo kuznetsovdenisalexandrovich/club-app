@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v727 -->
+<!-- FILE_VERSION: index-v728 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v727';
+window.CLUB_BUILD_ID = 'app-v728';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16984,7 +16984,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v727 · 26.11.2026 Связь с ВК';
+const APP_BUILD = 'v728 · 26.11.2026 Подтверждение доступа';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -37465,6 +37465,26 @@ function paidClaimWho(){
   return body;
 }
 
+async function paidClaimRequest(body){
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      const r=await fetch(`${API_URL}/access/manual/claim`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),signal:AbortSignal.timeout(12000)
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok)throw Object.assign(new Error(d.detail||('сервер ответил '+r.status)),{status:r.status,code:d.code});
+      if(d.status!=='ok'||d.is_member!==true)throw Object.assign(new Error('Manual access result unconfirmed'),{code:'invalid_result'});
+      return d;
+    }catch(e){
+      const temporary=e.code==='manual_claim_pending'||(!e.status&&e.code!=='invalid_result')||[425,429,502,503,504].includes(e.status);
+      if(!temporary||attempt===2)throw e;
+      paidClaimShow('Подтверждаем доступ','Повторяем проверку. Ссылка сохранена, повторно оплачивать ничего не нужно.','');
+      await new Promise(resolve=>setTimeout(resolve,2000));
+    }
+  }
+}
+
 async function claimManualAccess(token){
   if (!token || paidClaimPending) return;
   paidClaimLastToken = token;
@@ -37490,13 +37510,7 @@ async function claimManualAccess(token){
 
   try {
     paidClaimPending = true;
-    const r = await fetch(`${API_URL}/access/manual/claim`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json().catch(function(){ return {}; });
-    if (!r.ok) throw Object.assign(new Error(d.detail || ('сервер ответил ' + r.status)),{status:r.status});
-    if(d.status!=='ok' || d.is_member!==true)throw new Error('Manual access result unconfirmed');
+    const d = await paidClaimRequest(body);
 
     try { localStorage.removeItem(PAID_TOKEN_KEY); } catch(e){}
     isMember = true;
@@ -37515,6 +37529,7 @@ async function claimManualAccess(token){
       + escapeHtml(t('paid.ok_chat')) + '</button>'
       + '<button class="lec-link-btn" style="width:100%" onclick="paidClaimFinish()">'
       + escapeHtml(t('paid.ok_go')) + '</button>');
+    if(window.ClubAppRescue&&document.getElementById('paid-claim-overlay'))ClubAppRescue.mark('gate');
   } catch (e) {
     if([404,410].includes(e.status)){
       try {if(localStorage.getItem(PAID_TOKEN_KEY)===token)localStorage.removeItem(PAID_TOKEN_KEY);}catch(_){}
@@ -37522,7 +37537,7 @@ async function claimManualAccess(token){
     }
     const retryable=!e.status || [409,425,429,500,502,503,504].includes(e.status);
     const uncertain=!e.status || e.status>=500;
-    paidClaimShow(uncertain ? t('paid.network_t') : t('paid.fail_t'),
+    paidClaimShow(e.code==='manual_claim_pending'?'Подтверждаем доступ':uncertain ? t('paid.network_t') : t('paid.fail_t'),
       uncertain ? t('paid.network_x') : ((e && e.message) || t('paid.fail_x')),
       (retryable ? '<button class="lec-link-btn access-btn" style="width:100%" onclick="paidClaimRetry()">' + escapeHtml(t('paid.retry_btn')) + '</button>' : '') +
       '<button class="lec-link-btn" style="width:100%" onclick="paidClaimClose()">'
