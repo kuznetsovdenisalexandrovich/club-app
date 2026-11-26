@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v726 -->
+<!-- FILE_VERSION: index-v727 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v726';
+window.CLUB_BUILD_ID = 'app-v727';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -220,6 +220,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
    platform='vk';launch=raw;target=(/^[A-Za-z0-9_-]+$/.test(location.hash.slice(1))?location.hash.slice(1):'')||query.get('startapp')||params.get('vk_ref')||'';
    botUrl='https://vk.me/club232119632';return true;
   });
+  if(/^vkjoin_/.test(target))target='vk_access';
   if(!/^[A-Za-z0-9_-]{0,160}$/.test(target))target='';
   disabled=query.has('view');
   attempt=w.crypto&&w.crypto.randomUUID?w.crypto.randomUUID():('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g,function(){return Math.floor(Math.random()*16).toString(16);}));
@@ -16983,7 +16984,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v726 · 26.11.2026 Эфиры и вход';
+const APP_BUILD = 'v727 · 26.11.2026 Связь с ВК';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19051,8 +19052,10 @@ const profileVisitsStarted=new Set();
 async function loadProfile() {
   if (!telegramId) return;
   let profileResponseReceived=false;
+  const requestedProfileId=String(telegramId);
   try {
     const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}&bootstrap=1`, {}, 15000);
+    if(String(telegramId)!==requestedProfileId)return;
     if(!u||typeof u.found!=='boolean'){const err=new Error('Invalid profile response');err.code='invalid_response';throw err;}
     profileResponseReceived=true;
     if(typeof u.found==='boolean'&&window.ClubAppRescue)ClubAppRescue.mark('profile');
@@ -33097,27 +33100,70 @@ function markVkAccessGranted(){
 // апп считал, что доступ есть, ещё до того, как человек дошёл до ВК. Бросил на полпути —
 // и ворота больше не покажутся, а видео не откроются. Теперь отметку ставит БЭКЕНД
 // в момент реального одобрения заявки, а мы её подхватываем при возврате в апп.
-async function grantVkAccessAndJoin(){
-  document.getElementById('vk-access-overlay').classList.remove('open');
-  nbWallRelease('vk');   // v395: тест — дальше настоящая проверка
-  let url = VK_GROUP_LINK;
-  try {
-    const r = await fetch(`${API_URL}/access/vk/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId })
-    });
-    const d = await r.json();
-    if (d && d.url) url = d.url;
-  } catch (e) {}
-  vkAccessWatch = true;
-  openUrl(url);
+let vkJoinBusy=false, vkJoinRequest='', vkJoinTicket='';
+function vkJoinNote(text){
+  let el=document.getElementById('vk-join-status');
+  if(!el){el=document.createElement('div');el.id='vk-join-status';el.className='payment-help-link';el.setAttribute('role','status');document.getElementById('vk-access-modal').appendChild(el);}
+  el.textContent=text;
 }
-
+async function grantVkAccessAndJoin(){
+  if(vkJoinBusy)return;
+  if(!isMember&&!isInsideVk()){openPaywall();return;}
+  vkJoinBusy=true;
+  document.getElementById('vk-access-overlay').classList.add('open');
+  vkJoinNote('Проверяем доступ…');
+  try{
+    let d;
+    if(isInsideVk()){
+      d=await vkJoinCheck(vkJoinTicket||'start');
+      if(d.in_group){vkAccessGranted=true;vkJoinNote('Доступ открыт');openUrl(d.url);return;}
+      vkJoinNote('Подай заявку в группу — после неё доступ откроется автоматически.');
+      try{await vkBridge.send('VKWebAppJoinGroup',{group_id:d.group_id});}
+      catch(e){openUrl(d.url);vkAccessWatch=true;return;}
+      d=await vkJoinCheck('start');
+      vkAccessGranted=!!d.in_group;
+      vkJoinNote(d.in_group?'Доступ открыт':d.check_error||'Заявка отправлена. Проверяем одобрение…');
+      vkAccessWatch=!d.in_group;
+      if(d.in_group)openUrl(d.url);else pollForVkAccess();
+    }else{
+      if(!vkJoinRequest)vkJoinRequest=crypto.randomUUID();
+      const r=await fetch(API_URL+'/access/vk/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({telegram_id:telegramId,request_id:vkJoinRequest}),signal:AbortSignal.timeout(15000)});
+      d=await r.json().catch(()=>({}));
+      if(!r.ok){if(['ticket_expired','ticket_used','reissue_required'].includes(d.code))vkJoinRequest='';throw new Error(d.detail||'Не удалось открыть доступ к ВК');}
+      if(!d.url)throw new Error('Сервер не вернул ссылку для ВК');
+      vkAccessWatch=true;vkJoinNote('Продолжи во ВКонтакте');openUrl(d.url);
+    }
+  }catch(e){vkJoinNote(e.message||'Не удалось проверить доступ. Нажми кнопку ещё раз.');}
+  finally{vkJoinBusy=false;}
+}
+async function vkJoinCheck(ticket){
+  const r=await fetch(API_URL+'/access/vk/app-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket,vk_query:vkLaunchQuery()}),signal:AbortSignal.timeout(20000)});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.detail||'Не удалось связать аккаунты');
+  if(d.linked!==true||d.is_member!==true||!d.telegram_id)throw new Error('Сервер не подтвердил связь с подпиской');
+  return d;
+}
+async function claimVkMembership(ticket){
+  vkJoinTicket=ticket;
+  document.getElementById('vk-access-overlay').classList.add('open');vkJoinNote('Связываем аккаунты…');
+  try{
+    await waitProfile(8000);
+    const d=await vkJoinCheck(ticket);
+    vkJoinTicket='';telegramId=Number(d.telegram_id);isMember=true;clubPass='';clubPassId='';
+    if(typeof funnelLeave==='function')funnelLeave();
+    await clubPassEnsure();await loadProfile();
+    document.getElementById('app-shell').style.display='block';document.getElementById('tabbar').style.display='flex';
+    document.getElementById('web-login-screen').style.display='none';
+    switchView('portal');vkAccessGranted=!!d.in_group;
+    vkJoinNote(d.in_group?'Аккаунты связаны. Доступ в группу открыт.':d.check_error||'Аккаунты связаны. Нажми «Получить доступ к ВК», чтобы вступить в группу.');
+  }catch(e){vkJoinNote(e.message||'Связь не подтверждена. Попробуй ещё раз.');}
+}
 async function alreadyHaveVkAccess(){
-  await nbWallRelease('vk');   // v395
-  markVkAccessGranted();
-  proceedAfterVkAccess();
+  try{
+    const inside=isInsideVk()?(await vkJoinCheck('start')).in_group:await vkAccessFresh();
+    if(!inside){vkJoinNote('ВК пока не подтвердил участие. Нажми «Получить доступ к ВК».');return;}
+    vkAccessGranted=true;proceedAfterVkAccess();
+  }catch(e){vkJoinNote(e.message||'Не удалось проверить участие');}
 }
 
 function proceedAfterVkAccess(){
@@ -33138,8 +33184,7 @@ async function pollForVkAccess(attempts = 8, delayMs = 3000){
     if (vkAccessGranted) break;
     await new Promise(res => setTimeout(res, delayMs));
     try {
-      const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}`);
-      const d = await r.json();
+      const d = isInsideVk() ? await vkJoinCheck('start') : await (await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}&fresh=1`)).json();
       if (d && d.in_group) { vkAccessGranted = true; break; }
     } catch (e) {}
   }
@@ -38373,6 +38418,7 @@ async function init(){
     try {
       // Personal access must not depend on marketing presence or attribution.
       const accessStart = appStartParamRaw();
+      if(/^vkjoin_(?:lt[A-Za-z0-9_-]{32}|start)$/.test(accessStart)){if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));await claimVkMembership(accessStart.slice(7));return;}
       if(/^play_[a-f0-9]{24}$/.test(accessStart)){if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));await openGameInvitation(accessStart.slice(5));return;}
       if(/^games_(ai|gods|quizzes)$/.test(accessStart)){await waitProfile(8000);switchView('games');kqCategory(accessStart==='games_gods'?'god':accessStart.slice(6));return;}
       if(/^kq_[a-f0-9]{32}$/.test(accessStart)){await openKnowledgeQuiz(accessStart.slice(3));return;}

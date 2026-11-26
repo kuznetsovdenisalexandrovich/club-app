@@ -444,3 +444,5 @@ body to avoid scroll/transform ancestors; active bonus hides the large brand
 header and reserves96px in shell. Popup remains anchored to bar on scroll.
 Normal level UI and actual deadlines unchanged. Real scroll600px and cross-view
 checks pass in both themes/390,900px. v720's flow placement was incorrect.
+
+2026-11-26 VK access handshake: vkjoin_<native-ticket> is handled before marketing, in the main VK app. Verify the signed VK launch and reuse the existing atomic link-ticket merge/replay checks. Source access requires an authenticated member. Rescue records only vk_access, never the ticket; its fallback returns to nb_plat2 without claiming linkage or group membership. Old subscribe mini-app links preserve the ticket and offer the main-app continuation. The legacy Salebot app7062840 is no longer the membership access path. Actual groups.isMember must confirm approval; a click or HTTP 200 does not grant membership.
