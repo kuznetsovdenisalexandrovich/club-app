@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v725 -->
+<!-- FILE_VERSION: index-v726 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v725';
+window.CLUB_BUILD_ID = 'app-v726';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -9346,6 +9346,20 @@ body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z
 .live-chat-send{width:46px;height:46px;border:none;border-radius:14px;flex-shrink:0;
   background:linear-gradient(135deg,var(--lav,#9b8cf2),var(--coral,#e8614a));
   color:#fff;font-size:19px;cursor:pointer}
+/* Live viewport: preserve a usable history and composer beside wide video. */
+#live-full{height:100dvh;max-height:var(--tg-viewport-height,100dvh);box-sizing:border-box}
+#live-full-video{max-height:38%;min-height:0;flex-shrink:1}
+#live-full-frame{height:100%;max-height:100%;object-fit:contain}
+.live-chat{overflow:hidden;min-width:0}
+.live-chat-msg,.live-vip-pinned-body p{overflow-wrap:anywhere;flex-shrink:0}
+.live-chat-form,.live-chat-note,.live-chat-paywall{flex-shrink:0}
+@media(min-width:700px) and (min-aspect-ratio:6/5){
+ #live-full{flex-direction:row;flex-wrap:wrap;align-content:flex-start}
+ #live-full>.live-full-bar{width:100%;flex:0 0 100%;box-sizing:border-box}
+ #live-full-video{width:60%;flex:0 0 60%;max-height:calc(100% - 64px);height:calc(100% - 64px);aspect-ratio:auto;align-self:center}
+ #live-full>.live-chat{flex:1 1 35%;height:calc(100% - 64px);box-sizing:border-box}
+}
+
 /* ── ЗНАКОМСТВО С КЛУБОМ (ветка Г, 15.09.2026) — префикс nb-, чтобы не пересечься с туром onb- ── */
 .nb-start{margin:0 0 14px;padding:16px;border-radius:22px;background:var(--bg2);box-shadow:var(--sh-out, 0 8px 22px rgba(0,0,0,.18))}
 .nb-start h3{margin:0 0 6px;font-family:var(--disp);font-size:17px;font-weight:700}
@@ -16969,7 +16983,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v725 · 26.11.2026 Премиум и цели';
+const APP_BUILD = 'v726 · 26.11.2026 Эфиры и вход';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -31779,18 +31793,28 @@ const CHAT_POLL_MS = 4000;
 let chatTimer = null;
 let chatLastId = 0;
 let chatSending = false;
+let chatGeneration = 0;
+let chatRequest = null;
+let chatSessionId = 0;
+let chatMessages = new Map();
 
 function chatListEl(){ return document.getElementById('live-chat-list'); }
 
 function renderChatMessages(items, replace){
   const box = chatListEl();
   if (!box) return;
-  if (replace) box.innerHTML = '';
   // Прокручиваем вниз, только если человек и так стоял внизу: иначе мы бы
   // выдёргивали его из чтения старых сообщений каждым новым
-  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-  (items || []).forEach(function(m){
+  const atBottom = !box.children.length || box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  const oldTop=box.scrollTop;
+  if (replace) chatMessages.clear();
+  (items || []).forEach(m=>{if(Number(m.id)>0)chatMessages.set(Number(m.id),m);});
+  const ordered=Array.from(chatMessages.values()).sort((a,b)=>Number(a.id)-Number(b.id)).slice(-200);
+  chatMessages=new Map(ordered.map(m=>[Number(m.id),m]));
+  box.replaceChildren();
+  ordered.forEach(function(m){
     const div = document.createElement('div');
+    div.dataset.messageId=String(m.id);
     div.className = 'live-chat-msg' + (m.from_admin ? ' from-admin' : '') + (m.gift ? ' gift' : '') + (m.gift_mine ? ' mine' : '');
     const lvl = (m.level && m.level > 0)
       ? '<span class="live-chat-lvl" title="Уровень в клубе">' + m.level + '</span>' : '';
@@ -31812,9 +31836,9 @@ function renderChatMessages(items, replace){
   if (!box.children.length){
     box.innerHTML = '<div class="live-chat-empty" data-text="live.chat.empty">'
       + t('live.chat.empty') + '</div>';
-  } else if (atBottom || replace){
+  } else if (atBottom){
     box.scrollTop = box.scrollHeight;
-  }
+  } else { box.scrollTop=oldTop; }
 }
 
 /* v453 · ПОДАРОК БАЛЛОВ В ЧАТЕ. [stated] Denis 09.10: «анимашки, не сильно
@@ -31876,16 +31900,23 @@ function renderLiveVipQuestions(questions){
   questions.forEach(q=>{const item=document.createElement('p');const name=document.createElement('strong');name.textContent=q.name+': ';item.append(name,document.createTextNode(q.text));body.append(item);});host.append(body);
 }
 async function pollLiveChat(){
+  if(chatRequest)return;
+  const generation=chatGeneration,controller=new AbortController();
+  chatRequest=controller;
+  const deadline=setTimeout(()=>controller.abort(),10000);
   try {
-    const r = await fetch(`${API_URL}/live/chat?since_id=${chatLastId}` + (telegramId ? `&telegram_id=${encodeURIComponent(telegramId)}` : ''), {headers:sessionHeaders()});
+    // A bounded authoritative snapshot also removes moderated messages and
+    // catches a lower ID committed after a higher ID. One request at a time.
+    const r = await fetch(`${API_URL}/live/chat?since_id=0` + (telegramId ? `&telegram_id=${encodeURIComponent(telegramId)}` : ''), {headers:sessionHeaders(),signal:controller.signal});
+    if(!r.ok)throw new Error('chat_http_'+r.status);
     const d = await r.json();
+    if(generation!==chatGeneration)return;
     if (d && d.found){
-      if ((d.messages || []).length){
-        renderChatMessages(d.messages, chatLastId === 0);
-        chatLastId = d.last_id || chatLastId;
-      } else if (chatLastId === 0){
-        renderChatMessages([], true);
-      }
+      const sid=Number(d.session_id||0);
+      if(chatSessionId && sid && chatSessionId!==sid){chatLastId=0;chatMessages.clear();}
+      chatSessionId=sid;
+      renderChatMessages(d.messages||[], true);
+      chatLastId=Math.max(chatLastId,Number(d.last_id)||0);
       renderLiveVipQuestions(d.questions || []);
       const questionLabel=document.getElementById('live-question-label');
       if(questionLabel)questionLabel.hidden=!isMember||!d.chat_open;
@@ -31908,8 +31939,19 @@ async function pollLiveChat(){
         note.textContent = d.slow_sec ? tf('live.chat.slow', { n: d.slow_sec }) : '';
       }
     }
+    else {
+      const note=document.getElementById('live-chat-note');
+      if(note)note.textContent='Эфир завершён';
+      const form=document.getElementById('live-chat-form');if(form)form.style.display='none';
+    }
   } catch (e) {
-    console.warn('[чат] не смог обновить:', e);
+    if(generation===chatGeneration){
+      const note=document.getElementById('live-chat-note');
+      if(note)note.textContent='Чат переподключается. Сообщения сохранены.';
+    }
+  } finally {
+    clearTimeout(deadline);
+    if(chatRequest===controller)chatRequest=null;
   }
 }
 
@@ -31967,7 +32009,9 @@ function liveGateSecond(){
 }
 
 function startLiveChat(){
+  stopLiveChat();
   chatLastId = 0;
+  chatSessionId = 0;
   renderChatMessages([], true);
   pollLiveChat();
   clearInterval(chatTimer);
@@ -31975,6 +32019,9 @@ function startLiveChat(){
 }
 
 function stopLiveChat(){
+  ++chatGeneration;
+  if(chatRequest)chatRequest.abort();
+  chatRequest=null;
   clearInterval(chatTimer);
   chatTimer = null;
 }
@@ -31989,6 +32036,7 @@ async function sendLiveChat(){
     return;
   }
   chatSending = true;
+  const generation=chatGeneration;
   input.value = '';
   try {
     const r = await fetch(`${API_URL}/live/chat`, {
@@ -31996,18 +32044,21 @@ async function sendLiveChat(){
       body: JSON.stringify({ telegram_id: telegramId, text, question: !!document.getElementById('live-question-mode')?.checked })
     });
     const d = await r.json();
-    if (!d.ok){
+    if(generation!==chatGeneration)return;
+    if (!r.ok || !d.ok){
       document.getElementById('live-chat-note').textContent = d.error || t('live.chat.failed');
       input.value = text;   // возвращаем текст, чтобы не набирать заново
     } else {
       document.getElementById('live-chat-note').textContent = '';
-      pollLiveChat();       // своё сообщение видим сразу, не через паузу
+      // Invalidate an older snapshot before displaying the confirmed reply.
+      ++chatGeneration;if(chatRequest)chatRequest.abort();chatRequest=null;
+      if(d.message)renderChatMessages([d.message],false);
+      pollLiveChat();
     }
   } catch (e) {
-    document.getElementById('live-chat-note').textContent = t('live.chat.offline');
-    input.value = text;
-  }
-  chatSending = false;
+    if(generation===chatGeneration){document.getElementById('live-chat-note').textContent = t('live.chat.offline');
+    input.value = text;}
+  } finally { chatSending = false; }
 }
 
 /* Плеер иногда падает прямо посреди эфира */
@@ -32034,7 +32085,7 @@ function expandLiveFull(){
   mountClubVideoFullscreen(document.getElementById('live-full-video'));
   syncLiveJoinButtons();
   const url = livePlayPageUrl();
-  if (!url) return;
+  if (!url&&!liveNow?.video_stopped) return;
   liveFullOpen = true;
 
   // СИСТЕМНАЯ «КАРТИНКА В КАРТИНКЕ» — ТОЛЬКО ВНЕ TELEGRAM. Внутри мини-аппа
@@ -32056,8 +32107,8 @@ function expandLiveFull(){
   liveSeenSession = (liveNow && liveNow.session_id) || 'x';
   syncLivePractice();
   document.getElementById('live-full').style.display = 'flex';
-  document.getElementById('live-full-frame').src = url;
-  frameLoader(document.getElementById('live-full-frame'), 'live.loading');
+  document.getElementById('live-full-video').style.display=liveNow?.video_stopped?'none':'';
+  if(url&&!liveNow?.video_stopped){document.getElementById('live-full-frame').src=url;frameLoader(document.getElementById('live-full-frame'),'live.loading');}else{document.getElementById('live-full-frame').removeAttribute('src');frameLoaderHide(document.getElementById('live-full-frame'));}
   startLiveChat();
   // Маленький плеер на это время замолкает — два потока разом не нужны
   const host = liveHostEl();
@@ -32430,6 +32481,8 @@ function renderLiveBlock(){
     // сворачиваем (collapseLiveFull сам позовёт нас снова уже без экрана)
     if (liveNow && liveNow.free_open === false && !isMember){ collapseLiveFull(); return; }
     syncLivePractice();
+    const stopped=!!liveNow?.video_stopped;document.getElementById('live-full-video').style.display=stopped?'none':'';
+    if(stopped){document.getElementById('live-full-frame').removeAttribute('src');frameLoaderHide(document.getElementById('live-full-frame'));document.getElementById('live-full-badge').textContent=liveNow.practice_on?'Практика':'Занятие продолжается';}
     return;
   }
 
@@ -32452,7 +32505,7 @@ function renderLiveBlock(){
     }
     return;
   }
-  const show = !!(liveNow && liveNow.found && liveNow.is_live && liveNow.embed_link && !liveDismissed);
+  const show = !!(liveNow && liveNow.found && liveNow.is_live && (liveNow.embed_link || liveNow.video_stopped) && !liveDismissed);
   if (!show){
     host.style.display = 'none';
     slot.style.display = 'none';
@@ -32472,23 +32525,23 @@ function renderLiveBlock(){
   document.getElementById('live-title').textContent = liveNow.title || t('live.title.default');
   const badge = document.getElementById('live-badge');
   const onAir = liveNow.started && !liveNoPicture();
-  badge.textContent = onAir ? t('live.badge.on') : t('live.badge.soon');
+  badge.textContent = liveNow.video_stopped?(liveNow.practice_on?'Практика':'Занятие продолжается'):onAir ? t('live.badge.on') : t('live.badge.soon');
   badge.classList.toggle('live-badge-soon', !onAir);
   const wait = document.getElementById('live-wait');
   if (wait){
-    wait.textContent = liveNoPicture() ? t('live.wait_stream') : '';
-    wait.style.display = liveNoPicture() ? '' : 'none';
+    wait.textContent = liveNow.video_stopped?'Видео остановлено. Занятие продолжается.':liveNoPicture() ? t('live.wait_stream') : '';
+    wait.style.display = liveNow.video_stopped||liveNoPicture() ? '' : 'none';
   }
 
   syncLivePractice();
 
   // Пересоздаём iframe ТОЛЬКО если поменялся адрес — иначе поток начнётся заново
   const frame = document.getElementById('live-frame');
-  const src = liveNow.embed_link + (liveNow.embed_link.includes('?') ? '&' : '?') + 'muted=true&autoplay=true';
+  document.getElementById('live-frame-wrap').style.display=liveNow.video_stopped?'none':'';
+  const src = liveNow.video_stopped?'':liveNow.embed_link + (liveNow.embed_link.includes('?') ? '&' : '?') + 'muted=true&autoplay=true';
   if (liveIframeSrc !== src){
     liveIframeSrc = src;
-    frame.src = src;
-    frameLoader(frame, 'live.loading');
+    if(src){frame.src = src;frameLoader(frame, 'live.loading');}else{frame.removeAttribute('src');frameLoaderHide(frame);}
   }
   positionLiveHost();
   // Ещё раз следующим кадром: сразу после вставки высота ещё не посчитана.
@@ -37418,6 +37471,10 @@ async function claimManualAccess(token){
       + '<button class="lec-link-btn" style="width:100%" onclick="paidClaimFinish()">'
       + escapeHtml(t('paid.ok_go')) + '</button>');
   } catch (e) {
+    if([404,410].includes(e.status)){
+      try {if(localStorage.getItem(PAID_TOKEN_KEY)===token)localStorage.removeItem(PAID_TOKEN_KEY);}catch(_){}
+      paidClaimLastToken='';
+    }
     const retryable=!e.status || [409,425,429,500,502,503,504].includes(e.status);
     const uncertain=!e.status || e.status>=500;
     paidClaimShow(uncertain ? t('paid.network_t') : t('paid.fail_t'),
@@ -37469,6 +37526,9 @@ function paidClaimFinish(){
    известен — зовётся из `startApp()` */
 function paidClaimRetryIfPending(){
   var token = '';
+  // A fresh personal link outranks an abandoned one in localStorage.
+  // openFromStartParam handles it once; do not occupy the claim lock here.
+  try { if(/^paid_[a-f0-9]{24}$/.test(appStartParamRaw()))return; } catch(e){}
   try { token = localStorage.getItem(PAID_TOKEN_KEY) || ''; } catch(e){}
   if (!token) return;
   if (!telegramId && !(typeof tgKnownId !== 'undefined' && tgKnownId)) return;

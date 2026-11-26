@@ -29,3 +29,13 @@ test('connection diagnostics probe only public readiness without identity or acc
  for(const {url,opts} of calls){assert(url.endsWith('/rf/readiness'));assert.equal(opts.method,'GET');assert.equal(opts.credentials,'omit');assert(!opts.body&&!opts.headers);}
  assert(!code.includes('secret'));
 });
+
+test('fresh paid deep link outranks an expired token saved before startup',async()=>{
+ const calls=[];const {c,store}=setup(async(u,o)=>{calls.push(JSON.parse(o.body).token);return {ok:false,status:410,json:async()=>({detail:'Ссылка устарела'})};});
+ c.localStorage.getItem=k=>store.get(k);c.appStartParamRaw=()=> 'paid_'+'a'.repeat(24);
+ store.set(c.PAID_TOKEN_KEY,'old-expired');
+ const retry=html.slice(html.indexOf('function paidClaimRetryIfPending(){'),html.indexOf('/* Имя и ник с той площадки',html.indexOf('function paidClaimRetryIfPending(){')));
+ vm.runInContext(retry,c);c.paidClaimRetryIfPending();
+ await c.claimManualAccess('a'.repeat(24));
+ assert.deepEqual(calls,['a'.repeat(24)]);assert.equal(store.size,0);
+});
