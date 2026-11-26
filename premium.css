@@ -1,0 +1,23 @@
+#view-premium .vp-content{display:flex;flex-direction:column;gap:18px;padding:12px 0 28px;overflow-wrap:anywhere}
+#view-premium .card{margin:0;padding:22px}
+#view-premium h1{font-family:var(--disp);font-size:25px;line-height:1.3;letter-spacing:-.7px;margin:8px 0 16px}
+#view-premium h2{font-size:18px;line-height:1.4;margin-bottom:10px}
+#view-premium p{font-size:14px;line-height:1.6;margin:8px 0;color:var(--text-dim)}
+.vp-badge{display:inline-flex;align-self:flex-start;font-size:10px;letter-spacing:.07em;font-weight:800;color:#916b35;padding:5px 9px;border-radius:8px;border:1px solid #bc9e6655;background:linear-gradient(120deg,#d7b78222,#b9a4de22);box-shadow:inset 0 1px 0 #ffffff66}
+[data-theme=dark] .vp-badge{color:#edcf94;border-color:#b99b6e66;box-shadow:0 0 15px #b69bd322}
+#view-premium .vp-hero{position:relative;isolation:isolate;background:radial-gradient(ellipse at 0 0,#fff5df8c,transparent 58%),radial-gradient(ellipse at 100% 100%,#b4a0cc24,transparent 62%),linear-gradient(130deg,#e7d8c2a6,#e7dfd5 60%,#dbc9b38c);border-color:#b79a6f66}
+[data-theme=dark] #view-premium .vp-hero{background:radial-gradient(ellipse at 0 0,#b2863a24,transparent 62%),radial-gradient(ellipse at 100% 90%,#9470e62e,transparent 65%),linear-gradient(135deg,#292234db,#141324e8 60%,#252034db)}
+#view-premium .vp-hero::after{content:'';position:absolute;inset:0;padding:1px;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,#e1bd78,#7f58a3 20%,#c6a6ff 38%,#fff0c9 50%,#ac7f40 65%,#7b75d7 82%,#e1bd78);background-size:250% 250%;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;-webkit-mask-composite:xor;animation:vp-sheen 12s ease-in-out infinite alternate}
+.vp-primary,.vp-secondary{width:100%;min-height:48px;padding:14px 18px;border-radius:16px;font:700 14px/1.4 var(--body);color:var(--text);border:1px solid var(--border);background:var(--card);box-shadow:var(--sh-sm)}
+.vp-primary{color:#fff;background:linear-gradient(145deg,var(--warm),var(--warm-deep));box-shadow:0 8px 22px #e8614a33,inset 0 1px 0 #fff5}
+[data-theme=dark] .vp-primary{background:linear-gradient(145deg,#ad78ff,#d45ca5 45%,#ff684e);box-shadow:0 0 20px #8c5dff44,inset 0 1px 0 #fff5}
+.vp-feature{padding:16px 0;border-bottom:1px solid var(--line)}.vp-feature:last-child{border:0}.vp-feature strong{font-size:15px}.vp-feature p{font-size:13px!important}
+.vp-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vp-plans button{min-width:0;text-align:left;padding:20px;min-height:120px;border:1px solid var(--border);border-radius:20px;background:var(--card);box-shadow:var(--sh-r);color:var(--text);font-family:var(--body);display:flex;flex-direction:column;gap:7px;justify-content:center}.vp-plans strong{font-size:20px;line-height:1.35}.vp-plans small{color:var(--text-dim)}.vp-plans .selected{border-color:#b99b6e;box-shadow:var(--sh-r),0 0 20px #b69bd322;background:linear-gradient(120deg,#b99b6e22,#ac8ed322)}
+.vp-price{font-size:34px;font-weight:800;margin:14px 0}.vp-check{display:flex;gap:10px;font-size:12px;line-height:1.6;align-items:flex-start}.vp-check input{flex:none;width:20px;height:20px;margin-top:3px}
+.vp-form{display:flex;flex-direction:column;gap:20px}.vp-form label{display:flex;flex-direction:column;gap:10px;font-size:13px}.vp-form input,.vp-form textarea{width:100%;min-width:0;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);color:var(--text);font:16px var(--body)}.vp-form textarea{min-height:110px}
+#vp-goal-bar{display:block;width:100%;border:0;background:none;padding:10px 0 0;color:var(--text-dim);font:11px/1.5 var(--body);text-align:left}#vp-goal-bar[hidden]{display:none}#vp-goal-bar i{display:block;height:3px;background:var(--card2);margin-top:5px;border-radius:4px;overflow:hidden}#vp-goal-bar b{display:block;height:100%;background:linear-gradient(90deg,#c0a06e,#a98ade)}
+@keyframes vp-sheen{from{background-position:0% 20%}to{background-position:100% 80%}}
+@media(prefers-reduced-motion:reduce){#view-premium .vp-hero::after{animation:none}}
+@media(max-width:360px){.vp-plans button{padding:17px 16px}.vp-plans strong{font-size:18px}}
+
+.mp-button.vp-entry{border:1px solid #b59b6b88;background:linear-gradient(120deg,#d9bc8033,#c2a6ea33,#f4d8a433);box-shadow:var(--sh-sm),0 0 18px #bd9bd52b;color:var(--text);font-weight:650;min-height:46px;padding:12px 18px}

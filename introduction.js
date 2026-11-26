@@ -25,7 +25,7 @@ window.ClubIntroduction = (function(){
     document.body.classList.toggle("introduction-active",active());
     let bar=document.getElementById('ci-progress');
     if(!bar){bar=document.createElement('button');bar.id='ci-progress';bar.className='ci-progress';bar.dataset.ci='steps';document.getElementById('app-level-slot')?.after(bar);}
-    bar.hidden=!active();
+    bar.hidden=!active() || Number(state?.percent)>=100;
     const host=document.getElementById('nb-start-host');
     if(!active()){if(host?.dataset.ciOwned){host.innerHTML='';delete host.dataset.ciOwned;}return;}
     if(Number.isFinite(state.points))points=state.points;
@@ -65,6 +65,7 @@ window.ClubIntroduction = (function(){
     if(s.action==='game'){ciClose();openQuiz(false,'member');return;}
     if(s.done)return;
     ciClose();
+    if(s.action==='goal'){ciClose();window.ClubPremium?.open('goals');return;}
     if(s.action==='custom'){
       ciShow('<h2>'+esc(s.title)+'</h2><p>'+esc(s.description)+'</p>'+(s.target?'<button class="ci-primary" data-ci="custom-open" data-id="'+esc(s.id)+'">'+esc(s.button)+'</button>':'')+'<button class="ci-primary" data-ci="complete" data-id="'+esc(s.id)+'">Готово</button>');return;
     }
@@ -104,5 +105,5 @@ window.ClubIntroduction = (function(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-ci]');if(b)ciAction(b).catch(()=>status('Не удалось выполнить действие. Попробуй ещё раз.'));});
   document.addEventListener('keydown',e=>{const o=document.getElementById('ci-overlay');if(!o||o.hidden)return;if(e.key==='Escape')ciClose();if(e.key==='Tab'){const list=[...o.querySelectorAll('button:not(:disabled),textarea,a[href]')].filter(x=>x.offsetParent!==null);const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('focus',()=>{if(active())ciLoad();});
-  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,premium,profileSaved,record};
+  return {active,remaining:()=>active()&&Number(state?.percent)<100,load:ciLoad,render:ciRender,start:ciStart,steps,premium,profileSaved,record};
 })();

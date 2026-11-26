@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v724 -->
+<!-- FILE_VERSION: index-v725 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v724';
+window.CLUB_BUILD_ID = 'app-v725';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -10269,6 +10269,39 @@ function renderMeetingNotice(notice){
 
 </style>
 <style>.live-chat-msg.premium-member{font-size:15.5px;min-height:42px;padding-left:54px;position:relative}.live-chat-avatar{position:absolute;left:5px;top:7px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#b990df33;border:2px solid #ba91df;box-shadow:0 0 12px #b990df33;color:var(--text)}.live-chat-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
+<style>
+.live-chat-msg{overflow-wrap:anywhere;min-width:0;max-width:100%}
+.live-chat-msg.premium-member{font-size:14px;font-weight:600;padding:7px 10px 7px 54px;border-radius:10px;background:linear-gradient(90deg,rgba(155,140,242,.12),rgba(155,140,242,.02));border-left:2px solid rgba(155,140,242,.4)}
+.live-chat-msg.premium-member .live-chat-who{font-weight:800}
+[data-theme=light] .live-chat-msg.premium-member{background:linear-gradient(90deg,rgba(178,141,83,.13),rgba(178,141,83,.02));border-left-color:rgba(178,141,83,.4)}
+.live-chat-who{overflow-wrap:anywhere;max-width:100%}.live-chat-avatar{top:8px}
+</style><style>
+#view-premium .vp-content{display:flex;flex-direction:column;gap:18px;padding:12px 0 28px;overflow-wrap:anywhere}
+#view-premium .card{margin:0;padding:22px}
+#view-premium h1{font-family:var(--disp);font-size:25px;line-height:1.3;letter-spacing:-.7px;margin:8px 0 16px}
+#view-premium h2{font-size:18px;line-height:1.4;margin-bottom:10px}
+#view-premium p{font-size:14px;line-height:1.6;margin:8px 0;color:var(--text-dim)}
+.vp-badge{display:inline-flex;align-self:flex-start;font-size:10px;letter-spacing:.07em;font-weight:800;color:#916b35;padding:5px 9px;border-radius:8px;border:1px solid #bc9e6655;background:linear-gradient(120deg,#d7b78222,#b9a4de22);box-shadow:inset 0 1px 0 #ffffff66}
+[data-theme=dark] .vp-badge{color:#edcf94;border-color:#b99b6e66;box-shadow:0 0 15px #b69bd322}
+#view-premium .vp-hero{position:relative;isolation:isolate;background:radial-gradient(ellipse at 0 0,#fff5df8c,transparent 58%),radial-gradient(ellipse at 100% 100%,#b4a0cc24,transparent 62%),linear-gradient(130deg,#e7d8c2a6,#e7dfd5 60%,#dbc9b38c);border-color:#b79a6f66}
+[data-theme=dark] #view-premium .vp-hero{background:radial-gradient(ellipse at 0 0,#b2863a24,transparent 62%),radial-gradient(ellipse at 100% 90%,#9470e62e,transparent 65%),linear-gradient(135deg,#292234db,#141324e8 60%,#252034db)}
+#view-premium .vp-hero::after{content:'';position:absolute;inset:0;padding:1px;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,#e1bd78,#7f58a3 20%,#c6a6ff 38%,#fff0c9 50%,#ac7f40 65%,#7b75d7 82%,#e1bd78);background-size:250% 250%;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;-webkit-mask-composite:xor;animation:vp-sheen 12s ease-in-out infinite alternate}
+.vp-primary,.vp-secondary{width:100%;min-height:48px;padding:14px 18px;border-radius:16px;font:700 14px/1.4 var(--body);color:var(--text);border:1px solid var(--border);background:var(--card);box-shadow:var(--sh-sm)}
+.vp-primary{color:#fff;background:linear-gradient(145deg,var(--warm),var(--warm-deep));box-shadow:0 8px 22px #e8614a33,inset 0 1px 0 #fff5}
+[data-theme=dark] .vp-primary{background:linear-gradient(145deg,#ad78ff,#d45ca5 45%,#ff684e);box-shadow:0 0 20px #8c5dff44,inset 0 1px 0 #fff5}
+.vp-feature{padding:16px 0;border-bottom:1px solid var(--line)}.vp-feature:last-child{border:0}.vp-feature strong{font-size:15px}.vp-feature p{font-size:13px!important}
+.vp-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vp-plans button{min-width:0;text-align:left;padding:20px;min-height:120px;border:1px solid var(--border);border-radius:20px;background:var(--card);box-shadow:var(--sh-r);color:var(--text);font-family:var(--body);display:flex;flex-direction:column;gap:7px;justify-content:center}.vp-plans strong{font-size:20px;line-height:1.35}.vp-plans small{color:var(--text-dim)}.vp-plans .selected{border-color:#b99b6e;box-shadow:var(--sh-r),0 0 20px #b69bd322;background:linear-gradient(120deg,#b99b6e22,#ac8ed322)}
+.vp-price{font-size:34px;font-weight:800;margin:14px 0}.vp-check{display:flex;gap:10px;font-size:12px;line-height:1.6;align-items:flex-start}.vp-check input{flex:none;width:20px;height:20px;margin-top:3px}
+.vp-form{display:flex;flex-direction:column;gap:20px}.vp-form label{display:flex;flex-direction:column;gap:10px;font-size:13px}.vp-form input,.vp-form textarea{width:100%;min-width:0;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);color:var(--text);font:16px var(--body)}.vp-form textarea{min-height:110px}
+#vp-goal-bar{display:block;width:100%;border:0;background:none;padding:10px 0 0;color:var(--text-dim);font:11px/1.5 var(--body);text-align:left}#vp-goal-bar[hidden]{display:none}#vp-goal-bar i{display:block;height:3px;background:var(--card2);margin-top:5px;border-radius:4px;overflow:hidden}#vp-goal-bar b{display:block;height:100%;background:linear-gradient(90deg,#c0a06e,#a98ade)}
+@keyframes vp-sheen{from{background-position:0% 20%}to{background-position:100% 80%}}
+@media(prefers-reduced-motion:reduce){#view-premium .vp-hero::after{animation:none}}
+@media(max-width:360px){.vp-plans button{padding:17px 16px}.vp-plans strong{font-size:18px}}
+
+.mp-button.vp-entry{border:1px solid #b59b6b88;background:linear-gradient(120deg,#d9bc8033,#c2a6ea33,#f4d8a433);box-shadow:var(--sh-sm),0 0 18px #bd9bd52b;color:var(--text);font-weight:650;min-height:46px;padding:12px 18px}
+
+</style>
+<style>#live-vip-pinned[hidden],#live-question-label[hidden]{display:none!important}#live-vip-pinned{border-left:2px solid #b994e9;padding:8px 12px;margin:8px 0;background:rgba(178,139,224,.08);border-radius:8px;font-size:13px;overflow-wrap:anywhere}#live-vip-pinned summary{cursor:pointer;font-weight:600}.live-vip-pinned-body{max-height:112px;overflow-y:auto}.live-vip-pinned-body p{margin:8px 0}</style>
 </head>
 <body>
 
@@ -11094,6 +11127,7 @@ function renderMeetingNotice(notice){
       <div class="points-caption">баллов на балансе</div>
     </div>
 
+    <button class="vp-secondary" onclick="ClubPremium.open('goals')" style="margin:0 0 20px">Выбрать, на что копить</button>
     <div class="section-label">Что такое баллы и уровень</div>
     <div class="card">
       <div class="reward-hint">Баллы — внутренняя валюта клуба. Ты получаешь их за активность в клубе, просмотр лекций и особенно за <span style="color:var(--warm);font-weight:700;cursor:pointer" onclick="openInvitePopup()">приглашение друзей в клуб</span>. Баллы можно потратить на кучу разных ништяков — от личной консультации до доступа к очень особенным материалам. Ими даже можно оплатить участие в клубе.</div>
@@ -16935,7 +16969,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v724 · 26.11.2026 Управление подпиской';
+const APP_BUILD = 'v725 · 26.11.2026 Премиум и цели';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -17461,6 +17495,7 @@ function switchView(name, preserveGame) {
   libraryTargetLecture=null;
   if(name!=='access' && purchaseReturn && document.getElementById('view-access')?.classList.contains('active'))discardPurchaseReturn();
   if(name==='profile' && window.MemberProfiles)MemberProfiles.load();
+  if(['portal','profile','points-info'].includes(name))window.ClubPremium?.refreshGoal();
   if(typeof pdFeatureOpened==='function')pdFeatureOpened(name);
   if (typeof isMember !== 'undefined' && isMember) track('member_section', name);
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -19952,7 +19987,7 @@ async function openRewards(){
   await loadRewardsData();
   const body = document.getElementById('rewards-body');
   body.innerHTML = lastRewardsData
-    ? `<div class="sm-hint" style="margin-bottom:4px">У тебя <b>${lastRewardsData.points}</b> баллов.</div>${rewardsListHtml()}`
+    ? `<div class="sm-hint" style="margin-bottom:4px">У тебя <b>${lastRewardsData.points}</b> баллов.</div><button class="vp-secondary" style="margin:14px 0" onclick="closeRewards();ClubPremium.open('goals')">Выбрать, на что копить</button>${rewardsListHtml()}`
     : `<div class="sm-hint" style="padding:24px 0;text-align:center">Не получилось загрузить.</div>`;
   body.classList.add('fade-rise');
 }
@@ -25069,6 +25104,7 @@ function renderLevelCard(){
   if(typeof kqRefreshLocks==='function')kqRefreshLocks();
   syncRegistrationNext();
   renderLevelCardInner();
+  window.ClubPremium?.refreshGoal();
   syncLevelGap();   // v404: бар мог сменить высоту (строка-предупреждение) или спрятаться
   renderReserveTiles();   // v406: к этому моменту площадка и telegramId известны
 }
@@ -25258,6 +25294,7 @@ async function refreshOnboardStatus(){
 }
 
 async function openStepsPopup(){
+  if(window.ClubIntroduction?.remaining()){ClubIntroduction.steps();return;}
   if (nbMode()){ nbOpenSheet(); return; }
   /* v398: после регистрации — та же шторка, что у знакомства ([stated] Denis
      28.09: «меню выглядело по-старому»). Старое окно — только для регистрации */
@@ -27246,6 +27283,9 @@ const DEEPLINKS = {
   'reviews': { go: () => ClubReviews.open(), guests: true },
   'legal': { go: () => openLegalCenter(), guests: true },
   'introduction': { go: () => ClubIntroduction.start(), guests: false },
+  'premium': { go: () => ClubPremium.open('offer'), guests: false },
+  'savings_goal': { go: () => ClubPremium.open('goals'), guests: false },
+  'introduction_notifications': { go: () => ClubPremium.open('notifications'), guests: false },
   'introduction_steps': { go: () => ClubIntroduction.steps(), guests: false },
   'profile_edit': { go: () => MemberProfiles.openEditor(), guests: false },
   // — Открытая часть: годится для рекламы и холодного трафика —
@@ -31472,7 +31512,7 @@ function insightsLevelIsLocked(){
   return isMember && rewardLevel < (appSettings.insights_unlock_level || 2);
 }
 function pdfAccessAllowed(){
-  return isMember && (pdfManualUnlocked || rewardLevel >= (appSettings.pdf_unlock_level || 3));
+  return isMember && (pdfManualUnlocked || window.MemberProfiles?.isPremium() || rewardLevel >= (appSettings.pdf_unlock_level || 3));
 }
 function openInsightsLevelLockNotice(){
   const need = appSettings.insights_unlock_level || 2;
@@ -31824,9 +31864,20 @@ function giftCelebrate(m){
   setTimeout(function(){ pill.remove(); }, 1900);
 }
 
+function renderLiveVipQuestions(questions){
+  const list=document.getElementById('live-chat-list');if(!list)return;
+  let host=document.getElementById('live-vip-pinned');
+  if(!host){host=document.createElement('details');host.id='live-vip-pinned';host.open=true;list.before(host);}
+  const signature=JSON.stringify(questions);if(host.dataset.signature===signature)return;
+  host.dataset.signature=signature;host.hidden=!questions.length;host.replaceChildren();
+  if(!questions.length)return;
+  const summary=document.createElement('summary');summary.textContent='VIP-вопросы · '+questions.length;host.append(summary);
+  const body=document.createElement('div');body.className='live-vip-pinned-body';
+  questions.forEach(q=>{const item=document.createElement('p');const name=document.createElement('strong');name.textContent=q.name+': ';item.append(name,document.createTextNode(q.text));body.append(item);});host.append(body);
+}
 async function pollLiveChat(){
   try {
-    const r = await fetch(`${API_URL}/live/chat?since_id=${chatLastId}` + (telegramId ? `&telegram_id=${encodeURIComponent(telegramId)}` : ''));
+    const r = await fetch(`${API_URL}/live/chat?since_id=${chatLastId}` + (telegramId ? `&telegram_id=${encodeURIComponent(telegramId)}` : ''), {headers:sessionHeaders()});
     const d = await r.json();
     if (d && d.found){
       if ((d.messages || []).length){
@@ -31835,6 +31886,9 @@ async function pollLiveChat(){
       } else if (chatLastId === 0){
         renderChatMessages([], true);
       }
+      renderLiveVipQuestions(d.questions || []);
+      const questionLabel=document.getElementById('live-question-label');
+      if(questionLabel)questionLabel.hidden=!isMember||!d.chat_open;
       const note = document.getElementById('live-chat-note');
       const form = document.getElementById('live-chat-form');
       const wall = document.getElementById('live-chat-paywall');
@@ -31938,8 +31992,8 @@ async function sendLiveChat(){
   input.value = '';
   try {
     const r = await fetch(`${API_URL}/live/chat`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: telegramId, text })
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+      body: JSON.stringify({ telegram_id: telegramId, text, question: !!document.getElementById('live-question-mode')?.checked })
     });
     const d = await r.json();
     if (!d.ok){
@@ -39379,9 +39433,9 @@ function renderPackBanner(){
       try { if (!PR_PICKED) prPickScreens(); prPrefetchAssets('key'); } catch(e){}
     }
     if (t) t.textContent = packs.length === 1
-      ? 'Для тебя — новый пак'
+      ? (((packs[0].card_ids||[]).length===1) ? 'Для тебя — новая карта' : 'Для тебя — новый пак')
       : ('Твои подарки · ' + packs.length);
-    if (sub) sub.textContent = 'Твои карточки пантеона. Открой →';
+    if (sub) sub.textContent = packs.length===1 && (packs[0].card_ids||[]).length===1 ? 'Твоя карточка пантеона. Открой →' : 'Твои карточки пантеона. Открой →';
     el.onclick = openPackReveal;
     el.style.display = 'flex';
     return;
@@ -46171,6 +46225,7 @@ function openDigestFromHome(){
     <div class="live-reacts" id="live-reacts-full"></div>
     <div class="live-chat-list" id="live-chat-list"></div>
     <div class="live-chat-note" id="live-chat-note"></div>
+    <label id="live-question-label" hidden style="display:flex;align-items:center;gap:8px;font-size:12px;margin:0 0 8px"><input type="checkbox" id="live-question-mode"> Вопрос Денису</label>
     <div class="live-chat-form" id="live-chat-form">
       <input class="live-chat-input" id="live-chat-input" type="text" maxlength="500"
              placeholder="Спросить или сказать" onkeydown="if(event.key==='Enter') sendLiveChat()">
@@ -47408,7 +47463,7 @@ function facts(){
  const level=typeof nbState!=='undefined'&&nbState?.active?nbState.level:typeof currentLevelNum==='function'?currentLevelNum():null;
  const points=document.getElementById('p-points')?.textContent||'0';
  let god='';try{const result=savedQuizResult();god=result&&QUIZ_RESULTS[result.code]?.god||'';}catch(e){}
- return '<div class="mp-facts"><div><span>'+esc(tx('mp.level'))+'</span><strong>'+esc(level??'—')+'</strong></div><button type="button" data-mp="points"><span>'+esc(tx('mp.points'))+'</span><strong>'+esc(points)+'</strong></button></div><div class="mp-status-links">'+(state.premium_active?'<span class="mp-badge">'+esc(tx('mp.premium'))+'</span>':'<button class="mp-button" data-mp="premium">'+esc(tx('mp.premium_get'))+'</button>')+'<button class="mp-button" data-mp="god">'+esc(god?tx('mp.god')+': '+god:tx('mp.god_discover'))+'</button></div>';
+ return '<div class="mp-facts"><div><span>'+esc(tx('mp.level'))+'</span><strong>'+esc(level??'—')+'</strong></div><button type="button" data-mp="points"><span>'+esc(tx('mp.points'))+'</span><strong>'+esc(points)+'</strong></button></div><div class="mp-status-links">'+(state.premium_active?'<button class="mp-button vp-badge" data-mp="premium">'+esc(tx('mp.premium'))+'</button>':'<button class="mp-button vp-entry" data-mp="premium">'+esc(tx('mp.premium_get'))+'</button>')+'<button class="mp-button" data-mp="god">'+esc(god?tx('mp.god')+': '+god:tx('mp.god_discover'))+'</button></div>';
 }
 
 const root=()=>document.getElementById('member-profile-card');
@@ -47442,7 +47497,7 @@ function projectEdit(){const p=state.project||{};const labels={draft:'Черно
 async function directory(kind='people',append=false){if(!isMember){openPaywall();return;}const n=++sequence;if(!append){open('<h2>'+(kind==='people'?'Участники клуба':kind==='specialists'?'Биржа специалистов':'Проекты участников')+'</h2>'+(kind!=='catalog'?'<p class="mp-muted">Ищи по имени, описанию или тегам. Здесь только действующие участники, включившие видимость в поиске.</p><label class="mp-field">Поиск специалиста<input id="mp-search" maxlength="80" placeholder="Например, дизайнер"></label><button class="mp-button" data-mp="search">Найти</button>':'<p class="mp-muted">Проекты премиальных участников, одобренные Денисом.</p>')+'<button class="mp-button" data-mp="specialists">Биржа специалистов</button><div id="mp-results"></div><div class="mp-actions"><button id="mp-more" data-mp="more" hidden>Показать ещё</button><button data-mp="close">Закрыть</button></div>');sheet().dataset.kind=kind;sheet().dataset.offset='0';}
  const q=document.getElementById('mp-search')?.value||'';try{status('Загружаю…');const data=await api('/'+kind+'?offset='+(append?sheet().dataset.offset:'0')+'&q='+encodeURIComponent(q));if(n!==sequence||overlay().hidden)return;const results=document.getElementById('mp-results');if(!append)results.innerHTML='';results.insertAdjacentHTML('beforeend',data.items.map(p=>'<article class="mp-person '+theme(p)+'">'+card(p)+'<div class="mp-actions"><button data-mp="person" data-id="'+Number(p.id)+'">Посмотреть профиль</button></div></article>').join(''));const more=document.getElementById('mp-more');more.hidden=data.next_offset===null;sheet().dataset.offset=String(data.next_offset||0);status(results.children.length?'':'Пока никого не найдено.');}catch(e){if(n===sequence)status(e.message);}}
 async function person(path){if(!isMember){openPaywall();return;}const n=++sequence;open('<h2>Профиль участника</h2><div id="mp-person-view"></div><div class="mp-actions"><button data-mp="people">Все участники</button><button data-mp="close">Закрыть</button></div>');status('Загружаю…');try{const p=await api(path);if(n!==sequence||overlay().hidden)return;document.getElementById('mp-person-view').innerHTML='<article class="mp-person '+theme(p)+'">'+card(p)+'</article>';status('');}catch(e){if(n===sequence)status(e.message);}}
-async function action(name,button){if(busy)return;if(name==='close')return close();if(!isMember){close();openPaywall();return;}if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium'){close();return ClubIntroduction.premium();}if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='specialists')return directory('specialists');if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
+async function action(name,button){if(busy)return;if(name==='close')return close();if(!isMember){close();openPaywall();return;}if(name==='points')return openRewards();if(name==='god'){close();return openQuiz();}if(name==='premium'){close();return ClubPremium.open('offer');}if(name==='crop-reset')return resetCrop();if(name==='reload')return load();if(name==='open-editor')return openEditor();if(name==='edit')return edit();if(name==='specialists')return directory('specialists');if(name==='people'||name==='projects')return directory(name==='people'?'people':'catalog');if(name==='search')return search();if(name==='more')return directory(sheet().dataset.kind,true);if(name==='person')return person('/people/'+Number(button.dataset.id));if(name==='project-edit')return projectEdit();
  if(name==='save'&&photoLoading){status(tx('mp.photo_loading'));return;}
  if(name==='save')return mutate(async()=>{const values=draft();if(crop)state=await api('/me/avatar','PUT',{revision:state.revision,image:cropData()});else if(avatarDraft==='remove')state=await api('/me/avatar','DELETE',{revision:state.revision});crop=null;avatarDraft=null;state=await api('/me','PUT',{...values,revision:state.revision});if(typeof onbDone==='function')onbDone('profile');},true);
  if(name==='remove-avatar'){crop=null;avatarDraft='remove';photoSequence++;photoLoading=false;document.getElementById('mp-crop-wrap').hidden=true;const file=document.getElementById('mp-avatar-file');if(file)file.value='';const img=sheet().querySelector('.mp-avatar');if(img)img.outerHTML=avatar({...state,avatar:''});status(tx('mp.photo_staged'));return;}
@@ -47474,7 +47529,7 @@ document.addEventListener('change',e=>{if(e.target.id==='mp-avatar-file')chooseP
 document.addEventListener('click',e=>{const b=e.target.closest('[data-mp]');if(b)action(b.dataset.mp,b);});
 document.addEventListener('keydown',e=>{if(!overlay()||overlay().hidden)return;if(e.key==='Escape')close();if(e.key==='Enter'&&e.target.id==='mp-search'){e.preventDefault();search();}if(e.key==='Tab'){const els=[...sheet().querySelectorAll('button:not([disabled]):not([hidden]),input,textarea,select,a[href]')].filter(e=>e.offsetParent!==null);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 function search(){sheet().dataset.offset='0';document.getElementById('mp-results').innerHTML='';return directory(sheet().dataset.kind||'people',true);}
-window.MemberProfiles={load,openEditor,refreshSummary:ownCard,fromChat:id=>person('/from-chat/'+Number(id)),person:id=>person('/people/'+Number(id))};
+window.MemberProfiles={isPremium:()=>!!state?.premium_active,load,openEditor,refreshSummary:ownCard,fromChat:id=>person('/from-chat/'+Number(id)),person:id=>person('/people/'+Number(id))};
 })();
 
 </script>
@@ -47506,7 +47561,7 @@ window.ClubIntroduction = (function(){
     document.body.classList.toggle("introduction-active",active());
     let bar=document.getElementById('ci-progress');
     if(!bar){bar=document.createElement('button');bar.id='ci-progress';bar.className='ci-progress';bar.dataset.ci='steps';document.getElementById('app-level-slot')?.after(bar);}
-    bar.hidden=!active();
+    bar.hidden=!active() || Number(state?.percent)>=100;
     const host=document.getElementById('nb-start-host');
     if(!active()){if(host?.dataset.ciOwned){host.innerHTML='';delete host.dataset.ciOwned;}return;}
     if(Number.isFinite(state.points))points=state.points;
@@ -47546,6 +47601,7 @@ window.ClubIntroduction = (function(){
     if(s.action==='game'){ciClose();openQuiz(false,'member');return;}
     if(s.done)return;
     ciClose();
+    if(s.action==='goal'){ciClose();window.ClubPremium?.open('goals');return;}
     if(s.action==='custom'){
       ciShow('<h2>'+esc(s.title)+'</h2><p>'+esc(s.description)+'</p>'+(s.target?'<button class="ci-primary" data-ci="custom-open" data-id="'+esc(s.id)+'">'+esc(s.button)+'</button>':'')+'<button class="ci-primary" data-ci="complete" data-id="'+esc(s.id)+'">Готово</button>');return;
     }
@@ -47585,8 +47641,9 @@ window.ClubIntroduction = (function(){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-ci]');if(b)ciAction(b).catch(()=>status('Не удалось выполнить действие. Попробуй ещё раз.'));});
   document.addEventListener('keydown',e=>{const o=document.getElementById('ci-overlay');if(!o||o.hidden)return;if(e.key==='Escape')ciClose();if(e.key==='Tab'){const list=[...o.querySelectorAll('button:not(:disabled),textarea,a[href]')].filter(x=>x.offsetParent!==null);const first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}});
   window.addEventListener('focus',()=>{if(active())ciLoad();});
-  return {active,load:ciLoad,render:ciRender,start:ciStart,steps,premium,profileSaved,record};
+  return {active,remaining:()=>active()&&Number(state?.percent)<100,load:ciLoad,render:ciRender,start:ciStart,steps,premium,profileSaved,record};
 })();
+
 </script>
 <style data-club-bundle="lesson-audio.css">
 .lesson-podcast{padding:16px;border-radius:24px;background:var(--card);border:1px solid var(--border);box-shadow:var(--sh-sm);box-sizing:border-box;width:100%}
@@ -48365,6 +48422,63 @@ html[data-gg-play] #gg-play-wrap{background:var(--gg-page)}
  root.ClubReviews={open,stop};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window);
+</script>
+<script>
+/* Separate VIP purchase; native application shell and existing card reveal. */
+window.ClubPremium=(()=>{
+'use strict';
+let goalPending=null,goalLoadedAt=0;
+let state=null,screen='offer',plan='year',currency='rubles',busy=false,order=null,requestId=null,goalState=null;
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('ru-RU');
+const api=(path,method='GET',data)=>apiRequest(API_URL+'/premium'+path,{method,headers:{'Content-Type':'application/json',...(typeof sessionHeaders==='function'?sessionHeaders():{})},...(data===undefined?{}:{body:JSON.stringify(data)})},25000);
+const btn=(text,to,secondary=false)=>'<button class="'+(secondary?'vp-secondary':'vp-primary')+'" data-vp="'+to+'">'+text+'</button>';
+const badge='<span class="vp-badge">VIP · ПРЕМИУМ</span>';
+const feature=(title,text)=>'<div class="vp-feature"><strong>'+title+'</strong><p>'+text+'</p></div>';
+const note='<p class="vp-note">Основная подписка клуба оплачивается отдельно. Если она закончится, премиум встанет на паузу. Баллы, достижения и остаток срока сохранятся.</p>';
+function vpMount(){if(document.getElementById('view-premium'))return;const el=document.createElement('section');el.id='view-premium';el.className='view';document.getElementById('view-profile').parentNode.append(el);}
+function showError(text){const el=document.getElementById('vp-status');if(el)el.textContent=text;}
+async function vpOpen(next='offer'){
+ vpMount();screen=next;switchView('premium');document.getElementById('view-premium').innerHTML='<div class="card">Загружаю…</div>';
+ try{state=await api('/state');if(next==='offer'&&(state.profile.entitled||state.profile.active))screen='active';if(screen==='goals')goalState=await api('/goals');vpRender();}catch(e){document.getElementById('view-premium').innerHTML='<div class="card"><p>'+esc(e.message)+'</p>'+btn('Повторить','reload')+'</div>';}
+}
+function plans(){return '<div class="vp-plans">'+['year','forever'].map(p=>'<button class="'+(p===plan?'selected':'')+'" data-vp-plan="'+p+'"><small>'+(p==='year'?'На год':'Навсегда')+'</small><strong>'+fmt(state.config[p+'_'+currency])+(currency==='rubles'?' ₽':' баллов')+'</strong><small>Один платёж</small></button>').join('')+'</div>';}
+function benefits(){const c=state.config;return feature('Личная консультация с Денисом','Разберём твой бизнес и найдём, как использовать клуб для твоих задач.')+feature('Закрытые мастер-майнды','Ежемесячные разборы в отдельной группе.')+feature('Твои вопросы — первыми','VIP-бейдж и приоритет вопросов на эфирах.')+feature('Оформление и ссылки','Премиальное оформление профиля, ссылки на твои проекты и возможность делиться ими в чате.')+feature(c.cards+' карты за продление','Вместо одной. Повышенный шанс получить легендарную карту.')+feature('Больше баллов','×'+c.activity_multiplier+' за занятия, сбор маршрута и продление клуба.')+feature('PDF-выжимки','Скачивай выжимки занятий и возвращайся к ним без приложения.');}
+function vpRender(){
+ const c=state.config,p=state.profile;let h='';
+ if(screen==='offer')h='<section class="card vp-hero">'+badge+'<h1>Ближе к Денису.<br>Больше от клуба.</h1><p>Личная консультация, закрытые разборы и возможности для твоего бизнеса.</p></section><div class="card">'+benefits()+'</div><div class="card"><h2>Подарок за покупку</h2><p>+'+fmt(c.gift_points)+' баллов при оплате рублями.</p></div>'+note+btn('Выбрать премиум','checkout');
+ if(screen==='checkout')h=badge+'<h1>Твой премиум</h1>'+plans()+'<div class="card"><small>Разовая покупка · без автопродления</small><div class="vp-price">'+fmt(c[plan+'_'+currency])+(currency==='rubles'?' ₽':' баллов')+'</div><p>Личная консультация включена.</p><p>'+(currency==='rubles'?'Подарок: '+fmt(c.gift_points)+' баллов.':'Подарочные баллы за эту покупку не начисляются.')+'</p></div>'+note+'<label class="vp-check"><input id="vp-consent" type="checkbox"> Понимаю: премиум — отдельный апгрейд, подписка клуба оплачивается отдельно</label>'+btn(currency==='rubles'?'Перейти к оплате':'Купить за '+fmt(c[plan+'_points'])+' баллов','buy')+btn(currency==='rubles'?'Посмотреть вариант за баллы':'Оплатить рублями','currency',true);
+ if(screen==='pending')h='<div class="card"><h1>Проверяем оплату</h1><p>Премиум появится после подтверждения платежа.</p><p>Если деньги уже списались, повторно платить не нужно.</p>'+btn('Проверить статус','check')+'</div>';
+ if(screen==='success')h='<div class="card vp-hero">'+badge+'<h1>Добро пожаловать<br>в премиум</h1><p>Начнём с твоего бизнеса.</p></div>'+btn('Записаться на консультацию','consult')+btn('Мой премиум','active',true);
+ if(screen==='active')h='<div class="card vp-hero">'+badge+'<h1>'+(p.paused?'Твой VIP дождётся тебя':'Твой премиум')+'</h1><p>'+(p.paused?'На паузе. Вернись в клуб — срок продолжится с того же места.':p.forever?'Навсегда':p.until?'До '+new Date(p.until+'Z').toLocaleDateString('ru-RU'):'Активен')+'</p></div>'+ (p.paused?btn('Вернуться в клуб','base'):btn('Личная консультация','consult')+btn('Группа мастер-майндов','group',true)+btn('Оформление профиля','appearance',true))+btn('Мои карты','cards',true)+'<div class="card">'+benefits()+'</div>'+note;
+ if(screen==='consult')h='<h1>Встреча с Денисом</h1><form class="card vp-form" id="vp-consult"><label>Что у тебя за бизнес?<input name="business" maxlength="1500" required></label><label>С чем хочешь разобраться?<textarea name="question" maxlength="3000" required></textarea></label><label>Когда тебе удобно?<input name="availability" maxlength="500" placeholder="Дни, время и часовой пояс" required></label><button class="vp-primary">Отправить заявку</button></form>';
+ if(screen==='goals')h='<h1>На что копим?</h1><p>Выбери цель. Баллы остаются доступными — ничего не списывается и не резервируется.</p>'+(goalState.unavailable?'<p class="vp-note">Прошлая цель сейчас недоступна. Можно выбрать другую.</p>':'')+goalState.items.map(r=>'<div class="card"><h2>'+esc(r.title)+'</h2><p>'+fmt(r.cost)+' баллов · '+(r.cost<=goalState.points?'Уже хватает':'осталось '+fmt(r.cost-goalState.points))+'</p><button class="vp-secondary" data-vp-goal="'+esc(r.key)+'">'+(goalState.goal?.key===r.key?'Твоя цель':'Копить на это')+'</button></div>').join('');
+ if(screen==='notifications')h='<div class="card"><h1>Полезные штуки</h1><p>Можно отключить сообщения знакомства с приложением. Сам список шагов останется в приложении.</p>'+btn('Не получать уведомления о полезных штуках','unsubscribe')+btn('Снова получать подсказки','subscribe',true)+'</div>';
+ document.getElementById('view-premium').innerHTML='<div class="vp-content">'+h+'<p id="vp-status" role="status"></p></div>';window.scrollTo(0,0);
+}
+async function act(name){if(busy)return;
+ if(name==='reload')return vpOpen(screen);if(['checkout','active','consult'].includes(name)){screen=name;vpRender();return;}
+ if(name==='currency'){currency=currency==='rubles'?'points':'rubles';requestId=null;vpRender();return;}
+ if(name==='appearance'){MemberProfiles.openEditor();return;}if(name==='cards'){switchView('cards');await loadCards();return;}if(name==='base'){switchView('access');return;}
+ if(name==='group'){if(!state.config.group_url){showError('Группа готовится. Ссылка появится здесь.');return;}if(!state.profile.active){showError('Группа доступна при активном премиуме и подписке клуба.');return;}window.Telegram?.WebApp?.openTelegramLink?Telegram.WebApp.openTelegramLink(state.config.group_url):window.open(state.config.group_url,'_blank','noopener');return;}
+ busy=true;try{
+ if(name==='buy'){
+  if(!document.getElementById('vp-consent')?.checked){showError('Подтверди условия отдельной покупки.');return;}
+  if(!requestId){try{const saved=JSON.parse(sessionStorage.getItem('club_vip_request')||'null');if(saved?.plan===plan&&saved?.currency===currency)requestId=saved.id;}catch(e){}}requestId=requestId||crypto.randomUUID();sessionStorage.setItem('club_vip_request',JSON.stringify({id:requestId,plan,currency}));const r=await api('/buy','POST',{request_id:requestId,plan,currency,revision:state.config.revision});order=r.order_id;sessionStorage.setItem('club_vip_order',order);
+  if(r.status==='paid'){state=await api('/state');screen='success';vpRender();MemberProfiles.load();return;}
+  screen='pending';vpRender();if(r.payment_url){if(window.Telegram?.WebApp?.openLink)Telegram.WebApp.openLink(r.payment_url);else window.open(r.payment_url,'_blank','noopener');}
+ }
+ if(name==='check'){order=order||sessionStorage.getItem('club_vip_order');if(!order)throw Error('Заказ не найден');const r=await api('/orders/'+encodeURIComponent(order));if(r.status==='paid'){state=await api('/state');screen='success';vpRender();MemberProfiles.load();}else showError('Подтверждение пока не пришло. Можно проверить позже.');}
+ if(name==='unsubscribe'||name==='subscribe'){await apiRequest(API_URL+'/introduction/notifications',{method:'POST',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({enabled:name==='subscribe'})},20000);showError(name==='unsubscribe'?'Уведомления знакомства отключены.':'Уведомления знакомства включены.');}
+ }catch(e){showError(e.message||'Не получилось. Попробуй ещё раз.');}finally{busy=false;}
+}
+async function refreshGoal(){if(!isMember){document.getElementById('vp-goal-bar')?.remove();return;}if(goalPending)return goalPending;if(Date.now()-goalLoadedAt<30000){drawGoal();return;}goalPending=(async()=>{try{goalState=await api('/goals');goalLoadedAt=Date.now();drawGoal();}catch(e){}finally{goalPending=null;}})();return goalPending;}
+function drawGoal(){const host=document.getElementById('level-card');if(!host)return;let el=document.getElementById('vp-goal-bar');if(!el){el=document.createElement('button');el.id='vp-goal-bar';el.onclick=e=>{e.stopPropagation();vpOpen('goals');};host.append(el);}const g=goalState?.goal;el.hidden=!g;if(!g)return;const balance=typeof points==='number'?points:goalState.points;const left=Math.max(0,g.cost-balance);el.innerHTML='<span>'+esc(g.title)+' · '+(left?'осталось '+fmt(left)+' баллов':'Можно забрать')+'</span><i><b style="width:'+Math.min(100,100*balance/g.cost)+'%"></b></i>';}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-vp],[data-vp-plan],[data-vp-goal]');if(!b)return;if(b.dataset.vpPlan){plan=b.dataset.vpPlan;requestId=null;vpRender();return;}if(b.dataset.vpGoal){if(busy)return;busy=true;try{await api('/goal','PUT',{key:b.dataset.vpGoal});goalState=await api('/goals');vpRender();drawGoal();ClubIntroduction.load();}catch(e){showError(e.message);}finally{busy=false;}return;}act(b.dataset.vp);});
+document.addEventListener('submit',async e=>{if(e.target.id!=='vp-consult')return;e.preventDefault();if(busy)return;busy=true;try{await api('/consultation','POST',Object.fromEntries(new FormData(e.target)));showError('Заявка сохранена для Дениса. Время согласуем с тобой отдельно.');}catch(x){showError(x.message);}finally{busy=false;}});
+return {open:vpOpen,refreshGoal,drawGoal};
+})();
+
 </script>
 </body>
 
