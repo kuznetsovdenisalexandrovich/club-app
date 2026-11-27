@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v728 -->
+<!-- FILE_VERSION: index-v729 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v728';
+window.CLUB_BUILD_ID = 'app-v729';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -15421,10 +15421,10 @@ html[data-lite] .reveal-overlay .reveal-fx{display:none!important}
 <div class="center-modal-overlay" id="vk-access-overlay" onclick="if(event.target===this) document.getElementById('vk-access-overlay').classList.remove('open')">
   <div class="center-modal" id="vk-access-modal">
     <div class="center-modal-header">
-      <div class="center-modal-title">Видео в закрытой группе</div>
+      <div class="center-modal-title">Доступ к группе ВК</div>
       <button class="icon-btn" onclick="document.getElementById('vk-access-overlay').classList.remove('open')">✕</button>
     </div>
-    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px" data-text="library.a1">Это видео находится в закрытой группе ВК — сначала нужно, чтобы мы открыли тебе туда доступ. Это бесплатно, просто нажми кнопку.</div>
+    <div style="font-size:14px;color:var(--text-dim);line-height:1.5;margin-bottom:16px" >Свяжем твой аккаунт ВК с подпиской клуба. Затем подай заявку в группу — система проверит подписку и откроет доступ. Повторно платить не нужно.</div>
     <button class="lec-link-btn access-btn" onclick="grantVkAccessAndJoin()">Получить доступ к ВК</button>
     <div class="payment-help-link" style="margin-top:10px" onclick="alreadyHaveVkAccess()">У меня уже есть доступ</div>
   </div>
@@ -16984,7 +16984,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v728 · 26.11.2026 Подтверждение доступа';
+const APP_BUILD = 'v729 · 27.11.2026 Доступ к ВК';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -33041,12 +33041,12 @@ function startLiveWatch(){
    Спрашивать сервер в момент показа ворот — самое дешёвое место: один запрос
    ровно тогда, когда ответ на него и нужен. */
 async function vkAccessFresh(){
-  if (!telegramId) return vkAccessGranted;
+  if (!telegramId) return false;
   try {
-    const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}&fresh=1`);
+    const r = await fetch(`${API_URL}/access/vk/state?telegram_id=${telegramId}&fresh=1`,{signal:AbortSignal.timeout(12000)});
     const d = await r.json();
-    if (d && d.found) vkAccessGranted = !!d.in_group;
-  } catch (e) {}
+    vkAccessGranted = !!(r.ok && d && d.found && d.in_group && !d.error);
+  } catch (e) { vkAccessGranted = false; }
   return vkAccessGranted;
 }
 
@@ -33073,6 +33073,8 @@ async function openVkGateForUrl(url){
 async function openVkAccessFlow(){
   if (!isMember){ openPaywall(); return; }
   switchView('portal');
+  document.getElementById('vk-access-overlay').classList.add('open');
+  vkJoinNote('Проверяем участие в группе…');
   if (await vkAccessFresh()){
     openUrl(VK_GROUP_LINK);
     return;
@@ -33139,7 +33141,7 @@ async function grantVkAccessAndJoin(){
 async function vkJoinCheck(ticket){
   const r=await fetch(API_URL+'/access/vk/app-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket,vk_query:vkLaunchQuery()}),signal:AbortSignal.timeout(20000)});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.detail||'Не удалось связать аккаунты');
+  if(!r.ok){const e=new Error(d.detail||'Не удалось связать аккаунты');e.code=d.code;throw e;}
   if(d.linked!==true||d.is_member!==true||!d.telegram_id)throw new Error('Сервер не подтвердил связь с подпиской');
   return d;
 }
@@ -33156,7 +33158,15 @@ async function claimVkMembership(ticket){
     document.getElementById('web-login-screen').style.display='none';
     switchView('portal');vkAccessGranted=!!d.in_group;
     vkJoinNote(d.in_group?'Аккаунты связаны. Доступ в группу открыт.':d.check_error||'Аккаунты связаны. Нажми «Получить доступ к ВК», чтобы вступить в группу.');
-  }catch(e){vkJoinNote(e.message||'Связь не подтверждена. Попробуй ещё раз.');}
+  }catch(e){
+    vkJoinNote(e.message||'Связь не подтверждена. Попробуй ещё раз.');
+    if(['ticket_expired','ticket_not_found','reissue_required'].includes(e.code)){
+      vkJoinTicket='';
+      vkJoinNote('Срок персональной ссылки закончился. Вернись в Telegram и получи новую — подписка и данные сохранены.');
+      let link=document.getElementById('vk-join-renew');
+      if(!link){link=document.createElement('a');link.id='vk-join-renew';link.className='lec-link-btn access-btn';link.href='https://t.me/youselllikeagod_bot/app?startapp=vk';link.textContent='Получить новую ссылку в Telegram';document.getElementById('vk-access-modal').appendChild(link);}
+    }
+  }
 }
 async function alreadyHaveVkAccess(){
   try{
