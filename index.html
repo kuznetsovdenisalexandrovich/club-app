@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v729 -->
+<!-- FILE_VERSION: index-v730 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v729';
+window.CLUB_BUILD_ID = 'app-v730';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16984,7 +16984,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v729 · 27.11.2026 Доступ к ВК';
+const APP_BUILD = 'v730 · 27.11.2026 Возврат в приложение';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -19054,7 +19054,7 @@ async function loadProfile() {
   let profileResponseReceived=false;
   const requestedProfileId=String(telegramId);
   try {
-    const u = await apiRequest(`${API_URL}/users/me?telegram_id=${telegramId}&bootstrap=1`, {}, 15000);
+    const u = await requestProfileBootstrap(`${API_URL}/users/me?telegram_id=${telegramId}&bootstrap=1`);
     if(String(telegramId)!==requestedProfileId)return;
     if(!u||typeof u.found!=='boolean'){const err=new Error('Invalid profile response');err.code='invalid_response';throw err;}
     profileResponseReceived=true;
@@ -19244,6 +19244,29 @@ async function loadProfile() {
     const retry=document.createElement('button');retry.type='button';retry.className='mp-button';retry.textContent='Повторить';
     retry.onclick=async(event)=>{if(event)event.stopPropagation();retry.disabled=true;try{await loadProfile();}finally{if(retry.isConnected)retry.disabled=false;}};
     profileError.appendChild(retry);
+  }
+}
+
+// Retry only the read-only bootstrap when a backgrounded WebView loses its request.
+// The legacy visit with side effects remains outside this retry.
+async function requestProfileBootstrap(url) {
+  let backgrounded=Boolean(document.hidden);
+  const observe=()=>{if(document.hidden)backgrounded=true;};
+  if(document.addEventListener)document.addEventListener('visibilitychange',observe);
+  try {
+    try { return await apiRequest(url,{},15000); }
+    catch(error) {
+      const transient=error&&(error.name==='AbortError'||error.name==='TypeError');
+      if(!backgrounded||!transient)throw error;
+      if(document.hidden)await new Promise(resolve=>{
+        const resume=()=>{if(!document.hidden){document.removeEventListener('visibilitychange',resume);resolve();}};
+        document.addEventListener('visibilitychange',resume);resume();
+      });
+      // One new deadline after returning; persistent failures still show manual retry.
+      return await apiRequest(url,{},15000);
+    }
+  } finally {
+    if(document.removeEventListener)document.removeEventListener('visibilitychange',observe);
   }
 }
 

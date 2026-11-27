@@ -450,3 +450,11 @@ checks pass in both themes/390,900px. v720's flow placement was incorrect.
 2026-11-26 v728: personal paid-invitation claims use the same token for at most three bounded attempts after lost response, transient routing status, or explicit manual_claim_pending. No card charge is created. Identity conflicts and malformed success are not automatically repeated. Only the rendered, server-confirmed access result marks gate-ready; waiting and network errors do not. Backend atomically commits access, receipt and completed invitation before optional Telegram links; an existing receipt takes precedence over an abandoned claiming lock.
 
 2026-11-27 v729: VK access sheet explains account linking and group application. Fresh membership checks never reuse a cached positive flag after a negative or unavailable platform response. Expired native link tickets offer the stable Telegram entry startapp=vk, without persisting or replaying a private ticket. Shared channel links contain no credentials; per-person tickets remain generated inside authenticated access. Request notices and confirmed approval are recorded server-side; UI never reports membership from HTTP success alone. Payment/player/rescue flows remain unchanged.
+
+2026-11-27 v730: profile bootstrap interrupted while WebView is hidden gets one
+fresh read-only attempt after foreground return. Foreground-only failures and
+HTTP authorization errors keep the existing explicit error/retry UI. The legacy
+visit is outside retry, and its per-user side-effect guard is unchanged. Evidence:
+15:05 MSK v728 timeout followed hide at startup (anonymous timing correlation,
+not a proof of transport root cause); probes were healthy afterward. Tests cover
+return before/after timeout, persistent failure, auth refusal and listener cleanup.
