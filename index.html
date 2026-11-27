@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v730 -->
+<!-- FILE_VERSION: index-v731 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v730';
+window.CLUB_BUILD_ID = 'app-v731';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -16984,7 +16984,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v730 · 27.11.2026 Возврат в приложение';
+const APP_BUILD = 'v731 · 28.11.2026 Выдача карты';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -39555,6 +39555,7 @@ async function readCards(){
   renderPackBanner();
   renderCardsBadge();
   renderCollectionStrip();
+  renderCardsAlbum();
   updateAppBadge();
   try { nbRenderStart(); } catch(e){}
   await godsReady;
@@ -40318,6 +40319,7 @@ function openPackReveal(demoCards){
 
 function closePackReveal(){
   prFitStop();
+  prEl('pr-details').classList.remove('pr-reserved');
   const session = ++prSession;
   PR.busy = false;
   prClearPhase();
@@ -40423,7 +40425,7 @@ function prFitScene(){
   if(!stage||!scene)return;
   const height=window.visualViewport ? window.visualViewport.height : window.innerHeight;
   stage.style.setProperty('--pr-visible-height',Math.round(height)+'px');
-  stage.style.setProperty('--pr-card-limit',Math.max(70,(scene.clientHeight-90)*.75)+'px');
+  stage.style.setProperty('--pr-card-limit',Math.max(70,(scene.clientHeight-48)*.75)+'px');
 }
 function prFitStart(){
   prFitStop();prFitScene();
@@ -40605,9 +40607,13 @@ async function prOpenCard(id){
   if (front && artSrc) await prPrepareFrontImage(front, artSrc);
 
   if (session !== prSession) return;
+  // Reserve the final detail height before measuring or starting the flip.
+  prEl('pr-details').classList.remove('pr-on');
+  prFillDetails(card, data ? data.points_awarded : 0, PR.demo ? null : id, data ? data.claimed : false);
+  prEl('pr-details').classList.add('pr-reserved');
+  prFitScene();
   PR.hero = id;
   prLayout();
-  prEl('pr-details').classList.remove('pr-on');
   prClearPhase();
 
   const scene = prEl('pr-scene');
@@ -40636,7 +40642,6 @@ async function prOpenCard(id){
     scene.classList.remove('pr-phase-impact','pr-revealing'); scene.classList.add('pr-phase-signature');
     el.classList.remove('pr-phase-impact');
     PR.opened.push(id);
-    prFillDetails(card, data ? data.points_awarded : 0, PR.demo ? null : id, data ? data.claimed : false);
     prEl('pr-details').classList.add('pr-on');
     const left = PR.ids.length - PR.opened.length;
     prEl('pr-sub').textContent = left ? ('Осталось карт: ' + left) : 'Пак открыт';
@@ -47470,6 +47475,20 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)saleTimerR
 #pr-stage[data-pr-theme] #pr-cta{grid-row:4;position:relative!important;margin:12px 0 0!important;align-self:end;z-index:20}
 #pr-stage[data-pr-theme] .pr-card{aspect-ratio:3/4!important;width:min(44vw,190px,var(--pr-card-limit,190px))!important}
 #pr-stage[data-pr-theme] .pr-card.pr-hero{width:min(68vw,280px,var(--pr-card-limit,280px))!important}
+/* Stable reveal: the flip supplies motion; the hero keeps one centre. */
+#pr-stage[data-pr-theme] .pr-details.pr-reserved:not(.pr-on){display:block!important;visibility:hidden;pointer-events:none}
+#pr-stage[data-pr-theme] .pr-card.pr-hero{top:50%!important;width:min(82vw,340px,var(--pr-card-limit,340px))!important;transform:translate(-50%,-50%)!important;animation:none!important}
+#pr-stage[data-pr-theme] .pr-sub{min-height:2.8em}
+@media(max-height:700px){
+ #pr-stage[data-pr-theme] .pr-title{font-size:26px!important;margin:0!important}
+ #pr-stage[data-pr-theme] .pr-eyebrow{margin-bottom:4px;font-size:10px}
+ #pr-stage[data-pr-theme] .pr-sub{font-size:12px;margin-top:4px;min-height:2.5em}
+ #pr-stage[data-pr-theme] .pr-stats{padding:10px;gap:6px}
+ #pr-stage[data-pr-theme] .pr-label{font-size:10px}
+ #pr-stage[data-pr-theme] .pr-value{font-size:16px}
+ #pr-stage[data-pr-theme] #pr-actions{margin-top:8px!important}
+ #pr-stage[data-pr-theme] #pr-cta,#pr-stage[data-pr-theme] #pr-actions .pr-cta-inline{padding:10px 14px!important;min-height:44px;font-size:15px!important}
+}
 #pr-stage .pr-art-window{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
 #pr-stage .pr-art-window>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit}
 #pr-stage .pr-card.pr-open .pr-front.pr-framed{background:transparent!important;border:0!important;box-shadow:none!important}
