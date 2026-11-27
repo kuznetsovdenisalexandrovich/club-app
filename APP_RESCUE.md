@@ -458,3 +458,5 @@ visit is outside retry, and its per-user side-effect guard is unchanged. Evidenc
 15:05 MSK v728 timeout followed hide at startup (anonymous timing correlation,
 not a proof of transport root cause); probes were healthy afterward. Tests cover
 return before/after timeout, persistent failure, auth refusal and listener cleanup.
+
+2026-11-28 v732: bot route health probes allow5s instead of1.8s. Exact owner pack attempt675ea2fd had useful-ready3.131s, three failed acknowledgements, and separate successful bot-health2.597s. Regression replays2.6s health and verifies a single signed ready POST. Active-main/db verification, caller cancellation, no replay of writes, and watchdog thresholds are preserved. Midnight attempt77ffb44b has only html plus anonymous resource event; its full-screen outcome and resource identity remain unknown. Incident counter wording now says registrations, not JavaScript errors.

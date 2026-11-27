@@ -13,3 +13,17 @@ test('cancelled request sends no signed data',async()=>{const {t,calls}=setup();
 test('Request object preserves body, headers and query',async()=>{const {t,calls}=setup();await t.request(new Request(canonical+'?a=1',{method:'POST',headers:{'X-Test':'yes'},body:'signed'}));const c=calls.find(c=>c.o.method==='POST');assert.equal(c.u,primary+'/content/app-rescue?a=1');assert.equal(await c.o.body.text(),'signed');assert.equal(c.o.headers.get('x-test'),'yes');});
 test('signed pdf navigation maps only approved path',async()=>{const {t}=setup({primaryDown:true,reserveUp:true});assert.equal(await t.directLink('https://bot.youselllikeagod-magazine.ru/content/pdf/a?sig=keep'),reserve+'/content/pdf/a?sig=keep');await assert.rejects(t.directLink('https://evil.test/content/pdf/a'));});
 test('inline copy is exact and installed before rescue captures fetch',()=>{const h=fs.readFileSync(require('path').join(__dirname,'../index.html'),'utf8'),s=fs.readFileSync(require('path').join(__dirname,'../bot-transport.js'),'utf8');assert(h.includes(s));assert(h.indexOf('END_BOT_DIRECT_TRANSPORT_V1')<h.indexOf('var nativeFetch=w.fetch'));});
+test('ready acknowledgement survives the observed 2.6 second health response',async()=>{
+ const calls=[];
+ const t=createClubBotTransport(async(u,o={})=>{
+  if(u===reserve+'/')throw Error('standby');
+  if(u===primary+'/health')return new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>resolve(ready()),2600);
+   o.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));},{once:true});
+  });
+  calls.push({u,body:o.body});return Response.json({status:'ready'});
+ });
+ const body=JSON.stringify({event:'ready',attempt:'same-attempt',seq:3});
+ assert.equal((await t.request(canonical,{method:'POST',body})).status,200);
+ assert.deepEqual(calls,[{u:primary+'/content/app-rescue',body}]);
+});

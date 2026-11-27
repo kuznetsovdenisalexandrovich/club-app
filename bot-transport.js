@@ -13,7 +13,7 @@ function createClubBotTransport(fetcher,config={}){
   return u.pathname+u.search;
  }
  async function probe(i){
-  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),config.probeMs||1800);
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),config.probeMs||5000);
   try{
    const r=await fetcher(health[i],{signal:ctrl.signal,cache:'no-store',credentials:'omit',redirect:'error'});
    if(!r.ok)throw Error('Bot unavailable');
