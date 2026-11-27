@@ -4,7 +4,7 @@ const code=html.slice(html.indexOf('let vkJoinBusy='),html.indexOf('\nfunction p
 function setup(fetch,inside=false){
  const els={},opened=[],calls=[];
  const element=id=>els[id]||=( {textContent:'',style:{},className:'',classList:{add(){},remove(){}},setAttribute(){},appendChild(el){els[el.id]=el;}});
- const c={fetch,AbortSignal,API_URL:'https://api.test',telegramId:123,isMember:true,vkAccessGranted:false,vkAccessWatch:false,clubPass:'old',clubPassId:'123',crypto:{randomUUID:()=> 'stable-request'},sessionHeaders:()=>({'X-Session':'signed'}),isInsideVk:()=>inside,vkLaunchQuery:()=> 'signed-launch',vkBridge:{send:async(method,data)=>calls.push({method,data})},document:{getElementById:id=>id==='vk-join-renew'?(els[id]||null):element(id),createElement:()=>({setAttribute(){}})},openUrl:url=>opened.push(url),openPaywall(){calls.push('paywall')},pollForVkAccess(){calls.push('poll')},waitProfile:async()=>{},clubPassEnsure:async()=>{},loadProfile:async()=>{},switchView(){},funnelLeave(){},vkAccessFresh:async()=>false,proceedAfterVkAccess(){calls.push('proceed')}};
+ const c={fetch,AbortSignal,API_URL:'https://api.test',telegramId:123,isMember:true,vkAccessGranted:false,vkAccessWatch:false,clubPass:'old',clubPassId:'123',crypto:{randomUUID:()=> 'stable-request'},sessionHeaders:()=>({'X-Session':'signed'}),isInsideVk:()=>inside,vkLaunchQuery:()=> 'signed-launch',vkBridge:{send:async(method,data)=>calls.push({method,data})},document:{getElementById:id=>id==='vk-join-renew'?(els[id]||null):element(id),createElement:()=>({style:{},setAttribute(){}})},openUrl:url=>opened.push(url),openUrlResolved:url=>opened.push(url),openPaywall(){calls.push('paywall')},pollForVkAccess(){calls.push('poll')},waitProfile:async()=>{},clubPassEnsure:async()=>{},loadProfile:async()=>{},switchView(){},funnelLeave(){},vkAccessFresh:async()=>false,proceedAfterVkAccess(){calls.push('proceed')}};
  vm.createContext(c);vm.runInContext(code,c);return {c,els,opened,calls};
 }
 test('failed or missing handshake URL never opens unlinked group',async()=>{
@@ -53,4 +53,22 @@ test('fresh VK check never falls back to a stale positive flag',async()=>{
 test('shared entry copy describes linking and contains no temporary ticket',()=>{
  const modal=html.slice(html.indexOf('id="vk-access-overlay"'),html.indexOf('id="tg-access-overlay"'));
  assert.match(modal,/Доступ к группе ВК/);assert.match(modal,/Свяжем твой аккаунт/);assert(!modal.includes('library.a1'));
+});
+
+test('legacy club links route through handshake, unrelated links are unchanged',async()=>{
+ const start=html.indexOf('function isClubVkGroupUrl('),end=html.indexOf('function openUrlResolved(',start);
+ let clicks,flows=0;const opened=[];
+ const c={URL,document:{addEventListener:(type,fn)=>clicks=fn},openVkAccessFlow:()=>{flows++},ClubPaymentNavigation:{isPayment:()=>false},openUrlResolved:url=>opened.push(url)};
+ vm.createContext(c);vm.runInContext(html.slice(start,end),c);
+ for(const url of ['https://vk.ru/club232119632','https://m.vk.com/club232119632/?from=old']){c.openUrl(url);let prevented=false;clicks({target:{closest:()=>({getAttribute:()=>url})},preventDefault(){prevented=true},stopPropagation(){}});assert(prevented);}
+ assert.equal(flows,4);assert.equal(opened.length,0);
+ clicks({target:{closest:()=>({dataset:{clubVkVerified:'1'},getAttribute:()=> 'https://vk.ru/club232119632'})},preventDefault(){throw Error('verified native fallback intercepted')},stopPropagation(){}});
+ for(const url of ['https://vk.ru/club999','https://vk.ru/app54715238#vkjoin_lt123','https://vk.ru.evil/club232119632'])c.openUrl(url);
+ assert.equal(opened.length,3);
+});
+test('unlinked VK entry offers authenticated Telegram recovery, never grants access',async()=>{
+ const {c,els,opened}=setup(async()=>({ok:false,json:async()=>({detail:'Нужна действующая подписка клуба'})}),true);
+ await c.claimVkMembership('start');
+ assert.equal(els['vk-join-renew'].href,'https://t.me/youselllikeagod_bot/app?startapp=vk');
+ assert.equal(c.vkAccessGranted,false);assert.equal(opened.length,0);
 });

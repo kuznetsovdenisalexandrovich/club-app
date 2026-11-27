@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v733 -->
+<!-- FILE_VERSION: index-v734 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v733';
+window.CLUB_BUILD_ID = 'app-v734';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -17015,7 +17015,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v733 · 28.11.2026 Диагностика ресурсов';
+const APP_BUILD = 'v734 · 28.11.2026 Диагностика ресурсов';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -31523,7 +31523,17 @@ function rememberLastLecture(l, kind='lecture', platform='') {
    пустоту (телеграмного хоста там нет), кнопка «Открыть бота» молчала.
    Поймано Denis'ом 18.08 на экране оплаты внутри MAX. */
 const paymentNavigationPending = new Map();
+function isClubVkGroupUrl(value){
+  try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&['vk.ru','vk.com','m.vk.ru','m.vk.com'].includes(u.hostname)&&/^\/club232119632\/?$/.test(u.pathname);}catch(e){return false;}
+}
+// Editorial/legacy links must use the same authenticated linking flow.
+document.addEventListener('click',function(e){
+  const a=e.target.closest&&e.target.closest('a[href]');
+  if(!a||a.dataset?.clubVkVerified==='1'||!isClubVkGroupUrl(a.getAttribute('href')))return;
+  e.preventDefault();e.stopPropagation();openVkAccessFlow();
+},true);
 function openUrl(url) {
+  if(isClubVkGroupUrl(url))return openVkAccessFlow();
   if (!ClubPaymentNavigation.isPayment(url)) return openUrlResolved(url);
   if (paymentNavigationPending.has(url)) return paymentNavigationPending.get(url);
   // Keep browser user activation while configuration is read. Telegram opens through its SDK.
@@ -31568,6 +31578,7 @@ function openUrlResolved(url) {
     try {
       const a = document.createElement('a');
       a.href = url; a.target = '_blank'; a.rel = 'noopener';
+      if(isClubVkGroupUrl(url))a.dataset.clubVkVerified='1';
       a.style.display = 'none';
       document.body.appendChild(a); a.click();
       setTimeout(function(){ try { a.remove(); } catch(e){} }, 1000);
@@ -33130,7 +33141,7 @@ async function openVkAccessFlow(){
   document.getElementById('vk-access-overlay').classList.add('open');
   vkJoinNote('Проверяем участие в группе…');
   if (await vkAccessFresh()){
-    openUrl(VK_GROUP_LINK);
+    openUrlResolved(VK_GROUP_LINK);
     return;
   }
   grantVkAccessAndJoin();
@@ -33157,6 +33168,14 @@ function markVkAccessGranted(){
 // и ворота больше не покажутся, а видео не откроются. Теперь отметку ставит БЭКЕНД
 // в момент реального одобрения заявки, а мы её подхватываем при возврате в апп.
 let vkJoinBusy=false, vkJoinRequest='', vkJoinTicket='';
+function vkLinkRecovery(){
+  if(!isInsideVk())return;
+  let link=document.getElementById('vk-join-renew');
+  if(!link){link=document.createElement('a');link.id='vk-join-renew';link.className='lec-link-btn access-btn';document.getElementById('vk-access-modal').appendChild(link);}
+  link.href='https://t.me/youselllikeagod_bot/app?startapp=vk';
+  link.textContent='Оплачивал в Telegram? Связать аккаунты';
+  link.style.marginTop='12px';
+}
 function vkJoinNote(text){
   let el=document.getElementById('vk-join-status');
   if(!el){el=document.createElement('div');el.id='vk-join-status';el.className='payment-help-link';el.setAttribute('role','status');document.getElementById('vk-access-modal').appendChild(el);}
@@ -33172,24 +33191,24 @@ async function grantVkAccessAndJoin(){
     let d;
     if(isInsideVk()){
       d=await vkJoinCheck(vkJoinTicket||'start');
-      if(d.in_group){vkAccessGranted=true;vkJoinNote('Доступ открыт');openUrl(d.url);return;}
+      if(d.in_group){vkAccessGranted=true;vkJoinNote('Доступ открыт');openUrlResolved(d.url);return;}
       vkJoinNote('Подай заявку в группу — после неё доступ откроется автоматически.');
       try{await vkBridge.send('VKWebAppJoinGroup',{group_id:d.group_id});}
-      catch(e){openUrl(d.url);vkAccessWatch=true;return;}
+      catch(e){openUrlResolved(d.url);vkAccessWatch=true;return;}
       d=await vkJoinCheck('start');
       vkAccessGranted=!!d.in_group;
       vkJoinNote(d.in_group?'Доступ открыт':d.check_error||'Заявка отправлена. Проверяем одобрение…');
       vkAccessWatch=!d.in_group;
-      if(d.in_group)openUrl(d.url);else pollForVkAccess();
+      if(d.in_group)openUrlResolved(d.url);else pollForVkAccess();
     }else{
       if(!vkJoinRequest)vkJoinRequest=crypto.randomUUID();
       const r=await fetch(API_URL+'/access/vk/start',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...sessionHeaders()},body:JSON.stringify({telegram_id:telegramId,request_id:vkJoinRequest}),signal:AbortSignal.timeout(15000)});
       d=await r.json().catch(()=>({}));
       if(!r.ok){if(['ticket_expired','ticket_used','reissue_required'].includes(d.code))vkJoinRequest='';throw new Error(d.detail||'Не удалось открыть доступ к ВК');}
       if(!d.url)throw new Error('Сервер не вернул ссылку для ВК');
-      vkAccessWatch=true;vkJoinNote('Продолжи во ВКонтакте');openUrl(d.url);
+      vkAccessWatch=true;vkJoinNote('Продолжи во ВКонтакте');openUrlResolved(d.url);
     }
-  }catch(e){vkJoinNote(e.message||'Не удалось проверить доступ. Нажми кнопку ещё раз.');}
+  }catch(e){vkJoinNote(e.message||'Не удалось проверить доступ. Нажми кнопку ещё раз.');vkLinkRecovery();}
   finally{vkJoinBusy=false;}
 }
 async function vkJoinCheck(ticket){
@@ -33213,7 +33232,7 @@ async function claimVkMembership(ticket){
     switchView('portal');vkAccessGranted=!!d.in_group;
     vkJoinNote(d.in_group?'Аккаунты связаны. Доступ в группу открыт.':d.check_error||'Аккаунты связаны. Нажми «Получить доступ к ВК», чтобы вступить в группу.');
   }catch(e){
-    vkJoinNote(e.message||'Связь не подтверждена. Попробуй ещё раз.');
+    vkJoinNote(e.message||'Связь не подтверждена. Попробуй ещё раз.');vkLinkRecovery();
     if(['ticket_expired','ticket_not_found','reissue_required'].includes(e.code)){
       vkJoinTicket='';
       vkJoinNote('Срок персональной ссылки закончился. Вернись в Telegram и получи новую — подписка и данные сохранены.');
