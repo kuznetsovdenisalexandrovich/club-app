@@ -57,3 +57,18 @@ test('failed telemetry schedules bounded retry without requiring another user ev
  for(let i=0;i<20;i++){const t=[...s.timers].find(([k,v])=>v.ms===2000);if(!t)break;s.timers.delete(t[0]);t[1].fn();for(let j=0;j<20;j++)await Promise.resolve();}
  assert.equal(s.calls.length,12);assert(![...s.timers.values()].some(x=>x.ms===2000));
 });
+test('resource metadata survives before main code, strips URL secrets, distinguishes HTTP from unknown',async()=>{
+ const s=setup();s.w.URL=URL;s.w.location.href='https://example.test/club-app/';s.w.ClubClientDiagnostics.bind(attempt);
+ s.w.performance={getEntriesByName:()=>[{responseStatus:404,duration:123}]};
+ s.events.error({target:{tagName:'SCRIPT',src:'https://example.test/club-app/film-player.js?token=SECRET#PRIVATE'}});
+ const snapshot=s.w.ClubClientDiagnostics.resources();assert.equal(snapshot[0].asset,'film-player.js');assert.equal(snapshot[0].http,404);assert.equal(snapshot[0].cause,'http');assert.equal(snapshot[0].type,'script');
+ s.w.performance={getEntriesByName:()=>[]};s.w.navigator.onLine=false;
+ s.events.error({target:{tagName:'IMG',src:'https://private.invalid/signed-SECRET.png?signature=PRIVATE'}});
+ const x=s.w.ClubClientDiagnostics.resources()[1];assert.equal(x.asset,'other_img');assert.equal(x.cause,'browser_unknown');assert.equal(x.online,false);
+ await s.flush();const bodies=JSON.stringify(s.calls.map(c=>JSON.parse(c.options.body)));assert(!/SECRET|PRIVATE|private.invalid/.test(bodies));assert(bodies.includes('film-player.js'));assert(bodies.includes('browser_unknown'));
+});
+test('media error records browser code without inventing HTTP or a network diagnosis',()=>{
+ const s=setup();s.w.URL=URL;s.w.location.href='https://example.test/';s.w.ClubClientDiagnostics.bind(attempt);
+ s.events.error({target:{tagName:'VIDEO',src:'https://media.invalid/secret?key=PRIVATE',error:{code:3}}});
+ const x=s.w.ClubClientDiagnostics.resources()[0];assert.equal(x.media_code,3);assert.equal(x.cause,'media_decode');assert.equal(x.http,0);assert(!JSON.stringify(x).includes('PRIVATE'));
+});

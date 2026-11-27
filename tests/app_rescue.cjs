@@ -17,7 +17,7 @@ function setup({signed=true,fetchFailure=false,hidden=false,vk=false,legacy=fals
  return {w,d,calls,diagCalls,nodes,timers,events,docEvents,async deadline(){const t=[...timers.values()].find(t=>t.ms===35000);assert(t);t.f();await flush();}};
 }
 async function flush(){for(let i=0;i<40;i++)await Promise.resolve();}
-test('rescue is inline and runs before dependencies',()=>{assert.match(first,/APP_RESCUE_V1/);assert(html.indexOf('APP_RESCUE_V1')<html.indexOf('card-motion.js'));});
+test('rescue is inline and runs before dependencies',()=>{assert.match(first,/APP_RESCUE_V1/);assert(html.indexOf('APP_RESCUE_V1')<html.indexOf('/* Inline critical card defaults;'));});
 test('blank page without SDK or main code raises independent banner and requests delivery',async()=>{
  const s=setup();await s.deadline();assert(s.calls.some(x=>x.event==='failed'));assert(s.nodes.some(x=>x.id==='club-app-rescue'));
  assert(s.nodes.some(x=>x.textContent==='Видео уже отправлено в бота.'));assert(s.nodes.some(x=>x.textContent==='Перезагрузить'));
