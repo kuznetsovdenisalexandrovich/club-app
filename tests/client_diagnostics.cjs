@@ -72,3 +72,13 @@ test('media error records browser code without inventing HTTP or a network diagn
  s.events.error({target:{tagName:'VIDEO',src:'https://media.invalid/secret?key=PRIVATE',error:{code:3}}});
  const x=s.w.ClubClientDiagnostics.resources()[0];assert.equal(x.media_code,3);assert.equal(x.cause,'media_decode');assert.equal(x.http,0);assert(!JSON.stringify(x).includes('PRIVATE'));
 });
+
+test('empty image src is identified before browser resolves it to the HTML page',()=>{
+ const s=setup(),reports=[];s.w.URL=URL;s.w.location.href='https://example.test/';s.w.__reportError=(...a)=>reports.push(a);s.w.ClubClientDiagnostics.bind(attempt);
+ s.events.error({target:{tagName:'IMG',src:'https://example.test/',getAttribute:k=>k==='src'?'':null}});
+ const r=s.w.ClubClientDiagnostics.resources()[0];assert.equal(r.asset,'empty_source');assert.equal(r.cause,'empty_source');
+ assert(reports[0][1].includes('attempt='+attempt));assert(reports[0][1].includes('cause=empty_source'));assert(!reports[0][1].includes('https:'));
+});
+test('hidden stream placeholder never requests the HTML document as an image',()=>{
+ const html=fs.readFileSync('index.html','utf8');assert(html.includes('<img id="stream-hero-img" alt="">'));assert(!html.includes("document.getElementById('stream-hero-img').src = ''"));
+});

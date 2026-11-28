@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- FILE_VERSION: index-v734 -->
+<!-- FILE_VERSION: index-v735 -->
 <html lang="ru" data-theme="light">
 <head>
 <script>
-window.CLUB_BUILD_ID = 'app-v734';
+window.CLUB_BUILD_ID = 'app-v735';
 /* BOT_DIRECT_TRANSPORT_V1: inline before rescue; no SDK or DNS failover. */
 (function(root){
 'use strict';
@@ -172,12 +172,14 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
  }
  function reportResources(){
   if(typeof w.__reportError!=='function')return;
-  resources.splice(0).forEach(function(name){try{w.__reportError('Не загрузился ресурс приложения: '+name,'','resource_load');}catch(e){}});
+  resources.splice(0).forEach(function(info){try{var detail='attempt='+(parent||'unbound')+'; type='+info.type+'; origin='+info.origin+'; cause='+info.cause+'; http='+info.http+'; online='+info.online+'; visible='+info.visible;if(info.key)detail+='; resource_key='+info.key;w.__reportError('Не загрузился ресурс приложения: '+info.asset,detail,'resource_load');}catch(e){}});
  }
  function resourceInfo(target, blocked){
   var tag=String(target&&target.tagName||'').toLowerCase();
   if(!/^(script|link|img|video|audio|source|iframe)$/.test(tag))return null;
-  var raw=target.currentSrc||target.src||target.href||'',asset='unknown_resource',origin='other',url=null;
+  var raw=target.currentSrc||target.src||target.href||'';
+  if(tag==='img'&&target.getAttribute&&target.getAttribute('src')===''&&!target.getAttribute('srcset'))raw='';
+  var asset='unknown_resource',origin='other',url=null;
   if(!raw)asset='empty_source';
   try{
    url=new URL(raw,w.location.href);var name=url.pathname.split('/').pop();
@@ -205,7 +207,7 @@ else {root.createClubBotTransport=createClubBotTransport;const t=createClubBotTr
   var key=info.type+':'+info.asset;
   if(Object.prototype.hasOwnProperty.call(resourceSeen,key)){var i=resourceSeen[key];if(resourceFacts[i].cause==='browser_unknown'&&info.cause!=='browser_unknown'){resourceFacts[i]=info;return true;}return false;}
   if(resourceFacts.length>=4)return false;
-  resourceSeen[key]=resourceFacts.length;resourceFacts.push(info);resources.push(info.asset);reportResources();return true;
+  resourceSeen[key]=resourceFacts.length;resourceFacts.push(info);resources.push(info);reportResources();return true;
  }
  w.ClubClientDiagnostics={reportResources:reportResources,emit:emit,probe:probe,bind:function(id){parent=id;},parent:function(){return parent;},resources:function(){return resourceFacts.map(function(x){return Object.assign({},x);});}};
  function error(event,rejection){
@@ -10749,7 +10751,7 @@ function renderMeetingNotice(notice){
   <!-- ── Поток ── -->
   <div class="view" id="view-stream">
     <div class="stream-hero" id="stream-hero">
-      <img id="stream-hero-img" src="" alt="">
+      <img id="stream-hero-img" alt="">
       <span class="stream-back" onclick="switchView('library')">←</span>
     </div>
     <div class="stream-body">
@@ -17015,7 +17017,7 @@ function toggleTheme(){
    решалось гаданием: тема, кнопка, поведение — всё это косвенные признаки, и
    при кэше PWA они врут. Здесь прямой ответ: какой файл реально открыт.
    Видно в двух местах — Профиль → Отладка и `APP_BUILD` в консоли. */
-const APP_BUILD = 'v734 · 28.11.2026 Диагностика ресурсов';
+const APP_BUILD = 'v735 · 28.11.2026 Диагностика изображений';
 
 (function initTheme(){
   /* ⚠️ СВЕТЛАЯ ПО УМОЛЧАНИЮ (25.08.2026). [stated] Denis: «все стартовые
@@ -27558,9 +27560,9 @@ function renderFreeDemo(){
     + '<div class="card free-demo-card">'
     + '<div class="free-demo-text">' + escapeHtml(t('lib.free_text')) + '</div>'
     + list.map(function(l){
-        const img = (l.image_url || '').trim() || ('images/lectures/' + l.slug + '.jpg');
+        const img = (l.image_url || '').trim();
         return '<button class="free-demo-item" onclick="openFreeDemo(' + jsArg(l.slug) + ')">'
-          + '<img src="' + escapeHtml(img) + '" alt="" loading="lazy" onerror="this.remove()">'
+          + (img ? '<img src="' + escapeHtml(img) + '" alt="" loading="lazy" onerror="this.remove()">' : '')
           + '<span class="free-demo-name">' + escapeHtml(l.title || '') + '</span>'
           + '<span class="free-demo-go">' + escapeHtml(t('lib.free_go')) + ' &#8594;</span></button>';
       }).join('')
@@ -28802,7 +28804,7 @@ function lecCardHtml(l, i, src, fopts){
     : `playLecture(${i},${jsArg(src)})`;
   return `
     <div class="lec-card fade-rise${fopts && fopts.nested ? ' lec-kid' : ''}${fopts && fopts.more ? ' lec-kid-more' : ''}">
-      <img class="lec-thumb" src="${(l.image_url||'').trim() || ('images/lectures/' + l.slug + '.jpg')}" alt="" loading="lazy" onerror="this.remove()">
+      ${(l.image_url||'').trim() ? `<img class="lec-thumb" src="${escapeHtml(l.image_url.trim())}" alt="" loading="lazy" onerror="this.remove()">` : ''}
       ${lecKickerHtml(l, fopts)}
       <div class="lec-card-top">
         <div class="lec-title">${l.title}</div>
@@ -28911,7 +28913,7 @@ async function openStream(key) {
   switchView('stream');
   document.getElementById('stream-title').textContent = 'Загрузка...';
   document.getElementById('stream-desc').textContent = '';
-  document.getElementById('stream-hero-img').src = '';
+  document.getElementById('stream-hero-img').removeAttribute('src');
   document.getElementById('stream-lectures').innerHTML = '<div class="loading">Загрузка...</div>';
   try {
     const [stream, lectures] = await Promise.all([
@@ -29773,8 +29775,9 @@ function openPlanStop(i){
   }
 
   el.innerHTML =
-      '<img class="pstop-img" src="' + escapeHtml((l.image_url || '').trim() || ('images/lectures/' + l.slug + '.jpg')) + '" alt="" '
+      ((l.image_url || '').trim() ? '<img class="pstop-img" src="' + escapeHtml(l.image_url.trim()) + '" alt="" '
     + 'onerror="this.outerHTML=\'<div class=&quot;pstop-img-fallback&quot; style=&quot;--pc:' + color + '&quot;></div>\'">'
+    : '<div class="pstop-img-fallback" style="--pc:' + color + '"></div>')
     + '<div class="pstop-title">' + escapeHtml(l.title || '') + '</div>'
     + '<div class="pstop-note">' + escapeHtml(s.group || '')
       + (notes.length ? ' · ' + notes.join(' · ') : '') + '</div>'

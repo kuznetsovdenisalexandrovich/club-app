@@ -44,12 +44,14 @@
  }
  function reportResources(){
   if(typeof w.__reportError!=='function')return;
-  resources.splice(0).forEach(function(name){try{w.__reportError('Не загрузился ресурс приложения: '+name,'','resource_load');}catch(e){}});
+  resources.splice(0).forEach(function(info){try{var detail='attempt='+(parent||'unbound')+'; type='+info.type+'; origin='+info.origin+'; cause='+info.cause+'; http='+info.http+'; online='+info.online+'; visible='+info.visible;if(info.key)detail+='; resource_key='+info.key;w.__reportError('Не загрузился ресурс приложения: '+info.asset,detail,'resource_load');}catch(e){}});
  }
  function resourceInfo(target, blocked){
   var tag=String(target&&target.tagName||'').toLowerCase();
   if(!/^(script|link|img|video|audio|source|iframe)$/.test(tag))return null;
-  var raw=target.currentSrc||target.src||target.href||'',asset='unknown_resource',origin='other',url=null;
+  var raw=target.currentSrc||target.src||target.href||'';
+  if(tag==='img'&&target.getAttribute&&target.getAttribute('src')===''&&!target.getAttribute('srcset'))raw='';
+  var asset='unknown_resource',origin='other',url=null;
   if(!raw)asset='empty_source';
   try{
    url=new URL(raw,w.location.href);var name=url.pathname.split('/').pop();
@@ -77,7 +79,7 @@
   var key=info.type+':'+info.asset;
   if(Object.prototype.hasOwnProperty.call(resourceSeen,key)){var i=resourceSeen[key];if(resourceFacts[i].cause==='browser_unknown'&&info.cause!=='browser_unknown'){resourceFacts[i]=info;return true;}return false;}
   if(resourceFacts.length>=4)return false;
-  resourceSeen[key]=resourceFacts.length;resourceFacts.push(info);resources.push(info.asset);reportResources();return true;
+  resourceSeen[key]=resourceFacts.length;resourceFacts.push(info);resources.push(info);reportResources();return true;
  }
  w.ClubClientDiagnostics={reportResources:reportResources,emit:emit,probe:probe,bind:function(id){parent=id;},parent:function(){return parent;},resources:function(){return resourceFacts.map(function(x){return Object.assign({},x);});}};
  function error(event,rejection){
