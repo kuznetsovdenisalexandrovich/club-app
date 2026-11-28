@@ -72,38 +72,45 @@ function createRFParallelTransport(config){
     const controller=new AbortController(),parent=options.signal;
     if(parent&&parent.aborted)throw new DOMException('Aborted','AbortError');
     let timer,deadline,finished=false,otherStarted=false,completed=0,lastResponse,lastError;
+    const began=Date.now(),facts=[];
+    const fact=(index,phase,http=0)=>{if(facts.length<12)facts.push({node:['selectel','timeweb'][index],phase,ms:Math.min(60000,Date.now()-began),http});};
     return await new Promise((resolve,reject)=>{
       const finish=(response,error,index)=>{
         if(finished)return;finished=true;clearTimeout(timer);clearTimeout(deadline);
         if(parent)parent.removeEventListener('abort',abort);controller.abort();
         if(response){remember(response,index);if(![425,502,503,504].includes(response.status)&&active!==index){active=index;streak=0;persist();if(config.onSwitch)config.onSwitch(active);}resolve(response);}
-        else reject(error||new Error('Both API nodes unavailable'));
+        else {const failure=error||new Error('Both API nodes unavailable');try{failure.rfTrace=facts.slice();}catch(ignore){}reject(failure);}
       };
-      const abort=()=>finish(null,new DOMException('Aborted','AbortError'));
+      const abort=()=>{fact(origin,parent&&parent.aborted?'caller_abort':'deadline');finish(null,new DOMException('Aborted','AbortError'));};
       if(parent)parent.addEventListener('abort',abort,{once:true});
       const fail=()=>{if(++completed===2)finish(lastResponse,lastError,lastResponse?lastResponse.__rfIndex:origin);};
       const send=async index=>{
         try{
+          fact(index,'request');
           const h=new Headers(headers);
           if(index===0&&returnBarrier)h.set('x-rf-min-timeweb',String(returnBarrier));else h.delete('x-rf-min-timeweb');
           const raw=await fetcher(endpoints[index]+path,{...options,headers:h,redirect:'error',signal:controller.signal});
+          fact(index,'headers',raw.status);
           const bytes=await raw.arrayBuffer();
+          fact(index,'body',raw.status);
           const r=new Response([204,205].includes(raw.status)||(options.method||'GET')==='HEAD'?null:bytes,{status:raw.status,statusText:raw.statusText,headers:raw.headers});
           Object.defineProperty(r,'url',{value:raw.url});
           if(finished)return;
           if(![425,502,503,504].includes(r.status))return finish(r,null,index);
           lastResponse=r;lastResponse.__rfIndex=index;
-        }catch(e){lastError=e;}
+        }catch(e){if(!finished)fact(index,e&&e.name==='AbortError'?'aborted':'network');lastError=e;}
         if(!finished){fail();startOther();}
       };
       const startOther=async()=>{
         if(otherStarted||finished)return;otherStarted=true;
+        fact(target,'readiness');
         const ready=await readiness(target);
         if(finished)return;
+        fact(target,!ready?'readiness_failed':target===0&&ready.peer_seq<returnBarrier?'barrier':'ready');
         if(!ready||(target===0&&ready.peer_seq<returnBarrier)){fail();return;}
         send(target);
       };
-      deadline=setTimeout(abort,/^\/auth\/pass(?:\?|$)/.test(path)?(config.authTimeoutMs||12000):(config.readTimeoutMs||(/^\/media\//.test(path)?12000:7000)));
+      deadline=setTimeout(abort,/^\/auth\/pass(?:\?|$)/.test(path)?(config.authTimeoutMs||12000):(config.readTimeoutMs||(/^\/media\//.test(path)||path.split('?')[0]==='/users/me'?12000:7000)));
       timer=setTimeout(startOther,config.hedgeMs||900);
       send(origin);
     });
